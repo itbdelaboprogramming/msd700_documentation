@@ -1,1 +1,7 @@
 node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/dist_live/
+docs/.vitepress/dist_old/
+docs/.vitepress/cache/
+scripts/webhook.env
+scripts/deploy.log

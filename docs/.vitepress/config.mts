@@ -4,6 +4,8 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "MSD700 ITB de Labo Documentation",
   description: "Complete Documentation of ITB de Labo MSD700 Development Project",
+  // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ — must match the Alias path.
+  base: '/itbdelabo/docs/',
   vite: {
     server: {
       port: 5700,
