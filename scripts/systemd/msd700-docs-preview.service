@@ -1,0 +1,18 @@
+[Unit]
+Description=MSD700 Docs VitePress preview server (serves docs/.vitepress/dist on port 4700)
+After=network.target
+
+[Service]
+Type=simple
+User=itbdelabo
+Group=itbdelabo
+WorkingDirectory=/home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation
+# node is installed via nvm, not /usr/bin/node — update this path if nvm's
+# active node version changes (check with: nvm which current)
+ExecStart=/home/itbdelabo/.nvm/versions/node/v22.16.0/bin/node node_modules/.bin/vitepress preview docs
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

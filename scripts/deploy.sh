@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Pull latest main, build the VitePress site, and atomically swap it into
-# the directory Apache serves via Alias /msd700-docs.
+# Pull latest main, build the VitePress site into a fresh directory, and
+# atomically swap it into docs/.vitepress/dist — the path the persistent
+# `vitepress preview` process (systemd: msd700-docs-preview, port 4700,
+# proxied by Apache at /itbdelabo/docs) serves from. The swap is a plain
+# `mv` (rename), so the running process picks up new content on the next
+# request with no restart and no downtime window.
 # Triggered by scripts/webhook-listener.mjs on push to main.
 set -euo pipefail
 
@@ -40,19 +44,21 @@ fi
   git reset --hard origin/main
 
   npm ci
-  npm run docs:build
 
-  BUILD_DIR="$REPO_DIR/docs/.vitepress/dist"
-  LIVE_DIR="$REPO_DIR/docs/.vitepress/dist_live"
+  LIVE_DIR="$REPO_DIR/docs/.vitepress/dist"
+  NEW_DIR="$REPO_DIR/docs/.vitepress/dist_new"
   OLD_DIR="$REPO_DIR/docs/.vitepress/dist_old"
+
+  rm -rf "$NEW_DIR"
+  npx vitepress build docs --outDir docs/.vitepress/dist_new
 
   rm -rf "$OLD_DIR"
   if [ -d "$LIVE_DIR" ]; then
     mv "$LIVE_DIR" "$OLD_DIR"
   fi
-  mv "$BUILD_DIR" "$LIVE_DIR"
+  mv "$NEW_DIR" "$LIVE_DIR"
   rm -rf "$OLD_DIR"
 
-  echo "Deployed $AFTER, live at $LIVE_DIR"
+  echo "Deployed $AFTER, live at $LIVE_DIR (served by msd700-docs-preview, no restart needed)"
   echo "=== $(date -Is) deploy done ==="
 } >>"$LOG_FILE" 2>&1
