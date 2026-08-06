@@ -9,7 +9,10 @@ Group=itbdelabo
 WorkingDirectory=/home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation
 # node is installed via nvm, not /usr/bin/node — update this path if nvm's
 # active node version changes (check with: nvm which current)
-ExecStart=/home/itbdelabo/.nvm/versions/node/v22.16.0/bin/node node_modules/.bin/vitepress preview docs
+# --port/--strictPort are passed explicitly because vitepress 2.0.0-alpha.19's
+# `preview` command does not honor vite.preview.port from config.mts (only
+# `dev` does) — without this it silently falls back to Vite's default 4173.
+ExecStart=/home/itbdelabo/.nvm/versions/node/v22.16.0/bin/node node_modules/.bin/vitepress preview docs --port 4700 --strictPort
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=yes

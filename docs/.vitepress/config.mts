@@ -6,13 +6,12 @@ export default defineConfig({
   description: "Complete Documentation of ITB de Labo MSD700 Development Project",
   // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ — must match the Alias path.
   base: '/itbdelabo/docs/',
+  // Note: vitepress 2.0.0-alpha.19's `preview` command does not honor
+  // vite.preview.port — the preview port (4700) is set via --port/--strictPort
+  // CLI flags instead (see package.json docs:preview and the systemd unit).
   vite: {
     server: {
       port: 5700,
-      strictPort: true
-    },
-    preview: {
-      port: 4700,
       strictPort: true
     }
   },

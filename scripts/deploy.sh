@@ -34,9 +34,10 @@ fi
   git fetch origin main
   BEFORE="$(git rev-parse HEAD)"
   AFTER="$(git rev-parse origin/main)"
+  LIVE_DIR="$REPO_DIR/docs/.vitepress/dist"
 
-  if [ "$BEFORE" = "$AFTER" ]; then
-    echo "Already up to date at $BEFORE, nothing to do."
+  if [ "$BEFORE" = "$AFTER" ] && [ -d "$LIVE_DIR" ]; then
+    echo "Already up to date at $BEFORE and dist/ exists, nothing to do."
     exit 0
   fi
 
@@ -45,7 +46,6 @@ fi
 
   npm ci
 
-  LIVE_DIR="$REPO_DIR/docs/.vitepress/dist"
   NEW_DIR="$REPO_DIR/docs/.vitepress/dist_new"
   OLD_DIR="$REPO_DIR/docs/.vitepress/dist_old"
 
