@@ -2,12 +2,14 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "MSD700 ITB de Labo Documentation",
+  title: "MSD700 System",
   description: "Complete Documentation of ITB de Labo MSD700 Development Project",
-  // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ — must match the Alias path.
+  // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ - must match the Alias path.
   base: '/itbdelabo/docs/',
+  lastUpdated: true,
+  cleanUrls: true,
   // Note: vitepress 2.0.0-alpha.19's `preview` command does not honor
-  // vite.preview.port — the preview port (4700) is set via --port/--strictPort
+  // vite.preview.port - the preview port (4700) is set via --port/--strictPort
   // CLI flags instead (see package.json docs:preview and the systemd unit).
   vite: {
     server: {
@@ -19,21 +21,111 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Examples', link: '/markdown-examples' }
+      { text: 'Getting Started', link: '/getting-started/' },
+      { text: 'Setup', link: '/setup/' },
+      { text: 'Documentation', link: '/development/' }
     ],
 
-    sidebar: [
-      {
-        text: 'Examples',
-        items: [
-          { text: 'Markdown Examples', link: '/markdown-examples' },
-          { text: 'Runtime API Examples', link: '/api-examples' }
-        ]
-      }
-    ],
+    sidebar: {
+      '/getting-started/': [
+        {
+          text: 'Getting Started',
+          items: [
+            { text: 'Overview', link: '/getting-started/' },
+            { text: 'Introduction', link: '/getting-started/introduction' },
+            { text: 'Quick Start', link: '/getting-started/quick-start' },
+            { text: 'Features', link: '/getting-started/features' },
+          ]
+        },
+        {
+          text: 'Help',
+          items: [
+            { text: 'FAQ', link: '/getting-started/faq' },
+            { text: 'Troubleshooting', link: '/getting-started/troubleshooting' },
+          ]
+        }
+      ],
+      '/setup/': [
+        {
+          text: 'Setup',
+          items: [
+            { text: 'Overview', link: '/setup/' },
+            { text: 'Prerequisites', link: '/setup/prerequisites' },
+          ]
+        },
+        {
+          text: 'Installation',
+          items: [
+            { text: 'Server Setup', link: '/setup/server-setup' },
+            { text: 'Unit Setup', link: '/setup/unit-setup' },
+            { text: 'System Setup', link: '/setup/system-setup' },
+          ]
+        },
+        {
+          text: 'Operations',
+          items: [
+            { text: 'Maintenance', link: '/setup/maintenance' },
+            { text: 'Troubleshooting', link: '/setup/troubleshooting' },
+          ]
+        }
+      ],
+      '/development/': [
+        {
+          text: 'Documentation',
+          items: [
+            { text: 'Overview', link: '/development/' },
+            { text: 'Architecture', link: '/development/architecture' },
+            { text: 'Repository Structure', link: '/development/repository-structure' },
+          ]
+        },
+        {
+          text: 'Reference',
+          items: [
+            { text: 'API Reference', link: '/development/api-reference' },
+          ]
+        },
+        {
+          text: 'Contributing',
+          items: [
+            { text: 'Contributing Guide', link: '/development/contributing' },
+            { text: 'Changelog', link: '/development/changelog' },
+          ]
+        }
+      ],
+    },
+
+    outline: {
+      level: [2, 3],
+      label: 'On this page'
+    },
+
+    search: {
+      provider: 'local'
+    },
+
+    editLink: {
+      pattern: 'https://github.com/itbdelaboprogramming/msd700_documentation/edit/main/docs/:path',
+      text: 'Edit this page on GitHub'
+    },
+
+    lastUpdated: {
+      text: 'Last updated'
+    },
+
+    // footer: {
+    //   message: 'Released under the MIT License.',
+    //   copyright: 'Copyright © ITB de Labo Research Lab'
+    // },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/vuejs/vitepress' }
+      {
+        icon: {
+          svg: '<svg width="96" height="92" viewBox="0 0 96 92" fill="none" xmlns="http://www.w3.org/2000/svg"> <path d="M65 49.7164C80.0102 52.6676 90.5 59.4075 90.5 67.25C90.5 77.8124 71.4721 86.375 48 86.375C24.5279 86.375 5.5 77.8124 5.5 67.25C5.5 59.4075 15.9898 52.6676 31 49.7164M48 65.125V5.625L70.6003 19.5329C72.2488 20.5474 73.0731 21.0546 73.336 21.6936C73.5654 22.251 73.5472 22.8796 73.2861 23.4228C72.9868 24.0456 72.1346 24.5044 70.4303 25.4221L48 37.5" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        },
+        link: 'https://msd.nglobal.jp',
+        ariaLabel: 'MSD700 Web UI'
+      },
+      { icon: 'github', link: 'https://github.com/itbdelaboprogramming/msd700_documentation' }
     ]
   }
 })
