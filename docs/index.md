@@ -3,23 +3,31 @@
 layout: home
 
 hero:
-  name: "MSD700 ITB de Labo Documentation"
-  text: "Complete Documentation of ITB de Labo MSD700 Development Project"
-  tagline: My great project tagline
+  name: "MSD700 Documentation"
+  text: "by ITB de Labo Research Lab"
+  tagline: Documentation for using, deploying, and developing the MSD700 system.
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: Getting Started
+      link: /getting-started/
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: Setup Guide
+      link: /setup/
+    - theme: alt
+      text: Developer Docs
+      link: /development/
 
 features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: Getting Started
+    details: For end users - learn what MSD700 is and how to use it day-to-day.
+    link: /getting-started/
+    linkText: Read the user guide
+  - title: Setup
+    details: For technicians - install and configure the MSD700 Server and MSD700 Unit.
+    link: /setup/
+    linkText: Read the setup guide
+  - title: Documentation
+    details: For developers - system architecture, repository layout, and API reference.
+    link: /development/
+    linkText: Read the developer docs
 ---
-
