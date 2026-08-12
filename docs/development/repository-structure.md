@@ -1,10 +1,117 @@
+---
+search: false
+---
+
 # Repository Structure
 
 <RoleBadge role="developer" />
 
-## This repository (documentation site)
+MSD700 spans four repositories. This one (`msd700_documentation`) is just the docs site; the product
+itself lives in the other three, which are siblings on a Server checkout and submodules of
+`msd700_noetic` on a Unit checkout: same code, two different ways of assembling it.
 
-This repository (`msd700_documentation`) contains only the VitePress documentation site - it does not contain the MSD700 Server or Unit source code.
+## `ros-web-ui`: web-facing packages, backend, and frontend build context
+
+```
+ros-web-ui/
+├── docker-compose.yml          # Server-side services (see Architecture)
+├── docker-compose.robot.yml    # Robot-side container (used when this repo runs the robot half alone)
+├── Docker/                     # Dockerfile, HiveMQ config, coturn config, patches
+├── Certificates/                # Robot credential cache (device.json, token.cred), MQTT/SQL certs
+├── run_msd.sh                  # Launches roscore + ROS bringup + camera client + switch_mode in tmux
+├── scripts/
+│   ├── docker-manager.sh        # Runs the robot half in a container (Ubuntu 24/ARM64 hosts)
+│   ├── enroll.py                 # Talks to /enroll on the backend; prints the claim code
+│   ├── secrets.sh                # JWT keyring management (see Setup > Maintenance)
+│   └── ros_log_janitor.sh        # Caps ~/.ros/log growth
+├── source/                      # Catkin workspace source, this is what actually builds
+│   ├── msd700_webui_bringup/     # Top-level launch files (bringup_msd.launch, bringup_cloud.launch)
+│   ├── msd700_webui_control/     # switch_mode and related control nodes
+│   ├── msd700_webui_msg/         # Custom messages for the web-facing layer
+│   ├── msd700_webui_utils/
+│   ├── msd700_robot/              # msd700_robot, present here too (see below)
+│   └── dependencies/
+│       ├── ROS-dashboard-backend/  # backend_node, see API Reference
+│       ├── ROS-dashboard-next-ts/  # frontend build context (own git repo, gitignored here)
+│       ├── media-server/
+│       ├── signalling_server/
+│       ├── camera_client/
+│       ├── aws_mqtt/               # MQTT bridge launch files (local + cloud)
+│       ├── topic2string/           # Geometric topics ↔ MQTT string bridge
+│       ├── robot_pose_publisher/
+│       ├── mysql-folder-monitor/
+│       └── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
+└── logs/
+```
+
+`ros-web-ui` is the one repository used in **three different contexts**: built as the Server's
+backend/rosbridge (`docker-compose.yml`), sourced into a Unit's workspace for the robot's web-facing
+nodes (`msd700_noetic/src/ros-web-ui`), and run standalone as the robot half via
+`docker-compose.robot.yml` on a non-Jetson host (a dev laptop, or this documentation server, testing
+the simulator). Which one you get depends entirely on which compose file / script invokes it, not on
+anything in the repo itself.
+
+## `msd700_robot`: the ROS packages that make the robot move
+
+```
+msd700_robot/
+├── msd700_movement/
+│   ├── msd700_bringup/       # Launch files for primitive robot tasks
+│   ├── msd700_control/       # Sensor fusion (robot_localization)
+│   ├── msd700_firmware/      # Arduino firmware for the motor controller
+│   ├── msd700_msg/           # Robot-level messages
+│   └── msd700_navigations/   # SLAM, autonomous mapping, autonomous navigation, coverage
+├── msd700_simulation/        # Gazebo world files
+├── msd700_visual/            # RViz/Gazebo robot visuals
+├── msd700_hardware/          # Hardware drivers
+├── msd700_description/       # URDF
+└── ros_msd700_msgs/
+```
+
+Sourced by both `msd700_noetic` (as a submodule, `src/msd700_robot`) and copied into `ros-web-ui`'s
+own `source/msd700_robot`. The robot half of a build needs both this repo's navigation stack and
+`ros-web-ui`'s web-facing packages in the same catkin workspace.
+
+## `msd700_noetic`: Jetson/robot orchestration
+
+```
+msd700_noetic/
+├── setup.sh                  # One-time host setup (Docker, xhost, script permissions)
+├── scripts/docker-manager.sh # build / up / down / shell / logs / local-* commands
+├── docker/
+│   ├── Dockerfile             # osrf/ros:noetic-desktop-full based image
+│   ├── docker-compose.yml     # The single `msd700` robot container
+│   ├── .env.example           # Copied to .env on first run
+│   └── mosquitto/             # This unit's own local MQTT broker config
+└── src/                       # Populated via git submodules:
+    ├── msd700_robot/
+    ├── ros-web-ui/
+    └── ROS-dashboard-next-ts/
+```
+
+This is what a Unit actually runs. `src/` is bind-mounted into the container (not baked in), so
+editing a launch file or a Python node on the host takes effect on the next launch with no rebuild;
+only dependency or base-image changes need `docker-manager.sh build`. On a Server machine (like this
+documentation site's own host), `src/` is legitimately absent or empty unless you're specifically
+testing the robot half here. The Server runs `ros-web-ui`'s own `docker-compose.yml` instead, which
+needs none of this.
+
+## `ROS-dashboard-next-ts`: the operator dashboard
+
+Its own Next.js app, built twice from the same source with different baked-in URLs:
+
+- **Server build** (`frontend_prod`/`frontend_dev` in `ros-web-ui/docker-compose.yml`): talks to the
+  Server's own backend/rosbridge/media/signalling, over the public HTTPS/WSS paths Apache proxies.
+- **Unit build** (inside `msd700_noetic`'s container, or `ros-web-ui`'s `docker-compose.yml` when
+  running the robot half standalone): talks to that same unit's own local services, baked in via
+  `NEXT_PUBLIC_*` build args pointed at the unit's own IP.
+
+Because those URLs are compiled **into** the JS bundle rather than read at runtime, changing which
+server a build points at always requires a rebuild of the image, never just a restart.
+
+## This repository (`msd700_documentation`)
+
+Just the VitePress docs site, no product code.
 
 ```
 msd700_documentation/
@@ -23,7 +130,7 @@ msd700_documentation/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
-│   └── systemd/                  # systemd units for the preview server and webhook listener
+│   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
 └── package-lock.json
 ```
@@ -38,19 +145,21 @@ msd700_documentation/
    - fetches and hard-resets to `origin/main`
    - runs `npm ci`
    - builds the site into a fresh `docs/.vitepress/dist_new` directory
-   - atomically swaps it into `docs/.vitepress/dist` (a plain `mv`, so the running preview server picks up new content with no restart/downtime)
-4. `docs/.vitepress/dist` is served by a long-running `vitepress preview` process (systemd unit `msd700-docs-preview`, port `4700`).
-5. Apache proxies `/itbdelabo/docs` → `http://localhost:4700/itbdelabo/docs`, and `/services/msd700-webhook` → the webhook listener on `127.0.0.1:4701` (see `scripts/apache-snippet.conf`).
+   - atomically swaps it into `docs/.vitepress/dist` (a plain `mv`)
+4. In production, Apache serves `docs/.vitepress/dist` **directly off disk** via an `Alias` (see the
+   `000-default-le-ssl.conf` vhost); there is no running `vitepress preview` process in the request
+   path, and no systemd unit for one. `npm run docs:preview` is for local spot-checks only.
+5. `webhook-listener.mjs` itself runs under the `msd700-docs-webhook` systemd unit on `127.0.0.1:4701`.
 :::
 
-::: warning
-`vitepress preview` in this project's VitePress version (`2.0.0-alpha.19`) doesn't honor `vite.preview.port` from config - the port is set via `--port`/`--strictPort` CLI flags in `package.json`'s `docs:preview` script and in the systemd unit. Keep both in sync if the port ever changes.
-:::
-
-## MSD700 product codebase
-
-::: info TODO
-If the MSD700 Server and/or Unit firmware live in separate repositories, link them here and give a one-line summary of each.
+::: danger Never put `vitepress preview` behind Apache in production
+This used to be how the site was served (`ProxyPass` to a long-lived `vitepress preview` process on
+port 4700), and it silently broke after every deploy: `preview`'s static server (`sirv`, in
+production mode) scans the output directory once at startup and caches each file's name and size. A
+rebuild that changes hashed asset filenames left that cache pointing at files that no longer existed
+so every CSS/JS 404'd, and `index.html` was served truncated to its stale `Content-Length`. Serving
+`dist/` directly via Apache's own `Alias` (current setup, see below) has no such cache: Apache stats
+each file per request, so a `dist/` swap is picked up immediately with no restart.
 :::
 
 ## Related

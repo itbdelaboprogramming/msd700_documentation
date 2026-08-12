@@ -8,9 +8,11 @@ export default defineConfig({
   base: '/itbdelabo/docs/',
   lastUpdated: true,
   cleanUrls: true,
-  // Note: vitepress 2.0.0-alpha.19's `preview` command does not honor
-  // vite.preview.port - the preview port (4700) is set via --port/--strictPort
-  // CLI flags instead (see package.json docs:preview and the systemd unit).
+  // Note: `npm run docs:preview` is for local spot-checks only - it must never
+  // be used to serve production. Its static server (sirv) caches the file list
+  // and sizes at startup, so it serves a stale build after any rebuild. In
+  // production Apache serves docs/.vitepress/dist directly (scripts/apache-snippet.conf).
+  // That command also does not honor vite.preview.port, hence --port on the script.
   vite: {
     server: {
       port: 5700,

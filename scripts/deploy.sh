@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-# Pull latest main, build the VitePress site into a fresh directory, and
-# atomically swap it into docs/.vitepress/dist — the path the persistent
-# `vitepress preview` process (systemd: msd700-docs-preview, port 4700,
-# proxied by Apache at /itbdelabo/docs) serves from. The swap is a plain
-# `mv` (rename), so the running process picks up new content on the next
-# request with no restart and no downtime window.
+# Pull latest main, build the VitePress site into a fresh directory, and swap
+# it into docs/.vitepress/dist, the path Apache serves at /itbdelabo/docs via
+# a plain Alias (see scripts/apache-snippet.conf). Building into dist_new and
+# renaming keeps a half-built tree from ever being served.
+#
+# Nothing needs restarting after a deploy: Apache stats each file per request.
+# This used to sit behind a long-lived `vitepress preview` process, which did
+# NOT work: sirv in production mode caches the file list and sizes at startup,
+# so post-deploy it 404'd every newly hashed asset and truncated index.html.
+# Do not reintroduce a persistent preview server here.
 # Triggered by scripts/webhook-listener.mjs on push to main.
 set -euo pipefail
 
@@ -59,6 +63,6 @@ fi
   mv "$NEW_DIR" "$LIVE_DIR"
   rm -rf "$OLD_DIR"
 
-  echo "Deployed $AFTER, live at $LIVE_DIR (served by msd700-docs-preview, no restart needed)"
+  echo "Deployed $AFTER, live at $LIVE_DIR (served directly by Apache, no restart needed)"
   echo "=== $(date -Is) deploy done ==="
 } >>"$LOG_FILE" 2>&1

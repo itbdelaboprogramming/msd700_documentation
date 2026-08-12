@@ -1,3 +1,7 @@
+---
+search: false
+---
+
 # Documentation
 
 <RoleBadge role="developer" />

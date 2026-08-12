@@ -4,20 +4,31 @@
 
 ## What is MSD700?
 
-::: info TODO
-Replace this paragraph with a short, plain-language description of what MSD700 is, what problem it solves, and who uses it (e.g. lab staff, students, operators).
-:::
+MSD700 is an autonomous mobile robot platform built by **ITB de Labo Research Lab**. Its original
+purpose is mapping and navigating **featureless indoor spaces** (tunnels, corridors, and similar
+areas with few visual landmarks) on its own: the robot builds a map of an area by driving through
+it (SLAM), and afterwards uses that map to localize itself and move from point to point without
+being driven by hand.
 
-MSD700 is a system developed by **ITB de Labo Research Lab**, made up of two main parts:
+You interact with all of that through a **web dashboard**: you don't need to know ROS, Linux, or
+anything about the robot's internals to use it day-to-day. This section covers that dashboard.
 
-- **MSD700 Server** - the central service that collects and manages data.
-- **MSD700 Unit** - the hardware device(s) deployed in the field that report to the server.
+The system has two halves:
 
-If you're installing or configuring either of these, see the [Setup](/setup/) guide instead - this section only covers day-to-day use.
+- **MSD700 Server**: the cloud service at [msd.nglobal.jp](https://msd.nglobal.jp) that hosts the
+  web dashboard, keeps track of accounts, maps, routes and saved playlists, and relays commands to
+  robots.
+- **MSD700 Unit**: the physical robot itself. There can be more than one; each one is identified by
+  a unique ID and shows up as a separate entry in the dashboard once your account has access to it.
+
+If you're installing or configuring either of these, see the [Setup](/setup/) guide instead. This
+section only covers using the dashboard once someone else has already set everything up.
 
 ## Who this section is for
 
-The **Getting Started** section is written for **end users**: people who interact with MSD700 once it's already installed and configured. You do not need any technical or programming background to follow these pages.
+The **Getting Started** section is written for **end users**: people who log into the dashboard to
+drive, monitor, or map with a robot that a technician has already installed and connected. You do
+not need any technical or programming background to follow these pages.
 
 | If you want to... | Go to... |
 | --- | --- |
