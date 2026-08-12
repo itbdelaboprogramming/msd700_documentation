@@ -19,6 +19,23 @@ export default defineConfig({
       strictPort: true
     }
   },
+  markdown: {
+    config(md) {
+      // Turn ```mermaid fences into <Mermaid code="..." /> so they render as diagrams instead
+      // of as syntax-highlighted text. Base64 because the diagram source is full of quotes,
+      // newlines and angle brackets that Vue would otherwise try to parse once the fence is an
+      // element attribute. See theme/components/Mermaid.vue for the other half.
+      const defaultFence = md.renderer.rules.fence!
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx]
+        if (token.info.trim().toLowerCase() === 'mermaid') {
+          const encoded = Buffer.from(token.content, 'utf-8').toString('base64')
+          return `<Mermaid code="${encoded}" />`
+        }
+        return defaultFence(tokens, idx, options, env, self)
+      }
+    }
+  },
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
@@ -37,6 +54,7 @@ export default defineConfig({
             { text: 'Introduction', link: '/getting-started/introduction' },
             { text: 'Quick Start', link: '/getting-started/quick-start' },
             { text: 'Features', link: '/getting-started/features' },
+            { text: 'How the Robot Behaves', link: '/getting-started/behavior' },
           ]
         },
         {
@@ -64,6 +82,12 @@ export default defineConfig({
           ]
         },
         {
+          text: 'Reference',
+          items: [
+            { text: 'Docker Reference', link: '/setup/docker-reference' },
+          ]
+        },
+        {
           text: 'Operations',
           items: [
             { text: 'Maintenance', link: '/setup/maintenance' },
@@ -77,6 +101,7 @@ export default defineConfig({
           items: [
             { text: 'Overview', link: '/development/' },
             { text: 'Architecture', link: '/development/architecture' },
+            { text: 'State and Behavior', link: '/development/state-and-behavior' },
             { text: 'Repository Structure', link: '/development/repository-structure' },
           ]
         },
@@ -84,6 +109,7 @@ export default defineConfig({
           text: 'Reference',
           items: [
             { text: 'API Reference', link: '/development/api-reference' },
+            { text: 'Message Contracts', link: '/development/message-contracts' },
           ]
         },
         {

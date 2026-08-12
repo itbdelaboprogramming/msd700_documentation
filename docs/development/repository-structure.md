@@ -117,11 +117,11 @@ Just the VitePress docs site, no product code.
 msd700_documentation/
 ├── docs/                        # VitePress site source
 │   ├── .vitepress/
-│   │   ├── config.mts           # site config: nav, sidebar, search, etc.
+│   │   ├── config.mts           # site config: nav, sidebar, search, markdown hooks
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, etc.
+│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
 │   ├── index.md                 # homepage
 │   ├── getting-started/         # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -129,11 +129,40 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
+│   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
 └── package-lock.json
 ```
+
+### Diagrams
+
+Diagrams are authored as ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
+browser. Two pieces make that work:
+
+| Piece | Job |
+| --- | --- |
+| `docs/.vitepress/config.mts`, `markdown.config` | Rewrites every `mermaid` fence into `<Mermaid code="<base64>" />`. Base64 because the diagram source is full of quotes, newlines and angle brackets that Vue would parse as template syntax once the fence became an element attribute |
+| `docs/.vitepress/theme/components/Mermaid.vue` | Decodes it and renders on mount. Client-side only: mermaid needs a DOM to measure text before it can lay a graph out, and the dynamic `import('mermaid')` keeps the layout engine out of every page with no diagram on it |
+
+The component follows the reader's light or dark theme and re-renders on a theme flip, because
+mermaid bakes its palette into the SVG at render time. If a diagram fails to parse, the raw source is
+shown instead of an empty gap.
+
+```bash
+npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+```
+
+::: warning A broken diagram does not fail the build
+VitePress never parses the diagram source; it only passes it through. A syntax error surfaces as a
+red block of source on the published page. Run the checker after editing diagrams.
+:::
+
+::: info Keep `<br/>` out of state-diagram transition labels
+It works in `flowchart` node labels and in sequence-diagram notes, which is where this site uses it.
+State-diagram edge labels are plain text, so a `<br/>` there renders literally.
+:::
 
 ### How the docs site is deployed
 

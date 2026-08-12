@@ -1,10 +1,13 @@
 {
   "devDependencies": {
+    "jsdom": "^29.1.1",
+    "mermaid": "^11.16.1",
     "vitepress": "^2.0.0-alpha.19"
   },
   "scripts": {
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs --port 4700 --strictPort"
+    "docs:preview": "vitepress preview docs --port 4700 --strictPort",
+    "docs:check-diagrams": "node scripts/check-mermaid.mjs docs"
   }
 }
