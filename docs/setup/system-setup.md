@@ -8,25 +8,68 @@ unit enrolled successfully, most of this is verification rather than new configu
 
 ## Overview
 
-A Unit and the Server talk over two independent channels, and both need to be healthy:
+A Unit and the Server talk over channels that fail **independently**. Telling them apart is the
+whole skill here.
 
-- **MQTT (HiveMQ)**, TLS, over the internet: carries commands and status between the robot and the
-  backend. This is what makes a unit "online" in the admin console.
-- **rosbridge**, over the local network or a tunnel: carries the live map, robot pose, and video
-  signalling data an operator's browser needs while actively driving.
+```mermaid
+flowchart LR
+  subgraph U["Unit"]
+    R["robot"]
+  end
+  subgraph S["Server"]
+    MQ["HiveMQ"]
+    BE["backend_node"]
+    UC["rosweb_unit_ULID"]
+    RB["rosbridge"]
+    SIG["signalling"]
+  end
+  subgraph B["Operator browser"]
+    UI["dashboard"]
+  end
 
-A unit can be enrolled and "known" to the Server via MQTT while still being unreachable for live
-operation if rosbridge or the video signalling path isn't open; those are different failure modes,
-worth telling apart when something looks half-broken.
+  R ==>|"1. MQTT TLS 8883"| MQ
+  MQ --> BE
+  MQ --> UC --> RB
+  UI -->|"2. WSS /services/rosbridge"| RB
+  UI -->|"3. WSS /services/signalling"| SIG
+  UI -.->|"4. WebRTC media, direct or via coturn"| R
+```
+
+| # | Channel | Carries | Broken looks like |
+| --- | --- | --- | --- |
+| 1 | MQTT | commands, feedback, and every stream, as strings | Unit shows **offline**. Nothing works |
+| 2 | rosbridge | the browser's subscription to cloud-side typed topics | Unit is **online**, commands work, map canvas blank |
+| 3 | signalling | WebRTC peer negotiation | No video, everything else fine |
+| 4 | WebRTC media | the camera image itself | Video works on the LAN, never off it. That is the TURN relay |
+
+There is a fifth failure that looks like number 2: the unit is online and rosbridge is connected,
+but **nobody has opened that unit recently enough for its per-unit container to still be running**,
+so the cloud-side relays that rosbridge subscribes to do not exist. Same blank canvas, different
+cause. Check with `docker ps --filter name=rosweb_unit_`.
 
 ## 1. Confirm the network path
 
-- The Unit needs outbound access to the Server's MQTT port (`8883` production, `8884` dev) and, if
-  it's meant to be driven remotely rather than only from its own local dashboard, to the Server's
-  rosbridge/media/signalling ports as well.
-- The Server needs its Apache reverse proxy (see [Server Setup](/setup/server-setup)) actually
-  fronting those services with valid TLS: a self-signed or expired certificate will make the
-  dashboard's WebSocket connections fail silently in most browsers rather than showing a clear error.
+| From | To | Port | Required for |
+| --- | --- | --- | --- |
+| Unit | Server | `8883` TCP (prod) or `8884` TCP (dev) | Everything. This is the only mandatory one |
+| Operator browser | Server | `443` TCP | Dashboard, API, rosbridge, signalling |
+| Operator browser | Server | `3478` UDP+TCP and the relay range | WebRTC video when there is no direct path |
+
+```bash
+# From the Unit: can it reach the broker at all?
+nc -zv msd.nglobal.jp 8883
+
+# And is the certificate the broker presents actually valid?
+openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/null 2>/dev/null \
+  | openssl x509 -noout -subject -dates
+```
+
+::: warning An expired certificate fails silently in the browser
+The dashboard's WebSocket connections just never open. Most browsers show nothing more useful than a
+generic network error in the console, so check the certificate before chasing anything else. Note
+that the MQTT broker's certificate is a **separate artifact** from Apache's, rebuilt from the same
+PEM files: see [Maintenance](/setup/maintenance#certificates).
+:::
 
 ::: info Choosing production vs. dev
 `--dev` on the unit side (`./scripts/docker-manager.sh up --dev`) points enrolment and the MQTT
@@ -42,25 +85,46 @@ In the admin console, under **Registered Units**, find the unit you approved in
 [Unit Setup](/setup/unit-setup). Note its ULID; you'll want it for the next check.
 
 ```bash
-# On the Server, inside a container with the ROS master reachable:
-rostopic list | grep unit_<ULID>
+# On the Server. The per-unit container has to be RUNNING for these topics to exist,
+# so open the unit in the dashboard first, or start it by hand.
+docker ps --filter "name=rosweb_unit_"
+docker exec -it ros_web_ui_v2_nakayama_ros bash -lc \
+  'source /home/itbdelabo/ros-web-ui-ws/devel/setup.bash && rostopic list | grep unit_<ULID>'
 ```
 
-You should see topics like `/unit_<ULID>/system_command` and `/unit_<ULID>/system_feedback`. Seeing
-nothing here, with no error anywhere else, is the single most common "it looks broken but isn't
-telling you why" symptom in this system; see [Troubleshooting](/setup/troubleshooting).
+You should see topics like `/unit_<ULID>/system_command`, `/unit_<ULID>/system_feedback` and
+`/unit_<ULID>/server/robot_pose`. Seeing nothing here, with no error anywhere else, is the single
+most common "it looks broken but is not telling you why" symptom in this system.
+
+You can also watch the broker directly, which separates "the robot is not publishing" from "the
+cloud relays are not running":
+
+```bash
+mosquitto_sub -h msd.nglobal.jp -p 8883 --capath /etc/ssl/certs \
+  -t '/unit_<ULID>/#' -v | head -20
+```
 
 ## 3. End-to-end verification checklist
 
-- [ ] Server is running (`docker compose ps` shows every service healthy: [Server Setup, step 6](/setup/server-setup#6-verify))
-- [ ] Unit is running and shows its bringup nodes (`rosnode list` inside the unit's container: [Unit Setup, step 5](/setup/unit-setup#5-verify))
-- [ ] Unit shows **online** in the admin console's Registered Units list
-- [ ] Opening the unit from a test dashboard account shows a live camera feed and an up-to-date robot position on the map
-- [ ] Sending a small manual movement command (W-A-S-D) actually moves the robot, and the dashboard's position updates to match
-- [ ] Emergency Stop, tested once, actually stops the robot immediately
+Work down this list. Each item rules out one of the channels in the overview diagram.
 
-Don't skip the last two: a unit can look fully "connected" (online badge, video feed working) while
-the command path is broken in one direction, which only shows up once something is asked to move.
+- [ ] Server healthy: `docker compose --profile server_prod ps` shows every service `Up` or `healthy`
+- [ ] Unit's ROS graph healthy: `rosnode list` inside the unit's container shows the bringup nodes
+- [ ] Unit shows **online** in the admin console's Registered Units list (channel 1, MQTT)
+- [ ] Its per-unit container is running: `docker ps --filter name=rosweb_unit_`
+- [ ] Opening the unit shows an up-to-date robot position and a live map (channel 2, rosbridge)
+- [ ] The live camera feed appears **from outside the unit's LAN** (channels 3 and 4)
+- [ ] A small W-A-S-D movement actually moves the robot, and the dashboard position follows
+- [ ] A click-to-navigate goal is accepted and the robot drives to it
+- [ ] Emergency Stop, tested once, stops the robot immediately
+- [ ] Closing the browser mid-operation pauses the robot within about 10 seconds
+
+::: warning Do not skip the last four
+A unit can look fully connected (online badge, video working) while the command path is broken in
+one direction, and that only shows up once something is asked to move. The disconnect test matters
+just as much: it is the safety behavior, and the only way to know it works is to trigger it
+deliberately once, on a robot with clear space around it.
+:::
 
 ## 4. Handover
 

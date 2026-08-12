@@ -16,6 +16,7 @@ If you're a day-to-day user, see [Getting Started](/getting-started/) instead. I
   <LinkCard icon="🖥️" title="Server Setup" details="Install and configure the MSD700 Server." link="/setup/server-setup" />
   <LinkCard icon="📡" title="Unit Setup" details="Install and configure the MSD700 Unit hardware." link="/setup/unit-setup" />
   <LinkCard icon="🔗" title="System Setup" details="Connect Server and Unit(s) into one working system." link="/setup/system-setup" />
+  <LinkCard icon="🐳" title="Docker Reference" details="Every command, flag, and compose construct used, and why." link="/setup/docker-reference" />
   <LinkCard icon="🧰" title="Maintenance" details="Routine maintenance, backups, and updates." link="/setup/maintenance" />
   <LinkCard icon="🛠️" title="Troubleshooting" details="Diagnose and fix installation/deployment issues." link="/setup/troubleshooting" />
 </LinkCards>
@@ -32,6 +33,10 @@ useful until it's been *enrolled* against a running Server, so most deployments 
 4. [System Setup](/setup/system-setup): confirm the two are actually talking, end to end
 
 After that, keep [Maintenance](/setup/maintenance) and [Troubleshooting](/setup/troubleshooting) bookmarked: you'll come back to them, not just read them once.
+
+[Docker Reference](/setup/docker-reference) is not a step. It is the companion to steps 2 and 3:
+the setup pages tell you what to run, and that page explains what each flag and compose construct
+is doing, so keep it open in a second tab rather than reading it start to finish.
 
 ::: info Already have a running Server?
 If you're only adding a new Unit to an existing MSD700 deployment (the common case: one Server,
