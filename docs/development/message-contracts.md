@@ -676,6 +676,15 @@ The bootstrap key does **not** guard these endpoints. It ships inside every robo
 `device_secret` is minted at **handover**, never at approval. A database dump taken between an admin clicking Register and the robot next booting contains nothing usable, and only its bcrypt hash is ever stored.
 :::
 
+::: warning `device.json`, `enroll_state.json` and `token.cred` are world-writable on disk
+`enroll.py`'s own docstring says these three files are written `0600`. The actual `write_private()`
+helper sets `0o666`: any local account on the robot's host or in its container can read **and
+overwrite** `device_secret` and the enrolment nonce, not just read them. Worth tightening to a
+group-restricted mode, the pattern `scripts/secrets.sh` already uses for the cloud's JWT keyring,
+or documenting the current mode as an intentional tradeoff if it turns out to be working around a
+cross-UID container issue.
+:::
+
 | Guard | Value |
 | --- | --- |
 | `ENROLL_RATE_MAX` | 30 requests per IP per minute |
