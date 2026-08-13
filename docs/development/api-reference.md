@@ -270,9 +270,20 @@ homebase up from `maps_data` and attaches it to the robot command automatically.
 
 ::: warning `stop` is the one command that does not wait for the robot
 Saving a map takes longer than the 30 s feedback timeout, so this returns straight away and the
-dashboard polls for the outcome. `start` and `pause` use the normal wait-for-feedback path. If
-`map_name` is empty, a `YYYY-MM-DD_HH-MM-SS` display name is generated; the **filename** is always a
-fresh ULID.
+dashboard opens an SSE stream for the outcome. `start` and `pause` use the normal wait-for-feedback
+path. If `map_name` is empty, a `YYYY-MM-DD_HH-MM-SS` display name is generated; the **filename** is
+always a fresh ULID. `homebase_*`, when present, lands in the same request that creates the map row
+— there is no separate follow-up call.
+:::
+
+::: info A map is written to two media servers, one of them optional
+The robot stores the finished map on its own media server (required) and the cloud's (best effort)
+in the same `stop`. `mapping start` refuses outright if the required target is not reachable, but
+only warns if the optional one is not — the map is saved on the robot regardless, and the cloud copy
+follows through sync. See [Message Contracts § mapping](/development/message-contracts#mapping) for
+the exact `outcome` values the progress stream reports, and
+[State and Behavior § Map storage](/development/state-and-behavior#map-storage) for the state
+machine behind it.
 :::
 
 ### Area coverage

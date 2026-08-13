@@ -207,19 +207,66 @@ watchdog pause.
     "map_ulid": "01JZ8QK2H0000000000000MAP",
     "created_by": "01JZ7YV5CQUSER00000000000",
     "default_save_path": "/home/ubuntu/ros_maps",
-    "unit_id": "01JZ8P9WZ0UNIT00000000000"
+    "unit_id": "01JZ8P9WZ0UNIT00000000000",
+    "homebase_x": 1.2, "homebase_y": 0.5, "homebase_z": 0.0,
+    "homebase_ox": 0.0, "homebase_oy": 0.0, "homebase_oz": 0.0, "homebase_ow": 1.0
   }
 }
 ```
 
 `map_name` is the on-disk filename, `display_map_name` is what the operator typed (or an
 auto-generated `YYYY-MM-DD_HH-MM-SS` if they typed nothing). `created_by` is attribution, never
-ownership: a map belongs to the unit it was recorded on.
+ownership: a map belongs to the unit it was recorded on. `homebase_*` (all optional) rides along so
+it lands in the same row that gets created — there is no separate follow-up call any more; a browser
+that PUT it afterwards, in cloud mode, was writing to a row the media server it uploaded to had not
+created yet, and lost the pose to a silent `404`.
+
+`default_save_path` is accepted for one more release as a fallback only. The robot's own
+`MAPS_FOLDER` environment variable wins whenever it is set, because `default_save_path` names a
+directory on whichever machine's `.env` the command happened to come from — not necessarily this
+robot's own filesystem.
 
 ::: info `mapping stop` does not use the normal request/response pattern
 Saving a map takes longer than the 30 s feedback timeout. The endpoint publishes the command and
-returns `200` immediately with `{ request_id, map_ulid }`, and the dashboard then polls
-`GET /api/mapping/progress/:request_id` for the outcome.
+returns `200` immediately with `{ request_id, map_ulid }`, and the dashboard opens an
+`EventSource` on `GET /api/mapping/progress/:request_id` for the outcome (see below).
+:::
+
+#### The progress stream (`system_feedback`, `header: "mapping_progress"`)
+
+Every stage of `stop` — saving the map files, uploading to each media server, switching back to
+idle — publishes one of these on `/system_feedback`, which `backend_node` forwards verbatim over the
+SSE stream above. Exactly one event per run carries `terminal: true`, and only that one carries
+`outcome`:
+
+```json
+{
+  "header": "mapping_progress",
+  "command": "stop",
+  "data": {
+    "status": true,
+    "progress": 100,
+    "stage": "completed",
+    "message": "Saved on the robot and the server.",
+    "terminal": true,
+    "outcome": "completed"
+  },
+  "metadata": { "timestamp": 1734000000.0, "request_id": "..." }
+}
+```
+
+| `outcome` | When | Note |
+| --- | --- | --- |
+| `completed` | Stored on the Unit's media server **and** the cloud's | |
+| `cloud_pending` | Stored on the Unit only | Not an error. `sync_agent` carries the rest on its next round. |
+| `failed` | Not stored anywhere | The mapping session is left open; see [State and Behavior § Map storage](/development/state-and-behavior#map-storage) |
+
+::: warning Read `outcome`, not the progress number
+Before this contract existed, a failed save could emit **both** a `-1` (error) event and a later
+`100` (`status: false`) event for the same run, and neither browser client read `status` — both
+inferred success purely from `progress >= 100`. A client built against an older robot image that
+still sends no `outcome` should fall back to `progress >= 100 && status !== false`, which is strictly
+safer than the old `progress >= 100` alone.
 :::
 
 ### `boustrophedon` (area coverage)

@@ -39,7 +39,6 @@ ros-web-ui/
 │       ├── aws_mqtt/               # MQTT bridge launch files (local + cloud)
 │       ├── topic2string/           # Geometric topics ↔ MQTT string bridge
 │       ├── robot_pose_publisher/
-│       ├── mysql-folder-monitor/
 │       └── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
 └── logs/
 ```

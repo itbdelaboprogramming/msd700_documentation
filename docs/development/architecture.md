@@ -41,7 +41,7 @@ maps sync back to the cloud when the link returns.
 | **rosbridge** | WebSocket bridge from ROS topics and services to the browser: live map, robot pose, laser scan, plans. | part of the `nakayama_cloud` / `nakayama_cloud_dev` container (`rosbridge_suite`) |
 | **HiveMQ (MQTT)** | The only channel between a Unit and the cloud. TLS, one broker for prod (`8883`), one for dev (`8884`). | `hivemq` / `hivemq_dev` containers |
 | **MySQL** | Accounts, profiles, units, map and route metadata, backup manifests, sync journals. | `db` / `db_dev` containers |
-| **media-server** | Serves map images (`.pgm`, `.yaml`, thumbnails) and receives uploaded map data. | `ros-web-ui/source/dependencies/media-server` |
+| **media-server** | Serves map images (`.pgm`, `.yaml`, thumbnails) and receives uploaded map data. A Unit runs its own; a finished map is uploaded to **both** the Unit's copy (required) and the cloud's (best effort) in the same operation — see [State and Behavior § Map storage](/development/state-and-behavior#map-storage). | `ros-web-ui/source/dependencies/media-server` |
 | **signalling_server** | WebRTC signalling for the live camera feed. Peer negotiation only; the video itself is peer to peer. | `ros-web-ui/source/dependencies/signalling_server` |
 | **coturn** | TURN/STUN relay for WebRTC when no direct peer path exists. **Production only**, `network_mode: host`. | `docker-compose.yml` service `coturn` |
 | **Apache2** | TLS termination and reverse proxy. Maps every service onto a clean `/services/...` path so no browser code ever names a port. | host, not a container |
@@ -268,6 +268,9 @@ flowchart TB
 - **Unit-local tokens** come from that unit's own `backend_local`. A cloud-signed token is rejected
   by unit-local services on purpose. This is why `camera_client` asks `/local/robot-token` for a
   credential the unit's own signalling server will accept, rather than reusing `token.cred`.
+  `system_command.py` follows the same rule for its two media-server uploads: a fresh, per-target
+  credential minted on every attempt, never cached, since caching one across the 12-hour token
+  lifetime is what let a robot that had been up for more than a day fail every upload with a `401`.
 
 ## Local and cloud, per unit
 

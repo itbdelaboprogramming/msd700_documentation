@@ -47,7 +47,9 @@ stateDiagram-v2
   idle --> mapping_active: mapping start
   mapping_active --> mapping_paused: mapping pause
   mapping_paused --> mapping_active: mapping start
-  mapping_active --> idle: mapping stop (map saved)
+  mapping_active --> idle: mapping stop (map stored)
+  mapping_active --> mapping_stop_failed: mapping stop (storage failed)
+  mapping_stop_failed --> idle: mapping stop, retried (map stored)
   mapping_active --> idle: mapping discard
 
   idle --> navigation_ready: navigation init
@@ -81,6 +83,7 @@ stays where it is.
 | `manual` | idle | Operator is driving with W-A-S-D. |
 | `mapping_active` | mapping | SLAM plus `explore_lite` running. |
 | `mapping_paused` | mapping | Operator paused the mapping run. |
+| `mapping_stop_failed` | mapping | `stop` was requested but the map is not safely stored yet. SLAM is deliberately **not** torn down; see [Map storage](#map-storage). |
 | `navigation_ready` | navigation | Map loaded, `move_base` up, no goal. |
 | `navigation_point_published` | navigation | A goal is in flight. |
 | `boustrophedon_initializing` | navigation | Coverage path being computed. **Not** idle and **not** stuck. |
@@ -420,6 +423,63 @@ The area list is published on a latched topic. Cancelling a run does not clear i
 coverage node to start picks the old areas back up and the robot "continues an operation that was
 cancelled". Clearing the latch is part of cancelling, not part of starting.
 :::
+
+## Map storage
+
+A finished map is written to **two** media servers — the Unit's own, and the cloud's — in the same
+`mapping stop` request, using the credential each one actually trusts (see
+[Architecture § Trust domains](/development/architecture#trust-domains)). The two targets do not
+carry equal weight:
+
+| Target | Required? | A failure means |
+| --- | --- | --- |
+| The Unit's own media server | Yes | The robot cannot navigate this map at all. Treated as the save failing. |
+| The cloud's media server | No | Not yet on the cloud. `sync_agent` carries the row and the files up on its next round; no separate retry queue exists. |
+
+Both uploads carry the **same map ULID**, minted once by `backend_node` before the command is sent.
+That is what makes retrying, or writing to both targets, safe rather than risky: `sync_engine`'s
+`applyRow` is an upsert keyed by `id`, so two independent writes for the same ULID converge on one
+row instead of racing into a duplicate.
+
+```mermaid
+stateDiagram-v2
+  [*] --> PreflightChecking: mapping start
+  PreflightChecking --> Refused: required target unreachable, or MAPS_FOLDER unwritable
+  PreflightChecking --> mapping_active: OK (cloud-only problems become a warning, not a refusal)
+  mapping_active --> Saving: mapping stop
+  Saving --> Stored: required upload OK
+  Stored --> [*]: outcome = completed (both targets) or cloud_pending (Unit only)
+  Saving --> mapping_stop_failed: required upload failed
+  mapping_stop_failed --> Saving: mapping stop, retried
+```
+
+::: info Preflight moves the failure earlier, it does not remove it
+`check_map_storage_ready()` runs on `mapping start`: it probes `MAPS_FOLDER` is writable, that a
+credential can be minted for each target, and each target's `/health`. A problem with the **required**
+target refuses the start outright — mapping is 20–30 minutes of unrecoverable work if it fails at
+the end, since SLAM keeps no history to resume from. A problem with the **optional** cloud target
+does not block anything; it is echoed back in the `start` response message so the operator knows the
+map will land on the robot only, ahead of time rather than as a surprise at the end.
+:::
+
+::: warning A failed save does not tear the session down
+Earlier behaviour called `switch_mode('idle')` and reset the map regardless of whether storage
+succeeded, which discarded the whole run over a problem as mundane as an expired token or a
+restarted container. Now a failure on the **required** target leaves `mapping_active`'s SLAM state
+alone and reports `mapping_stop_failed`: the operator fixes the cause and presses Save again on the
+same run. Only a **stored** map (`completed` or `cloud_pending`) tears down mapping mode.
+:::
+
+The terminal event on `/system_feedback` (`header: "mapping_progress"`) carries an `outcome` field
+that names the result instead of leaving the dashboard to infer it from the progress number — see
+[Message Contracts § mapping](/development/message-contracts#mapping) for the exact payload. Exactly
+one terminal event is sent per run; `terminal: true` marks it.
+
+| `outcome` | Meaning | Should the operator worry? |
+| --- | --- | --- |
+| `completed` | Stored on the Unit and the cloud | No |
+| `cloud_pending` | Stored on the Unit; the cloud copy will follow via sync | No — this is normal for a robot working offline |
+| `failed` | Not stored anywhere | Yes |
 
 ## Session recovery
 
