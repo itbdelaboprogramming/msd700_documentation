@@ -110,6 +110,9 @@ export default defineConfig({
           items: [
             { text: 'API Reference', link: '/development/api-reference' },
             { text: 'Message Contracts', link: '/development/message-contracts' },
+            { text: 'Database Schema', link: '/development/database-schema' },
+            { text: 'Camera Streaming', link: '/development/camera-streaming' },
+            { text: 'Data Sync', link: '/development/data-sync' },
           ]
         },
         {

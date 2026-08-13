@@ -36,13 +36,13 @@ maps sync back to the cloud when the link returns.
 | Component | Responsibility | Where it lives |
 | --- | --- | --- |
 | **Frontend** (`ROS-dashboard-next-ts`) | Operator dashboard (Next.js). Built twice from one codebase: `frontend_prod` / `frontend_dev` on the Server, and a `frontend_local` build baked into every Unit. | `ros-web-ui/source/dependencies/ROS-dashboard-next-ts` |
-| **backend_node** (`ROS-dashboard-backend`) | Express API: auth, CRUD for maps/routes/areas/playlists, unit control endpoints, admin console API, enrolment, cross-device sync. Also an MQTT client in its own right, and the host of `unit_manager.js`. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
+| **backend_node** (`ROS-dashboard-backend`) | Express API: auth, CRUD for maps/routes/areas/playlists, unit control endpoints, admin console API, enrolment, [cross-device sync](/development/data-sync). Also an MQTT client in its own right, and the host of `unit_manager.js`. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
 | **unit_manager.js** | Starts and stops one Docker container per unit on demand, over the mounted Docker socket. Reaps idle ones. | inside `backend_node`'s process |
 | **rosbridge** | WebSocket bridge from ROS topics and services to the browser: live map, robot pose, laser scan, plans. | part of the `nakayama_cloud` / `nakayama_cloud_dev` container (`rosbridge_suite`) |
 | **HiveMQ (MQTT)** | The only channel between a Unit and the cloud. TLS, one broker for prod (`8883`), one for dev (`8884`). | `hivemq` / `hivemq_dev` containers |
 | **MySQL** | Accounts, profiles, units, map and route metadata, backup manifests, sync journals. | `db` / `db_dev` containers |
 | **media-server** | Serves map images (`.pgm`, `.yaml`, thumbnails) and receives uploaded map data. A Unit runs its own; a finished map is uploaded to **both** the Unit's copy (required) and the cloud's (best effort) in the same operation — see [State and Behavior § Map storage](/development/state-and-behavior#map-storage). | `ros-web-ui/source/dependencies/media-server` |
-| **signalling_server** | WebRTC signalling for the live camera feed. Peer negotiation only; the video itself is peer to peer. | `ros-web-ui/source/dependencies/signalling_server` |
+| **signalling_server** | WebRTC signalling for the live camera feed (see [Camera Streaming](/development/camera-streaming)). Peer negotiation only; the video itself is peer to peer. | `ros-web-ui/source/dependencies/signalling_server` |
 | **coturn** | TURN/STUN relay for WebRTC when no direct peer path exists. **Production only**, `network_mode: host`. | `docker-compose.yml` service `coturn` |
 | **Apache2** | TLS termination and reverse proxy. Maps every service onto a clean `/services/...` path so no browser code ever names a port. | host, not a container |
 | **ROS packages** | `msd700_robot` (navigation, SLAM, coverage, drivers) plus `ros-web-ui`'s `msd700_webui_*` packages (MQTT bridge, `topic2string`, `system_command`, `operation_supervisor`, camera client). | `msd700_robot/`, `ros-web-ui/source/` |
@@ -272,6 +272,31 @@ flowchart TB
   credential minted on every attempt, never cached, since caching one across the 12-hour token
   lifetime is what let a robot that had been up for more than a day fail every upload with a `401`.
 
+::: warning A robot token's claims are not read consistently everywhere it's accepted
+`media-server` authorizes a robot's map upload by verifying the token's signature, but the handler
+reads `decoded.user_id`, a claim only operator tokens carry. A robot token's identity lives in
+`sub` / `userId` / `unit_id` instead, so `req.user_id` comes out `undefined` on that path. The upload
+still succeeds because attribution (`created_by`) is taken from the request body, not from the token
+(see [Database Schema § Attribution is never authorization](/development/database-schema#foreign-keys-in-full)),
+but it means a robot token is, on this specific endpoint, verified rather than actually consulted.
+:::
+
+::: warning Only the `_dev` profile has actually migrated to the keyring
+Production's `media-server` and `signalling_server` still read `JWT_SECRET` from their own
+`.env` files rather than the shared keyring, and those `.env` files (plus a leftover
+`JWT_SECRET_OLD` and database passwords) are still committed to the repository. The keyring
+described above is real and correct for `_dev`; treat any claim that production has moved off a
+single, long-known literal secret as unverified until those `.env` files are actually replaced.
+:::
+
+::: danger The MQTT broker itself has no per-unit boundary
+Everything above is about who can obtain and use an HTTP or WebSocket token. It says nothing about
+the MQTT layer underneath: the default (`nakayama`) broker profile runs with `requires_auth: false`,
+so anything able to reach the broker can publish to **any** unit's `/unit_<ULID>/system_command`
+topic, not only its own, once it knows or guesses the ULID. The tidy JWT trust-domain story above sits
+on top of a transport that does not itself distinguish one unit's traffic from another's.
+:::
+
 ## Local and cloud, per unit
 
 Every unit runs both MQTT bridges unconditionally: one to its own Mosquitto broker on `127.0.0.1:1883`,
@@ -304,5 +329,8 @@ only party that survives a backend restart, a closed browser and a reconnect. Se
 - [Message Contracts](/development/message-contracts): every payload that crosses these seams
 - [State and Behavior](/development/state-and-behavior): the state machines behind them
 - [API Reference](/development/api-reference): the HTTP surface
+- [Database Schema](/development/database-schema): the tables behind `backend_node`'s state
+- [Camera Streaming](/development/camera-streaming): the WebRTC handshake behind `signalling_server`
+- [Data Sync](/development/data-sync): how a Unit's cache and the cloud's copy reconcile
 - [Repository Structure](/development/repository-structure)
 - [System Setup](/setup/system-setup): the deployment-time view
