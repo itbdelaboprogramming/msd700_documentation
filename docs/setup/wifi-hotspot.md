@@ -9,9 +9,9 @@ outline: deep
 An optional local-mode feature: the Unit runs its own WiFi hotspot for an operator to join, gets
 automatically captured into its dashboard the moment they open any HTTP page (a captive portal, the
 same mechanism airports and cafes use), and — if a second radio is available — stays connected as a
-WiFi **client** to another network for internet/cloud-sync fallback. A badge on the dashboard, next
-to the [Local Mode badge](/development/data-sync#the-local-mode-badge), shows both radios' state and
-lets an operator connect to a different network from a dropdown.
+WiFi **client** to another network for internet/cloud-sync fallback. Both radios' state is shown on
+the [Local Mode badge](/development/data-sync#the-local-mode-badge) — the same badge, the same
+dropdown — and an operator can connect to a different network from there.
 
 Entirely optional. A unit that never runs the provisioning step below still works exactly as
 [Unit Setup](/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
@@ -54,7 +54,7 @@ flowchart TB
 
   BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
-  BADGE["WiFi badge<br/>(dashboard, top-right)"] --> FE
+  BADGE["Local Mode badge, WiFi section<br/>(dashboard, top-right)"] --> FE
 
   CLIENT["Device joining the hotspot"] -->|"DNS: anything -> 192.168.4.1"| DNS
   CLIENT -->|"HTTP :80, redirected"| IPT
@@ -127,7 +127,7 @@ Passing it inline for the one-time provisioning run avoids the problem entirely,
 `setup.sh` sources `docker/.env` without overriding variables already present in the environment,
 so an inline value wins. Nothing needs the password afterwards either — NetworkManager stores the
 key itself, and later changes go through
-[the dashboard's WiFi badge](#changing-the-unit-s-own-hotspot). The password never has to live in a
+[the dashboard's badge menu](#changing-the-unit-s-own-hotspot). The password never has to live in a
 file at all.
 
 The same applies to `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` if you want a client network configured
@@ -147,8 +147,8 @@ never recreated) and does not start any container. It:
    `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` are filled in.
 3. Installs the captive-portal DNS config and the NetworkManager dispatcher script.
 
-To add or change a client network afterward, use the dashboard's WiFi badge dropdown instead of
-re-running this step — provisioning intentionally never touches an existing profile.
+To add or change a client network afterward, use the WiFi section of the dashboard badge's dropdown
+instead of re-running this step — provisioning intentionally never touches an existing profile.
 
 ## The captive portal
 
@@ -189,9 +189,20 @@ real address directly, reaches the normal dashboard untouched.
 
 ## The dashboard badge
 
-Structurally the same pattern as the [Local Mode badge](/development/data-sync#the-local-mode-badge)
-— polls `GET /local/wifi/status` every 30 seconds, faster for a short window after an action —
-stacked directly beneath it so the two share a right edge without overlapping.
+There is no separate WiFi badge. This is a **section inside** the
+[Local Mode badge](/development/data-sync#the-local-mode-badge)'s dropdown, under the sync state.
+On the badge line itself there is only a WiFi **glyph**, coloured by state and carrying the summary
+(an SSID, `hotspot only`, `no network`, `wifi unreachable`) as its hover tooltip and its
+screen-reader label rather than as printed text — an SSID is up to 32 bytes of arbitrary characters
+and the badge sits over the navbar, so the words belong one click away instead. The agent being
+unreachable is also stated in words at the top of the section, since a red glyph on its own is not
+something an operator can act on.
+
+It polls `GET /local/wifi/status` every 30 seconds, faster for a short window
+after an action, from the always-mounted badge rather than from the section — so the summary is
+current whether or not the dropdown has ever been opened. The network scan is the opposite: it runs
+when the dropdown opens and not before, because `nmcli`'s rescan is not free and most page-views
+never open it.
 
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
@@ -211,8 +222,8 @@ pre-login exception.
 
 ## Changing the unit's own hotspot
 
-The badge's dropdown can rename the hotspot and set a new password. Two behaviours are worth
-knowing before using it.
+The WiFi section of the badge's dropdown can rename the hotspot and set a new password. Two
+behaviours are worth knowing before using it.
 
 ::: danger Saving disconnects every device on the hotspot, including yours
 This is unavoidable, not a rough edge: the hotspot is what serves the dashboard, so the request to
@@ -268,12 +279,13 @@ implements a second one.
 
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
-| Badge says "no hotspot radio" | `AP_INTERFACE_LOCAL` is empty, or `--provision-network` was never run | Fill in `docker/.env` and run `./setup.sh --provision-network` |
+| Badge menu says "Hotspot: no hotspot radio" | `AP_INTERFACE_LOCAL` is empty, or `--provision-network` was never run | Fill in `docker/.env` and run `./setup.sh --provision-network` |
+| No WiFi glyph on the badge at all | Neither radio is present — with no AP and no STA interface there is nothing to report | Expected on a unit built without WiFi; otherwise check `nmcli device` for the interfaces |
 | `--provision-network` fails with "nmcli not found" | NetworkManager is not installed on the host | `sudo apt install network-manager` |
 | `--provision-network` fails, "AP_PASSWORD_LOCAL is not set" | Password missing or under 8 characters | Set an 8+ character password in `docker/.env`, re-run |
 | Hotspot does not survive a reboot | Provisioning was never run, or the connection profile's `autoconnect` was manually disabled | `nmcli connection show msd700-hotspot` — check `autoconnect: yes`; re-run `--provision-network` if the profile does not exist at all |
 | A device joins the hotspot but gets no captive-portal prompt | The OS may cache a previous "internet OK" result for this SSID, or a corporate/managed device has captive-portal detection disabled | Forget the network on the client device and rejoin; check the device's captive-portal-detection setting |
-| Hotspot up, but the badge shows "wifi unreachable" | `network_local` is not running, or `backend_local` cannot reach it | `docker compose ps` for `network_local`; confirm `NETWORK_AGENT_PORT_LOCAL` matches on both services |
+| Hotspot up, but the WiFi glyph is red and the menu says "WiFi service unreachable on this unit" | `network_local` is not running, or `backend_local` cannot reach it | `docker compose ps` for `network_local`; confirm `NETWORK_AGENT_PORT_LOCAL` matches on both services |
 | `nmcli device wifi connect` fails from the badge with an unhelpful reason | nmcli's own stderr is passed through verbatim rather than reworded | Read the reason text directly — it distinguishes wrong password from out-of-range from refused |
 | Existing local services (backend, media, MySQL) become unreachable after provisioning | The iptables rule was not scoped correctly to the AP interface | Check the redirect rule targets only `<ap-interface>`, never the client interface or loopback: `sudo iptables -t nat -L PREROUTING -n` |
 | Changed the hotspot name/password, and the old network is still the one being broadcast | The change failed to activate and was rolled back automatically | Reconnect on the old network, reopen the dashboard, and read `last_change.reason` from `GET /local/wifi/hotspot` |
@@ -285,7 +297,7 @@ implements a second one.
 - [Unit Setup](/setup/unit-setup): the base local-mode installation this feature sits on top of
 - [Docker Reference § network_mode: host](/setup/docker-reference#network-mode-host): why some
   services share the host's network namespace
-- [Data Sync § The Local Mode badge](/development/data-sync#the-local-mode-badge): the neighbouring
-  badge this one is stacked under
+- [Data Sync § The Local Mode badge](/development/data-sync#the-local-mode-badge): the badge this
+  section lives inside, and the sync state shown above it
 - [Architecture § Trust domains](/development/architecture#trust-domains): why `/local/wifi/connect`
   needs an operator session and `/local/status` does not

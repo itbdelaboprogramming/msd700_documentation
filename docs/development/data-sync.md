@@ -123,11 +123,18 @@ build time — absent entirely from a cloud build, not merely hidden). It polls
 below), and shows a **state**, never an age: "Local mode" plus one short phrase like `offline` or
 `sync failing`. The staleness itself (`synced 42 min ago`) moved into the click-menu on purpose —
 it is the one figure that keeps growing on its own while a unit is offline, which is also the one
-normal condition a unit spends most of its life in.
+normal condition a unit spends most of its life in. To the right of a thin rule sits a WiFi glyph
+and no text at all: its **colour** is the radio state (teal fine, amber connected-but-no-internet,
+red agent gone), the words are in the menu, and each half keeping its own colour is what lets a red
+badge still say which of the two is red.
 
 Clicking the badge opens a menu with **Sync now** (`POST /local/sync`, 10-second server-side
-cooldown, disabled entirely while the state is `disabled` since a round would be refused outright)
-and the same state spelled out with its age. Both `/local/status` and `/local/sync` are
+cooldown, omitted entirely while the state is `disabled` or `unreachable` since a round would be
+refused outright) and the same state spelled out with its age, followed by the
+[WiFi section](/setup/wifi-hotspot#the-dashboard-badge) on units that have a radio. Sync and WiFi
+share one badge and one menu rather than sitting in two stacked boxes: "is this unit reachable from
+the cloud" and "what network is this unit on" are the same question asked twice, so the answer sits
+directly under the state that prompts it. Both `/local/status` and `/local/sync` are
 **unauthenticated**, deliberately: the moment either is most needed is a unit whose accounts have
 not synced down yet, where nobody can log in to begin with. What `/local/sync` exposes is a request
 the unit already makes on its own every five minutes, to a server of its own choosing, with its own
