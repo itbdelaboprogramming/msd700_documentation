@@ -85,6 +85,7 @@ export default defineConfig({
           text: 'Reference',
           items: [
             { text: 'Docker Reference', link: '/setup/docker-reference' },
+            { text: 'WiFi Hotspot + Client', link: '/setup/wifi-hotspot' },
           ]
         },
         {

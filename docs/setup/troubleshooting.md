@@ -60,7 +60,7 @@ Work through these in order: each one rules out an entire layer.
 | Backend logs `ECONNREFUSED 127.0.0.1:1883` repeatedly | `MQTT_BROKER_TYPE` is unset or not `nakayama`, so the backend fell back to a local broker nothing serves | Set `MQTT_BROKER_TYPE=nakayama` in `.env` and recreate the backend |
 | Backend logs `EACCES /var/run/docker.sock` and no unit containers appear | `DOCKER_GID` does not match this host's docker group | `getent group docker \| cut -d: -f3`, fix `.env`, recreate the backend |
 | A new endpoint returns 404 on a unit whose source clearly has it | The unit's local server image is stale. Those services are **copied** into the image, not bind-mounted | `./scripts/docker-manager.sh local-build`, then `up` |
-| The unit's dashboard points at the wrong address after the unit moved network | `NEXT_PUBLIC_*` URLs are baked into the JS bundle at build time | `docker-manager.sh` rebuilds automatically on an IP change; force it with `local-build` |
+| Badge says image is out of date after editing local-mode source | Since 2026-08-13, `up` only warns (`[WARN] ... OUT OF DATE`) and keeps running the old image — it no longer rebuilds automatically, so bringing a unit online never requires internet | Rebuild deliberately: `./scripts/docker-manager.sh local-build` (or `build` for the robot image too), or `up --build` to do both and start in one command |
 
 ## Regressions worth knowing about
 
@@ -85,6 +85,35 @@ at their cause:
   next to an incomplete coverage overlay.
 - **The robot continues an operation that was cancelled.** The area list is published on a **latched**
   topic, so cancelling does not clear it and the next coverage node to start picks the old areas up.
+- **`skipped profile_units ...: parent row not present`, and only part of a unit's maps pull down
+  (e.g. 7 of 30).** `sync_state` used to store only a timestamp watermark, not which rental profile
+  it was scoped to. Re-renting a unit to a different tenant left an old watermark that silently
+  filtered out rows that were new **to that profile** even though the unit had never received them.
+  Fixed by also recording `last_pull_profile_id` and forcing a full re-pull whenever the handshake's
+  profile disagrees with it — but any unit that already hit this needs
+  `node scripts/migrate_sync.js --profile <name> --apply` before the fix takes effect. See
+  [Data Sync § Watermarks are scoped to a rental profile](/development/data-sync#watermarks-are-scoped-to-a-rental-profile-not-just-a-clock).
+- **Sync reports success, but rentals and every map under them never arrive.** `units` was, for a
+  while, missing from the sync table registry even though `profile_units.unit_id` and
+  `maps_data.unit_id` both foreign-key into it. A missing parent row was treated as ordinary skipped
+  traffic — silently, with no error and no `skipped` count printed — so an entire branch of data
+  could fail to sync while the round still reported `ok`. If a similarly-shaped silent gap shows up
+  again, check `sync_tables.js`'s registry first, not the transport.
+- **A map deleted on one side still takes up disk on the other, after its database row is already
+  gone.** Tombstones used to remove only the database row; whichever side received the tombstone
+  through sync (not the side that performed the original delete) never removed the `.pgm`/`.yaml`
+  thumbnail files. Files that piled up before this was fixed do not clean themselves up retroactively
+  and need a manual sweep.
+- **A map transferred, swapped, or cleared from the cloud admin console never reaches the unit — or
+  reappears after being cleared.** The admin transfer/swap/clear/restore endpoints used to write SQL
+  directly instead of going through `sync_engine.js`, so they never recorded a tombstone the way an
+  ordinary delete does. A clear looked, from the unit's side, exactly like nothing had happened, and
+  its next push resurrected the "deleted" map in the cloud. Fixed by routing all of those through the
+  same tombstone-writing path as a normal delete.
+- **Never `HEX()` an id anywhere in the sync path.** `toBinary()` expects a raw `BINARY(16)` and
+  rejects a 32-character hex string outright, because a ULID is 26 characters of Crockford base32,
+  not 32 hex characters. `collectChanges needs a rental profile`, stuck at 15%, was exactly this: a
+  profile lookup had been written with `HEX(pu.profile_id)` and every row using it failed to resolve.
 
 If a symptom looks like one of these (plausible on the surface, but the checklist above does not
 explain it), that is the signal to escalate rather than keep guessing.

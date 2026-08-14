@@ -114,6 +114,89 @@ is set to `offline`, and the next attempt is scheduled a minute out rather than 
 surface. Progress within a round is intentionally not persisted anywhere but `sync_state` itself. If
 the process restarts mid-round, the next round simply starts from the last confirmed watermark.
 
+## The Local Mode badge
+
+The operator-facing surface of everything above: a small badge, top-right on every page of a
+unit's own dashboard, present only in a local build (`NEXT_PUBLIC_DEPLOYMENT_MODE=local` baked at
+build time — absent entirely from a cloud build, not merely hidden). It polls
+`GET /local/status` every 30 seconds, or every 2 seconds while a full-screen sync panel is up (see
+below), and shows a **state**, never an age: "Local mode" plus one short phrase like `offline` or
+`sync failing`. The staleness itself (`synced 42 min ago`) moved into the click-menu on purpose —
+it is the one figure that keeps growing on its own while a unit is offline, which is also the one
+normal condition a unit spends most of its life in.
+
+Clicking the badge opens a menu with **Sync now** (`POST /local/sync`, 10-second server-side
+cooldown, disabled entirely while the state is `disabled` since a round would be refused outright)
+and the same state spelled out with its age. Both `/local/status` and `/local/sync` are
+**unauthenticated**, deliberately: the moment either is most needed is a unit whose accounts have
+not synced down yet, where nobody can log in to begin with. What `/local/sync` exposes is a request
+the unit already makes on its own every five minutes, to a server of its own choosing, with its own
+credentials — a caller on the unit's LAN only gets to make that happen sooner.
+
+### When a full sync round is running
+
+`sync_progress` on `/local/status` carries the phase in flight, a percentage, and the tail of the
+agent's own log (40 lines kept in memory, same source as `docker logs msd700_backend_local`). This
+exists because the person who most needs that log is standing next to the robot with a browser and
+often no shell on the Jetson at all.
+
+The percentage is weighted per **phase**, not per row of data — only `files` reports a real
+fraction (`n of m files`), because it is the only phase that knows its total cost up front:
+
+| Phase | Label shown | Weight |
+| --- | --- | --- |
+| `token` | Signing in to the cloud | 8 |
+| `handshake` | Contacting the cloud | 7 |
+| `pull` | Downloading changes | 20 |
+| `apply` | Saving changes on this unit | 15 |
+| `push` | Uploading changes from this unit | 15 |
+| `files` | Transferring map files | 30 |
+| `finish` | Finishing up | 5 |
+
+A failed round leaves the phase where it died rather than resetting it, and that alone is half the
+diagnosis: dying at `token` means credentials, at `handshake` means reachability, at `files` means
+the rows already landed and only the map images are left.
+
+### Screens that replace the login form
+
+| Screen | Cause |
+| --- | --- |
+| "This unit is not registered" | No ULID yet. Distinguishes waiting on an admin from having no path to the server at all |
+| "Waiting for the first sync" | Registered, but the local database is still empty — no accounts exist yet to log in with |
+| "This unit has no rental profile" | Registered and synced, but not assigned to any rental |
+
+The last two show the same progress panel described above (bar, phase, the raw error message
+un-paraphrased, a countdown to the next attempt, a self-scrolling log tail, and a **Try again now**
+button), plus a second button, **Download everything again**
+(`POST /local/sync` with `{"full": true}`), which is not a retry — it clears
+`last_pull_watermark`/`last_push_watermark` first so the next round asks for everything again
+rather than only what changed since last time. That is the recovery path for rows **older** than a
+watermark that has already moved past them, which no ordinary incremental round can ever ask for
+again. Safe to press at any time: every sync write is an upsert, so nothing local is lost by asking
+twice.
+
+### Reading the badge's own words
+
+| Badge text | Meaning | What to do |
+| --- | --- | --- |
+| `first sync pending` | Agent is running, first round has not finished | Wait, usually well under 15 seconds after `backend_local` comes up |
+| `offline, never synced` | Agent running, cloud unreachable | Check the unit's network, then `CLOUD_BASE_URL` in `docker/.env` |
+| `not enrolled yet` | `UNIT_ID` is empty in the container | Not approved yet, or `backend_local` is still carrying the empty value from before approval — re-run `docker-manager.sh` |
+| `sync not configured` | `CLOUD_BASE_URL` is empty | Set it, then recreate `backend_local` |
+| `database not migrated` | `sync_state` table does not exist yet | Run `migrate_sync.js --profile local --apply`, or start over with an empty `mysql_data_local` |
+| `sync failing` | Reachable, but rejected | `docker logs msd700_backend_local 2>&1 \| grep sync_agent` for the reason — most often, no rental profile yet |
+| `backend unreachable` | The dashboard cannot reach this unit's **own** `backend_local` | Not a cloud problem. Usually the backend image is older than the frontend's and does not have `/local/status` yet — rebuild both: `local-build` |
+
+For the first three, open the badge menu and press **Sync now** before assuming anything is
+actually broken — what looks stuck is often just the timer.
+
+::: warning `backend_node` is COPIED into the image, not mounted
+Frontend and backend can drift to different versions independently. A newer frontend calling a
+route the older backend does not have yet answers 404, which reads like a missing endpoint rather
+than a version mismatch. Always rebuild both together with `local-build`, never only
+`frontend_local`.
+:::
+
 ## What is not built yet
 
 The design (`docs/rancangan-penyimpanan-hybrid.md` in `ros-web-ui`) describes five stages; as of this

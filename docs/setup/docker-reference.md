@@ -480,29 +480,40 @@ asking 11311, so the master existed and nothing could find it.
 flowchart TB
   A["ensure_local_secrets<br/>generate this unit's MySQL password on first run"] --> B["ensure_media_dir<br/>create + test-write media_data_local"]
   B --> C["resolve_repo_paths<br/>src/ or sibling checkout"]
-  C --> D["resolve_local_ip<br/>LOCAL_IP if it is actually up, else detect"]
-  D --> E{"webui_needs_build?<br/>image older than source"}
-  E -->|yes| F["build backend_local"]
-  E -->|no| G
-  F --> G{"frontend_needs_build?<br/>changed IP, mode, or source"}
-  G -->|yes| H["build frontend_local"]
+  C --> D["resolve_local_ip<br/>a hint for humans only, see below"]
+  D --> E{"image missing entirely?"}
+  E -->|yes| F["build it now<br/>(the ONLY case up ever builds)"]
+  E -->|no| G{"image looks stale?<br/>port or deployment-mode label changed"}
+  G -->|yes| W["print [WARN] ... OUT OF DATE<br/>and continue with the old image anyway"]
   G -->|no| I
-  H --> I["compose --profile local_dev up -d"]
+  F --> I
+  W --> I
+  I["compose --profile local_dev up -d"]
   I --> J["ensure_robot_token_file<br/>token.cred must exist as a FILE"]
   J --> K["compose up -d msd700"]
   K --> L["docker exec run_msd.sh"]
 ```
 
-Two of those steps exist because of failures that looked like nothing at all:
+::: warning `up` builds only when an image does not exist at all
+Before 2026-08-13, a stale image (source edited, or a port changed in `docker/.env`) triggered an
+automatic rebuild on the next `up`. That meant bringing a unit online could suddenly need internet,
+which is exactly backwards for hardware whose entire point is running without it. Now a stale image
+only prints `[WARN] ... is OUT OF DATE` and starts anyway with what is already built. Rebuild
+deliberately: `./scripts/docker-manager.sh build` (or `local-build` for just the web half), or
+`up --build` to do both in one command. `build-clean` forces a rebuild with no layer cache at all.
+:::
+
+Two more of those steps exist because of failures that looked like nothing at all:
 
 - **`ensure_robot_token_file`.** Four services bind-mount `Certificates/robot/token.cred`. Bring any
   of them up on a robot that has never enrolled and Docker, finding no such host file, creates a
   root-owned empty **directory** there. `enroll.py` then cannot write the token it just earned, and
   the robot re-enrols from scratch on every boot.
-- **The staleness checks.** `Dockerfile.webui-local` **COPY**s the source into the image; there is no
-  bind mount for those services. Without the timestamp check, `up` reuses whatever was baked, the
-  stack comes up perfectly, and it serves last week's backend. That is how a new endpoint ends up
-  returning 404 on a unit whose source tree plainly contains it.
+- **The staleness check itself.** `Dockerfile.webui-local` **COPY**s the source into the image; there
+  is no bind mount for those services. Without comparing source-file mtimes against the image build
+  time (plus the port and deployment-mode labels), a unit would have no way to notice it is serving
+  last week's backend at all. That is how a new endpoint ends up returning 404 on a unit whose source
+  tree plainly contains it — see [Troubleshooting](/setup/troubleshooting).
 
 ## Unit: `run_msd.sh`
 
@@ -568,11 +579,16 @@ USER_UID=                 # empty = detect from `id -u` (Jetson 2002, laptop 100
 USER_GID=
 ```
 
-::: warning `LOCAL_IP` is baked into the dashboard bundle
-`NEXT_PUBLIC_*` values are compiled into the JS that runs in the operator's browser, so changing the
-unit's IP needs a **rebuild** of `frontend_local`, never just a restart. `docker-manager.sh` notices
-via an image label and rebuilds automatically, which is why an unexplained rebuild on `up` usually
-means the unit's address moved.
+::: info `LOCAL_IP` stopped being part of the bundle on 2026-08-13
+It used to be: `NEXT_PUBLIC_*` URLs were compiled into the JS with the unit's IP baked in, so moving
+a unit to a new network meant a mandatory rebuild. The bundle now takes its **host** from whatever
+address the operator's browser actually used to open the page
+(`src/config/apiConfig.ts` in `ROS-dashboard-next-ts`), which by construction is the same machine —
+only the **port** still comes from the build. A unit reached by IP, hostname, mDNS
+(`msd700.local`), or an SSH tunnel on `localhost` all work correctly now, none of which was possible
+before. `LOCAL_IP` in `docker/.env` is left as a hint for the script's own printed URLs and the
+DHCP-less fallback baked in before a browser ever exists — getting it wrong is no longer fatal to
+the dashboard, only to what the script prints.
 :::
 
 ## Per-unit containers (created by the backend, not by compose)
