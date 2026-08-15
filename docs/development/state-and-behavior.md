@@ -322,6 +322,22 @@ therefore *pins* its view for a short window (`AUTOPILOT_PIN_MS`) in both direct
 enable direction matters as much as disable: a stale contradicting report right after an enable would
 stop the retention pass from ever seeing the unit as autonomous.
 
+### When the handover is not acknowledged
+
+Engaging autopilot mid-run is an explicit transfer of ownership. The browser sends the batch and a
+`takeover`, waits up to 2.5 s for a snapshot that reflects it, and retries three times. Only once
+that snapshot arrives does it suspend its own dispatch loop.
+
+If it never arrives the browser **keeps driving** and says so in a banner. That is the safer
+default: standing down for a driver that may not have picked up leaves the robot parked mid-route.
+
+But a missing ACK is a statement about what the tab heard, not about the robot, and the two disagree
+whenever the return leg alone is lost. So the tab keeps listening. `operation_progress` is published
+only while the supervisor is dispatching, which makes an `active` progress message better proof of
+ownership than the ACK it was waiting for. On receiving one, the browser stands its loop down and
+clears the banner. Without that step both the tab and the supervisor dispatch onto the same
+`move_base`, and the robot obeys whichever wrote last.
+
 ### Waypoint advancement
 
 The browser's multi-pin loop advances **only on `SUCCEEDED` (status 3)**. Advancing on every
@@ -406,16 +422,36 @@ stateDiagram-v2
 | --- | --- | --- |
 | Planned path | `/msd700/coverage_plan` | dashboard overlay (orange boustrophedon lines) |
 | Keep-out grid | `/msd700/keepout_grid` | `keepout_layer` in the costmap |
-| Run status | `/msd700/coverage_status` (`running`, `complete`) | backend, flips activity to `arrived` |
+| Run status | `/msd700/coverage_status` (`running`, `complete`, `aborted`) | backend, flips activity to `arrived` or `coverage_failed` |
+| Swept path | `/msd700/boustrophedon_path`, **latched** | dashboard overlay, ACKed per revision |
+
+### The sweep overlay is cleared at both ends of a run
+
+`publish_coverage_status` wipes `/msd700/boustrophedon_path` when a run starts **and** when it
+reaches a terminal status, and `boustrophedon deactivate` wipes it too, because that path stops
+`path_coverage_node` before it can clear up after itself. Every entry point emits exactly one
+`running`/terminal pair around a whole run, a playlist included, so a wipe can never erase earlier
+areas mid-sequence.
+
+::: warning Hiding an overlay in the browser does not end it
+The topic is latched, and `navplan_to_string` rebroadcasts the last path it saw at 2 Hz for as long
+as it lives. Until 2026-08-15 the only thing that ended a sweep overlay was a `sessionStorage` flag
+in the dashboard, which logout wipes, so the next login resubscribed and the robot handed the old
+sweep straight back. Anything that must survive a new browser session has to be cleared at the
+source.
+:::
 
 ::: danger Two coverage failure modes that look like success
 **Keep-out deadlock.** `keepout_layer` waits for `/msd700/keepout_grid`. If it is never published,
 the costmap never becomes "current", the planner stops, and goals are accepted while the robot does
 not move at all.
 
-**ABORTED reported as complete.** A sweep that gives up after N failed attempts still publishes
-`complete`, so the UI shows "Arrived" for an area that was never swept. Recognise it by an `arrived`
-state with an obviously incomplete coverage overlay.
+**ABORTED reported as complete.** `complete` used to be published on every exit, so an area the
+robot gave up on was filed as swept. A bail-out now earns its own `aborted` status, which lands as
+`coverage_failed` and reads "Failed" in the UI. The residual case is narrower but still real: the
+flag is only raised after N failures **in a row**, so a run that fails intermittently and finishes
+its remaining legs still ends as `complete`. Recognise it by an `arrived` state with an obviously
+incomplete coverage overlay.
 :::
 
 ::: warning Cancel leaves residue on a latched topic
@@ -515,6 +551,11 @@ Four rules that make this reliable:
 4. **Recovered state is validated against the robot.** If the snapshot claims a coverage run is in
    progress but the robot reports idle across several samples, the UI resets to Idle rather than
    showing a phantom operation.
+5. **Ending an operation is an explicit message.** The supervisor drops a batch only on `stop` or
+   `complete`, so every way a run can end has to send one: a coverage run that finished on the robot
+   with no deactivate call, a `boustrophedon deactivate`, a point-nav route that ended `Failed`, and
+   a recovery that gives up on a run it cannot rebuild. Miss any of them and the snapshot keeps
+   advertising a finished operation, which is exactly what rule 2 will faithfully restore.
 
 ::: warning Opening a map from the Database page is a full state flush
 Entering a map from Database wipes the session state completely, then re-validates on re-entry.

@@ -80,9 +80,26 @@ at their cause:
   `idle_detector`'s own logic (a sticky anchor point, or a displacement threshold too large for slow
   motion), never the frontend. See
   [State and Behavior](/development/state-and-behavior#idle-and-stuck-arbitration).
-- **A coverage run reports "Arrived" for an area that was obviously never swept.** A sweep that
-  gives up after repeated failures still publishes `complete`. Recognise it by an `arrived` state
-  next to an incomplete coverage overlay.
+- **A coverage run reports "Arrived" for an area that was obviously never swept.** A bail-out now
+  publishes `aborted` and reads "Failed", but only after N failures **in a row** — a run that fails
+  intermittently and completes its remaining legs still ends as `complete`. Recognise it by an
+  `arrived` state next to an incomplete coverage overlay.
+- **On the local dashboard only: Autopilot shows "did not engage" but the robot is plainly running
+  it, and logging back in recovers nothing.** Both are the same missing hop. Until 2026-08-15
+  `local.launch` relayed the dashboard-to-robot string topics but nothing the other way, so the
+  supervisor published `/string/operation_snapshot` while the dashboard listened on
+  `/unit_<ULID>/string/operation_snapshot`. Confirm with `rostopic list | grep operation_` on the
+  unit: the flat name present with no prefixed twin is the fingerprint. The cloud path was never
+  affected, because MQTT bridges both directions.
+- **Boustrophedon sweep lines from an old run reappear after a fresh login.** The overlay topic is
+  latched and rebroadcast at 2 Hz, and for a long time the only thing that dismissed it was a
+  `sessionStorage` flag that logout wipes. If it comes back again, look for a run that ended without
+  reaching a terminal `coverage_status`, not at the browser.
+- **A finished operation comes back as "On Progress" after logging in, coverage area redrawn and
+  all.** The supervisor drops a batch only on `stop` or `complete`. Any exit path that forgets to
+  send one leaves a finished run `active` in the latched snapshot, and session recovery restores it
+  exactly as designed. See
+  [State and Behavior § Session recovery](/development/state-and-behavior#session-recovery).
 - **The robot continues an operation that was cancelled.** The area list is published on a **latched**
   topic, so cancelling does not clear it and the next coverage node to start picks the old areas up.
 - **`skipped profile_units ...: parent row not present`, and only part of a unit's maps pull down
