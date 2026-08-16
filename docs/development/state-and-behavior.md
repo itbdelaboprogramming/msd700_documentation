@@ -413,16 +413,18 @@ stateDiagram-v2
   Initializing --> InitFailed: planner refused
   Sweeping --> Paused: boustrophedon pause true
   Paused --> Sweeping: boustrophedon pause false
+  Sweeping --> StuckPaused: N consecutive leg failures (stuck_paused)
+  StuckPaused --> Sweeping: operator resumes run
   Sweeping --> Arrived: coverage_status = complete
-  Sweeping --> CoverageFailed: sweep aborted after N failures
-  Sweeping --> Idle: boustrophedon deactivate
+  Sweeping --> CoverageFailed: operator cancels while stuck or unhandled error
+  Sweeping --> Idle: boustrophedon deactivate / mode switch
 ```
 
 | Signal | Topic | Consumer |
 | --- | --- | --- |
 | Planned path | `/msd700/coverage_plan` | dashboard overlay (orange boustrophedon lines) |
 | Keep-out grid | `/msd700/keepout_grid` | `keepout_layer` in the costmap |
-| Run status | `/msd700/coverage_status` (`running`, `complete`, `aborted`) | backend, flips activity to `arrived` or `coverage_failed` |
+| Run status | `/msd700/coverage_status` (`running`, `complete`, `aborted`, `stuck_paused`) | backend, flips activity to `arrived`, `coverage_failed`, or `stuck` |
 | Swept path | `/msd700/boustrophedon_path`, **latched** | dashboard overlay, ACKed per revision |
 
 ### The sweep overlay is cleared at both ends of a run
@@ -441,17 +443,20 @@ sweep straight back. Anything that must survive a new browser session has to be 
 source.
 :::
 
-::: danger Two coverage failure modes that look like success
+::: tip Stuck and obstacle fallback in coverage
+When consecutive waypoints fail due to an obstacle, `path_coverage_node` enters `stuck_paused` and
+notifies the system rather than hard-aborting the whole run. The operator sees the Robot Stuck
+warning, can remove the obstruction, and press Resume to continue the sweep.
+:::
+
+::: danger Coverage failure modes that look like success
 **Keep-out deadlock.** `keepout_layer` waits for `/msd700/keepout_grid`. If it is never published,
 the costmap never becomes "current", the planner stops, and goals are accepted while the robot does
 not move at all.
 
-**ABORTED reported as complete.** `complete` used to be published on every exit, so an area the
-robot gave up on was filed as swept. A bail-out now earns its own `aborted` status, which lands as
-`coverage_failed` and reads "Failed" in the UI. The residual case is narrower but still real: the
-flag is only raised after N failures **in a row**, so a run that fails intermittently and finishes
-its remaining legs still ends as `complete`. Recognise it by an `arrived` state with an obviously
-incomplete coverage overlay.
+**ABORTED reported as complete.** `complete` used to be published on every exit (including degenerate
+outlines or missing free space), so an area the robot gave up on was filed as swept. Early exits now
+explicitly mark `_sweep_aborted = True` so an unswept area is never falsely marked `complete`.
 :::
 
 ::: warning Cancel leaves residue on a latched topic
