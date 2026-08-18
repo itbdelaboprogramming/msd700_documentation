@@ -48,6 +48,10 @@ The node prints all of this in one block at startup. **Read that block before bl
 
 That last one is a geometric floor, not a planner defect: it is `wall_clearance - body_half_width`. A 3 x 6 m room therefore tops out at **78.6 %** coverage no matter how good the plan is. Judge a plan by its **attainment** (how much of the reachable region it swept), not by raw coverage.
 
+::: warning Only one simulated robot can test any of this
+Every model in `msd700_description/urdf` except `msd700_field.urdf.xacro` is a TurtleBot3 Waffle derivative at 0.266 x 0.266 m. Against that body a `wall_clearance` of 0.575 m and a 1.77 m turnaround corridor are meaningless, and the small worlds shipped alongside them make it worse: `turtlebot_world` has a maximum clearance of 0.39 m, less than this robot's inscribed radius alone. Use `msd700_simulation msd700_warehouse_nav.launch`; see [Simulation](/development/simulation).
+:::
+
 ---
 
 ## 2. How a sweep is planned
@@ -72,7 +76,15 @@ strokes
 
 **Decompose.** A vertical line sweeps across the area; wherever its connectivity changes (an obstacle's left or right extreme) the area is cut. Every resulting cell is crossed in exactly one interval, which is what makes a plain back-and-forth correct inside it. Without this an L-shaped room arrives as one polygon and the zig-zag crosses the obstacle. Controlled by `~boustrophedon_decomposition`, **on by default**.
 
-**Lanes.** Placed inside the `wall_clearance` band at `pitch` spacing, running along the cell's long axis, with `lane_order: skip` sweeping 1, 3, 5 then 6, 4, 2 so consecutive lanes are `2 x pitch` apart and a turnaround has room.
+**Lanes.** Placed inside the `wall_clearance` band at `pitch` spacing, running along the cell's long axis, swept in the order they were scanned: a plain back-and-forth serpentine.
+
+**Bands.** A scan column that crosses a hole yields two segments. They are chained into separate **bands**, joined only where the y intervals of adjacent columns overlap, and a band that splits or two bands that merge both end there. Those are the IN and OUT events of the decomposition, and honouring them is what keeps the serpentine on one side of an obstacle until it is finished with it. Without band grouping the path hops the obstacle at every column: on a 10 x 6 m room with a 2 x 2 m pillar that alone was 76 m of transit instead of 22 m.
+
+**Lane order.** `~lane_order: adjacent` is the default and is what an operator expects to see. `skip` sweeps 1, 3, 5 then 6, 4, 2, which leaves `2 x pitch` between consecutive lanes and more room for a turnaround, at the cost of a figure that is hard to read and hard to predict. Coverage is identical either way.
+
+**Turns.** `~turn_style: square` is the default: pivot 90 degrees at the lane end, cross to the next lane, pivot 90 again. Where the two lane ends are not level the difference is walked along the lane axis as its own leg, so the comb never draws a diagonal. Where the robot cannot pivot (`is_turnable` fails at either corner) or the crossing leg is not clear end to end, the planner falls back to the shortest manoeuvre that fits, in order: point turn, omega, switchback, or plain goal. `~turn_style: adaptive` always takes the shortest manoeuvre and produces the older, visually irregular path.
+
+**Chaining.** Lanes keep their scanned order and orientation. Headland and residual strokes are placed by cheapest insertion into that fixed chain, so they no longer cost a full cell transit apiece while the zigzag still reads as a zigzag. This is deliberately not a route solve: reordering lanes buys a few metres of transit and costs the operator any ability to predict where the robot goes next. Measured on the standard cases, the readable serpentine costs about 1 m more transit on a 3 x 6 m room and about 4 m more on a 6 x 8 m room than a full reorder, and is slightly **cheaper** on an L-shape.
 
 **Headland.** A lane end sits `wall_clearance` from the far wall, but an in-place turn needs `turn_clearance`, so the turning disc would punch through the wall. Lanes therefore stop `turn_clearance` short, and the strip that leaves is closed by one perpendicular pass at each end. Coverage is unchanged; every turn becomes feasible. Two extra passes per cell. Disable with `~headland:=false`.
 
@@ -177,7 +189,8 @@ rosnode info /path_coverage                    # the startup geometry block
 | `~coverage_overlap` | `0.18` | Overlap between neighbouring lanes |
 | `~safety_margin` | `0.0` | Extra clearance. Zero on purpose |
 | `~boustrophedon_decomposition` | `true` | Split areas into obstacle-free cells |
-| `~lane_order` | `skip` | `adjacent` or `skip` |
+| `~lane_order` | `adjacent` | `adjacent` (plain serpentine) or `skip` |
+| `~turn_style` | `square` | `square` (right-angled comb) or `adaptive` (shortest manoeuvre) |
 | `~headland` | `true` | Pull lanes back and close the strip with a perpendicular pass |
 | `~min_gap_area` | `0.10` m² | Smallest leftover patch worth a pass |
 | `~min_attainment` | `0.90` | Below this an area reports partial |

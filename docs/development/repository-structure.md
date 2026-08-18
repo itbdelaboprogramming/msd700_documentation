@@ -60,12 +60,19 @@ msd700_robot/
 │   ├── msd700_firmware/      # Arduino firmware for the motor controller
 │   ├── msd700_msg/           # Robot-level messages
 │   └── msd700_navigations/   # SLAM, autonomous mapping, autonomous navigation, coverage
-├── msd700_simulation/        # Gazebo world files
+├── msd700_simulation/        # Gazebo worlds and sim launches
+│   ├── worlds/               #   small, TurtleBot-scale worlds, committed
+│   ├── scripts/              #   fetch_sim_worlds.sh: pulls the AWS warehouse
+│   └── vendor/               #   fetched third-party worlds, gitignored
 ├── msd700_visual/            # RViz/Gazebo robot visuals
 ├── msd700_hardware/          # Hardware drivers
-├── msd700_description/       # URDF
+├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
 └── ros_msd700_msgs/
 ```
+
+Only `msd700_field.urdf.xacro` is the real 0.90 x 0.70 m robot; every other model here is a
+TurtleBot3 Waffle derivative at 0.266 m, and the committed worlds are sized to match. See
+[Simulation](/development/simulation) for which combination can validate coverage geometry.
 
 Sourced by both `msd700_noetic` (as a submodule, `src/msd700_robot`) and copied into `ros-web-ui`'s
 own `source/msd700_robot`. The robot half of a build needs both this repo's navigation stack and
