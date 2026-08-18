@@ -91,6 +91,30 @@ at their cause:
   `/unit_<ULID>/string/operation_snapshot`. Confirm with `rostopic list | grep operation_` on the
   unit: the flat name present with no prefixed twin is the fingerprint. The cloud path was never
   affected, because MQTT bridges both directions.
+- **A swept room still has an unswept strip along every wall.** Some of it is geometry and some of
+  it was a bug. The floor is `wall_clearance - body_half_width` = 0.225 m per wall, and no plan can
+  beat it. Anything wider means the clearance is being applied more than once: read the geometry
+  block `path_coverage` prints at startup and check that the effective setback is 0.575 m, not
+  1.10 m. See
+  [Boustrophedon § Two robot geometries](/development/boustrophedon-and-alignment#_1-two-robot-geometries).
+- **A narrow corridor produces no sweep path at all.** The robot needs 1.15 m clear to enter and
+  1.77 m to turn around inside. Below the first figure the free-space erosion removes the corridor
+  entirely and there is nothing to plan. `rostopic echo -n1 /msd700/coverage_debug` shows the drawn
+  area against the coverable area, which is the fastest way to tell "the corridor is too narrow"
+  from "the planner failed".
+- **A whole room behind a doorway is never swept.** The free-space extraction used to keep only the
+  largest connected blob, so a doorway narrower than twice the clearance severed the room and it
+  vanished with no message. It is now returned flagged unreachable and shaded on the map via
+  `/msd700/uncovered_regions`. If a room disappears again, check that topic before the planner.
+- **The robot gives up on a lane instead of driving around the box in it.** That is the L4 replan
+  loop not firing. It needs `~replan_blocked_fraction` of the remaining lane blocked, or
+  `~replan_failure_streak` consecutive failures, and it will not fire more often than
+  `~replan_min_interval`. Obstacles smaller than the body deliberately never trigger it, because the
+  local planner already steers around those.
+- **The robot oscillates at the end of every lane.** The turn does not fit. An in-place turn needs
+  0.885 m of free radius; if the headland pass is disabled the lane runs right up to the wall and
+  there is no room. Check `~headland` is `true`, and that the TEB coverage profile was applied (the
+  log says so) so the robot is allowed to reverse.
 - **Boustrophedon sweep lines from an old run reappear after a fresh login.** The overlay topic is
   latched and rebroadcast at 2 Hz, and for a long time the only thing that dismissed it was a
   `sessionStorage` flag that logout wipes. If it comes back again, look for a run that ended without
