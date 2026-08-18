@@ -141,10 +141,19 @@ everyday work, or every run fails for the same already-known reason.
 | `msd700_simulation msd700_warehouse.launch` | World and robot only |
 | `msd700_simulation msd700_warehouse_slam.launch` | Adds gmapping, `move_base`, frontier exploration. Produces the map |
 | `msd700_simulation msd700_warehouse_nav.launch` | Adds `map_server`, AMCL and `path_coverage_node`. The coverage rig |
+| `msd700_navigation msd700_explore.launch` | Web UI Mapping / Exploration default launch (now wired to AWS Warehouse) |
+| `msd700_navigation msd700_navigation.launch` | Web UI Navigation default launch (now wired to AWS Warehouse) |
 
-All three accept `headless_mode:=true` for Docker or a display-less SSH session.
+All of them accept `headless_mode:=true` for Docker or a display-less SSH session.
 
-### Getting a map
+### Web UI Integration
+
+The standard Web UI mode switching (`/switch_mode`) and dashboard buttons are natively integrated:
+- **Mapping Button**: Runs `msd700_explore.launch`, spawning `msd700_field` at `(0.50, -2.40)` in the AWS Warehouse, running warehouse gmapping (`gmapping_params_warehouse.yaml`), `explore_lite`, and `move_base` with `sim_body:=field`.
+- **Navigation Mode**: Runs `msd700_navigation.launch`, initializing AMCL pose at `(0.50, -2.40, yaw: 1.5708)` and setting LiDAR range to 12.0 m.
+- **Coverage / Boustrophedon**: Runs `msd700_boustrophedon.launch` with real robot footprint parameters on top of the warehouse map.
+
+### Getting a map via CLI
 
 ```bash
 roslaunch msd700_simulation msd700_warehouse_slam.launch
@@ -157,15 +166,15 @@ by hand instead; the two are mutually exclusive because `explore_lite` and teleo
 `cmd_vel`.
 
 ::: tip The map AWS ships is not used
-Its frame does not line up with the Gazebo world — shelf rows that run along `y` in the world
-appear along `x` in that map — so localising against it puts the robot in the wrong aisle. It
+Its frame does not line up with the Gazebo world (shelf rows that run along `y` in the world
+appear along `x` in that map) so localising against it puts the robot in the wrong aisle. It
 also came from a TurtleBot-height sensor. Map the world with the robot that will drive it.
 :::
 
 Save at the gmapping resolution of **0.05 m/cell**. The coverage planner reads clearances off
 that grid, so a coarser map quietly shrinks every aisle by up to one cell per side.
 
-### Running coverage
+### Running coverage via CLI
 
 ```bash
 roslaunch msd700_simulation msd700_warehouse_nav.launch
@@ -184,8 +193,8 @@ configs. `move_base.launch` now takes a separate `sim_body`:
 
 | `sim_body` | Costmap config | TEB config |
 |---|---|---|
-| `waffle` (default) | `costmap_common_params_sim.yaml` — 0.28 x 0.31 m | `teb_local_planner_params_sim.yaml` |
-| `field` | `costmap_common_params.yaml` — the real 1.20 x 0.85 m envelope | `teb_local_planner_params.yaml` |
+| `waffle` | `costmap_common_params_sim.yaml` (0.28 x 0.31 m) | `teb_local_planner_params_sim.yaml` |
+| `field` (default for warehouse/Web UI) | `costmap_common_params.yaml` (the real 1.20 x 0.85 m envelope) | `teb_local_planner_params.yaml` |
 
 Real hardware ignores the argument and always loads the real configs. **A real-size robot
 carrying a Waffle footprint plans straight between two shelf legs it cannot pass**, which is
