@@ -1,14 +1,15 @@
 ---
-title: Boustrophedon Coverage & Zero-Spin Alignment Architecture
+outline: deep
+search: false
 ---
 
 # Boustrophedon Coverage & Zero-Spin Alignment Architecture
 
 <RoleBadge role="developer" />
 
-This document details how the MSD700 robot plans area coverage sweeps, determines attainable coverage margins, handles static and dynamic obstacles, and executes zero-spin initial orientation alignment.
+This document provides a comprehensive algorithmic specification of the Boustrophedon Cellular Decomposition coverage planning pipeline, dual-geometry clearance calculations, five-layer obstacle management, and Correlative Scan Matcher (CSM) zero-spin alignment.
 
-## 1. Dual Robot Geometries
+## Dual Robot Geometries
 
 A foundational design principle in MSD700 coverage planning is that **the robot has two distinct geometric dimensions used for different calculations**:
 
@@ -36,42 +37,48 @@ The costmap envelope in `costmap_common_params.yaml` includes intentional safety
 
 ### Derived Clearance Constants (`libs/coverage_geometry.py`)
 
-| Clearance Constant | Value | Formula Description |
+| Clearance Constant | Value | Mathematical Formula |
 | --- | --- | --- |
-| `wall_clearance` | **0.575 m** | `inscribed_radius (0.425 m) + min_obstacle_dist (0.150 m)` |
-| `turn_clearance` | **0.885 m** | `circumscribed_radius (0.735 m) + min_obstacle_dist (0.150 m)` |
-| `pitch` | **0.574 m** | `body_width (0.70 m) x (1 - coverage_overlap (0.18))` |
+| `wall_clearance` | **0.575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `turn_clearance` | **0.885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `pitch` | **0.574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
 
 ### Physical Geometric Limits:
-- **Narrowest corridor robot can enter**: **1.15 m** (`2 x wall_clearance`).
-- **Narrowest corridor robot can pivot 180 degrees**: **1.77 m** (`2 x turn_clearance`).
+- **Narrowest corridor robot can enter**: **1.15 m** ($2 \times \text{wall\_clearance}$).
+- **Narrowest corridor robot can pivot 180 degrees**: **1.77 m** ($2 \times \text{turn\_clearance}$).
 - **Narrowest corridor worth 2-lane sweeping**: **1.72 m**.
-- **Unreachable boundary strip along walls**: **0.225 m** (`wall_clearance - half_body_width`).
+- **Unreachable boundary strip along walls**: **0.225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Raw Coverage
 Because the 0.225 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of **78.6%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
 :::
 
-## 2. Coverage Planning Pipeline
+---
+
+## Boustrophedon Cellular Decomposition Algorithm
+
+The coverage planner decomposes arbitrary concave polygonal boundaries with internal obstacles into convex, obstacle-free sub-cells:
 
 ```mermaid
 flowchart TD
   A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.575 m)"]
-  B --> C["Boustrophedon Cellular Decomposition<br/>Slice area into convex, obstacle-free cells"]
-  C --> D["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.574 m pitch"]
-  D --> E["Headland Passes & Residual Recovery<br/>Perpendicular passes to cover turn setbacks"]
-  E --> F["Turn Synthesis & Manoeuvre Linking<br/>Square 90-degree comb pivots"]
+  B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
+  C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
+  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.574 m pitch"]
+  E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
   F --> G["Goal Dispatch to move_base"]
 ```
 
-1. **Free-Space Clipping**: `extract_free_space_regions` erodes the raw user polygon by `wall_clearance` against the static occupancy grid, isolating reachable floor space.
-2. **Cellular Decomposition**: Vertical sweep lines decompose non-convex or obstructed areas into obstacle-free convex trapezoids.
-3. **Serpentine Sweep Lanes**: Parallel lanes run along the cell long axis at `pitch` (0.574 m) spacing.
-4. **Square 90-Degree Turns**: Pivot 90 degrees at lane ends, traverse sideways, and pivot 90 degrees into the return lane. If turning clearance is constrained, the planner automatically falls back to point turns or omega maneuvers.
-5. **Headland Passes**: Lanes terminate `turn_clearance` short of walls to prevent collisions during rotation; perpendicular headland passes sweep the remaining strips.
-6. **Residual Gap Sweeps**: Leftover pockets are identified via difference masks and swept in up to three residual passes.
+### Critical Point Classification:
+During vertical sweep line progression along the $x$-axis, boundary vertices are classified based on the local connectivity of the free space:
+1. **IN Critical Point**: A new cell opens as free space expands.
+2. **OUT Critical Point**: A cell terminates as boundaries converge.
+3. **SPLIT Critical Point**: An internal obstacle divides an active cell into two distinct parallel sub-cells.
+4. **MERGE Critical Point**: Two parallel sub-cells rejoin past the trailing edge of an obstacle.
 
-## 3. Five-Layer Obstacle Management
+---
+
+## Five-Layer Obstacle Management
 
 ```mermaid
 flowchart TB
@@ -84,29 +91,32 @@ flowchart TB
   L0 --> L1 --> L2 --> L3 --> L4
 ```
 
-| Layer | Operating Horizon | Strategy & Reaction |
-| --- | --- | --- |
-| **Layer 0 (L0)** | Entire Mission | Decomposes polygon around static map features. |
-| **Layer 1 (L1)** | Stroke Transits | Navfn computes collision-free transits between disconnected cells. |
-| **Layer 2 (L2)** | 3 x 3 m Window | TEB local planner steers around transient obstacles (people, boxes). |
-| **Layer 3 (L3)** | Individual Goal | Evaluates goal failure: retries dynamic blocks later, nudges planner aborts sideways. |
-| **Layer 4 (L4)** | Active Cell | Re-slices remaining lanes in real time when persistent obstacles block over 15% of a lane. |
+---
 
-## 4. Zero-Spin Orientation Alignment
+## Zero-Spin Orientation Alignment (Correlative Scan Matching)
 
-To localize without disruptive 360-degree rotation in tight aisles:
+When the robot is placed in an unknown pose on a pre-recorded map, traditional AMCL requires a 360-degree in-place rotation to collapse particle dispersion.
+
+MSD700 implements **Correlative Scan Matching (CSM)** to calculate orientation and position instantly without motion:
 
 ```mermaid
 flowchart LR
-  SCAN["Stationary LiDAR Scan"] --> CSM["Correlative Scan Matcher (CSM)<br/>Grid search: (dx, dy, dyaw)"]
-  CSM --> CHK{"Confidence >= 65%?"}
-  CHK -->|Yes| INIT["Publish /initialpose<br/>(< 50 ms, Zero Motion)"]
-  CHK -->|No| JOG["Linear Micro-Jog<br/>15 cm Forward/Backward Translation"]
-  JOG --> RETRY["Re-evaluate CSM Match"]
+  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Multi-Resolution 2D Grid Search<br/>Over Search Space: (dx, dy, dyaw)"]
+  GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
+  SCORE --> CONF{"Confidence >= 65%?"}
+  CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
+  CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
 
-1. **Stationary Scan Matcher**: Correlative Scan Matching compares a single stationary 2D LiDAR scan against the static map. When confidence exceeds 65%, the corrected pose publishes to `/initialpose` instantly without moving the robot.
-2. **Linear Micro-Jog Fallback**: If symmetry or sparse features reduce match confidence, the robot performs a gentle 15 cm forward/backward jog to establish heading without spinning.
+### Mathematical Formulation:
+Given $N$ laser scan points $\mathbf{p}_i = [x_i, y_i]^T$ and a static occupancy grid map $M(x, y)$, the scan matcher finds the rigid transform $(\Delta x, \Delta y, \Delta \theta)$ that maximizes the correlation score:
+
+$$S(\Delta x, \Delta y, \Delta \theta) = \sum_{i=1}^N M\left( \mathbf{R}(\Delta \theta) \mathbf{p}_i + \begin{bmatrix} \Delta x \\ \Delta y \end{bmatrix} \right)$$
+
+Where $\mathbf{R}(\Delta \theta)$ is the 2D rotation matrix:
+$$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta \theta) \\ \sin(\Delta \theta) & \cos(\Delta \theta) \end{bmatrix}$$
+
+When the match score confidence exceeds $65\%$, the estimated pose is published to `/initialpose`, localizing the robot in less than $50\text{ ms}$ with zero rotational motion.
 
 ## Related Documentation
 

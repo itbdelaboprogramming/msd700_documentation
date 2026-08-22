@@ -3,120 +3,127 @@ outline: deep
 search: false
 ---
 
-# Firmware and Hardware Architecture
+# Firmware, Microcontroller, and Hardware Bus
 
 <RoleBadge role="developer" />
 
-This document details the low-level embedded hardware architecture, microcontroller firmware, motor driver interfaces, serial communication protocols, and battery telemetry monitoring for the MSD700 robot.
+This document provides a deep technical specification of the embedded microcontroller firmware, motor driver interfaces, optical encoder decoding, discrete PID velocity control algorithms, and analog telemetry circuitry implemented on the MSD700 robot.
 
-## Hardware Control Topology
-
-The MSD700 chassis is controlled by an onboard embedded microcontroller (Arduino/Teensy) communicating with the main NVIDIA Jetson single-board computer over a high-speed isolated serial link.
+## Embedded Control Topology
 
 ```mermaid
 flowchart TD
-  subgraph HostComputer["NVIDIA Jetson SBC (Host Computer)"]
-    ROS_CTRL["ROS Navigation & Teleop Nodes<br/>Publishes: /cmd_vel (geometry_msgs/Twist)"]
-    SERIAL_NODE["msd700_hardware / serial_node<br/>Manages /dev/ttyUSB0 (115200 baud)"]
-    ROS_ODOM["Publishes: /wheel/odom & /battery_state"]
+  subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
+    SERIAL_NODE["serial_node.py (msd700_hardware)<br/>TTY Port: /dev/ttyUSB0 (115200 baud, 8N1)"]
+    CMD_PUB["Subscribes /cmd_vel (Twist)<br/>Publishes /wheel/odom & /battery_state"]
   end
 
-  subgraph Microcontroller["Embedded Motor Microcontroller (Arduino)"]
-    COMM_PARSER["Serial Packet Parser & Checksum Validator"]
-    PID_LOOP["Dual Closed-Loop PID Velocity Controllers"]
-    PWM_GEN["PWM Generation & Direction Gates"]
-    ENCODER_ISR["Quadrature Encoder ISRs (A/B Channels)"]
-    ADC_SENSE["Analog Voltage Sensing (Battery Divider)"]
-    HW_WATCHDOG["Hardware Safety Watchdog (500 ms Timeout)"]
+  subgraph Microcontroller["Embedded Microcontroller (Arduino / Teensy)"]
+    UART_ISR["UART Receive ISR & Packet Checksum Validator"]
+    PID_LEFT["Left Wheel Discrete PID Controller (100 Hz)"]
+    PID_RIGHT["Right Wheel Discrete PID Controller (100 Hz)"]
+    ENC_ISR["Quadrature Encoder Pin Change ISRs (4000 CPR)"]
+    ADC_SENSE["10-Bit ADC Battery Voltage Sampling"]
+    WATCHDOG["Hardware Safety Watchdog Timer (500 ms)"]
   end
 
-  subgraph ActuatorsPower["Chassis Hardware & Power Stage"]
-    MOTOR_L["Left Motor Driver & High-Torque Gearmotor"]
-    MOTOR_R["Right Motor Driver & High-Torque Gearmotor"]
-    ENC_L["Left Optical Quadrature Encoder"]
-    ENC_R["Right Optical Quadrature Encoder"]
-    BATTERY["24V LiFePO4 Battery Pack & BMS"]
-    RELAY["Hardware Emergency Cutoff Relay"]
+  subgraph PowerStage["Actuators and Power Electronics"]
+    H_BRIDGE_L["Left Motor H-Bridge Driver Stage"]
+    H_BRIDGE_R["Right Motor H-Bridge Driver Stage"]
+    MOTOR_L["Left High-Torque Brushed DC Motor"]
+    MOTOR_R["Right High-Torque Brushed DC Motor"]
+    BATTERY["24V LiFePO4 Battery Pack (25.6V Nominal)"]
+    ESTOP_RELAY["Hardware Safety Cutoff Relay"]
   end
 
-  ROS_CTRL -->|/cmd_vel| SERIAL_NODE
-  SERIAL_NODE <-->|Serial UART 115200| COMM_PARSER
-  SERIAL_NODE --> ROS_ODOM
+  SERIAL_NODE <-->|Full-Duplex UART 115200| UART_ISR
+  CMD_PUB --> SERIAL_NODE
 
-  COMM_PARSER --> PID_LOOP
-  COMM_PARSER --> HW_WATCHDOG
-  PID_LOOP --> PWM_GEN
-  PWM_GEN --> MOTOR_L
-  PWM_GEN --> MOTOR_R
+  UART_ISR --> PID_LEFT
+  UART_ISR --> PID_RIGHT
+  UART_ISR --> WATCHDOG
 
-  ENC_L --> ENCODER_ISR
-  ENC_R --> ENCODER_ISR
-  ENCODER_ISR --> PID_LOOP
-  ENCODER_ISR --> COMM_PARSER
+  PID_LEFT --> H_BRIDGE_L --> MOTOR_L
+  PID_RIGHT --> H_BRIDGE_R --> MOTOR_R
 
-  BATTERY --> ADC_SENSE
-  ADC_SENSE --> COMM_PARSER
-  HW_WATCHDOG --> RELAY
+  MOTOR_L --> ENC_ISR
+  MOTOR_R --> ENC_ISR
+  ENC_ISR --> PID_LEFT
+  ENC_ISR --> PID_RIGHT
+  ENC_ISR --> UART_ISR
+
+  BATTERY --> ADC_SENSE --> UART_ISR
+  WATCHDOG --> ESTOP_RELAY
 ```
 
-## Serial Protocol Specification
+---
 
-Communication between the Jetson host and the microcontroller runs over USB UART (`/dev/ttyUSB0` or `/dev/ttyACM0`) at **115200 baud, 8N1**.
+## Hardware Electrical Pinout and Wiring
 
-### 1. Velocity Command Packet (Host to Microcontroller)
-Sent at 20 to 50 Hz whenever the robot moves:
+Communication between the NVIDIA Jetson and microcontroller runs over high-speed USB UART with optical isolation:
 
-```text
-[START_BYTE] [CMD_TYPE] [LINEAR_VEL_MSB] [LINEAR_VEL_LSB] [ANGULAR_VEL_MSB] [ANGULAR_VEL_LSB] [CHECKSUM] [END_BYTE]
-```
+| Signal Function | Microcontroller Pin | Driver / Peripheral Connection | Electrical Characteristics |
+| --- | --- | --- | --- |
+| **Left Motor PWM** | Pin 5 (Timer 3) | Left H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM (Quiet Inaudible Drive) |
+| **Left Motor DIR** | Pin 4 | Left H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
+| **Right Motor PWM** | Pin 6 (Timer 4) | Right H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM |
+| **Right Motor DIR** | Pin 7 | Right H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
+| **Left Encoder A** | Pin 2 (INT0) | Left Optical Encoder Channel A | 5V TTL Interrupt (Rising/Falling Edge) |
+| **Left Encoder B** | Pin 3 (INT1) | Left Optical Encoder Channel B | 5V TTL Interrupt |
+| **Right Encoder A** | Pin 18 (INT5) | Right Optical Encoder Channel A | 5V TTL Interrupt |
+| **Right Encoder B** | Pin 19 (INT4) | Right Optical Encoder Channel B | 5V TTL Interrupt |
+| **Battery Voltage ADC**| Pin A0 (ADC0) | Precision Resistor Divider Output | 0 to 5.0V Analog Voltage |
+| **E-Stop Safety Line** | Pin 12 | Hardware Relay Gate Driver | Logic High: Motors Enabled, Low: Cutoff |
 
-- `START_BYTE`: `0xAA`
-- `CMD_TYPE`: `0x01` (Velocity Drive)
-- `LINEAR_VEL`: 16-bit signed integer (millimeters per second, $v_x$).
-- `ANGULAR_VEL`: 16-bit signed integer (milliradians per second, $\omega_z$).
-- `CHECKSUM`: Bitwise XOR of all payload bytes.
-- `END_BYTE`: `0x55`
+---
 
-### 2. Telemetry and Encoder Feedback (Microcontroller to Host)
-Streamed continuously at 50 Hz:
+## Closed-Loop Discrete PID Velocity Control
 
-```text
-[START_BYTE] [TYPE] [L_ENC_B3] [L_ENC_B2] [L_ENC_B1] [L_ENC_B0] [R_ENC_B3] [R_ENC_B2] [R_ENC_B1] [R_ENC_B0] [VOLTAGE_MV] [STATUS_FLAG] [CHECKSUM] [END_BYTE]
-```
+The firmware runs dual discrete PID control loops at $100\text{ Hz}$ ($\Delta t = 0.01\text{ s}$) with anti-windup clamping to control wheel velocity:
 
-- `L_ENC / R_ENC`: 32-bit signed integer cumulative quadrature pulse counts.
-- `VOLTAGE_MV`: 16-bit unsigned integer battery voltage in millivolts.
-- `STATUS_FLAG`: Bitfield flags (Emergency E-Stop, Motor Driver Fault, Temperature Alert).
+### Discrete Error Formulation:
+$$e_k = v_{\text{target}} - v_{\text{measured}}$$
 
-## Microcontroller Firmware Architecture
+### PID Control Output with Clamping:
+$$\text{PWM}_k = K_p \cdot e_k + K_i \sum_{j=0}^k e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
 
-The Arduino firmware in `msd700_firmware` executes a deterministic real-time control loop:
+### Anti-Windup Integrator Protection:
+To prevent integrator windup when motors are temporarily loaded or stalled against an incline:
 
-### 1. Quadrature Encoder Pulse Capture
-Interrupt Service Routines (ISRs) monitor both rising and falling edges of optical encoder channels A and B, calculating directional displacement with zero missed pulses.
+$$\sum e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \right)$$
 
-$$\Delta d_{left} = \frac{2 \pi r_{wheel} \cdot \Delta \text{ticks}_{left}}{\text{TICKS\_PER\_REV}}$$
+$$\text{PWM}_k = \text{clamp}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
 
-$$\Delta d_{right} = \frac{2 \pi r_{wheel} \cdot \Delta \text{ticks}_{right}}{\text{TICKS\_PER\_REV}}$$
+Where $\text{PWM}_{\max} = 255$ ($8$-bit timer resolution).
 
-### 2. Closed-Loop PID Velocity Control
-The firmware computes differential wheel speed targets from received $v_x$ and $\omega_z$:
+---
 
-$$v_{left} = v_x - \frac{\omega_z \cdot L_{track}}{2}, \quad v_{right} = v_x + \frac{\omega_z \cdot L_{track}}{2}$$
+## Battery Voltage Sensing Circuitry
 
-A discrete PID algorithm runs at 100 Hz per wheel channel:
+The robot is powered by a 24V LiFePO4 battery pack (full charge: $29.2\text{ V}$, nominal: $25.6\text{ V}$, cutoff: $21.0\text{ V}$).
 
-$$PWM(t) = K_p e(t) + K_i \int e(t) dt + K_d \frac{de(t)}{dt}$$
+An onboard voltage divider scales battery voltage down to the $0\text{ to }5\text{ V}$ range of the microcontroller ADC:
 
-### 3. Hardware Safety Watchdog
-If the microcontroller does not receive a valid velocity command packet for **500 ms**, the firmware automatically sets motor PWM outputs to zero and disengages the power drive stage. This ensures the robot comes to a dead stop if the Jetson computer crashes or the serial cable disconnects.
+$$V_{adc} = V_{bat} \cdot \frac{R_2}{R_1 + R_2}$$
 
-## Battery Voltage and Telemetry
+Where $R_1 = 30\text{ k}\Omega$ and $R_2 = 5.1\text{ k}\Omega$ (Divider Ratio $K_{div} = 0.1453$).
 
-The robot is powered by a 24V LiFePO4 battery pack monitored via a precision resistor divider connected to an analog ADC input on the microcontroller. The host driver translates voltage readings into a linear state-of-charge percentage published on `/battery_state`.
+### Voltage Reconstruction in Firmware:
+$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \left( \frac{R_1 + R_2}{R_2} \right)$$
+
+Where $V_{ref} = 5.00\text{ V}$.
+
+---
+
+## Hardware Safety Watchdog
+
+To prevent runaway robot conditions caused by host OS lockups or severed serial cables, the microcontroller executes an autonomous hardware watchdog:
+
+1. **Timer Expiry**: The watchdog timer register resets to $500\text{ ms}$ upon every valid checksum-verified velocity packet.
+2. **Safety Cutoff**: If no packet arrives for $500\text{ ms}$, the microcontroller immediately clamps motor PWM outputs to zero and drops the `ESTOP_RELAY` gate line.
 
 ## Related Documentation
 
-- [ROS Package Registry](/development/ros-packages): Package structures and launch configurations.
-- [Sensor Fusion and Control](/development/sensor-fusion-and-control): EKF state estimation using wheel odometry.
-- [State and Behavior](/development/state-and-behavior): Emergency stop and safety states.
+- [Sensor Fusion and Control](/development/sensor-fusion-and-control): Odometry integration and EKF.
+- [Costmaps and Planners](/development/costmaps-and-planners): Velocity limit parameters.
+- [State and Behavior](/development/state-and-behavior): Emergency stop state machines.
