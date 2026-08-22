@@ -91,6 +91,63 @@ at their cause:
   `/unit_<ULID>/string/operation_snapshot`. Confirm with `rostopic list | grep operation_` on the
   unit: the flat name present with no prefixed twin is the fingerprint. The cloud path was never
   affected, because MQTT bridges both directions.
+- **A swept room still has an unswept strip along every wall.** Some of it is geometry and some of
+  it was a bug. The floor is `wall_clearance - body_half_width` = 0.225 m per wall, and no plan can
+  beat it. Anything wider means the clearance is being applied more than once: read the geometry
+  block `path_coverage` prints at startup and check that the effective setback is 0.575 m, not
+  1.10 m. See
+  [Boustrophedon § Two robot geometries](/development/boustrophedon-and-alignment#_1-two-robot-geometries).
+- **A geometry problem reproduces on the robot but never in the simulator.** Until 2026-08-19 every
+  simulated robot was a TurtleBot3 Waffle derivative: a 0.266 x 0.266 m body against a real
+  0.90 x 0.70 m one. A 0.133 m inscribed radius sails through a gap that stops a 0.425 m one, so
+  no narrow-aisle complaint could ever be reproduced. Worse, the worlds matched the small robot:
+  `turtlebot_world` tops out at 0.39 m of clearance, so the real robot does not fit in a single
+  cell of it. Use `msd700_simulation msd700_warehouse_nav.launch`, which spawns
+  `msd700_field.urdf.xacro` at its real size in a 14 x 21 m hall. See
+  [Simulation](/development/simulation).
+- **Gazebo opens on an empty grey grid and the map comes out blank.** The third-party world was
+  never fetched. Gazebo does not fail on a missing `world_name`; it opens nothing and says nothing,
+  and every downstream symptom is a red herring. Run
+  `rosrun msd700_simulation fetch_sim_worlds.sh`. The warehouse launches now abort with a readable
+  message instead, but any launch pointing `world_path` at the vendor directory by hand still can
+  hit this.
+- **The simulated robot plans a path between two shelf legs it cannot possibly pass.** `move_base`
+  is carrying the Waffle footprint under a real-size body. Pass `sim_body:=field` so it loads
+  `costmap_common_params.yaml` (1.20 x 0.85 m envelope) instead of the `_sim` variant
+  (0.28 x 0.31 m). Confirm with
+  `rosparam get /move_base/global_costmap/footprint`.
+- **AMCL's pose wanders in the open middle of a large map.** `laser_max_range` defaults to 3.5 m,
+  which is a room-sized figure. In a 21 m hall it discards the only long returns a particle could be
+  weighted against. It is now an argument on `amcl.launch`; the warehouse rig passes 12.0.
+- **A narrow corridor produces no sweep path at all.** The robot needs 1.15 m clear to enter and
+  1.77 m to turn around inside. Below the first figure the free-space erosion removes the corridor
+  entirely and there is nothing to plan. `rostopic echo -n1 /msd700/coverage_debug` shows the drawn
+  area against the coverable area, which is the fastest way to tell "the corridor is too narrow"
+  from "the planner failed".
+- **A whole room behind a doorway is never swept.** The free-space extraction used to keep only the
+  largest connected blob, so a doorway narrower than twice the clearance severed the room and it
+  vanished with no message. It is now returned flagged unreachable and shaded on the map via
+  `/msd700/uncovered_regions`. If a room disappears again, check that topic before the planner.
+- **The robot gives up on a lane instead of driving around the box in it.** That is the L4 replan
+  loop not firing. It needs `~replan_blocked_fraction` of the remaining lane blocked, or
+  `~replan_failure_streak` consecutive failures, and it will not fire more often than
+  `~replan_min_interval`. Obstacles smaller than the body deliberately never trigger it, because the
+  local planner already steers around those.
+- **The sweep path looks scrambled instead of a plain back-and-forth comb.** Two settings shape it.
+  `~lane_order` must be `adjacent` (`skip` deliberately sweeps 1, 3, 5 then 6, 4, 2) and
+  `~turn_style` must be `square`. Both are the defaults; a launch file still passing
+  `lane_order:=skip` is the usual cause. Diagonal legs on an otherwise square path are not a
+  setting: they mean the robot could not pivot at that corner, so the planner fell back to the
+  shortest manoeuvre that fits. `rostopic echo -n1 /msd700/coverage_debug` and the `turn_clearance`
+  line in the startup block tell you whether the corner had 0.885 m of room.
+- **The path hops over a pillar again and again instead of finishing one side first.** Scan columns
+  that cross a hole are supposed to be grouped into separate bands. If they are not, every column
+  costs a crossing. Confirm `~boustrophedon_decomposition` is `true`, since a cell that still
+  contains a hole is what puts the band grouping under load in the first place.
+- **The robot oscillates at the end of every lane.** The turn does not fit. An in-place turn needs
+  0.885 m of free radius; if the headland pass is disabled the lane runs right up to the wall and
+  there is no room. Check `~headland` is `true`, and that the TEB coverage profile was applied (the
+  log says so) so the robot is allowed to reverse.
 - **Boustrophedon sweep lines from an old run reappear after a fresh login.** The overlay topic is
   latched and rebroadcast at 2 Hz, and for a long time the only thing that dismissed it was a
   `sessionStorage` flag that logout wipes. If it comes back again, look for a run that ended without
