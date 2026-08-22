@@ -6,288 +6,196 @@ outline: deep
 
 <RoleBadge role="technician" />
 
-How to install and configure the **MSD700 Server**, the cloud and dashboard half of the system.
-Complete [Prerequisites](/setup/prerequisites) first. For what every Docker flag and compose
-construct below is doing, see [Docker Reference](/setup/docker-reference).
+This guide provides step-by-step instructions for deploying the **MSD700 Cloud Server and Web Dashboard**.
 
-::: info Why start with the Server?
-A Unit can run fully offline once it has enrolled, but it cannot enrol *for the first time* without
-somewhere to enrol against. Standing up the Server first means [Unit Setup](/setup/unit-setup) has
-something to talk to on the first try, instead of failing at the very last step.
+Complete [Prerequisites](/setup/prerequisites) before proceeding.
+
+::: info Production-First Architecture
+This guide defaults to a standard **Production Deployment**. Development mode instructions and advanced custom parameters are located in the [Advanced Configurations](#advanced-configurations) section at the bottom.
 :::
 
-## What you are building
+## System Topology
 
 ```mermaid
 flowchart TB
-  NET["Internet"] -->|":443 HTTPS"| AP
-  NET -->|":8883 MQTT TLS"| MQ
-  NET -.->|":3478 + UDP relay range"| TURN
+  NET["Public Internet"] -->|":443 HTTPS / WSS"| AP["Apache2 Reverse Proxy<br/>TLS Termination & Ingress Routing"]
+  NET -->|":8883 MQTTS"| MQ["HiveMQ CE (:8883)<br/>Encrypted Fleet Broker"]
+  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>WebRTC TURN Relay"]
 
-  subgraph HOST["Server host"]
-    AP["Apache2<br/>TLS termination + reverse proxy"]
-    AP --> FE["frontend_prod :3000"]
-    AP --> BE["backend_node :5000"]
-    AP --> RB["rosbridge :9090"]
-    AP --> MED["media-server :3003"]
-    AP --> SIG["signalling :3001"]
-    BE --> DB[("MySQL :3307")]
-    MQ["HiveMQ :8883"]
-    TURN["coturn :3478"]
-    SEC["/srv/msd/secrets<br/>JWT keyring + TLS keystore"]
+  subgraph DockerServices["Docker Compose Production Stack"]
+    AP --> FE["frontend_prod (:3000)<br/>Next.js Web Dashboard"]
+    AP --> BE["backend_node (:5000)<br/>REST API & Container Manager"]
+    AP --> RB["rosbridge_suite (:9090)<br/>WebSocket Telemetry"]
+    AP --> MED["media-server (:3003)<br/>Map & Binary Asset Store"]
+    AP --> SIG["signalling_server (:3001)<br/>WebRTC Signalling"]
+    BE --> DB[("MySQL Central DB (:3307)<br/>Database: ROS_DB")]
+    SEC["/srv/msd/secrets<br/>JWT Keyring & TLS Keystore"]
     SEC -.-> BE
     SEC -.-> MQ
   end
 ```
 
-Everything except Apache is a container, all defined in one `docker-compose.yml` inside the
-`ros-web-ui` repository. Nothing is installed directly on the host except Docker, Apache and
-certbot.
+## Directory Structure Overview
 
-## 1. Clone the repository
+Before running any commands, understand how the repositories are structured on the host filesystem:
 
-```bash
-git clone https://github.com/itbdelaboprogramming/ros-web-ui.git
-cd ros-web-ui
+```
+~/ (e.g. /home/ubuntu)
+└── ros-web-ui/                               # Main Server Repository (branch: v2)
+    ├── docker-compose.yml                    # Docker Compose Multi-Service Definition
+    ├── .env                                  # Environment & Port Configuration
+    ├── scripts/
+    │   └── secrets.sh                        # JWT Keyring Management Utility
+    └── source/
+        └── dependencies/
+            ├── ROS-dashboard-backend/        # Express REST API (backend_node)
+            ├── ROS-dashboard-next-ts/        # Frontend Dashboard (CLONED HERE, branch: v2)
+            ├── media-server/                 # Static Map Media Server
+            ├── signalling_server/            # WebRTC Camera Signalling
+            └── ssl_update/
+                └── update_ssl.sh             # Certbot to HiveMQ Keystore Converter
 ```
 
-The dashboard is a **separate repository**, cloned inside this one as the frontend build context:
+---
+
+## Core Step-by-Step Setup
+
+Follow these 6 steps in sequence to stand up a complete production server.
+
+### Step 1: Clone Repositories
+
+Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` frontend repository directly into `source/dependencies/`:
 
 ```bash
-git clone https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts.git \
-  source/dependencies/ROS-dashboard-next-ts
-cd source/dependencies/ROS-dashboard-next-ts
-git checkout v2
-cd -
+# 1. Clone main server repository on branch v2
+git clone -b v2 https://github.com/itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
+
+# 2. Clone the frontend dashboard repository directly into dependencies on branch v2
+git clone -b v2 https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts.git \
+  ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
-::: warning That clone must be on branch `v2`
-The Dockerfile the frontend build needs exists only on `v2`. Branch `main` is the older line and
-carries neither the Dockerfile nor the V2 app, so a clone left on `main` fails the build outright.
-The nested clone is deliberately gitignored by `ros-web-ui`, so `git status` listing it as untracked
-is git reporting a nested repository, not evidence that it is stray.
+::: tip Why is the frontend cloned inside dependencies?
+The Dockerfile builds the Next.js frontend directly within the Docker build context of `ros-web-ui`. The `source/dependencies/ROS-dashboard-next-ts` path is gitignored by the parent repository.
 :::
 
-## 2. Create the secrets
+---
 
-Two things live *outside* the Docker image on purpose: the JWT signing keyring and the HiveMQ TLS
-keystore. Both are read from a fixed host path, `/srv/msd/secrets` by default (`SECRETS_DIR`).
+### Step 2: Initialize Security Secrets
 
-### JWT signing keyring
+Secrets live outside Docker containers in `/srv/msd/secrets/` to persist across image rebuilds.
 
 ```bash
-./scripts/secrets.sh init            # production keyring  -> jwt_keyring.json
-./scripts/secrets.sh init --dev      # dev keyring         -> jwt_keyring.dev.json
-./scripts/secrets.sh status          # list keys and expiry, without printing values
+# 1. Navigate to the ros-web-ui repository
+cd ~/ros-web-ui
+
+# 2. Initialize the production JWT Keyring
+sudo mkdir -p /srv/msd/secrets
+./scripts/secrets.sh init
+
+# 3. Verify that the keyring was created
+./scripts/secrets.sh status
 ```
 
-| Command | Effect |
-| --- | --- |
-| `init` | Create the keyring if it does not exist. Never overwrites an existing one. |
-| `status` | List keys, their state and expiry. Read only. |
-| `rotate` | Mint a new active key; demote the current one to accepted for a grace window. |
-| `prune` | Drop accepted keys whose grace window has passed. |
+---
 
-| Option | Applies to | Meaning |
-| --- | --- | --- |
-| `--dev` | all | Operate on `jwt_keyring.dev.json` instead of `jwt_keyring.json` |
-| `--seed-legacy SECRET` | `init` | Add `SECRET` as an already-accepted key so tokens signed with the pre-keyring secret keep verifying during a cutover |
-| `--legacy-days N` | `init` | Grace window for `--seed-legacy` (default 7) |
-| `--grace-hours N` | `rotate` | Grace window for the demoted key (default 48) |
+### Step 3: Generate HiveMQ TLS Keystore
 
-::: info Why a file instead of an environment variable
-Two reasons. First, the Docker build copies the whole `source/` tree into the image, so anything in
-an `.env` file *inside* that tree gets baked into the image: changing a secret would mean a rebuild.
-A file mounted at container start avoids that entirely. Second, this is a **keyring**, not a single
-secret. Rotating it demotes the old key to "still accepted for a grace window" instead of
-invalidating every logged-in session and every connected robot at once.
-:::
-
-### HiveMQ TLS keystore
-
-The broker needs a PKCS#12 keystore built from the domain's Let's Encrypt certificate. One keystore
-serves **both** brokers; prod and dev mount the same file read-only.
+The HiveMQ MQTT broker requires a PKCS#12 keystore generated from your domain's Let's Encrypt SSL certificate.
 
 ```bash
+# 1. Obtain Let's Encrypt certificate for your server domain
+sudo certbot certonly --standalone -d msd.nglobal.jp
+
+# 2. Run the automated keystore generator script in ros-web-ui
+cd ~/ros-web-ui
 sudo ./source/dependencies/ssl_update/update_ssl.sh
 ```
 
-That script renews the certificate with certbot, exports
-`/etc/letsencrypt/live/<domain>/{fullchain,privkey}.pem` into
-`/srv/msd/secrets/hivemq/keystore.p12`, and fixes ownership and mode. Doing it by hand looks like
-this:
+This script creates `/srv/msd/secrets/hivemq/keystore.p12` with UID `1001` ownership and `0600` permissions.
+
+---
+
+### Step 4: Configure Environment (`.env`)
+
+Create `.env` at `~/ros-web-ui/.env`:
 
 ```bash
-sudo mkdir -p /srv/msd/secrets/hivemq
-sudo openssl pkcs12 -export \
-  -in   /etc/letsencrypt/live/msd.nglobal.jp/fullchain.pem \
-  -inkey /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem \
-  -out  /srv/msd/secrets/hivemq/keystore.p12 \
-  -name hivemq \
-  -passout "pass:<the password in Docker/hivemq/config.xml>"
-
-# The broker runs as uid 1001 and reads the 0600 key directly, so it has to BE the owner.
-sudo chown -R 1001:1001 /srv/msd/secrets/hivemq
-sudo chmod 700 /srv/msd/secrets/hivemq
-sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
+cd ~/ros-web-ui
+nano .env
 ```
 
-::: warning A running broker keeps serving the OLD certificate
-HiveMQ reads the keystore once, at startup. Restart it for a new certificate to take effect, and
-mind that a **prod** restart cuts MQTT fleet-wide for around 14 seconds, which is longer than the
-10 second ping watchdog and therefore trips `/emergency_pause` on every robot mid-operation. Do prod
-in a maintenance window.
+Paste the following production configuration:
 
-```bash
-docker compose --profile server_dev  restart hivemq_dev
-docker compose --profile server_prod restart hivemq      # maintenance window
-```
-:::
-
-## 3. Configure `.env`
-
-Create `.env` at the repository root, next to `docker-compose.yml`. There is no committed template,
-because several values are per-host and a shared template is how a wrong one travels between
-machines. This is the full set of keys the compose file reads.
-
-```bash
-# ── Paths and identity ─────────────────────────────────────────────────────────
-# Must be the SAME value the Unit uses. A mismatch is the classic "map saving
-# silently breaks": the backend writes to a path that exists only in its own container.
+```ini
+# Storage path for recorded map files on the host
 MAPS_FOLDER=/home/ubuntu/ros_maps
 
-# Ownership of files the containers write on the host. PER-HOST.
+# Host User and Docker Group IDs (run: id -u, id -g, getent group docker | cut -d: -f3)
 USER_UID=1001
 USER_GID=1001
-
-# Host docker group gid: `getent group docker | cut -d: -f3`. PER-HOST.
-# A wrong value makes the backend log "EACCES /var/run/docker.sock" and unit
-# containers stop being auto-spawned.
 DOCKER_GID=998
 
-# How long an idle unit's container stays up before the reaper stops it (ms).
+# Idle timeout before stopping inactive unit containers (1800000 ms = 30 min)
 UNIT_IDLE_TIMEOUT_MS=1800000
 
-# ── Database ───────────────────────────────────────────────────────────────────
-MYSQL_ROOT_PASSWORD=<strong random>
+# Central Database Credentials
+MYSQL_ROOT_PASSWORD=SetYourStrongRootPasswordHere
 MYSQL_DATABASE=ROS_DB
 MYSQL_USER=itbdelabo
-MYSQL_PASSWORD=<strong random>
+MYSQL_PASSWORD=SetYourStrongUserPasswordHere
 
-# ── MQTT broker ────────────────────────────────────────────────────────────────
-# Leave as "nakayama". Any other value, or an empty one, makes backend_node fall
-# back to a local Mosquitto on 1883 that nothing on this host serves, and the only
-# symptom is a repeating "ECONNREFUSED 127.0.0.1:1883".
+# MQTT Broker Settings
 MQTT_BROKER_TYPE=nakayama
 NAKAYAMA_HOST=msd.nglobal.jp
-
-# The keystore from step 2. HIVEMQ_UID must own that file and it must stay 0600.
-# It is NOT the same as USER_UID above.
 HIVEMQ_KEYSTORE=/srv/msd/secrets/hivemq/keystore.p12
 HIVEMQ_UID=1001
 
-# ── Production ports ───────────────────────────────────────────────────────────
+# Production Port Map
 MYSQL_PORT_PROD=3307
 BACKEND_PORT_PROD=5000
 MEDIA_SERVER_PORT_PROD=3003
 SIGNALLING_PORT_WS_PROD=3001
 SIGNALLING_PORT_HTTP_PROD=3002
 HIVE_MQTT_TLS_PORT_PROD=8883
-# Pinned to 3000 by Apache's catch-all. Changing it means editing the vhost too.
 FRONTEND_PORT_PROD=3000
 
-# ── Development ports (offset so both profiles can coexist) ────────────────────
-MYSQL_PORT_DEV=3308
-BACKEND_PORT_DEV=5001
-MEDIA_SERVER_PORT_DEV=4003
-SIGNALLING_PORT_WS_DEV=4001
-SIGNALLING_PORT_HTTP_DEV=4002
-HIVE_MQTT_TLS_PORT_DEV=8884
-ROSBRIDGE_PORT_DEV=9091
-FRONTEND_PORT_DEV=3100
-
-# Public address of THIS server, baked into the DEV dashboard bundle at build time
-# because those URLs resolve in the operator's browser, not in the container.
-# Changing it means rebuilding frontend_dev, not restarting it.
-SERVER_PUBLIC_IP=118.22.31.252
-
-# ── TURN relay: see step 7. Production only. ───────────────────────────────────
-TURN_LISTENING_IP=
-TURN_EXTERNAL_IP=
-TURN_USER=
-TURN_PASSWORD=
+# WebRTC TURN Relay (coturn)
+TURN_LISTENING_IP=192.168.100.14
+TURN_EXTERNAL_IP=118.22.31.252/192.168.100.14
+TURN_USER=msd700
+TURN_PASSWORD=SetYourStrongTurnPasswordHere
 ```
 
-Check what compose actually resolved before starting anything:
+---
+
+### Step 5: Start Production Docker Containers
+
+Launch the production compose stack:
 
 ```bash
-docker compose --profile server_prod config | less
-```
+cd ~/ros-web-ui
 
-::: danger `.env` is tracked between hosts; per-host values are not
-`DOCKER_GID`, `USER_UID`, `USER_GID`, `MAPS_FOLDER` and the TURN addresses differ per machine. A
-commit that sweeps a Jetson's values into this file is how the canvas turns grey and map saving
-starts failing on the server, with nothing in any log pointing at a config change. Confirm those
-five keys against the host you are on before the first `up`.
-:::
-
-## 4. Start the services
-
-Pick one profile. `server_dev` is the safer first run: separate database, separate ports, separate
-MQTT broker, so a mistake here cannot touch anything real.
-
-```bash
-docker compose --profile server_dev up -d
-docker compose --profile server_dev ps        # everything Up or healthy?
-docker compose --profile server_dev logs -f nakayama_cloud_dev
-```
-
-Once that works:
-
-```bash
+# Start production containers in detached mode
 docker compose --profile server_prod up -d
+
+# Verify all containers are Up or Healthy
+docker compose --profile server_prod ps
 ```
 
-::: info What actually starts, in order
-A one-shot permissions fixer runs first (`fix_perms_prod` / `fix_perms_dev`): it creates and
-`chown`s the maps, media and backup directories so the app containers, which run unprivileged, can
-write to them. You never run it by hand; every app service waits on it with
-`service_completed_successfully`. Then MySQL (which the backend waits on with `service_healthy`),
-the HiveMQ broker, the backend plus rosbridge, the media server, the signalling server, the Next.js
-dashboard, and in prod the TURN relay.
-:::
+---
 
-::: warning Do not run both profiles at once unless the host can take it
-They are designed to coexist, and that is how server-side changes get tested against a real broker
-before touching production. But this is two full stacks including two MySQL instances and two JVMs.
-If you are unsure, ask whoever runs the existing deployment before starting a second profile.
-:::
+### Step 6: Configure Apache Reverse Proxy
 
-## 5. Put Apache in front of it
-
-Apache terminates HTTPS and reverse-proxies each service onto a clean public path, so the
-dashboard's browser code never has to know a raw port.
-
-### Enable the modules
+Apache terminates SSL on port 443 and routes incoming traffic to internal container ports.
 
 ```bash
+# 1. Enable required Apache modules
 sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias
 sudo systemctl restart apache2
 ```
 
-`proxy_wstunnel` is the one people forget. Without it, `ProxyPass ws://...` silently falls back to
-plain HTTP proxying and every WebSocket handshake fails.
-
-### Get a certificate
-
-```bash
-sudo certbot --apache -d msd.nglobal.jp
-```
-
-This creates `/etc/apache2/sites-available/000-default-le-ssl.conf`. Everything below goes inside
-that file's `<VirtualHost *:443>` block.
-
-### The vhost block
+Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 
 ```apache
 <IfModule mod_ssl.c>
@@ -296,86 +204,40 @@ that file's `<VirtualHost *:443>` block.
     ServerAdmin webmaster@localhost
     DocumentRoot /var/www/html
 
-    ErrorLog  ${APACHE_LOG_DIR}/error.log
+    ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
 
-    # Forward X-Forwarded-For / X-Forwarded-Host to the backends. The enrolment
-    # rate limiter and the connection log both read the client IP from these.
     ProxyAddHeaders On
 
-    # ── WebRTC signalling (WebSocket) ────────────────────────────────────────
-    ProxyPass        /services/signalling ws://localhost:3001
+    # 1. WebRTC Signalling Server (WebSocket)
+    ProxyPass /services/signalling ws://localhost:3001
     ProxyPassReverse /services/signalling ws://localhost:3001
 
-    # ── Media server (map images, uploads) ───────────────────────────────────
-    ProxyPass        /services/media http://localhost:3003
+    # 2. Media Server (Map files and images)
+    ProxyPass /services/media http://localhost:3003
     ProxyPassReverse /services/media http://localhost:3003
 
-    # ── Backend API ──────────────────────────────────────────────────────────
-    ProxyPass        /services/rosbackend http://localhost:5000
+    # 3. Express REST API Backend
+    ProxyPass /services/rosbackend http://localhost:5000
     ProxyPassReverse /services/rosbackend http://localhost:5000
 
-    # ── rosbridge (WebSocket) ────────────────────────────────────────────────
-    # rosbridge requires the Host header to INCLUDE the port, because it runs on a
-    # non-standard one. Without the rewrite it rejects the handshake with
-    # "missing port in HTTP Host header", which in the browser looks like the map
-    # simply never loading. A <Location> block is used because RequestHeader
-    # cannot be attached to a bare ProxyPass line.
+    # 4. rosbridge WebSocket Server
     <Location /services/rosbridge>
-        ProxyPass        ws://localhost:9090 timeout=86400 keepalive=On flushpackets=on
+        ProxyPass ws://localhost:9090 timeout=86400 keepalive=On flushpackets=on
         ProxyPassReverse ws://localhost:9090
         RequestHeader set Host "localhost:9090"
     </Location>
 
-    # ── Catch-all to the dashboard. MUST BE LAST. ────────────────────────────
-    ProxyPass        / http://localhost:3000/
-    ProxyPassReverse / http://localhost:3000/
-
-    SSLCertificateFile    /etc/letsencrypt/live/msd.nglobal.jp/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem
-    Include /etc/letsencrypt/options-ssl-apache.conf
-</VirtualHost>
-</IfModule>
-```
-
-| Directive | Why it is there |
-| --- | --- |
-| `timeout=86400` | rosbridge connections are long-lived. Apache's default proxy timeout closes them mid-session. |
-| `keepalive=On` | Sends TCP keepalives so an idle WebSocket is not dropped by an intermediate NAT. |
-| `flushpackets=on` | Forwards each frame immediately instead of buffering, which matters for pose at 25 Hz. |
-| `RequestHeader set Host` | The rosbridge handshake fix described above. |
-| `ProxyAddHeaders On` | Preserves the real client IP for rate limiting and audit. |
-
-::: danger Ordering rules that are not negotiable
-**The catch-all `ProxyPass /` must come last.** Apache evaluates `ProxyPass` directives in file
-order and takes the first match. Put the catch-all first and every `/services/...` path goes to the
-dashboard instead.
-
-**To serve anything locally, exclude it from the proxy first** with `ProxyPass /path !`. `mod_proxy`
-hooks `translate_name` ahead of `mod_alias`, so without the exclusion the catch-all beats an `Alias`
-no matter what order they appear in.
-:::
-
-### Serving static content alongside the proxy
-
-If you also serve a static site off disk from this vhost, the pattern is exclusion, then `Alias`,
-then a `<Directory>` block. This is what the documentation site itself uses:
-
-```apache
-    # 1. Exclude from the catch-all so Apache serves it locally.
+    # 5. Documentation Site Static Files
     ProxyPass /itbdelabo/docs !
+    Alias /itbdelabo/docs /home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation/docs/.vitepress/dist
 
-    # 2. Map the URL to a directory on disk.
-    Alias /itbdelabo/docs /path/to/msd700_documentation/docs/.vitepress/dist
-
-    # 3. Serve it.
-    <Directory /path/to/msd700_documentation/docs/.vitepress/dist>
+    <Directory /home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation/docs/.vitepress/dist>
         Options -Indexes -MultiViews +FollowSymLinks
         AllowOverride None
         Require all granted
         DirectoryIndex index.html
 
-        # Clean URLs: /setup/prerequisites must resolve to prerequisites.html
         RewriteEngine On
         RewriteCond %{REQUEST_FILENAME} !-f
         RewriteCond %{REQUEST_FILENAME} !-d
@@ -383,136 +245,153 @@ then a `<Directory>` block. This is what the documentation site itself uses:
         RewriteRule ^ %{REQUEST_FILENAME}.html [L]
 
         ErrorDocument 404 /itbdelabo/docs/404.html
-
-        <IfModule mod_headers.c>
-            # HTML references hashed asset names and is rewritten every build.
-            <FilesMatch "\.html$">
-                Header set Cache-Control "no-cache"
-            </FilesMatch>
-        </IfModule>
     </Directory>
+
+    # 6. Web Dashboard Frontend (Catch-All, MUST BE LAST)
+    ProxyPass / http://localhost:3000/
+    ProxyPassReverse / http://localhost:3000/
+
+    # SSL Certificate Paths
+    SSLCertificateFile /etc/letsencrypt/live/msd.nglobal.jp/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem
+    Include /etc/letsencrypt/options-ssl-apache.conf
+</VirtualHost>
+</IfModule>
 ```
 
-### Apply and check
+Reload Apache:
 
 ```bash
-sudo apache2ctl configtest      # Syntax OK
+sudo apache2ctl configtest
 sudo systemctl reload apache2
 ```
 
-## 6. The TURN relay (production only)
+---
 
-`coturn` relays WebRTC media when no direct peer-to-peer path exists. It runs in **production only**
-and uses host networking. See [Docker Reference](/setup/docker-reference#coturn-the-production-only-service)
-for why both of those are structural rather than stylistic.
+## Unit Registration & Enrolment Flow
 
-### Configure it
+Once the server is running, physical robots can be registered:
 
-Shared policy lives in `Docker/coturn/turnserver.conf`, which is tracked in git. Per-host addresses
-are passed as flags from `.env`, because coturn expands no environment variables in its config file.
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Tech as Field Technician
+  participant Unit as Robot Unit (Jetson)
+  participant Server as Cloud Backend
+  participant Admin as Admin Web Portal
+
+  Tech->>Unit: Run enrollment script on Jetson
+  Unit->>Server: POST /enroll/claim (sends nonce_hash & serial)
+  Server-->>Unit: HTTP 202 (Returns Claim Code, e.g. "K7M2QP")
+  Unit-->>Tech: Displays Claim Code "K7M2QP" on screen
+
+  Tech->>Admin: Open https://msd.nglobal.jp/admin and login
+  Tech->>Admin: Navigate to "Pending Units" and match "K7M2QP"
+  Tech->>Admin: Assign Unit Name and Rental Profile -> Click "Approve"
+
+  Server->>Server: Update status to "approved" in database
+  Unit->>Server: POST /enroll/status (presents plaintext nonce)
+  Server-->>Unit: HTTP 200 (Hands over Unit ULID & Device Secret)
+  Unit->>Unit: Saves Certificates/robot/device.json and connects to HiveMQ
+```
+
+1. Log into the administration panel at `https://msd.nglobal.jp/admin`.
+2. Under **Pending Units**, locate the 6-character claim code displayed by the technician on the robot.
+3. Select an active **Rental Profile**, assign a unit display label, and click **Approve**.
+4. The robot completes enrolment and appears in the fleet dashboard immediately.
+
+---
+
+## Advanced Configurations
+
+<details>
+<summary><b>Development Mode Profile (`server_dev`)</b></summary>
+
+To run an isolated development stack alongside production:
+
+1. Initialize dev keyring:
+   ```bash
+   cd ~/ros-web-ui
+   ./scripts/secrets.sh init --dev
+   ```
+
+2. Start the dev profile:
+   ```bash
+   docker compose --profile server_dev up -d
+   ```
+
+3. Dev ports are offset to prevent collisions:
+   - Dev MySQL: `3308`
+   - Dev Backend: `5001`
+   - Dev HiveMQ: `8884`
+   - Dev rosbridge: `9091`
+   - Dev Frontend: `3100`
+
+</details>
+
+<details>
+<summary><b>Keyring Rotation & Grace Periods</b></summary>
+
+Rotate the active JWT signing key without terminating active user sessions:
 
 ```bash
-# ros-web-ui/.env
-# This host's LAN address, the one the router forwards 3478 to (`ip -4 -o addr show`).
-TURN_LISTENING_IP=192.168.100.14
+cd ~/ros-web-ui
 
-# PUBLIC/PRIVATE. The private half must be EXACTLY the listening address above, or
-# coturn ignores the mapping and goes back to advertising an unreachable private
-# relay candidate.
-TURN_EXTERNAL_IP=118.22.31.252/192.168.100.14
+# Rotate active key (old key remains valid for 48 hours)
+./scripts/secrets.sh rotate --grace-hours 48
 
-# Must match what the dashboard bundle sends, or every video call loses its relay.
-TURN_USER=msd700
-TURN_PASSWORD=<a long random string>
+# Check status of keys in keyring
+./scripts/secrets.sh status
 
-# Optional. Unset means coturn's own full 49152-65535 range, which is free here
-# because host networking publishes nothing. Whatever this ends up being, the SAME
-# range must be forwarded UDP through the router to TURN_LISTENING_IP.
-# TURN_MIN_PORT=49152
-# TURN_MAX_PORT=65535
+# Remove expired keys after grace window
+./scripts/secrets.sh prune
 ```
 
-::: warning If the relay advertises the wrong address, check `TURN_EXTERNAL_IP` first
-coturn allocates on the address that received the `Allocate` request. On a host with several
-addresses on one interface, that is the **primary** one, and that is the address the router must
-forward 3478 to. Getting this wrong produces a camera feed that never appears, with no error
-anywhere in the dashboard.
-:::
+</details>
 
-### Router and firewall
+<details>
+<summary><b>Manual HiveMQ Keystore Creation</b></summary>
 
-| Protocol | Port | To |
-| --- | --- | --- |
-| UDP + TCP | `3478` | `TURN_LISTENING_IP` |
-| UDP | `TURN_MIN_PORT`-`TURN_MAX_PORT` (default `49152-65535`) | `TURN_LISTENING_IP` |
-
-### Start it
+If generating the keystore manually without `update_ssl.sh`:
 
 ```bash
-# Normally it comes up with the rest of production:
-docker compose --profile server_prod up -d
+sudo mkdir -p /srv/msd/secrets/hivemq
+sudo openssl pkcs12 -export \
+  -in   /etc/letsencrypt/live/msd.nglobal.jp/fullchain.pem \
+  -inkey /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem \
+  -out  /srv/msd/secrets/hivemq/keystore.p12 \
+  -name hivemq \
+  -passout "pass:SetKeystorePasswordHere"
 
-# Start or restart JUST the relay, without touching anything else:
-docker compose --profile turn up -d coturn
-
-# Watch allocations. The config logs at `verbose` to stdout, capped at 3 x 20 MB.
-docker compose logs -f coturn
+sudo chown -R 1001:1001 /srv/msd/secrets/hivemq
+sudo chmod 700 /srv/msd/secrets/hivemq
+sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
 ```
 
-The four required values are validated at container start, not by compose, so
-`--profile server_dev up` never fails on a relay nobody asked to start. If any is missing you get:
+</details>
 
-```
-FATAL: set TURN_LISTENING_IP, TURN_EXTERNAL_IP, TURN_USER and TURN_PASSWORD in ros-web-ui/.env
-```
+---
 
-::: info Dev stacks share the production relay, on purpose
-`server_dev` deliberately does not include `coturn`. There is one relay instance and it belongs to
-prod. Sharing is safe because a relay holds no state and pairs nobody: peers find each other through
-the signalling servers, and those **are** split (3001 prod, 4001 dev).
-:::
+## Verification & Health Checks
 
-::: danger Migrating off an apt/systemd coturn: order matters exactly once
-Port 3478 is a single well-known port and the two cannot both hold it.
+Run these diagnostic commands to confirm all server subsystems are operational:
 
 ```bash
-sudo systemctl disable --now coturn            # 1. free the port
-docker compose --profile turn up -d coturn     # 2. prove the container works
-docker compose logs -f coturn                  # 3. confirm it bound
-docker compose --profile server_prod up -d     # 4. now it is just another prod service
+# 1. Confirm all Docker containers are running
+docker compose --profile server_prod ps
+
+# 2. Test Apache HTTPS ingress
+curl -sI https://msd.nglobal.jp/ | head -n 1
+
+# 3. Test Backend API health endpoint
+curl -s https://msd.nglobal.jp/services/rosbackend/
+
+# 4. Check MQTT broker listening socket
+sudo ss -lptn 'sport = :8883'
 ```
 
-Run a prod `up` while the systemd unit is still listening and the container fails to bind, then
-`restart: always` retries forever: noisy, harmless, and a long way from its cause.
-:::
+## Related Documentation
 
-## 7. Verify
-
-```bash
-docker compose --profile server_prod ps          # everything healthy or Up
-docker compose logs -f nakayama_cloud            # backend; watch for MQTT errors
-sudo ss -lptn 'sport = :3000'                    # dashboard is listening
-sudo ss -lptn 'sport = :8883'                    # broker is listening
-curl -sI https://msd.nglobal.jp/                 # 200 through Apache
-curl -s  https://msd.nglobal.jp/services/rosbackend/ -o /dev/null -w '%{http_code}\n'
-```
-
-Then open your domain in a browser: you should reach the login page. A successful login with **no
-units listed is expected at this point**. A unit only appears once one has enrolled (see
-[Unit Setup](/setup/unit-setup)) and your account has been added to a rental profile that includes
-it.
-
-| Check | Failure means |
-| --- | --- |
-| `docker compose ps` all healthy | See [Docker Reference troubleshooting](/setup/docker-reference#troubleshooting-docker-itself) |
-| Login page loads | Apache catch-all or `frontend_prod` |
-| Login succeeds | Backend proxy path or the JWT keyring |
-| `401` on `/services/rosbackend` with a valid token | Keyring not mounted, or the wrong one for this profile |
-| Browser console shows a rosbridge handshake error | The `RequestHeader set Host` block is missing |
-
-## Next step
-
-Continue to [Unit Setup](/setup/unit-setup), then [System Setup](/setup/system-setup) to connect
-them together. Keep [Docker Reference](/setup/docker-reference) open alongside both.
-
-If something goes wrong, see [Troubleshooting](/setup/troubleshooting).
+- [Unit Setup](/setup/unit-setup): Configure the physical Jetson SBC.
+- [System Setup](/setup/system-setup): End-to-end integration and calibration.
+- [Docker Reference](/setup/docker-reference): Container options and lifecycle details.
