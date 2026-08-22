@@ -1,70 +1,72 @@
-# FAQ
+---
+outline: deep
+search: false
+---
+
+# Frequently Asked Questions (FAQ)
 
 <RoleBadge role="user" />
 
-Frequently asked questions from MSD700 users.
+Answers to common operational questions regarding the MSD700 robotic platform.
 
-::: details What is MSD700?
-See the [Introduction](/getting-started/introduction) page.
+---
+
+::: details 1. What is the MSD700 robot designed to do?
+The MSD700 is an autonomous mobile robot platform designed for environmental mapping (SLAM), autonomous point-to-point transport, and systematic area coverage (e.g. floor cleaning, disinfection, or surface scanning) in indoor facilities such as warehouses, office corridors, and industrial plants.
 :::
 
-::: details I logged in but don't see any units. Why?
-Your account exists, but nobody has granted it access to a unit yet. Access is managed by an admin
-through rental profiles: ask them to add your account to the right profile.
+::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
+Your user account exists, but an administrator has not yet assigned it to a **Rental Profile** containing active robots. Contact your facility administrator or lab supervisor to grant your account access to your organization's rental profile.
 :::
 
-::: details Can two people control the same robot at once?
-No. A unit has exactly one active operator at a time. If a unit shows **In Use**, another account is
-currently driving; you can still open the unit, you just do not get control. If it is another session
-of your *own* account (a second tab, or the unit's own local dashboard), you get an explicit
-**Take Over** prompt, and the session that loses control is told so. See
-[How the Robot Behaves](/getting-started/behavior#only-one-person-drives-at-a-time).
+::: details 3. Can two operators control the same robot simultaneously?
+No. To ensure safety, each robot is governed by an **exclusive operating lease** held by a single active session:
+- If a colleague is operating the robot, the unit displays an **In Use** badge and commands are blocked.
+- If you open a second tab or switch devices under your own account, the dashboard displays a **Take Over Control** button, allowing you to explicitly transfer the lease to your new window.
 :::
 
-::: details What happens if I lose my internet connection while driving?
-Three things, at increasing intervals. After about **10 seconds** the robot stops moving but keeps
-your operation loaded, and it resumes as soon as you reconnect. After **10 minutes** the operation is
-torn down and the robot goes idle. After **30 minutes** it powers its hardware down, which needs an
-explicit restart. See [How the Robot Behaves](/getting-started/behavior#what-happens-when-you-disconnect).
+::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
+The system responds based on the active operating mode:
+- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
+- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and autonomously completes its entire waypoint sequence or area coverage playlist before returning to its homebase.
 :::
 
-::: details Can I close the browser and let the robot finish on its own?
-Yes, with **Autopilot** switched on. It suspends all three of the safety timers above and hands
-waypoint stepping to the robot itself, so a route finishes with no browser attached and logging out
-does not stop it. Turning it back off re-arms every safety pause immediately. Use it for long
-unattended routes, not for spaces you have not run before.
+::: details 5. What is the Homebase point and why is it important?
+When creating a map during a SLAM session, clicking **Set Homebase Here** records the robot's physical docking station coordinates $(x=0, y=0, \theta=0)$. Future automated playlists use this coordinate to automatically navigate the robot back to its charging station upon completing a mission.
 :::
 
-::: details I refreshed the page mid-operation. Did I lose the run?
-No. The robot is the one keeping score, so a refresh, a new tab, or logging in from a different
-machine all restore the whole operation: your waypoints, which one it is on, the map, and any
-coverage areas. The one exception is opening a map from the Database page, which is a deliberate
-reset.
+::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?
+Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mirrors, which may cause invisible boundaries on a raw SLAM map. To protect the robot:
+1. Open the map in the dashboard.
+2. Use the **Keep-Out Zone** tool to draw virtual red exclusion boundaries along all glass partitions and drop-offs.
+3. The motion planner treats these virtual lines as solid impenetrable walls.
 :::
 
-::: details The robot shows "Robot Stuck": is something wrong?
-Not necessarily. It appears briefly during tight turns, and for up to a minute at the start of an
-area coverage run while the sweep path is being computed. If it clears on its own, no action is
-needed. If it stays up for several minutes, check the camera feed for an obstruction, then see
-[Troubleshooting](/getting-started/troubleshooting).
+::: details 7. How fast does the robot drive?
+Maximum speed limits are enforced in software for workplace safety:
+- **Default Speed**: `0.20 m/s` (approx. 0.72 km/h).
+- **Adjustable Range**: You can adjust linear speed between `0.05 m/s` and `0.40 m/s` using the speed slider in the bottom-right control panel.
+- **Angular Turning Speed**: Configurable up to `0.50 rad/s`.
 :::
 
-::: details Does Emergency Stop always work, even if someone else is driving?
-Yes. E-Stop outranks every other source of movement on the robot and is available on every page
-regardless of who holds control. It stays engaged until explicitly released.
+::: details 8. How long does the battery last and how is it monitored?
+The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 to 6 hours** of continuous autonomous operation:
+- Live battery voltage and percentage are displayed in the top header bar.
+- If the battery falls below **20%**, the dashboard surfaces an amber warning.
+- If the battery falls below **15%**, running missions are paused and the robot prioritizes returning to its homebase charging station.
 :::
 
-::: details Where do I find setup / installation instructions?
-That's covered in the [Setup](/setup/) section, aimed at technicians installing the MSD700 Server
-and Unit.
+::: details 9. Can I operate the robot if there is no internet connection in the building?
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop or tablet directly to the robot's Wi-Fi network (`MSD700_Unit_<ULID>`) and open `http://<jetson-ip>:3000`. You can perform all mapping, teleoperation, and coverage routines completely offline.
 :::
 
-::: details Who do I contact if something isn't working?
-Start with [Troubleshooting](/getting-started/troubleshooting). If the issue looks like a hardware
-or connectivity problem rather than something you can fix from the browser, escalate to the
-technician responsible for your unit.
+::: details 10. How does the Emergency Stop work?
+Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your keyboard) instantly overrides all active autonomous plans, brings motor velocity to zero within milliseconds, and latches the safety state. To resume operations, resolve the safety condition and click **Release Emergency Stop**.
 :::
 
-## Didn't find your answer?
+---
 
-See [Troubleshooting](/getting-started/troubleshooting), or escalate to the technical [Setup &gt; Troubleshooting](/setup/troubleshooting) page.
+## Still have questions?
+
+- Consult the [Operator Troubleshooting Guide](/getting-started/troubleshooting).
+- For hardware maintenance and installation, see [System Setup](/setup/system-setup).

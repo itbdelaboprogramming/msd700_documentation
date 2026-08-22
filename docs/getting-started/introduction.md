@@ -1,43 +1,62 @@
-# Introduction
+---
+outline: deep
+search: false
+---
+
+# Introduction to MSD700
 
 <RoleBadge role="user" />
 
 ## What is MSD700?
 
-MSD700 is an autonomous mobile robot platform built by **ITB de Labo Research Lab**. Its original
-purpose is mapping and navigating **featureless indoor spaces** (tunnels, corridors, and similar
-areas with few visual landmarks) on its own: the robot builds a map of an area by driving through
-it (SLAM), and afterwards uses that map to localize itself and move from point to point without
-being driven by hand.
+The **MSD700** is an industrial-grade autonomous mobile robot developed by **ITB de Labo Research Lab**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
 
-You interact with all of that through a **web dashboard**: you don't need to know ROS, Linux, or
-anything about the robot's internals to use it day-to-day. This section covers that dashboard.
+Equipped with 360-degree 3D LiDAR sensors, inertial measurement units (IMUs), and high-resolution optical cameras, the robot builds centimeter-accurate occupancy grid maps in real time using Simultaneous Localization and Mapping (SLAM).
 
-The system has two halves:
+```mermaid
+flowchart LR
+  subgraph PhysicalRobot["MSD700 Robot Hardware"]
+    SENSORS["3D LiDAR & 9-DOF IMU<br/>Optical Encoders & HD Camera"]
+    CHASSIS["Heavy-Duty Differential Drive<br/>4 Passive Swivel Casters"]
+  end
 
-- **MSD700 Server**: the cloud service at [msd.nglobal.jp](https://msd.nglobal.jp) that hosts the
-  web dashboard, keeps track of accounts, maps, routes and saved playlists, and relays commands to
-  robots.
-- **MSD700 Unit**: the physical robot itself. There can be more than one; each one is identified by
-  a unique ID and shows up as a separate entry in the dashboard once your account has access to it.
+  subgraph CloudPlatform["Cloud Dashboard & Fleet Hub"]
+    MAPS["Map & Route Database"]
+    RENTALS["Rental Profiles & Tenancy"]
+    LIVE["Real-Time Canvas & Telemetry"]
+  end
 
-If you're installing or configuring either of these, see the [Setup](/setup/) guide instead. This
-section only covers using the dashboard once someone else has already set everything up.
+  PhysicalRobot <-->|"Encrypted TLS Link"| CloudPlatform
+```
 
-## Who this section is for
+## Key Operator Capabilities
 
-The **Getting Started** section is written for **end users**: people who log into the dashboard to
-drive, monitor, or map with a robot that a technician has already installed and connected. You do
-not need any technical or programming background to follow these pages.
+1. **Simultaneous Localization and Mapping (SLAM)**: Drive the robot through a new environment to create a 2D floorplan.
+2. **Point-to-Point Navigation**: Click anywhere on the map to dispatch the robot to that location with autonomous obstacle avoidance.
+3. **Boustrophedon Area Sweeps**: Draw polygons around rooms or corridors and command the robot to sweep the entire floor area systematically in parallel lanes.
+4. **Automated Mission Playlists**: Chain multiple waypoint routes and cleaning areas into unattended sequence playlists.
+5. **Zero-Spin Heading Alignment (Auto-Align)**: Place the robot in a mapped room and align its position instantly without disruptive 360-degree rotations.
+6. **Live HD Video Streaming**: Monitor the robot's point-of-view in real time through ultra-low latency WebRTC streaming.
+7. **Offline Standalone Operation**: When working in remote facilities without internet access, connect directly to the robot's local Wi-Fi to use the full dashboard offline.
 
-| If you want to... | Go to... |
-| --- | --- |
-| Learn how to use MSD700 for the first time | [Quick Start](/getting-started/quick-start) |
-| See what MSD700 can do | [Features](/getting-started/features) |
-| Fix a problem you're running into | [Troubleshooting](/getting-started/troubleshooting) |
-| Install or configure the server/unit | [Setup](/setup/) |
-| Understand the codebase or API | [Documentation](/development/) |
+## System Architecture for Users
 
-## Next steps
+The system is composed of two primary layers:
 
-Continue to [Quick Start](/getting-started/quick-start) to start using the system.
+| Layer | Component | User Interaction |
+| --- | --- | --- |
+| **Cloud Dashboard** | Central Server (`https://msd.nglobal.jp`) | The central web application where you log in, manage maps, assign routes, and monitor fleet status across all rented robots. |
+| **Physical Robot (Unit)** | Onboard Jetson Computer | The physical machine executing your navigation goals. Each unit has a unique identifier (ULID) and connects securely to the cloud. |
+
+## User Roles and Access
+
+Access to robots is governed by **Rental Profiles**:
+
+- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and monitor telemetry.
+- **Lab Administrators**: Manage tenant rental profiles, provision operator accounts, and approve new hardware robot registrations.
+
+## Next Steps
+
+- Proceed to the [Quick Start Guide](/getting-started/quick-start) to log in and control your first robot.
+- Read [System Features](/getting-started/features) for a full breakdown of mapping and navigation capabilities.
+- Review [How the Robot Behaves](/getting-started/behavior) to understand safety watchdogs and Autopilot persistence.

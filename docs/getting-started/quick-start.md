@@ -1,70 +1,129 @@
-# Quick Start
+---
+outline: deep
+search: false
+---
+
+# Quick Start Guide
 
 <RoleBadge role="user" />
 
-This page walks you through using MSD700 for the first time, assuming a technician has already
-installed and enrolled the unit (see [Setup](/setup/) if that hasn't happened yet).
+This guide walks you through logging in to the MSD700 dashboard, taking control of an assigned robot unit, loading a map, and executing your first navigation mission.
 
-## Before you start
+## Prerequisites
 
-You'll need:
+Before starting, ensure you have:
+1. An active user account on the dashboard.
+2. At least one robot assigned to your account by an administrator.
+3. Google Chrome or Microsoft Edge on a laptop or desktop computer.
 
-- An **account** on the MSD700 dashboard. Sign up at the login page, or ask your lab admin to create
-  one for you.
-- Access to at least one **unit**, granted by an admin through a rental profile. A brand-new account
-  can log in but won't see any units until an admin adds it to one.
-- A modern desktop browser (Chrome or Edge recommended, since the dashboard uses WebRTC for the live
-  camera feed, which some browsers restrict on non-HTTPS pages).
+---
 
-::: info Desktop only
-The dashboard is designed for a single, reasonably large browser window (1400×720 or bigger): the
-map, controls and camera feed all need to be visible at once. It isn't meant for phones or small
-tablets.
+## Step 1: Log In to the Dashboard
+
+1. Open your browser and navigate to: `https://msd.nglobal.jp`.
+2. Enter your username and password, then click **Sign In**.
+
+```mermaid
+flowchart LR
+  LOGIN["1. Sign In at msd.nglobal.jp"] --> FLEET["2. Fleet Overview Page"]
+  FLEET --> SELECT["3. Select Assigned Unit"]
+  SELECT --> NAV["4. Open Navigation Workspace"]
+```
+
+---
+
+## Step 2: Select a Robot Unit
+
+After logging in, the **Fleet Dashboard** displays all robots assigned to your rental profile:
+
+| Status Badge | Meaning | Action Allowed |
+| --- | --- | --- |
+| <Badge type="tip" text="Online" /> | Robot is active, connected, and ready for commands. | Click unit card to open dashboard. |
+| <Badge type="warning" text="In Use" /> | Another operator is actively connected. | You may open the unit in view mode or request control takeover. |
+| <Badge type="danger" text="Offline" /> | Robot is powered down or disconnected from the network. | Wait for the unit to reconnect or check hardware power. |
+
+Click on any **Online** robot card to enter its control workspace.
+
+---
+
+## Step 3: Understand the Operator Workspace
+
+The operator interface is divided into three main operational panels:
+
+```mermaid
+flowchart TD
+  subgraph Workspace["MSD700 Operator Workspace Layout"]
+    TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
+    LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
+    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
+    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Joystick, Mode Selector, Goal Dispatcher, Speed Sliders"]
+  end
+```
+
+---
+
+## Step 4: Load a Map
+
+1. In the left panel header, click the **Select Map** dropdown.
+2. Choose a pre-recorded map from the list (e.g. `Warehouse_Floor_1`).
+3. The 2D floorplan renders on the canvas along with the robot's current position (blue circular icon with direction arrow).
+
+::: tip No map available?
+If no maps exist in the dropdown, see [Building a New Map (SLAM)](/getting-started/features#1-autonomous-slam-mapping) to create your first map.
 :::
 
-## Step 1: Log in
+---
 
-Open [msd.nglobal.jp](https://msd.nglobal.jp) and sign in with your account. If you don't have one
-yet, use the **Sign up** link on the same page; an admin still needs to grant you access to a unit
-before you'll see anything useful.
+## Step 5: Drive Manually (Teleoperation)
 
-## Step 2: Pick a unit
+You can drive the robot manually using your keyboard or the on-screen virtual joystick:
 
-After logging in you land on the **Unit Dashboard**, which lists every unit your account has access
-to. Click one to open it.
+```mermaid
+flowchart LR
+  subgraph KeyboardControls["Keyboard Drive Controls"]
+    W["W: Drive Forward"]
+    S["S: Drive Backward"]
+    A["A: Rotate Left (Counter-Clockwise)"]
+    D["D: Rotate Right (Clockwise)"]
+    SPACE["Spacebar: Immediate Stop"]
+  end
+```
 
-- A unit marked **In Use** already has an operator connected. You can still open it: the badge just
-  tells you someone else is currently driving, and taking over control is an explicit action, not
-  something that happens by opening the page.
-- If the list is empty, nobody has granted your account access to a unit yet. Ask your admin.
+### Teleoperation Controls:
+- **Linear Speed Slider**: Adjusts maximum forward speed (default: `0.20 m/s`, range: `0.05` to `0.40 m/s`).
+- **Angular Speed Slider**: Adjusts rotational turning speed (default: `0.40 rad/s`).
+- **Virtual Joystick**: Click and drag the on-screen joystick handle in the desired direction.
 
-## Step 3: Choose what to do
+---
 
-Opening a unit takes you to its **Navigation** page. From there:
+## Step 6: Dispatch a Navigation Goal (Point-to-Point)
 
-- If a map already exists for this unit, it loads automatically and you can start driving or sending
-  the robot to a point.
-- If no map exists yet, go to the **Mapping** page first to build one (see
-  [Features](/getting-started/features)). This is normally done once per new area, often by a
-  technician.
+To send the robot to a target destination autonomously:
 
-## Step 4: Everyday use
+1. Click the **Navigate Goal** button on the canvas toolbar.
+2. Click on the desired destination point on the map.
+3. Click and drag outward to orient the target heading arrow, then release.
+4. The robot calculates a collision-free global path (blue line) and navigates autonomously to the target.
 
-Once a map is loaded, the Navigation page is where you'll spend most of your time:
+```mermaid
+flowchart LR
+  CLICK["1. Click Destination on Map"] --> PLAN["2. Robot Plans Collision-Free Path"]
+  PLAN --> DRIVE["3. Robot Steers Around Obstacles"]
+  DRIVE --> ARRIVE["4. Arrives at Goal with Target Heading"]
+```
 
-- **Drive manually** with the on-screen controls or the W-A-S-D keys on your keyboard.
-- **Click a point on the map** to send the robot there directly.
-- **Queue several points** as a playlist and switch on **Autopilot** to have the robot visit them
-  one after another, unattended.
-- Watch the **live camera feed** to see what the robot sees.
-- Use the **Emergency Stop** button any time: it works immediately, regardless of what the robot is
-  doing.
+---
 
-If you close the browser or lose connection mid-operation, the robot pauses itself automatically as
-a safety measure; see [FAQ](/getting-started/faq) for exactly when that happens.
+## Step 7: Emergency Stop (E-Stop)
 
-## What's next
+The **Emergency Stop** button is prominently located at the top right of every page:
 
-- Explore the full list of [Features](/getting-started/features).
-- Check the [FAQ](/getting-started/faq) for common questions.
-- If something isn't working, see [Troubleshooting](/getting-started/troubleshooting).
+- **Activate E-Stop**: Click the red **Emergency Stop** button (or press the `Escape` key). The robot brakes immediately and halts all autonomous routines.
+- **Clear E-Stop**: Resolve the safety condition and click **Resume Operations** to restore motor power.
+
+---
+
+## Next Steps
+
+- Learn how to perform systematic area coverage in [System Features](/getting-started/features).
+- Understand safety timers and Autopilot in [How the Robot Behaves](/getting-started/behavior).

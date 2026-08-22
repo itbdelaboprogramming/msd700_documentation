@@ -1,14 +1,36 @@
+---
+search: false
+---
+
 # Getting Started
 
 <RoleBadge role="user" />
 
-This section is for **end users** of the MSD700 system: people who log into the dashboard to drive, monitor, or map with the robot, but don't install or develop it. If you're setting up hardware or servers, see the [Setup](/setup/) guide instead. If you're working on the codebase, see the [Documentation](/development/) section.
+Welcome to the **MSD700 Operator User Guide**. This documentation is designed for fleet operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots.
+
+No programming or robotics experience is required to operate the robot via the web interface.
 
 <LinkCards>
-  <LinkCard icon="📖" title="Introduction" details="What MSD700 is, who it's for, and what it does." link="/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Quick Start" details="Get up and running with the system in a few steps." link="/getting-started/quick-start" />
-  <LinkCard icon="✨" title="Features" details="An overview of what you can do with MSD700." link="/getting-started/features" />
-  <LinkCard icon="🤖" title="How the Robot Behaves" details="Control handover, the safety pause, autopilot, and what survives a disconnect." link="/getting-started/behavior" />
-  <LinkCard icon="❓" title="FAQ" details="Answers to common questions." link="/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Troubleshooting" details="Fixes for common day-to-day issues." link="/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/getting-started/introduction" />
+  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/getting-started/quick-start" />
+  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/getting-started/features" />
+  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/getting-started/behavior" />
+  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/getting-started/faq" />
+  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/getting-started/troubleshooting" />
 </LinkCards>
+
+## Recommended Reading Path for Operators
+
+```mermaid
+flowchart LR
+  A["1. Introduction<br/>System Overview"] --> B["2. Quick Start<br/>First-Time Onboarding"]
+  B --> C["3. Features<br/>Mapping & Sweeps"]
+  C --> D["4. Robot Behavior<br/>Safety & Autopilot"]
+  D --> E["5. FAQ & Help<br/>Troubleshooting"]
+```
+
+## System Requirements
+
+- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
+- **Display Resolution**: Optimized for desktop and laptop displays (1366 x 768 or higher) to display map canvases, live camera feeds, and telemetry side-by-side.
+- **Network**: Internet access for cloud dashboard (`msd.nglobal.jp`), or local Wi-Fi connection when operating robots offline in the field.
