@@ -1,19 +1,3 @@
-<!--
-  Renders a ```mermaid fenced block as a real SVG diagram instead of preformatted text.
-
-  The fence is rewritten into `<Mermaid code="<base64>" />` by the markdown hook in
-  ../../config.mts. Base64 rather than the raw string because the diagram source contains
-  quotes, angle brackets and newlines, all of which Vue would otherwise parse as template
-  syntax the moment the fence became an element attribute.
-
-  Rendering is client-side only, on purpose. Mermaid needs a DOM to measure text before it can
-  lay a graph out, so there is nothing for the static build to pre-render; `onMounted` never
-  runs during SSR, and the dynamic `import('mermaid')` keeps ~500 KB of layout engine out of
-  every page that has no diagram on it.
-
-  If mermaid throws (a syntax error in the source), the raw source is shown instead of an
-  empty gap: a broken diagram should look broken, not look absent.
--->
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useData } from 'vitepress'
@@ -42,20 +26,58 @@ const source = computed(() => {
 async function render() {
   try {
     const mermaid = (await import('mermaid')).default
+    const dark = isDark.value
+
     mermaid.initialize({
       startOnLoad: false,
-      // Follows the reader's theme rather than picking one: the same page is read in both.
-      theme: isDark.value ? 'dark' : 'default',
-      securityLevel: 'strict',
-      fontFamily: 'var(--vp-font-family-base)',
-      flowchart: { curve: 'basis', useMaxWidth: true },
-      sequence: { useMaxWidth: true, wrap: true },
+      theme: 'base',
+      securityLevel: 'loose',
+      fontFamily: 'var(--vp-font-family-base, system-ui, sans-serif)',
+      flowchart: {
+        curve: 'linear',
+        useMaxWidth: false,
+        htmlLabels: true,
+        nodeSpacing: 45,
+        rankSpacing: 45
+      },
+      sequence: {
+        useMaxWidth: false,
+        wrap: true,
+        width: 170,
+        messageMargin: 35,
+        boxMargin: 10,
+        mirrorActors: false
+      },
       themeVariables: {
-        fontSize: '14px'
+        darkMode: dark,
+        fontFamily: 'var(--vp-font-family-base, system-ui, sans-serif)',
+        fontSize: '13px',
+        primaryColor: dark ? '#1e293b' : '#f8fafc',
+        primaryTextColor: dark ? '#f8fafc' : '#0f172a',
+        primaryBorderColor: dark ? '#475569' : '#cbd5e1',
+        lineColor: dark ? '#38bdf8' : '#0284c7',
+        secondaryColor: dark ? '#0f172a' : '#ffffff',
+        tertiaryColor: dark ? '#1e293b' : '#f1f5f9',
+        clusterBkg: dark ? '#0f172a80' : '#f8fafc99',
+        clusterBorder: dark ? '#334155' : '#cbd5e1',
+        edgeLabelBackground: dark ? '#1e293b' : '#f8fafc',
+        actorBkg: dark ? '#1e293b' : '#f8fafc',
+        actorBorder: dark ? '#38bdf8' : '#0284c7',
+        actorTextColor: dark ? '#f8fafc' : '#0f172a',
+        actorLineColor: dark ? '#475569' : '#94a3b8',
+        signalColor: dark ? '#f8fafc' : '#0f172a',
+        signalTextColor: dark ? '#f8fafc' : '#0f172a',
+        labelBoxBkgColor: dark ? '#1e293b' : '#f8fafc',
+        labelBoxBorderColor: dark ? '#475569' : '#cbd5e1',
+        labelTextColor: dark ? '#f8fafc' : '#0f172a',
+        loopTextColor: dark ? '#f8fafc' : '#0f172a',
+        noteBorderColor: dark ? '#64748b' : '#cbd5e1',
+        noteBkgColor: dark ? '#1e293b' : '#fef9c3',
+        noteTextColor: dark ? '#f8fafc' : '#713f12'
       }
     })
-    // A fresh id per render: mermaid keys its internal defs (arrowheads, markers) off it, and
-    // re-rendering into a reused id leaves the old marker definitions attached to the document.
+
+    // A fresh id per render: mermaid keys its internal defs off it
     const { svg: out } = await mermaid.render(`mermaid-svg-${seq++}`, source.value)
     svg.value = out
     failed.value = false
@@ -66,8 +88,7 @@ async function render() {
 }
 
 onMounted(render)
-// Re-render on theme flip. Mermaid bakes its palette into the SVG at render time, so a dark
-// diagram left over on a light page is unreadable rather than merely off-brand.
+// Re-render on theme flip
 watch(isDark, render)
 </script>
 
@@ -85,19 +106,21 @@ watch(isDark, render)
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
   background: var(--vp-c-bg-soft);
-  /* Wide diagrams scroll inside their own box; the page body must never scroll sideways. */
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mermaid-figure__svg {
   display: flex;
   justify-content: center;
-  min-height: 2rem;
+  min-width: min-content;
 }
 
 .mermaid-figure__svg :deep(svg) {
-  max-width: 100%;
+  max-width: none;
   height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 .mermaid-figure__fallback {

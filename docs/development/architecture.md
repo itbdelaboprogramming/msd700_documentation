@@ -7,330 +7,306 @@ search: false
 
 <RoleBadge role="developer" />
 
-How MSD700 is put together, and why the seams are where they are. See
-[Repository Structure](/development/repository-structure) for where each piece lives in source,
-[Message Contracts](/development/message-contracts) for the exact payloads that cross each seam,
-[State and Behavior](/development/state-and-behavior) for the state machines that consume them, and
-[System Setup](/setup/system-setup) for the deployment-time view of the same components.
+This document details the architectural design of the MSD700 autonomous robotics platform, explaining how the components interact, the data boundaries between them, and the engineering rationale behind every subsystem.
 
-## The two-machine model
+For repository locations, see [Repository Structure](/development/repository-structure). For exact data payloads, see [Message Contracts](/development/message-contracts). For finite state machines, see [State and Behavior](/development/state-and-behavior). For deployment topology, see [System Setup](/setup/system-setup).
 
-Everything follows from one decision: a **Unit** (the robot) runs the entire server stack itself,
-and a **Server** (the cloud) runs the same stack for the whole fleet. They are not client and
-server in the usual sense. They are two peers that hold the same kinds of data, joined by a single
-MQTT link.
+## The Two-Machine Model
 
-| | MSD700 Unit | MSD700 Server |
+The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
+
+```mermaid
+flowchart LR
+  subgraph Unit["MSD700 Unit (Jetson SBC)"]
+    R_CORE["ROS 1 Noetic Core<br/>bringup, nav, SLAM, drivers"]
+    U_BE["backend_local :5002"]
+    U_DB[("MySQL Local :3306")]
+    U_FE["frontend_local :3000"]
+    U_MQTT["Mosquitto :1883"]
+  end
+
+  subgraph Cloud["MSD700 Server (Cloud Host)"]
+    C_AP["Apache2 Reverse Proxy :443"]
+    C_BE["backend_node :5000"]
+    C_DB[("MySQL Central :3307")]
+    C_MQ["HiveMQ :8883 (TLS)"]
+    C_FE["frontend_prod :3000"]
+  end
+
+  R_CORE <-->|"internal topics"| U_BE
+  U_BE <-->|"local SQL"| U_DB
+  U_FE <-->|"HTTP / WS"| U_BE
+  R_CORE <-->|"loopback MQTT"| U_MQTT
+
+  R_CORE <-->|"TLS 8883 (Single Cloud Link)"| C_MQ
+  C_MQ <--> C_BE
+  C_BE <--> C_DB
+  C_AP --> C_BE
+  C_AP --> C_FE
+```
+
+| Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |
-| Runs | ROS 1 Noetic bringup, navigation, SLAM, drivers, **plus** its own backend, rosbridge, MySQL, MQTT broker, media server, dashboard | backend, rosbridge, MySQL, MQTT broker, media server, signalling server, dashboard, TURN relay |
-| Owns | live robot state, the operating lease, the map files it recorded | accounts, rental profiles, unit registry, the fleet-wide copy of maps and routes |
-| Survives | total loss of internet | a robot being switched off |
-| Cannot do alone | assign its own identity (needs one cloud enrolment, ever) | move a robot |
+| **Execution** | ROS 1 Noetic bringup, move_base, gmapping, sensor drivers, plus `backend_local`, `db_local`, `mosquitto_local`, and `frontend_local`. | Central `backend_node`, `db` (MySQL), `hivemq` (MQTT broker), `rosbridge`, `signalling_server`, `media-server`, and `frontend_prod`. |
+| **Authority** | Owns the live physical robot, sensor readings, local operation lease, and raw map recordings. | Owns user accounts, authentication keyrings, rental profiles, robot enrolment registry, and fleet-wide synchronized maps/routes. |
+| **Fault Tolerance** | Operates autonomously offline during complete loss of internet or Wi-Fi connectivity. | Survives robot shutdowns, network disconnects, and restarts without losing fleet metadata. |
+| **Constraint** | Cannot assign its own global identity (requires initial cloud enrolment). | Cannot move a physical robot without an active robot connection. |
 
-The consequence worth internalising: **local is a cache of the cloud, not a silo.** A unit works
-offline indefinitely once enrolled, but its identity and its accounts come from the cloud, and its
-maps sync back to the cloud when the link returns.
+::: tip Core Design Principle: Local as Offline Cache
+The unit's local stack is an **offline-first cache of the cloud, not an isolated silo**. An enrolled unit functions indefinitely without an active internet connection. When network connectivity is restored, recorded maps, executed routes, and configuration states automatically synchronize back to the cloud.
+:::
 
-## Components
+## Component Overview
 
-| Component | Responsibility | Where it lives |
-| --- | --- | --- |
-| **Frontend** (`ROS-dashboard-next-ts`) | Operator dashboard (Next.js). Built twice from one codebase: `frontend_prod` / `frontend_dev` on the Server, and a `frontend_local` build baked into every Unit. | `ros-web-ui/source/dependencies/ROS-dashboard-next-ts` |
-| **backend_node** (`ROS-dashboard-backend`) | Express API: auth, CRUD for maps/routes/areas/playlists, unit control endpoints, admin console API, enrolment, [cross-device sync](/development/data-sync). Also an MQTT client in its own right, and the host of `unit_manager.js`. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
-| **unit_manager.js** | Starts and stops one Docker container per unit on demand, over the mounted Docker socket. Reaps idle ones. | inside `backend_node`'s process |
-| **rosbridge** | WebSocket bridge from ROS topics and services to the browser: live map, robot pose, laser scan, plans. | part of the `nakayama_cloud` / `nakayama_cloud_dev` container (`rosbridge_suite`) |
-| **HiveMQ (MQTT)** | The only channel between a Unit and the cloud. TLS, one broker for prod (`8883`), one for dev (`8884`). | `hivemq` / `hivemq_dev` containers |
-| **MySQL** | Accounts, profiles, units, map and route metadata, backup manifests, sync journals. | `db` / `db_dev` containers |
-| **media-server** | Serves map images (`.pgm`, `.yaml`, thumbnails) and receives uploaded map data. A Unit runs its own; a finished map is uploaded to **both** the Unit's copy (required) and the cloud's (best effort) in the same operation — see [State and Behavior § Map storage](/development/state-and-behavior#map-storage). | `ros-web-ui/source/dependencies/media-server` |
-| **signalling_server** | WebRTC signalling for the live camera feed (see [Camera Streaming](/development/camera-streaming)). Peer negotiation only; the video itself is peer to peer. | `ros-web-ui/source/dependencies/signalling_server` |
-| **coturn** | TURN/STUN relay for WebRTC when no direct peer path exists. **Production only**, `network_mode: host`. | `docker-compose.yml` service `coturn` |
-| **Apache2** | TLS termination and reverse proxy. Maps every service onto a clean `/services/...` path so no browser code ever names a port. | host, not a container |
-| **ROS packages** | `msd700_robot` (navigation, SLAM, coverage, drivers) plus `ros-web-ui`'s `msd700_webui_*` packages (MQTT bridge, `topic2string`, `system_command`, `operation_supervisor`, camera client). | `msd700_robot/`, `ros-web-ui/source/` |
+| Component | Technology | Responsibility | Host Location |
+| --- | --- | --- | --- |
+| **Frontend Dashboard** | Next.js, React, TypeScript | Single-page operator interface with map canvas, telemetry widgets, manual teleop, and navigation controls. | `ROS-dashboard-next-ts` (built as `frontend_prod` on cloud and `frontend_local` on unit) |
+| **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, sync coordination, and container lifecycle manager (`unit_manager.js`). | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
+| **unit_manager.js** | Node.js (Docker API) | Dynamically spins up and reaps per-unit relay containers (`rosweb_unit_<ULID>`) on the server over `/var/run/docker.sock`. | Embedded inside `backend_node` |
+| **rosbridge** | `rosbridge_suite` (WebSocket) | Bridges live ROS topics (robot pose, laser scan, costmaps, global plan) to the browser canvas over WebSockets. | Cloud container (`nakayama_cloud`) and unit local stack |
+| **HiveMQ (MQTT)** | HiveMQ CE (Java) | Encrypted, high-throughput message broker connecting robots to the server over port 8883 (TLS). | Server container (`hivemq` / `hivemq_dev`) |
+| **MySQL Database** | MySQL 8.0 | Stores user accounts, rental profiles, enrolled unit records, route geometry, custom area boundaries, and sync journals. | Server (`db` / `db_dev`) and unit (`db_local`) |
+| **media-server** | Node.js, Express | Manages map asset uploads, thumbnail generation, and serves static `.pgm` and `.yaml` map files. | Server container and unit container (`media_local`) |
+| **signalling_server** | Node.js (WebSocket) | WebRTC peer negotiation server facilitating direct video streaming between robot cameras and operator browsers. | Server container (`signalling`) and unit container (`signalling_local`) |
+| **coturn** | Coturn (C) | RFC 5766 TURN / STUN relay server providing media fallback when NAT traversal prevents direct peer-to-peer WebRTC video. | Server host (`coturn` service, host networking) |
+| **Apache2** | Apache HTTP Server | Handles TLS termination, security headers, and routes all public traffic via `/services/...` paths. | Server host (native service) |
+| **ROS Robot Packages** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigation, SLAM, boustrophedon coverage, EKF, sensor drivers) and `ros-web-ui` bridge packages (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (`msd700` container) |
 
-## System topology
+## System Topology and Data Flow
 
 ```mermaid
 flowchart TB
-  subgraph browser["Operator browser"]
-    UI["Next.js dashboard"]
+  subgraph Client["Operator Web Client"]
+    BROWSER["Operator Browser<br/>Next.js Dashboard"]
   end
 
-  subgraph server["MSD700 Server (cloud host)"]
-    AP["Apache2 :443<br/>TLS + reverse proxy"]
-    FE["frontend_prod :3000"]
-    BE["backend_node :5000<br/>+ unit_manager"]
-    RB["rosbridge :9090"]
-    MED["media-server :3003"]
-    SIG["signalling_server :3001"]
-    DB[("MySQL :3307")]
-    MQ["HiveMQ :8883 TLS"]
-    TURN["coturn :3478<br/>host network"]
-    UC["rosweb_unit_ULID<br/>one per open unit"]
+  subgraph ServerHost["MSD700 Server Host (Cloud)"]
+    APACHE["Apache2 Reverse Proxy (:443)<br/>TLS Termination & URL Routing"]
+    FE_PROD["frontend_prod (:3000)"]
+    BE_PROD["backend_node (:5000)<br/>REST API + unit_manager.js"]
+    DB_PROD[("MySQL Central (:3307)")]
+    HIVEMQ["HiveMQ Broker (:8883 TLS)"]
+    ROSBRIDGE["rosbridge_suite (:9090)"]
+    MEDIA["media-server (:3003)"]
+    SIG["signalling_server (:3001)"]
+    COTURN["coturn (:3478 / UDP Relay)"]
+    UNIT_RELAY["rosweb_unit_<ULID><br/>MQTT-to-ROS Deserializer"]
   end
 
-  subgraph unit["MSD700 Unit (robot)"]
-    BR["aws_mqtt bridge<br/>cloud + local"]
-    SC["system_command.py"]
-    SUP["operation_supervisor"]
-    ROS["roscore :11311<br/>move_base, SLAM, drivers"]
-    LOC["local stack<br/>backend :5002, UI :3000"]
+  subgraph UnitHost["MSD700 Unit (Jetson SBC)"]
+    MQTT_BRIDGE["aws_mqtt Bridge<br/>Cloud TLS + Local Loopback"]
+    SYS_CMD["system_command.py<br/>Command Dispatcher & Lease Holder"]
+    OP_SUP["operation_supervisor.py<br/>Autopilot & Waypoint Sequencer"]
+    ROS_NAV["ROS Noetic Navigation<br/>move_base, costmaps, EKF, drivers"]
+    LOCAL_STACK["Local Stack (:5002, :3000, :3306)<br/>Offline Operator Interface"]
   end
 
-  UI -->|HTTPS| AP
-  AP --> FE
-  AP --> BE
-  AP --> RB
-  AP --> MED
-  AP --> SIG
-  UI -.->|WebRTC media| TURN
-  BE --> DB
-  BE -->|docker.sock| UC
-  BE <-->|"system_command / system_feedback"| MQ
-  UC <-->|"bridged ROS topics"| MQ
-  UC --> RB
-  MQ <==>|"TLS, the only link"| BR
-  BR --> SC
-  BR --> SUP
-  SC --> ROS
-  SUP --> ROS
-  LOC --> ROS
+  BROWSER -->|"HTTPS (:443)"| APACHE
+  APACHE --> FE_PROD
+  APACHE --> BE_PROD
+  APACHE --> ROSBRIDGE
+  APACHE --> MEDIA
+  APACHE --> SIG
+  BROWSER -.->|"WebRTC Video"| COTURN
+
+  BE_PROD <--> DB_PROD
+  BE_PROD -->|"/var/run/docker.sock"| UNIT_RELAY
+  BE_PROD <-->|"system_command / system_feedback"| HIVEMQ
+
+  HIVEMQ <-->|"TLS 8883 (Internet)"| MQTT_BRIDGE
+  UNIT_RELAY <-->|"Telemetry Strings"| HIVEMQ
+  UNIT_RELAY -->|"Typed ROS Topics"| ROSBRIDGE
+
+  MQTT_BRIDGE --> SYS_CMD
+  MQTT_BRIDGE --> OP_SUP
+  SYS_CMD --> ROS_NAV
+  OP_SUP --> ROS_NAV
+  LOCAL_STACK --> ROS_NAV
 ```
 
-Three things this diagram is trying to make obvious:
+### Architectural Key Rules:
+1. **Apache as the Single Public Ingress**: All HTTP and WebSocket requests enter through Apache port 443. Backend services bind to internal ports or loopback addresses. The only external port directly reached by robots is HiveMQ on port 8883 (TLS).
+2. **Commands Flow over MQTT, Not ROS**: Commands dispatched by `backend_node` ride the `/unit_<ULID>/system_command` MQTT topic and are acknowledged over `/unit_<ULID>/system_feedback`. ROS topics in the cloud exist exclusively to feed the browser map canvas and telemetry displays.
+3. **Per-Unit Containers as Deserializers**: The container `rosweb_unit_<ULID>` runs on demand to convert JSON/string payloads from MQTT back into native ROS messages (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), allowing `rosbridge` to stream them to the dashboard.
 
-- **Apache is the only public surface.** Every port in the Server box is bound on localhost or
-  reached through a `/services/...` path. The one exception is MQTT, which robots dial directly on
-  `8883` because its TLS certificate is issued for the public hostname.
-- **`backend_node` talks to robots over MQTT, not over ROS.** Commands and their acknowledgements
-  ride `system_command` / `system_feedback` as an MQTT request/response pair. The ROS side of the
-  cloud exists to feed the browser's map canvas, not to carry commands.
-- **The per-unit container is a bridge, not a robot.** `rosweb_unit_<ULID>` runs the cloud-side
-  relays that turn a unit's MQTT strings back into typed ROS messages, so rosbridge has something
-  for the browser to subscribe to.
+## Two Diagnostic Channels
 
-## Two channels, two failure modes
+The platform uses two separate communication channels that fail independently:
 
-A unit is reachable over two independent paths, and they fail separately. Telling them apart is the
-single most useful diagnostic skill in this system.
+```mermaid
+flowchart LR
+  subgraph Channel1["Channel 1: MQTT Control Channel"]
+    M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
+  end
 
-| Channel | Carries | Broken means |
-| --- | --- | --- |
-| **MQTT** (HiveMQ, TLS, internet) | Commands, feedback, pose, map, scan, plans, all of it as strings | The unit shows offline. Nothing works. |
-| **rosbridge** (WebSocket, through Apache) | The browser's subscription to the cloud-side typed topics | The unit shows online and commands succeed, but the map canvas stays blank. |
+  subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
+    R1["Serialized ROS Topics"] --> R2["rosweb_unit_<ULID>"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
+  end
+```
 
-A third, softer failure sits underneath both: the unit is online and rosbridge is connected, but
-**nobody has opened that unit recently enough for its per-unit container to still be running**, so
-the cloud-side relays that rosbridge subscribes to do not exist. Same blank canvas, different cause.
+| Channel | Transport | Data Carried | Failure Symptom |
+| --- | --- | --- | --- |
+| **MQTT** | TCP / TLS (8883) | Commands, acknowledgements, pose strings, status pings. | Robot appears **Offline** in the console. Commands fail immediately with HTTP 504. |
+| **rosbridge** | WebSocket (WSS) | Typed ROS messages (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot appears **Online** and accepts commands, but the map canvas remains blank. |
+| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because `rosweb_unit_<ULID>` is stopped or reaped due to inactivity. |
 
-## Command path, end to end
+## End-to-End Command Execution Flow
 
-What happens between clicking a point on the map and the robot moving:
+When an operator commands the robot (for example, clicking a waypoint on the map):
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant B as Browser
-  participant A as Apache
-  participant BE as backend_node
-  participant M as HiveMQ
-  participant SC as system_command.py
-  participant MB as move_base
+  actor Operator as Operator
+  participant UI as Browser Dashboard
+  participant Apache as Apache2 Proxy
+  participant Backend as backend_node
+  participant HiveMQ as HiveMQ Broker
+  participant UnitCmd as system_command.py
+  participant MoveBase as move_base (ROS)
 
-  B->>A: POST /services/rosbackend/api/navigation/pointstamped
-  A->>BE: proxied, Bearer token
-  Note over BE: verifyToken then attachUnit<br/>proves this account may drive this unit
-  BE->>BE: request_id = uuidv4()
-  BE->>M: publish /unit_ULID/system_command
-  M->>SC: delivers JSON envelope
-  SC->>MB: PointStamped goal
-  SC->>M: publish /unit_ULID/system_feedback
-  M->>BE: matching request_id
-  BE-->>B: 200 with the robot's own reply
+  Operator->>UI: Click waypoint on navigation map
+  UI->>Apache: POST /services/rosbackend/api/navigation/pointstamped
+  Apache->>Backend: Proxy request with Bearer JWT
+  Note over Backend: verifyToken & attachUnit<br/>Validates account lease permissions
+  Backend->>Backend: Generate unique request_id (UUID v4)
+  Backend->>HiveMQ: Publish to /unit_<ULID>/system_command
+  HiveMQ->>UnitCmd: Deliver command envelope via TLS
+  UnitCmd->>MoveBase: Convert to geometry_msgs/PoseStamped goal
+  MoveBase-->>UnitCmd: Goal accepted by navigation actionlib
+  UnitCmd->>HiveMQ: Publish to /unit_<ULID>/system_feedback (request_id match)
+  HiveMQ->>Backend: Deliver feedback payload
+  Backend-->>Apache: HTTP 200 { status: true, message: "Goal accepted" }
+  Apache-->>UI: Update UI state to "Navigating"
 
-  loop every 1500 ms until feedback or 30 s timeout
-    BE->>M: resend the same command
+  loop Automatic Retry on Packet Drop
+    Backend->>HiveMQ: Resend unacknowledged command every 1500 ms (up to 30 s)
   end
 ```
 
-Two properties fall out of this shape:
+### Critical Implementation Details:
+- **HTTP Response Reflects Robot State**: `backend_node` holds the HTTP connection open until `system_feedback` with the matching `request_id` arrives from the robot. A status 504 Gateway Timeout signifies that the robot never processed the command.
+- **Selective Command Retry**: Mutating commands (navigation goals, mode switches, E-Stop) are retried every 1500 ms until acknowledged. Heartbeat pings are **never retried**: dropping a ping is the exact signal the safety watchdog uses to initiate zero-twist emergency stops.
 
-- **The HTTP response is the robot's answer, not the server's.** `backend_node` holds the request
-  open until the matching `system_feedback` arrives, keyed by `request_id`. A `504` means the robot
-  never answered, which is a genuinely different fact from a `500`.
-- **Commands are retried, pings are not.** Every command is resent every 1500 ms until it is
-  acknowledged, because MQTT drops messages. Pings are excluded on purpose: a lost ping is the exact
-  signal the safety watchdog exists to observe, so masking it would disable the watchdog.
+## Per-Unit Container Lifecycle
 
-## The per-unit container lifecycle
-
-`unit_manager.js` runs inside `backend_node` and manages one container per unit through the mounted
-Docker socket (`/var/run/docker.sock`, docker-out-of-docker).
+To conserve server memory and CPU, the server does not run persistent ROS master nodes for inactive robots. Instead, `unit_manager.js` inside `backend_node` dynamically manages one container per active unit.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Absent
-  Absent --> Starting: operator opens the unit (touch)
-  Starting --> Running: container up, relays advertising
-  Running --> Running: heartbeat refreshes lastActivity
-  Running --> Retained: robot reports autopilot on
-  Retained --> Running: autopilot off, or robot stops answering
-  Running --> Stopped: idle past UNIT_IDLE_TIMEOUT_MS (reaper, every 60 s)
-  Running --> Stopped: last holder logs out
-  Retained --> Retained: logout does nothing here
-  Stopped --> Starting: opened again
-  Stopped --> [*]: removed only if UNIT_REMOVE_ON_REAP=true
+  [*] --> Absent: No container running
+  Absent --> Starting: Operator opens robot page (touch event)
+  Starting --> Running: Container healthy, rosbridge topics published
+  Running --> Running: Periodic ping refreshes lastActivity
+  Running --> Retained: Robot reports Autopilot ON
+  Retained --> Running: Autopilot OFF or supervisor timeout
+  Running --> Stopped: Idle past UNIT_IDLE_TIMEOUT_MS (reaped)
+  Running --> Stopped: Operator explicitly logs out
+  Retained --> Retained: Operator logout ignored (run protected)
+  Stopped --> Starting: Operator re-opens robot
+  Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
 ```
 
-| Knob | Default | Effect |
+| Configuration Variable | Default Value | Description |
 | --- | --- | --- |
-| `UNIT_MANAGER_ENABLED` | `true` on cloud, `false` when `DEPLOYMENT_MODE=local` | Whole feature on or off |
-| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (prod), `:dev` (dev) | Which image a unit container runs |
-| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 min) | How long a container survives with no activity |
-| `UNIT_REAP_INTERVAL_MS` | `60000` | How often the reaper looks |
-| `UNIT_REMOVE_ON_REAP` | `false` | Stop only, or stop and remove |
-| `UNIT_MODE` | `prod` | Picks the container suffix, broker port and ROS master port |
+| `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Controls whether dynamic container management is active. |
+| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (`:dev` in dev) | Docker image instantiated for the unit relay. |
+| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Duration of operator inactivity before container is reaped. |
+| `UNIT_REAP_INTERVAL_MS` | `60000` (1 minute) | Frequency of the background reaper sweep. |
+| `UNIT_REMOVE_ON_REAP` | `false` | When true, deletes the container; when false, keeps it stopped. |
+| `UNIT_MODE` | `prod` (or `dev`) | Selects port offsets (ROS master 11311/11312, rosbridge 9090/9091). |
 
-Container naming is derived, not stored: `rosweb_unit_<ULID>_nakayama` in prod,
-`rosweb_unit_<ULID>_nakayama_dev` in dev. The restart policy is `unless-stopped`, which is chosen
-so that an explicit stop by the reaper sticks while a host reboot still brings active units back.
-
-::: warning Retention is not the same as being held
-A container whose robot is on autopilot is moved into a **retained** set. Retained containers are
-skipped by the reaper *and* excluded from the logout teardown, because the operator who walks away
-is precisely the one whose departure must not end the run. Retention is released by the robot
-reporting autopilot off, never by a logout.
+::: warning Autopilot Retention Guard
+When a robot executes an autonomous mission in **Autopilot Mode**, its relay container enters the **Retained** state. Retained containers are exempt from idle timeouts and are not terminated when an operator logs out or closes their browser, ensuring continuous mission monitoring.
 :::
 
-## MQTT is a clock-domain boundary
+## Clock Domain Boundary and Time Synchronization
 
-The Unit's roscore and the cloud's roscore are two different ROS masters with two different clocks.
-Every geometric message that crosses the broker is restamped to the receiving side's local ROS clock
-on ingress, through a shared `BoundaryPublisher`.
+The robot onboard computer and the cloud server run separate ROS master instances with independent system clocks. To prevent timestamp divergence, all geometric messages crossing MQTT are restamped to local ROS time on ingress via `BoundaryPublisher`.
 
 ```mermaid
 flowchart LR
-  subgraph unitclk["Unit clock domain"]
-    A["typed msg<br/>stamp = unit ROS time"]
-    B["topic2string<br/>serialize to JSON"]
+  subgraph UnitDomain["Unit Clock Domain (Robot)"]
+    U_MSG["ROS Message<br/>stamp = Unit Clock"]
+    U_T2S["topic2string<br/>JSON Serialization"]
   end
-  subgraph wire["MQTT"]
-    C["/unit_ULID/string/..."]
+
+  subgraph Transport["Encrypted Transport"]
+    MQTT_TOPIC["MQTT Topic<br/>/unit_<ULID>/string/..."]
   end
-  subgraph cloudclk["Cloud clock domain"]
-    D["BoundaryPublisher<br/>restamp to cloud ROS time"]
-    E["typed msg<br/>rosbridge, browser"]
+
+  subgraph CloudDomain["Cloud Clock Domain (Server)"]
+    C_BOUND["BoundaryPublisher<br/>Restamp to Server ROS Clock"]
+    C_ROS["Typed ROS Message<br/>stamp = Server Clock"]
+    C_VIEW["rosbridge / UI Canvas"]
   end
-  A --> B --> C --> D --> E
+
+  U_MSG --> U_T2S --> MQTT_TOPIC --> C_BOUND --> C_ROS --> C_VIEW
 ```
 
-Skip the restamp and you get `TF_OLD_DATA` warnings at best. At worst, if `/use_sim_time` disagrees
-between the two masters, you get silent staleness: a map and a pose that both look plausible and are
-both minutes old, with no error anywhere.
-
-::: danger The related failure to recognise on sight
-`/use_sim_time` stuck `true` on a master with no `/clock` publisher freezes navigation and mapping
-outright, with TF errors mentioning "simulated time". Restarting the bringup does not fix it,
-because the stale parameter lives on the ROS master rather than in any node. See
-[Troubleshooting](/setup/troubleshooting).
+::: danger Why Clock Restamping Is Mandatory
+Omitting time restamping results in immediate `TF_OLD_DATA` warnings in RViz and web renderers. Furthermore, if `/use_sim_time` is enabled on one master without an active `/clock` generator, TF tree evaluation freezes completely.
 :::
 
-## Trust domains
+## Multi-Tier Trust Domains and Security
 
-There are three token issuers in this system and they do not accept each other's tokens.
+The MSD700 architecture enforces three distinct security trust domains. Credentials issued within one domain are strictly rejected by the others.
 
 ```mermaid
 flowchart TB
-  subgraph cloud["Cloud trust domain"]
-    CK["JWT keyring<br/>/run/secrets/jwt_keyring"]
-    CU["operator tokens"]
-    CA["admin tokens (typ=admin)"]
-    CR["robot tokens (from /enroll)"]
-  end
-  subgraph unitd["Unit trust domain"]
-    LK["unit-local keyring"]
-    LR["/local/robot-token"]
+  subgraph CloudDomain["Cloud Server Trust Domain"]
+    KEYRING["JWT Keyring<br/>/srv/msd/secrets/jwt_keyring"]
+    OP_TOKENS["Operator JWTs (typ=operator)"]
+    ADMIN_TOKENS["Admin JWTs (typ=admin)"]
+    ROBOT_TOKENS["Robot Cloud Tokens (/enroll)"]
   end
 
-  CK --> CU
-  CK --> CA
-  CK --> CR
-  LK --> LR
-  CR -.->|"rejected"| LR
-  CA -.->|"rejected by verifyToken"| CU
+  subgraph UnitDomain["Unit Local Trust Domain"]
+    LOCAL_KEY["Unit Local Keyring"]
+    LOCAL_TOKENS["Local Tokens (/local/robot-token)"]
+  end
+
+  KEYRING --> OP_TOKENS
+  KEYRING --> ADMIN_TOKENS
+  KEYRING --> ROBOT_TOKENS
+  LOCAL_KEY --> LOCAL_TOKENS
+
+  ROBOT_TOKENS -.->|"REJECTED by Local Services"| LOCAL_TOKENS
+  ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
 ```
 
-- **Operator tokens** are HS256, verified against a keyring rather than a single secret. The active
-  key signs; recently rotated keys are still accepted for a grace window, so a rotation does not log
-  the fleet out. Refresh tokens (`typ=refresh`) are rejected everywhere except `/user/refresh`, and
-  admin tokens (`typ=admin`) are rejected by the operator middleware because they carry no `user_id`.
-- **Robot tokens** are minted by `/enroll/token` from the device secret, live 12 hours, and are
-  re-minted on every boot.
-- **Unit-local tokens** come from that unit's own `backend_local`. A cloud-signed token is rejected
-  by unit-local services on purpose. This is why `camera_client` asks `/local/robot-token` for a
-  credential the unit's own signalling server will accept, rather than reusing `token.cred`.
-  `system_command.py` follows the same rule for its two media-server uploads: a fresh, per-target
-  credential minted on every attempt, never cached, since caching one across the 12-hour token
-  lifetime is what let a robot that had been up for more than a day fail every upload with a `401`.
+1. **Operator Tokens**: Standard HS256 JWTs verified against the `/srv/msd/secrets/` keyring. Tokens include user IDs and account scope. Admin tokens (`typ=admin`) are rejected by standard robot operation routes.
+2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours and refreshed on every system boot.
+3. **Unit Local Tokens**: Issued locally by `backend_local` on the Jetson computer. Cloud-signed tokens are intentionally rejected by local endpoints to ensure complete local autonomy during network partitions.
 
-::: warning A robot token's claims are not read consistently everywhere it's accepted
-`media-server` authorizes a robot's map upload by verifying the token's signature, but the handler
-reads `decoded.user_id`, a claim only operator tokens carry. A robot token's identity lives in
-`sub` / `userId` / `unit_id` instead, so `req.user_id` comes out `undefined` on that path. The upload
-still succeeds because attribution (`created_by`) is taken from the request body, not from the token
-(see [Database Schema § Attribution is never authorization](/development/database-schema#foreign-keys-in-full)),
-but it means a robot token is, on this specific endpoint, verified rather than actually consulted.
-:::
+## Operating Lease: Preventing Multi-Operator Conflicts
 
-::: warning Only the `_dev` profile has actually migrated to the keyring
-Production's `media-server` and `signalling_server` still read `JWT_SECRET` from their own
-`.env` files rather than the shared keyring, and those `.env` files (plus a leftover
-`JWT_SECRET_OLD` and database passwords) are still committed to the repository. The keyring
-described above is real and correct for `_dev`; treat any claim that production has moved off a
-single, long-known literal secret as unverified until those `.env` files are actually replaced.
-:::
-
-::: danger The MQTT broker itself has no per-unit boundary
-Everything above is about who can obtain and use an HTTP or WebSocket token. It says nothing about
-the MQTT layer underneath: the default (`nakayama`) broker profile runs with `requires_auth: false`,
-so anything able to reach the broker can publish to **any** unit's `/unit_<ULID>/system_command`
-topic, not only its own, once it knows or guesses the ULID. The tidy JWT trust-domain story above sits
-on top of a transport that does not itself distinguish one unit's traffic from another's.
-:::
-
-## Local and cloud, per unit
-
-Every unit runs both MQTT bridges unconditionally: one to its own Mosquitto broker on `127.0.0.1:1883`,
-one to the cloud's HiveMQ. This is not a mode you opt into.
+Because a robot can be accessed from both the cloud web interface and the onboard local network dashboard, the physical robot enforces a single **Operating Lease**.
 
 ```mermaid
 flowchart LR
-  OP1["Operator on the LAN<br/>http://unit-ip:3000"]
-  OP2["Operator anywhere<br/>https://msd.nglobal.jp"]
+  USER_A["Operator A (Cloud Dashboard)"]
+  USER_B["Operator B (Local LAN Dashboard)"]
 
-  subgraph U["Unit"]
-    LB["local aws_mqtt bridge"]
-    CB["cloud aws_mqtt bridge"]
-    LEASE["system_command.py<br/>one lease, one answer"]
-    R["roscore + move_base"]
+  subgraph Jetson["Physical Robot (Jetson SBC)"]
+    LEASE_MGR["system_command.py<br/>Exclusive Operating Lease"]
+    CONTROLLER["move_base & Motor Actuators"]
   end
 
-  OP1 --> LB --> LEASE
-  OP2 -->|"HiveMQ"| CB --> LEASE
-  LEASE --> R
+  USER_A -->|"Acquires Lease"| LEASE_MGR
+  USER_B -.->|"Rejected: In Use by Another User"| LEASE_MGR
+  LEASE_MGR --> CONTROLLER
 ```
 
-Both surfaces reach the same robot, so "who is driving" has to have exactly one answer. That answer
-is the **operating lease**, held on the robot rather than in either backend, because the robot is the
-only party that survives a backend restart, a closed browser and a reconnect. See
-[State and Behavior](/development/state-and-behavior#the-operating-lease) for the rules.
+- The lease is held on the **robot** (inside `system_command.py`), not on the server backend.
+- When an operator opens a robot dashboard, the client acquires a 15-second lease renewed continuously by heartbeat pings.
+- If a second operator attempts to send commands, the robot returns an `In Use` status. Takeover requires explicit confirmation from the original operator or lease expiration.
 
-## Related
+## Related Documentation
 
-- [Message Contracts](/development/message-contracts): every payload that crosses these seams
-- [State and Behavior](/development/state-and-behavior): the state machines behind them
-- [API Reference](/development/api-reference): the HTTP surface
-- [Database Schema](/development/database-schema): the tables behind `backend_node`'s state
-- [Camera Streaming](/development/camera-streaming): the WebRTC handshake behind `signalling_server`
-- [Data Sync](/development/data-sync): how a Unit's cache and the cloud's copy reconcile
-- [Repository Structure](/development/repository-structure)
-- [System Setup](/setup/system-setup): the deployment-time view
+- [Message Contracts](/development/message-contracts): Full specification of MQTT, ROS, and WebSocket payloads.
+- [State and Behavior](/development/state-and-behavior): Detailed state machines for navigation, boustrophedon sweep, and E-Stop.
+- [API Reference](/development/api-reference): REST API endpoints and authentication contracts.
+- [Database Schema](/development/database-schema): MySQL schema, tables, foreign keys, and migration scripts.
+- [Camera Streaming](/development/camera-streaming): WebRTC video pipeline and ICE candidate negotiation.
+- [Data Sync](/development/data-sync): Synchronization mechanics between unit cache and central server.

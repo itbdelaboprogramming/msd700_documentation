@@ -60,7 +60,7 @@ Work through these in order: each one rules out an entire layer.
 | Backend logs `ECONNREFUSED 127.0.0.1:1883` repeatedly | `MQTT_BROKER_TYPE` is unset or not `nakayama`, so the backend fell back to a local broker nothing serves | Set `MQTT_BROKER_TYPE=nakayama` in `.env` and recreate the backend |
 | Backend logs `EACCES /var/run/docker.sock` and no unit containers appear | `DOCKER_GID` does not match this host's docker group | `getent group docker \| cut -d: -f3`, fix `.env`, recreate the backend |
 | A new endpoint returns 404 on a unit whose source clearly has it | The unit's local server image is stale. Those services are **copied** into the image, not bind-mounted | `./scripts/docker-manager.sh local-build`, then `up` |
-| Badge says image is out of date after editing local-mode source | Since 2026-08-13, `up` only warns (`[WARN] ... OUT OF DATE`) and keeps running the old image — it no longer rebuilds automatically, so bringing a unit online never requires internet | Rebuild deliberately: `./scripts/docker-manager.sh local-build` (or `build` for the robot image too), or `up --build` to do both and start in one command |
+| Badge says image is out of date after editing local-mode source | Since 2026-08-13, `up` only warns (`[WARN] ... OUT OF DATE`) and keeps running the old image, it no longer rebuilds automatically, so bringing a unit online never requires internet | Rebuild deliberately: `./scripts/docker-manager.sh local-build` (or `build` for the robot image too), or `up --build` to do both and start in one command |
 
 ## Regressions worth knowing about
 
@@ -81,7 +81,7 @@ at their cause:
   motion), never the frontend. See
   [State and Behavior](/development/state-and-behavior#idle-and-stuck-arbitration).
 - **A coverage run reports "Arrived" for an area that was obviously never swept.** A bail-out now
-  publishes `aborted` and reads "Failed", but only after N failures **in a row** — a run that fails
+  publishes `aborted` and reads "Failed", but only after N failures **in a row**, a run that fails
   intermittently and completes its remaining legs still ends as `complete`. Recognise it by an
   `arrived` state next to an incomplete coverage overlay.
 - **On the local dashboard only: Autopilot shows "did not engage" but the robot is plainly running
@@ -164,13 +164,13 @@ at their cause:
   it was scoped to. Re-renting a unit to a different tenant left an old watermark that silently
   filtered out rows that were new **to that profile** even though the unit had never received them.
   Fixed by also recording `last_pull_profile_id` and forcing a full re-pull whenever the handshake's
-  profile disagrees with it — but any unit that already hit this needs
+  profile disagrees with it, but any unit that already hit this needs
   `node scripts/migrate_sync.js --profile <name> --apply` before the fix takes effect. See
   [Data Sync § Watermarks are scoped to a rental profile](/development/data-sync#watermarks-are-scoped-to-a-rental-profile-not-just-a-clock).
 - **Sync reports success, but rentals and every map under them never arrive.** `units` was, for a
   while, missing from the sync table registry even though `profile_units.unit_id` and
   `maps_data.unit_id` both foreign-key into it. A missing parent row was treated as ordinary skipped
-  traffic — silently, with no error and no `skipped` count printed — so an entire branch of data
+  traffic, silently, with no error and no `skipped` count printed, so an entire branch of data
   could fail to sync while the round still reported `ok`. If a similarly-shaped silent gap shows up
   again, check `sync_tables.js`'s registry first, not the transport.
 - **A map deleted on one side still takes up disk on the other, after its database row is already
@@ -178,7 +178,7 @@ at their cause:
   through sync (not the side that performed the original delete) never removed the `.pgm`/`.yaml`
   thumbnail files. Files that piled up before this was fixed do not clean themselves up retroactively
   and need a manual sweep.
-- **A map transferred, swapped, or cleared from the cloud admin console never reaches the unit — or
+- **A map transferred, swapped, or cleared from the cloud admin console never reaches the unit, or
   reappears after being cleared.** The admin transfer/swap/clear/restore endpoints used to write SQL
   directly instead of going through `sync_engine.js`, so they never recorded a tombstone the way an
   ordinary delete does. A clear looked, from the unit's side, exactly like nothing had happened, and

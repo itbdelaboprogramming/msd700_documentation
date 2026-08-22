@@ -513,7 +513,7 @@ Two more of those steps exist because of failures that looked like nothing at al
   is no bind mount for those services. Without comparing source-file mtimes against the image build
   time (plus the port and deployment-mode labels), a unit would have no way to notice it is serving
   last week's backend at all. That is how a new endpoint ends up returning 404 on a unit whose source
-  tree plainly contains it — see [Troubleshooting](/setup/troubleshooting).
+  tree plainly contains it, see [Troubleshooting](/setup/troubleshooting).
 
 ## Unit: `run_msd.sh`
 
@@ -583,11 +583,11 @@ USER_GID=
 It used to be: `NEXT_PUBLIC_*` URLs were compiled into the JS with the unit's IP baked in, so moving
 a unit to a new network meant a mandatory rebuild. The bundle now takes its **host** from whatever
 address the operator's browser actually used to open the page
-(`src/config/apiConfig.ts` in `ROS-dashboard-next-ts`), which by construction is the same machine —
+(`src/config/apiConfig.ts` in `ROS-dashboard-next-ts`), which by construction is the same machine , 
 only the **port** still comes from the build. A unit reached by IP, hostname, mDNS
 (`msd700.local`), or an SSH tunnel on `localhost` all work correctly now, none of which was possible
 before. `LOCAL_IP` in `docker/.env` is left as a hint for the script's own printed URLs and the
-DHCP-less fallback baked in before a browser ever exists — getting it wrong is no longer fatal to
+DHCP-less fallback baked in before a browser ever exists, getting it wrong is no longer fatal to
 the dashboard, only to what the script prints.
 :::
 

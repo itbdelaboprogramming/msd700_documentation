@@ -15,7 +15,7 @@ This section is for **developers** working on the MSD700 codebase (and this docu
   <LinkCard icon="🔌" title="API Reference" details="Every endpoint, with request and response bodies." link="/development/api-reference" />
   <LinkCard icon="🗄️" title="Database Schema" details="Every ROS_DB table, its columns, and the foreign keys between them." link="/development/database-schema" />
   <LinkCard icon="📷" title="Camera Streaming" details="The WebRTC handshake, STUN/TURN per target, and the mDNS candidate bug." link="/development/camera-streaming" />
-  <LinkCard icon="🔄" title="Data Sync" details="How a Unit's database and the cloud's stay consistent — direction, conflicts, watermarks." link="/development/data-sync" />
+  <LinkCard icon="🔄" title="Data Sync" details="How a Unit's database and the cloud's stay consistent, direction, conflicts, watermarks." link="/development/data-sync" />
   <LinkCard icon="🗂️" title="Repository Structure" details="Layout of this repository and how the docs site is deployed." link="/development/repository-structure" />
   <LinkCard icon="🤝" title="Contributing" details="Dev workflow, commit conventions, and how to submit changes." link="/development/contributing" />
   <LinkCard icon="📝" title="Changelog" details="What changed and when." link="/development/changelog" />

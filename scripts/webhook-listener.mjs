@@ -1,7 +1,7 @@
 // Minimal GitHub webhook receiver: verifies the push signature and triggers
 // scripts/deploy.sh when main is updated. No external dependencies.
 // Runs behind Apache (ProxyPass /services/msd700-webhook -> 127.0.0.1:PORT),
-// bound to 127.0.0.1 only — never exposed directly to the internet.
+// bound to 127.0.0.1 only, never exposed directly to the internet.
 import { createServer } from 'node:http';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';

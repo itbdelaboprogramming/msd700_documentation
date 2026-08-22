@@ -112,7 +112,7 @@ grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc
 **`::1` must not be mapped to `localhost`.** MySQL and Mosquitto in the `local_dev` profile
 deliberately bind to `127.0.0.1` only (see [Docker Reference](/setup/docker-reference#the-unit-s-own-stack-local-dev-profile)).
 If `/etc/hosts` resolves `localhost` to `::1` first, `backend_local` fails with
-`ECONNREFUSED ::1:3306` or `ECONNREFUSED ::1:1883` — the connection is refused, not timed out,
+`ECONNREFUSED ::1:3306` or `ECONNREFUSED ::1:1883`, the connection is refused, not timed out,
 because something IS listening on `::1`, just not the service being asked for.
 
 ```bash
@@ -122,7 +122,7 @@ getent ahosts localhost   # must print only a 127.0.0.1 line, no ::1
 ```
 
 Every service in the `msd700` container and the `local_dev` profile uses `network_mode: host`, so
-this fix is inherited automatically by all of them — but only by containers **created after** the
+this fix is inherited automatically by all of them, but only by containers **created after** the
 fix. Anything already running needs `docker rm -f` before it picks up the corrected `/etc/hosts`.
 
 **The maps folder mount is hardcoded on the robot side.** The `msd700` service's own bind mount is
@@ -137,7 +137,7 @@ sudo mkdir -p /home/ubuntu/ros_maps
 sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
 ```
 
-Do not point `MAPS_FOLDER_LOCAL` elsewhere while this mount stays hardcoded — the robot and the
+Do not point `MAPS_FOLDER_LOCAL` elsewhere while this mount stays hardcoded, the robot and the
 web services would then read and write maps in two different places.
 
 ## 3. Review `docker/.env`
@@ -350,7 +350,7 @@ check. See [Architecture](/development/architecture#trust-domains).
 ::: tip No LAN to put the unit on?
 A unit can run its own WiFi hotspot for an operator to join directly, with the dashboard opening
 automatically the moment they connect (a captive portal). Optional, and layered entirely on top of
-what this page already sets up — see [WiFi Hotspot + Client](/setup/wifi-hotspot).
+what this page already sets up, see [WiFi Hotspot + Client](/setup/wifi-hotspot).
 :::
 
 ### Managing the local stack on its own
