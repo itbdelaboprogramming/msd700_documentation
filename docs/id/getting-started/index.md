@@ -10,12 +10,12 @@ Selamat datang di **Panduan Pengguna Operator MSD700**. Dokumentasi ini dirancan
 Tidak diperlukan pengalaman pemrograman atau robotika untuk mengoperasikan robot melalui antarmuka web.
 
 <LinkCards>
-  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/getting-started/quick-start" />
-  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/getting-started/features" />
-  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/getting-started/behavior" />
-  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="Perkenalan" details="Pelajari tentang platform MSD700, kemampuan perangkat keras, dan arsitektur cloud." link="/id/getting-started/introduction" />
+  <LinkCard icon="🚀" title="Panduan Memulai Cepat" details="Petunjuk langkah demi langkah untuk masuk, memilih robot, dan menjalankan misi pertama Anda." link="/id/getting-started/quick-start" />
+  <LinkCard icon="✨" title="Fitur Sistem" details="Panduan komprehensif untuk teleoperasi, pemetaan SLAM, sapuan area, dan streaming kamera." link="/id/getting-started/features" />
+  <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami pengawas keselamatan, sewa operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/getting-started/behavior" />
+  <LinkCard icon="❓" title="Pertanyaan yang Sering Diajukan" details="Jawaban atas pertanyaan operasional umum mengenai baterai, peta, dan konektivitas." link="/id/getting-started/faq" />
+  <LinkCard icon="🛠️" title="Pemecahan Masalah Operator" details="Solusi cepat untuk gejala umum operator seperti video terhenti dan tujuan dibatalkan." link="/id/getting-started/troubleshooting" />
 </LinkCards>
 
 ## Jalur Bacaan yang Direkomendasikan untuk Operator

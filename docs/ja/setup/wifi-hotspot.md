@@ -68,7 +68,7 @@ flowchart TB
 
 ::: info Why the container is not `privileged: true`
 `network_local` には 2 つの異なるものが必要ですが、`msd700` がすでに使用している広範な許可も必要ありません
-(`privileged: true` + host network, see [Docker Reference](/ja/setup/docker-reference#network-mode-host)).
+(`privileged: true` + ホスト ネットワーク。[Docker リファレンス](/ja/setup/docker-reference#network-mode-host) を参照)。
 `nmcli` が **ホスト独自の** NetworkManager デーモンを制御する必要があるのは、バインド マウントされた D-Bus ソケットだけです
 、クライアント自体がネットワーク インターフェイスに直接触れることはありません。 iptables ルールは異なります。
 **host** ネットワーク名前空間で実行する必要があります。AP インターフェイスが実際に存在する場所だからです。
@@ -126,7 +126,7 @@ AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
 `setup.sh` は、環境内にすでに存在する変数をオーバーライドせずに `docker/.env` をソースします。
 したがって、インライン値が優先されます。その後はパスワードを必要とすることはありません。NetworkManager はパスワードを保存します。
 キー自体とその後の変更が反映されます
-[the dashboard's badge menu](#changing-the-unit-s-own-hotspot).パスワードが次の場所に存在する必要はありません
+[ダッシュボードのバッジ メニュー](#changing-the-unit-s-own-hotspot)。パスワードが次の場所に存在する必要はありません
 ファイル全然。
 
 クライアント ネットワークを構成する場合は、`STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` にも同じことが当てはまります
@@ -293,10 +293,10 @@ msd700-hotspot` が正直な答えです。
 
 ## 関連
 
-- [Unit Setup](/ja/setup/unit-setup): the base local-mode installation this feature sits on top of
-- [Docker Reference § network_mode: host](/ja/setup/docker-reference#network-mode-host): why some
+- [ユニット セットアップ](/ja/setup/unit-setup): この機能が上に置かれるベースのローカル モード インストール
+- [Docker リファレンス § network_mode: host](/ja/setup/docker-reference#network-mode-host): なぜいくつかの
   サービスはホストのネットワーク名前空間を共有します
-- [Data Sync § The Local Mode badge](/ja/development/data-sync#the-local-mode-badge): the badge this
+- [データ同期 § ローカル モード バッジ](/ja/development/data-sync#the-local-mode-badge): このバッジ
   セクションは内部に存在し、その上に同期状態が表示されます
-- [Architecture § Trust domains](/ja/development/architecture#trust-domains): why `/local/wifi/connect`
+- [アーキテクチャ § 信頼ドメイン](/ja/development/architecture#trust-domains): なぜ `/local/wifi/connect`
   `/local/status` はオペレーターセッションを必要としません

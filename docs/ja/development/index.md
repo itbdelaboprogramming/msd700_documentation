@@ -10,55 +10,55 @@ MSD700 プラットフォームに取り組むソフトウェア エンジニア
 ## アーキテクチャとコア システム
 
 <LinkCards>
-  <LinkCard icon="🏗️" title="Architecture" details="Two-machine peer model, system topology, trust domains, and seams." link="/development/architecture" />
-  <LinkCard icon="🛡️" title="Security & Authentication" details="JWT keyring, 3-stage cryptographic enrolment nonce, and trust isolation." link="/development/security-and-auth" />
-  <LinkCard icon="🔁" title="State and Behavior" details="Robot activities, safety watchdog tiers, Autopilot mode, and session recovery." link="/development/state-and-behavior" />
-  <LinkCard icon="🗂️" title="Repository Structure" details="Codebase layout across msd700_robot, ros-web-ui, and msd700_noetic." link="/development/repository-structure" />
+  <LinkCard icon="🏗️" title="建築" details="2 マシンのピア モデル、システム トポロジ、信頼ドメイン、およびシーム。" link="/ja/development/architecture" />
+  <LinkCard icon="🛡️" title="セキュリティと認証" details="JWT キーリング、3 段階の暗号登録ノンス、および信頼分離。" link="/ja/development/security-and-auth" />
+  <LinkCard icon="🔁" title="状態と動作" details="ロボットのアクティビティ、安全ウォッチドッグ層、自動操縦モード、およびセッションの回復。" link="/ja/development/state-and-behavior" />
+  <LinkCard icon="🗂️" title="リポジトリ構造" details="msd700_robot、ros-web-ui、および msd700_noetic にわたるコードベースのレイアウト。" link="/ja/development/repository-structure" />
 </LinkCards>
 
 ## ROS とロボット サブシステム
 
 <LinkCards>
-  <LinkCard icon="📦" title="ROS Package Registry" details="Complete directory of ROS 1 Noetic nodes, launch files, and topics." link="/development/ros-packages" />
-  <LinkCard icon="📐" title="Coordinate Transforms (TF)" details="REP-103/105 transform tree, sensor offsets, and BoundaryPublisher restamping." link="/development/tf-transforms" />
-  <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/development/sensor-fusion-and-control" />
-  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/development/firmware-and-hardware" />
-  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/development/costmaps-and-planners" />
-  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, roslaunch Python API process spawning, and Autopilot sequencer." link="/development/mode-switching" />
+  <LinkCard icon="📦" title="ROS パッケージ レジストリ" details="ROS 1 Noetic ノード、起動ファイル、トピックの完全なディレクトリ。" link="/ja/development/ros-packages" />
+  <LinkCard icon="📐" title="座標変換 (TF)" details="REP-103/105 変換ツリー、センサー オフセット、および BoundaryPublisher の再スタンプ。" link="/ja/development/tf-transforms" />
+  <LinkCard icon="📡" title="センサーの融合と制御" details="Velodyne VLP-16 LiDAR、IMU フィルタリング、EKF 状態推定。" link="/ja/development/sensor-fusion-and-control" />
+  <LinkCard icon="⚡" title="ファームウェアとハ​​ードウェア" details="マイクロコントローラーのシリアル UART プロトコル、PID 速度ループ、バッテリー テレメトリ。" link="/ja/development/firmware-and-hardware" />
+  <LinkCard icon="🗺️" title="コストマップとプランナー" details="Move Base、navfn global planner、および TEB ローカル軌道最適化。" link="/ja/development/costmaps-and-planners" />
+  <LinkCard icon="🔄" title="動的モード切り替え" details="switch_mode.py、roslaunch Python API プロセスの生成、および Autopilot シーケンサー。" link="/ja/development/mode-switching" />
 </LinkCards>
 
 ## ナビゲーション、カバレッジ、シミュレーション
 
 <LinkCards>
-  <LinkCard icon="📐" title="Boustrophedon Coverage" details="Dual geometry models, cellular decomposition, and zero-spin alignment." link="/development/boustrophedon-and-alignment" />
-  <LinkCard icon="🏭" title="Simulation" details="True-scale Gazebo simulation, AWS Small Warehouse world, and clearance testing." link="/development/simulation" />
+  <LinkCard icon="📐" title="ボストロフェドンの報道" details="デュアルジオメトリモデル、セル分解、ゼロスピンアライメント。" link="/ja/development/boustrophedon-and-alignment" />
+  <LinkCard icon="🏭" title="シミュレーション" details="実物大の Gazebo シミュレーション、AWS Small Warehouse の世界、およびクリアランス テスト。" link="/ja/development/simulation" />
 </LinkCards>
 
 ## 通信とインターフェース
 
 <LinkCards>
-  <LinkCard icon="📨" title="Message Contracts" details="MQTT command envelopes, feedback schemas, and ARQ ACK protocols." link="/development/message-contracts" />
-  <LinkCard icon="🔌" title="API Reference" details="Exhaustive REST API endpoints, request parameters, and response bodies." link="/development/api-reference" />
-  <LinkCard icon="🌐" title="rosbridge Protocol" details="WebSocket JSON streaming protocol, topic subscriptions, and canvas rendering." link="/development/rosbridge-protocol" />
-  <LinkCard icon="🎨" title="Frontend Canvas & Web UI" details="EaselJS stage rendering, metric-to-pixel math, and createjs prototype patches." link="/development/frontend-canvas" />
-  <LinkCard icon="📷" title="Camera Streaming" details="WebRTC video pipeline, STUN/TURN relays, and mDNS candidate filtering." link="/development/camera-streaming" />
+  <LinkCard icon="📨" title="メッセージコントラクト" details="MQTT コマンド エンベロープ、フィードバック スキーマ、および ARQ ACK プロトコル。" link="/ja/development/message-contracts" />
+  <LinkCard icon="🔌" title="APIリファレンス" details="徹底的な REST API エンドポイント、リクエスト パラメーター、および応答本文。" link="/ja/development/api-reference" />
+  <LinkCard icon="🌐" title="ロスブリッジプロトコル" details="WebSocket JSON ストリーミング プロトコル、トピック サブスクリプション、およびキャンバス レンダリング。" link="/ja/development/rosbridge-protocol" />
+  <LinkCard icon="🎨" title="フロントエンド キャンバスと Web UI" details="EaselJS ステージ レンダリング、メトリックからピクセルへの計算、createjs プロトタイプ パッチ。" link="/ja/development/frontend-canvas" />
+  <LinkCard icon="📷" title="カメラストリーミング" details="WebRTC ビデオ パイプライン、STUN/TURN リレー、mDNS 候補フィルタリング。" link="/ja/development/camera-streaming" />
 </LinkCards>
 
 ## データ、ストレージ、クラウド同期
 
 <LinkCards>
-  <LinkCard icon="🗄️" title="Database Schema" details="MySQL 8.0 tables, uniform timestamps, and rental profile foreign keys." link="/development/database-schema" />
-  <LinkCard icon="🔄" title="Data Sync" details="Offline-first database reconciliation, conflict resolution, and Local badge." link="/development/data-sync" />
-  <LinkCard icon="💾" title="Backup & Migration" details="Profile and unit scoped backups, tar.gz manifests, and schema migrations." link="/development/backup-and-restore" />
+  <LinkCard icon="🗄️" title="データベーススキーマ" details="MySQL 8.0 テーブル、統一タイムスタンプ、およびレンタル プロファイル外部キー。" link="/ja/development/database-schema" />
+  <LinkCard icon="🔄" title="データ同期" details="オフラインファーストのデータベース調整、競合解決、ローカルバッジ。" link="/ja/development/data-sync" />
+  <LinkCard icon="💾" title="バックアップと移行" details="プロファイルおよびユニットを対象としたバックアップ、tar.gz マニフェスト、およびスキーマの移行。" link="/ja/development/backup-and-restore" />
 </LinkCards>
 
 ## 操作と診断
 
 <LinkCards>
-  <LinkCard icon="🐳" title="Unit Container Lifecycle" details="unit_manager.js, Docker socket proxying, and idle reaper sweeps." link="/development/unit-container-lifecycle" />
-  <LinkCard icon="🔧" title="Diagnostics & Troubleshooting" details="Developer failure decision trees, root cause mappings, and recovery." link="/development/troubleshooting-guide" />
-  <LinkCard icon="🤝" title="Contributing Guide" details="Development workflow, commit conventions, and pull request procedures." link="/development/contributing" />
-  <LinkCard icon="📝" title="Changelog" details="Historical platform changelog and release notes." link="/development/changelog" />
+  <LinkCard icon="🐳" title="ユニットコンテナのライフサイクル" details="Unit_manager.js、Docker ソケット プロキシ、アイドル リーパー スイープ。" link="/ja/development/unit-container-lifecycle" />
+  <LinkCard icon="🔧" title="診断とトラブルシューティング" details="開発者の障害デシジョン ツリー、根本原因のマッピング、および回復。" link="/ja/development/troubleshooting-guide" />
+  <LinkCard icon="🤝" title="貢献ガイド" details="開発ワークフロー、コミット規約、プル リクエスト手順。" link="/ja/development/contributing" />
+  <LinkCard icon="📝" title="変更履歴" details="過去のプラットフォームの変更履歴とリリース ノート。" link="/ja/development/changelog" />
 </LinkCards>
 
 ## 推奨される読む順序

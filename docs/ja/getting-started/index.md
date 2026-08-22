@@ -10,12 +10,12 @@ search: false
 Web インターフェイス経由でロボットを操作するのに、プログラミングやロボット工学の経験は必要ありません。
 
 <LinkCards>
-  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/getting-started/quick-start" />
-  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/getting-started/features" />
-  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/getting-started/behavior" />
-  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="導入" details="MSD700 プラットフォーム、ハードウェア機能、クラウド アーキテクチャについて学びます。" link="/ja/getting-started/introduction" />
+  <LinkCard icon="🚀" title="クイックスタートガイド" details="ログインし、ロボットを選択し、最初のミッションを実行するための段階的な手順。" link="/ja/getting-started/quick-start" />
+  <LinkCard icon="✨" title="システムの特徴" details="遠隔操作、SLAM マッピング、エリア スイープ、カメラ ストリーミングに関する包括的なガイド。" link="/ja/getting-started/features" />
+  <LinkCard icon="🤖" title="ロボットの動作" details="安全性ウォッチドッグ、オペレーティング リース、オートパイロットの永続性、およびセッションの回復について理解します。" link="/ja/getting-started/behavior" />
+  <LinkCard icon="❓" title="よくある質問" details="バッテリー、マップ、接続に関する一般的な操作に関する質問への回答。" link="/ja/getting-started/faq" />
+  <LinkCard icon="🛠️" title="オペレーターのトラブルシューティング" details="ビデオの停止や目標の中止など、オペレーターの一般的な症状に対する迅速な解決策。" link="/ja/getting-started/troubleshooting" />
 </LinkCards>
 
 ## オペレーター向けの推奨読書パス

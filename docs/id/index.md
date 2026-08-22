@@ -3,32 +3,32 @@
 layout: home
 
 hero:
-  name: "MSD700 Platform Documentation"
+  name: "Dokumentasi Platform MSD700"
   text: "by ITB de Labo Research Lab"
-  tagline: "Complete technical manual for operators, field technicians, and robotics developers."
+  tagline: "Panduan teknis lengkap untuk operator, teknisi lapangan, dan pengembang robotika."
   actions:
     - theme: brand
-      text: Getting Started
-      link: /getting-started/
+      text: Memulai
+      link: /id/getting-started/
     - theme: alt
-      text: Setup Guide
-      link: /setup/
+      text: Panduan Pengaturan
+      link: /id/setup/
     - theme: alt
-      text: Developer Docs
-      link: /development/
+      text: Dokumen Pengembang
+      link: /id/development/
 
 features:
-  - title: Getting Started
-    details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
-    link: /getting-started/
-    linkText: Read the operator guide
-  - title: Setup & Deployment
-    details: "For field technicians: step-by-step installation guides for the cloud server stack and NVIDIA Jetson robot hardware."
-    link: /setup/
-    linkText: Read the technician setup guide
-  - title: Developer Documentation
-    details: "For software engineers: deep system architecture, 15-state EKF kinematics, message contracts, and REST API reference."
-    link: /development/
-    linkText: Read the developer documentation
+  - title: Memulai
+    details: "Untuk operator armada: pelajari cara mengendalikan robot, merekam peta SLAM, melakukan penyisiran area, dan memantau video langsung."
+    link: /id/getting-started/
+    linkText: Baca panduan operator
+  - title: Penyiapan & Penerapan
+    details: "Untuk teknisi lapangan: panduan instalasi langkah demi langkah untuk tumpukan server cloud dan perangkat keras robot NVIDIA Jetson."
+    link: /id/setup/
+    linkText: Baca panduan pengaturan teknisi
+  - title: Dokumentasi Pengembang
+    details: "Untuk insinyur perangkat lunak: arsitektur sistem mendalam, kinematika EKF 15 keadaan, kontrak pesan, dan referensi REST API."
+    link: /id/development/
+    linkText: Baca dokumentasi pengembang
 ---
 

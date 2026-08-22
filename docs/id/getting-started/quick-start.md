@@ -37,9 +37,9 @@ Setelah masuk, **Dasbor Armada** menampilkan semua robot yang ditugaskan ke prof
 
 | Lencana Status | Arti | Tindakan Diizinkan |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | Robot aktif, terhubung, dan siap menerima perintah. | Klik kartu unit untuk membuka dasbor. |
-| <Badge type="warning" text="In Use" /> | Operator lain terhubung secara aktif. | Anda dapat membuka unit dalam mode tampilan atau meminta pengambilalihan kendali. |
-| <Badge type="danger" text="Offline" /> | Robot dimatikan atau terputus dari jaringan. | Tunggu hingga unit menyambung kembali atau periksa daya perangkat keras. |
+| <Badge type="tip" text="On line" /> | Robot aktif, terhubung, dan siap menerima perintah. | Klik kartu unit untuk membuka dasbor. |
+| <Badge type="warning" text="Sedang Digunakan" /> | Operator lain terhubung secara aktif. | Anda dapat membuka unit dalam mode tampilan atau meminta pengambilalihan kendali. |
+| <Badge type="danger" text="Luring" /> | Robot dimatikan atau terputus dari jaringan. | Tunggu hingga unit menyambung kembali atau periksa daya perangkat keras. |
 
 Klik kartu robot **Online** mana pun untuk memasuki ruang kerja kontrolnya.
 

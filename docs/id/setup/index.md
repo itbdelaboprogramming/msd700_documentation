@@ -10,14 +10,14 @@ Bagian ini berisi dokumentasi teknis untuk **teknisi, teknisi sistem, dan pemasa
 Setiap prosedur mencakup perintah shell langkah demi langkah, keluaran yang diharapkan, templat konfigurasi, dan penjelasan arsitektur.
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/setup/docker-reference" />
-  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/setup/wifi-hotspot" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/setup/troubleshooting" />
+  <LinkCard icon="✅" title="Prasyarat" details="Ukuran perangkat keras, persyaratan komputasi, versi OS, dan aturan firewall port jaringan." link="/id/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="Pengaturan Server" details="Penerapan cloud produksi selangkah demi selangkah: Docker Compose, Apache reverse proxy, dan SSL." link="/id/setup/server-setup" />
+  <LinkCard icon="📡" title="Pengaturan Unit" details="Instal dan konfigurasikan robot fisik pada NVIDIA Jetson SBCs, build runtime, dan daftar." link="/id/setup/unit-setup" />
+  <LinkCard icon="🔗" title="Pengaturan Sistem" details="Daftar periksa integrasi ujung ke ujung, verifikasi jaringan, dan serah terima operator." link="/id/setup/system-setup" />
+  <LinkCard icon="🐳" title="Referensi Docker" details="Referensi lengkap untuk profil Docker Compose, variabel lingkungan, dan pemasangan volume." link="/id/setup/docker-reference" />
+  <LinkCard icon="📶" title="Hotspot WiFi + Klien" details="Konfigurasikan hotspot Wi-Fi onboard, mode Titik Akses, dan jembatan klien jaringan lokal." link="/id/setup/wifi-hotspot" />
+  <LinkCard icon="🧰" title="Pemeliharaan" details="Rotasi log rutin, rotasi keyring JWT, pembaruan dan pencadangan Certbot Let's Encrypt." link="/id/setup/maintenance" />
+  <LinkCard icon="🛠️" title="Pemecahan Masalah Teknisi" details="Mendiagnosis dan menyelesaikan masalah perangkat keras, kontainer, broker MQTT, dan sensor." link="/id/setup/troubleshooting" />
 </LinkCards>
 
 ## Kemajuan Penerapan yang Direkomendasikan

@@ -67,7 +67,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 ### Komponen Global Khusus:
 Tema dokumentasi ini memperluas VitePress dengan komponen global khusus:
 - `<RoleBadge role="user | technician | developer" />`: Menampilkan lencana target audiens di bagian atas halaman.
-- `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Kisi kartu interaktif yang digunakan pada laman landas bagian.
+- `<LinkCards>` / `<LinkCard icon="..." title="..." details="..." link="..." />`: Kisi kartu interaktif yang digunakan pada laman landas bagian.
 - `<Mermaid code="..." />`: Penyaji SVG sisi klien untuk diagram alur arsitektur responsif dan diagram urutan.
 
 ### Konvensi Permintaan Komit dan Tarik:

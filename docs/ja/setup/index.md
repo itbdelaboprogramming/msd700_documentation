@@ -10,14 +10,14 @@ search: false
 すべての手順には、段階的なシェル コマンド、予想される出力、構成テンプレート、およびアーキテクチャの説明が含まれています。
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/setup/docker-reference" />
-  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/setup/wifi-hotspot" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/setup/troubleshooting" />
+  <LinkCard icon="✅" title="前提条件" details="ハードウェアのサイジング、コンピューティング要件、OS バージョン、およびネットワーク ポートのファイアウォール ルール。" link="/ja/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="サーバーのセットアップ" details="段階的な実稼働クラウド展開: Docker Compose、Apache リバース プロキシ、および SSL。" link="/ja/setup/server-setup" />
+  <LinkCard icon="📡" title="ユニットのセットアップ" details="NVIDIA Jetson SBC に物理ロボットをインストールして構成し、ランタイムを構築して登録します。" link="/ja/setup/unit-setup" />
+  <LinkCard icon="🔗" title="システムセットアップ" details="エンドツーエンドの統合チェックリスト、ネットワーク検証、オペレーターの引き継ぎ。" link="/ja/setup/system-setup" />
+  <LinkCard icon="🐳" title="ドッカーリファレンス" details="Docker Compose プロファイル、環境変数、ボリューム マウントに関する包括的なリファレンス。" link="/ja/setup/docker-reference" />
+  <LinkCard icon="📶" title="WiFi ホットスポット + クライアント" details="オンボード Wi-Fi ホットスポット、アクセス ポイント モード、およびローカル ネットワーク クライアント ブリッジを構成します。" link="/ja/setup/wifi-hotspot" />
+  <LinkCard icon="🧰" title="メンテナンス" details="定期的なログのローテーション、JWT キーリングのローテーション、Certbot Let's Encrypt の更新、およびバックアップ。" link="/ja/setup/maintenance" />
+  <LinkCard icon="🛠️" title="技術者のトラブルシューティング" details="ハードウェア、コンテナ、MQTT ブローカー、センサーの問題を診断して解決します。" link="/ja/setup/troubleshooting" />
 </LinkCards>
 
 ## 推奨される展開の進行状況

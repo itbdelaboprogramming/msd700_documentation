@@ -67,7 +67,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 ### カスタム グローバル コンポーネント:
 このドキュメント テーマは、カスタム グローバル コンポーネントを使用して VitePress を拡張します。
 - `<RoleBadge role="user | technician | developer" />`: ページの上部に対象読者のバッジを表示します。
-- `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: セクションのランディング ページで使用されるインタラクティブ カード グリッド。
+- `<LinkCards>` / `<LinkCard icon="..." title="..." details="..." link="..." />`: セクションのランディング ページで使用されるインタラクティブ カード グリッド。
 - `<Mermaid code="..." />`: レスポンシブ アーキテクチャのフローチャートおよびシーケンス図用のクライアント側 SVG レンダラー。
 
 ### コミット リクエストとプル リクエストの規則:
