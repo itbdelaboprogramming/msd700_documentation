@@ -4,15 +4,10 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "MSD700 System",
   description: "Complete Documentation of ITB de Labo MSD700 Development Project",
-  // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ - must match the Alias path.
+  // Served by Apache at https://msd.nglobal.jp/itbdelabo/docs/ (must match the Alias path).
   base: '/itbdelabo/docs/',
   lastUpdated: true,
   cleanUrls: true,
-  // Note: `npm run docs:preview` is for local spot-checks only - it must never
-  // be used to serve production. Its static server (sirv) caches the file list
-  // and sizes at startup, so it serves a stale build after any rebuild. In
-  // production Apache serves docs/.vitepress/dist directly (scripts/apache-snippet.conf).
-  // That command also does not honor vite.preview.port, hence --port on the script.
   vite: {
     server: {
       port: 5700,
@@ -42,7 +37,7 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Getting Started', link: '/getting-started/' },
       { text: 'Setup', link: '/setup/' },
-      { text: 'Documentation', link: '/development/' }
+      { text: 'Developer Docs', link: '/development/' }
     ],
 
     sidebar: {
@@ -98,28 +93,57 @@ export default defineConfig({
       ],
       '/development/': [
         {
-          text: 'Documentation',
+          text: 'System & Architecture',
           items: [
             { text: 'Overview', link: '/development/' },
-            { text: 'Architecture', link: '/development/architecture' },
-            { text: 'State and Behavior', link: '/development/state-and-behavior' },
+            { text: 'System Architecture', link: '/development/architecture' },
+            { text: 'Security & Authentication', link: '/development/security-and-auth' },
+            { text: 'State & Behavior', link: '/development/state-and-behavior' },
             { text: 'Repository Structure', link: '/development/repository-structure' },
-            { text: 'Simulation', link: '/development/simulation' },
-            { text: 'Boustrophedon Coverage', link: '/development/boustrophedon-and-alignment' },
           ]
         },
         {
-          text: 'Reference',
+          text: 'ROS & Robot Subsystems',
           items: [
-            { text: 'API Reference', link: '/development/api-reference' },
-            { text: 'Message Contracts', link: '/development/message-contracts' },
-            { text: 'Database Schema', link: '/development/database-schema' },
-            { text: 'Camera Streaming', link: '/development/camera-streaming' },
-            { text: 'Data Sync', link: '/development/data-sync' },
+            { text: 'ROS Package Registry', link: '/development/ros-packages' },
+            { text: 'Sensor Fusion & Control', link: '/development/sensor-fusion-and-control' },
+            { text: 'Firmware & Hardware Bus', link: '/development/firmware-and-hardware' },
+            { text: 'Costmaps & Motion Planners', link: '/development/costmaps-and-planners' },
           ]
         },
         {
-          text: 'Contributing',
+          text: 'Navigation & Simulation',
+          items: [
+            { text: 'Boustrophedon Coverage', link: '/development/boustrophedon-and-alignment' },
+            { text: 'Gazebo Simulation', link: '/development/simulation' },
+          ]
+        },
+        {
+          text: 'Communications & Protocols',
+          items: [
+            { text: 'Message Contracts', link: '/development/message-contracts' },
+            { text: 'API Reference', link: '/development/api-reference' },
+            { text: 'rosbridge WebSocket Protocol', link: '/development/rosbridge-protocol' },
+            { text: 'Camera Video Streaming', link: '/development/camera-streaming' },
+          ]
+        },
+        {
+          text: 'Data & Cloud Sync',
+          items: [
+            { text: 'Database Schema', link: '/development/database-schema' },
+            { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
+            { text: 'Backup & Migration', link: '/development/backup-and-restore' },
+          ]
+        },
+        {
+          text: 'Operations & Diagnostics',
+          items: [
+            { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
+            { text: 'Diagnostics & Troubleshooting', link: '/development/troubleshooting-guide' },
+          ]
+        },
+        {
+          text: 'Contributing & Releases',
           items: [
             { text: 'Contributing Guide', link: '/development/contributing' },
             { text: 'Changelog', link: '/development/changelog' },
@@ -145,11 +169,6 @@ export default defineConfig({
     lastUpdated: {
       text: 'Last updated'
     },
-
-    // footer: {
-    //   message: 'Released under the MIT License.',
-    //   copyright: 'Copyright © ITB de Labo Research Lab'
-    // },
 
     socialLinks: [
       {

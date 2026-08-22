@@ -2,34 +2,70 @@
 search: false
 ---
 
-# Documentation
+# Developer Documentation
 
 <RoleBadge role="developer" />
 
-This section is for **developers** working on the MSD700 codebase (and this documentation site itself). If you're looking to use MSD700, see [Getting Started](/getting-started/). If you're installing hardware/software in the field, see [Setup](/setup/).
+Comprehensive technical documentation for software engineers, robotics developers, and systems architects working on the MSD700 platform.
+
+## Architecture and Core Systems
 
 <LinkCards>
-  <LinkCard icon="🏗️" title="Architecture" details="How the MSD700 Server and Unit fit together, with diagrams." link="/development/architecture" />
-  <LinkCard icon="🔁" title="State and Behavior" details="Every state machine: activity, lease, watchdog tiers, autopilot, coverage, recovery." link="/development/state-and-behavior" />
-  <LinkCard icon="📨" title="Message Contracts" details="Exact payloads on MQTT, the topic bridge, operation sync, and enrolment." link="/development/message-contracts" />
-  <LinkCard icon="🔌" title="API Reference" details="Every endpoint, with request and response bodies." link="/development/api-reference" />
-  <LinkCard icon="🗄️" title="Database Schema" details="Every ROS_DB table, its columns, and the foreign keys between them." link="/development/database-schema" />
-  <LinkCard icon="📷" title="Camera Streaming" details="The WebRTC handshake, STUN/TURN per target, and the mDNS candidate bug." link="/development/camera-streaming" />
-  <LinkCard icon="🔄" title="Data Sync" details="How a Unit's database and the cloud's stay consistent, direction, conflicts, watermarks." link="/development/data-sync" />
-  <LinkCard icon="🗂️" title="Repository Structure" details="Layout of this repository and how the docs site is deployed." link="/development/repository-structure" />
-  <LinkCard icon="🤝" title="Contributing" details="Dev workflow, commit conventions, and how to submit changes." link="/development/contributing" />
-  <LinkCard icon="📝" title="Changelog" details="What changed and when." link="/development/changelog" />
+  <LinkCard icon="🏗️" title="Architecture" details="Two-machine peer model, system topology, trust domains, and seams." link="/development/architecture" />
+  <LinkCard icon="🛡️" title="Security & Authentication" details="JWT keyring, 3-stage cryptographic enrolment nonce, and trust isolation." link="/development/security-and-auth" />
+  <LinkCard icon="🔁" title="State and Behavior" details="Robot activities, safety watchdog tiers, Autopilot mode, and session recovery." link="/development/state-and-behavior" />
+  <LinkCard icon="🗂️" title="Repository Structure" details="Codebase layout across msd700_robot, ros-web-ui, and msd700_noetic." link="/development/repository-structure" />
 </LinkCards>
 
-## Reading order
+## ROS & Robot Subsystems
 
-If you are new to the codebase, these four pages are meant to be read in this order. Each one
-assumes the previous.
+<LinkCards>
+  <LinkCard icon="📦" title="ROS Package Registry" details="Complete directory of ROS 1 Noetic nodes, launch files, and topics." link="/development/ros-packages" />
+  <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/development/sensor-fusion-and-control" />
+  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/development/firmware-and-hardware" />
+  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/development/costmaps-and-planners" />
+</LinkCards>
 
-1. [Architecture](/development/architecture): the two-machine model, the components, and the two
-   independent channels between them.
-2. [Message Contracts](/development/message-contracts): what actually travels on those channels,
-   field by field.
-3. [State and Behavior](/development/state-and-behavior): the state machines that produce and
-   consume those messages, and the failure modes each one is guarding against.
-4. [API Reference](/development/api-reference): the HTTP surface the dashboard drives it all with.
+## Navigation, Coverage & Simulation
+
+<LinkCards>
+  <LinkCard icon="📐" title="Boustrophedon Coverage" details="Dual geometry models, cellular decomposition, and zero-spin alignment." link="/development/boustrophedon-and-alignment" />
+  <LinkCard icon="🏭" title="Simulation" details="True-scale Gazebo simulation, AWS Small Warehouse world, and clearance testing." link="/development/simulation" />
+</LinkCards>
+
+## Communications & Interfaces
+
+<LinkCards>
+  <LinkCard icon="📨" title="Message Contracts" details="MQTT command envelopes, feedback schemas, and ARQ ACK protocols." link="/development/message-contracts" />
+  <LinkCard icon="🔌" title="API Reference" details="Exhaustive REST API endpoints, request parameters, and response bodies." link="/development/api-reference" />
+  <LinkCard icon="🌐" title="rosbridge Protocol" details="WebSocket JSON streaming protocol, topic subscriptions, and canvas rendering." link="/development/rosbridge-protocol" />
+  <LinkCard icon="📷" title="Camera Streaming" details="WebRTC video pipeline, STUN/TURN relays, and mDNS candidate filtering." link="/development/camera-streaming" />
+</LinkCards>
+
+## Data, Storage & Cloud Sync
+
+<LinkCards>
+  <LinkCard icon="🗄️" title="Database Schema" details="MySQL 8.0 tables, uniform timestamps, and rental profile foreign keys." link="/development/database-schema" />
+  <LinkCard icon="🔄" title="Data Sync" details="Offline-first database reconciliation, conflict resolution, and Local badge." link="/development/data-sync" />
+  <LinkCard icon="💾" title="Backup & Migration" details="Profile and unit scoped backups, tar.gz manifests, and schema migrations." link="/development/backup-and-restore" />
+</LinkCards>
+
+## Operations & Diagnostics
+
+<LinkCards>
+  <LinkCard icon="🐳" title="Unit Container Lifecycle" details="unit_manager.js, Docker socket proxying, and idle reaper sweeps." link="/development/unit-container-lifecycle" />
+  <LinkCard icon="🔧" title="Diagnostics & Troubleshooting" details="Developer failure decision trees, root cause mappings, and recovery." link="/development/troubleshooting-guide" />
+  <LinkCard icon="🤝" title="Contributing Guide" details="Development workflow, commit conventions, and pull request procedures." link="/development/contributing" />
+  <LinkCard icon="📝" title="Changelog" details="Historical platform changelog and release notes." link="/development/changelog" />
+</LinkCards>
+
+## Recommended Reading Order
+
+For engineers newly onboarding to MSD700, the recommended foundational progression is:
+
+1. [Architecture](/development/architecture): Understand the two-machine model and the separation between MQTT and rosbridge.
+2. [Security & Authentication](/development/security-and-auth): Learn the three trust domains and cryptographic device enrolment.
+3. [ROS Package Registry](/development/ros-packages): Explore the ROS nodes and package bindings.
+4. [Message Contracts](/development/message-contracts): Master the exact wire formats crossing machine boundaries.
+5. [State and Behavior](/development/state-and-behavior): Trace finite state machine transitions and safety watchdogs.
+6. [API Reference](/development/api-reference): Integrate web and external client controllers.
