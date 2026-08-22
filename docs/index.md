@@ -3,9 +3,9 @@
 layout: home
 
 hero:
-  name: "MSD700 Documentation"
+  name: "MSD700 Platform Documentation"
   text: "by ITB de Labo Research Lab"
-  tagline: Documentation for using, deploying, and developing the MSD700 system.
+  tagline: "Complete technical manual for operators, field technicians, and robotics developers."
   actions:
     - theme: brand
       text: Getting Started
@@ -19,15 +19,15 @@ hero:
 
 features:
   - title: Getting Started
-    details: For end users - learn what MSD700 is and how to use it day-to-day.
+    details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
     link: /getting-started/
-    linkText: Read the user guide
-  - title: Setup
-    details: For technicians - install and configure the MSD700 Server and MSD700 Unit.
+    linkText: Read the operator guide
+  - title: Setup & Deployment
+    details: "For field technicians: step-by-step installation guides for the cloud server stack and NVIDIA Jetson robot hardware."
     link: /setup/
-    linkText: Read the setup guide
-  - title: Documentation
-    details: For developers - system architecture, repository layout, and API reference.
+    linkText: Read the technician setup guide
+  - title: Developer Documentation
+    details: "For software engineers: deep system architecture, 15-state EKF kinematics, message contracts, and REST API reference."
     link: /development/
-    linkText: Read the developer docs
+    linkText: Read the developer documentation
 ---

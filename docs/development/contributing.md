@@ -2,104 +2,80 @@
 search: false
 ---
 
-# Contributing
+# Contributing Guide
 
 <RoleBadge role="developer" />
 
-Two different things live under "contributing" here: working on the **MSD700 product** (`ros-web-ui`, `msd700_robot`, `msd700_noetic`, `ROS-dashboard-next-ts`), and working on **this documentation site**. They're covered separately below.
+This guide covers developer workflows for contributing to the **MSD700 Core Product** (`ros-web-ui`, `msd700_robot`, `msd700_noetic`, `ROS-dashboard-next-ts`) and this **documentation site**.
 
-## Product development workflow
+## Product Development Workflow
 
-The safe way to test a server-side change is the `server_dev` Compose profile: a separate database,
-separate ports, and a separate MQTT broker from production, so nothing you do here can touch a real
-operator's session:
+To test server-side modifications safely without impacting production operators, use the isolated `server_dev` Docker Compose profile:
 
 ```bash
-cd ros-web-ui
+cd ~/ros-web-ui
 docker compose --profile server_dev up -d --build
 ```
 
-The dev stack follows a project-wide port scheme, offset from production so both can run at once:
+### Dev Stack Port Offsets:
+The development stack uses dedicated port offsets to allow concurrent operation alongside production:
 
-| Service | Prod | Dev |
-| --- | --- | --- |
-| ROS master | `11311` | `11312` |
-| rosbridge | `9090` | `9091` |
-| MQTT (HiveMQ, TLS) | `8883` | `8884` |
-| MySQL | `3307` | `3308` |
-| Backend API | `5000` | `5001` |
-| Dashboard | `3000` | `3100` |
+| Service | Production Port | Development Port | Protocol |
+| --- | --- | --- | --- |
+| **ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **rosbridge** | `9090` | `9091` | WebSocket |
+| **HiveMQ MQTT** | `8883` | `8884` | TLS Encrypted MQTTS |
+| **MySQL Database** | `3307` | `3308` | TCP |
+| **Backend REST API** | `5000` | `5001` | HTTP |
+| **Next.js Dashboard**| `3000` | `3100` | HTTP |
 
-A robot points itself at the dev peer with `--dev` (`./scripts/docker-manager.sh up --dev` from
-`msd700_noetic`, or `--dev` to `run_msd.sh` directly). This only changes which cloud it enrols
-against and talks MQTT to; it does **not** touch the robot's own local service ports, which stay the
-same in both cases (every unit runs its own stack regardless of which cloud it peers with).
-
-::: warning
-Don't run `server_prod` and `server_dev` on the same host casually; see the note in
-[Prerequisites](/setup/prerequisites#for-the-msd700-server-cloud-dashboard-side).
-:::
-
-For robot-side development, `msd700_noetic`'s `src/` is bind-mounted into the container, so editing
-a launch file, a Python node, or a script under `src/` takes effect on the next `up`, no rebuild
-needed. A rebuild (`docker-manager.sh build`) is only required when a *dependency* or the base image
-changes.
-
-### Adding a new backend endpoint
-
-`backend_node` under `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/` is where
-`/api/*`, `/user/*`, `/unit/*` and `/local/*` live; `admin_api.js`, `enroll_api.js`, and `sync_api.js`
-are separate Express routers mounted at `/admin/api`, `/enroll`, and `/sync` respectively. See
-[API Reference](/development/api-reference) for what already exists before adding something that
-overlaps it.
-
-## Working on this documentation site
-
-### Local development
-
+A physical or simulated robot connects to the dev cloud peer by passing `--dev`:
 ```bash
-npm install
-npm run docs:dev       # dev server with hot reload, http://localhost:5700/itbdelabo/docs/
-npm run docs:build     # production build -> docs/.vitepress/dist
-npm run docs:preview   # serve the production build on port 4700
+./scripts/docker-manager.sh up --dev -d
 ```
 
-::: warning
-The site is served under the base path `/itbdelabo/docs/` (see `base` in [`docs/.vitepress/config.mts`](https://github.com/itbdelaboprogramming/msd700_documentation/blob/main/docs/.vitepress/config.mts)) to match the Apache `ProxyPass`/`Alias` path in production. Local URLs include this prefix too.
-:::
+### Robot-Side Development Workflow:
+In `msd700_noetic`, the `src/` directory is bind-mounted directly into the robot runtime container. Changes to launch files, Python nodes, or URDF models take effect on the next launch without requiring an image rebuild. Image rebuilds (`docker-manager.sh build`) are only necessary when C++ catkin packages or base system dependencies are modified.
 
-### Adding a page
+---
 
-1. Add a `.md` file under `docs/getting-started/`, `docs/setup/`, or `docs/development/` depending on the audience.
-2. Add it to the matching `sidebar` entry in `docs/.vitepress/config.mts` so it's navigable.
-3. Cross-link it from the relevant section's `index.md` (use the `<LinkCards>` / `<LinkCard>` components already used on those pages) and from any related pages.
+## Working on this Documentation Site
 
-### Custom components
+### Local Development Server:
 
-This site extends VitePress's default theme (`docs/.vitepress/theme/`) with two global components, usable directly in any `.md` file:
+```bash
+cd ~/msd700_documentation
+npm install
+npm run docs:dev       # Starts local dev server at http://localhost:5700/itbdelabo/docs/
+npm run docs:build     # Validates production build -> docs/.vitepress/dist
+npm run docs:preview   # Serves production build preview
+```
 
-- `<RoleBadge role="user | technician | developer" />` - marks which audience a page is for.
-- `<LinkCards>` / `<LinkCard title="…" details="…" link="…" icon="…" />` - a card grid for section landing pages.
+### Automated Validation Scripts:
+Before committing documentation changes, run:
 
-### The Documentation section is access-gated in production
+```bash
+# 1. Validate all Mermaid diagrams syntax
+node scripts/check_parse.mjs
 
-Every page under `/development/` requires an HTTP login when served from `msd.nglobal.jp`. See
-[Repository Structure](/development/repository-structure#how-the-docs-site-is-deployed) for how the
-site is served, and ask an existing maintainer for the credentials if you don't have them yet. This
-only applies to the deployed site: `npm run docs:dev` and `docs:preview` run locally with no gate.
-New pages under `docs/development/` should keep the `search: false` front-matter line already
-present on the others in that section, so their content doesn't end up embedded in the public search
-index bundle that ships to every visitor regardless of the login gate.
+# 2. Build VitePress bundle and test broken links
+npm run docs:build
 
-### Commit conventions
+# 3. Verify zero forbidden punctuation characters
+grep -rn $'\xe2\x80\x94' docs/ scripts/
+```
 
-Commits in this repo loosely follow `type: short summary` (e.g. `fix: …`, `chore: …`). Keep the summary in the imperative mood and under ~70 characters.
+### Custom Global Components:
+This documentation theme extends VitePress with custom global components:
+- `<RoleBadge role="user | technician | developer" />`: Displays target audience badge at the top of pages.
+- `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Interactive card grid used on section landing pages.
+- `<Mermaid code="..." />`: Client-side SVG renderer for responsive architecture flowcharts and sequence diagrams.
 
-### Deployment
+### Commit and Pull Request Conventions:
+Commits follow standard conventional commit formats (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).
 
-Deployment is automatic: pushing to `main` triggers a webhook that rebuilds and swaps in the new site. See [Repository Structure](/development/repository-structure) for the full pipeline.
+## Related Documentation
 
-## Related
-
-- [Repository Structure](/development/repository-structure)
-- [Architecture](/development/architecture)
+- [Repository Structure](/development/repository-structure): Full multi-repository layout.
+- [Architecture](/development/architecture): Two-machine system topology.
+- [Changelog](/development/changelog): Platform release history.

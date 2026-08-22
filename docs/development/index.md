@@ -21,9 +21,11 @@ Comprehensive technical documentation for software engineers, robotics developer
 
 <LinkCards>
   <LinkCard icon="📦" title="ROS Package Registry" details="Complete directory of ROS 1 Noetic nodes, launch files, and topics." link="/development/ros-packages" />
+  <LinkCard icon="📐" title="Coordinate Transforms (TF)" details="REP-103/105 transform tree, sensor offsets, and BoundaryPublisher restamping." link="/development/tf-transforms" />
   <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/development/sensor-fusion-and-control" />
   <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/development/firmware-and-hardware" />
   <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/development/costmaps-and-planners" />
+  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, roslaunch Python API process spawning, and Autopilot sequencer." link="/development/mode-switching" />
 </LinkCards>
 
 ## Navigation, Coverage & Simulation
@@ -39,6 +41,7 @@ Comprehensive technical documentation for software engineers, robotics developer
   <LinkCard icon="📨" title="Message Contracts" details="MQTT command envelopes, feedback schemas, and ARQ ACK protocols." link="/development/message-contracts" />
   <LinkCard icon="🔌" title="API Reference" details="Exhaustive REST API endpoints, request parameters, and response bodies." link="/development/api-reference" />
   <LinkCard icon="🌐" title="rosbridge Protocol" details="WebSocket JSON streaming protocol, topic subscriptions, and canvas rendering." link="/development/rosbridge-protocol" />
+  <LinkCard icon="🎨" title="Frontend Canvas & Web UI" details="EaselJS stage rendering, metric-to-pixel math, and createjs prototype patches." link="/development/frontend-canvas" />
   <LinkCard icon="📷" title="Camera Streaming" details="WebRTC video pipeline, STUN/TURN relays, and mDNS candidate filtering." link="/development/camera-streaming" />
 </LinkCards>
 
@@ -66,6 +69,7 @@ For engineers newly onboarding to MSD700, the recommended foundational progressi
 1. [Architecture](/development/architecture): Understand the two-machine model and the separation between MQTT and rosbridge.
 2. [Security & Authentication](/development/security-and-auth): Learn the three trust domains and cryptographic device enrolment.
 3. [ROS Package Registry](/development/ros-packages): Explore the ROS nodes and package bindings.
-4. [Message Contracts](/development/message-contracts): Master the exact wire formats crossing machine boundaries.
-5. [State and Behavior](/development/state-and-behavior): Trace finite state machine transitions and safety watchdogs.
-6. [API Reference](/development/api-reference): Integrate web and external client controllers.
+4. [Coordinate Transforms (TF)](/development/tf-transforms): Understand the spatial reference tree and clock domain restamping.
+5. [Message Contracts](/development/message-contracts): Master the exact wire formats crossing machine boundaries.
+6. [State and Behavior](/development/state-and-behavior): Trace finite state machine transitions and safety watchdogs.
+7. [API Reference](/development/api-reference): Integrate web and external client controllers.

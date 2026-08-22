@@ -1,44 +1,40 @@
-# Setup
+---
+search: false
+---
+
+# Setup and Deployment Guide
 
 <RoleBadge role="technician" />
 
-This section is technical documentation for **technicians** installing and configuring MSD700
-hardware and software. It's written to be followable even if this is your first time: every step
-says what to type, what you should see, and *why* that step exists, not just the command.
+This section contains technical documentation for **technicians, system engineers, and field installers** configuring MSD700 hardware and software.
 
-It assumes physical access to the MSD700 Unit(s) and/or Server, plus the credentials needed to
-configure them (admin console access, server SSH access, etc. as relevant to the step).
-
-If you're a day-to-day user, see [Getting Started](/getting-started/) instead. If you're building or extending MSD700's software, see [Documentation](/development/).
+Every procedure includes step-by-step shell commands, expected outputs, configuration templates, and architectural explanations.
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware, software, and access needed before you begin." link="/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Install and configure the MSD700 Server." link="/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the MSD700 Unit hardware." link="/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="Connect Server and Unit(s) into one working system." link="/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Every command, flag, and compose construct used, and why." link="/setup/docker-reference" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine maintenance, backups, and updates." link="/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Troubleshooting" details="Diagnose and fix installation/deployment issues." link="/setup/troubleshooting" />
+  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/setup/server-setup" />
+  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/setup/unit-setup" />
+  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/setup/system-setup" />
+  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/setup/docker-reference" />
+  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/setup/wifi-hotspot" />
+  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/setup/maintenance" />
+  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/setup/troubleshooting" />
 </LinkCards>
 
-## Recommended order
+## Recommended Deployment Progression
 
-There is one thing worth understanding up front: **the Server and a Unit are two separate machines**,
-each with its own setup. You (or someone else) can do them in either order, but a Unit isn't fully
-useful until it's been *enrolled* against a running Server, so most deployments go:
+The MSD700 platform uses a two-machine model (Server + Physical Units). Follow this sequence for new installations:
 
-1. [Prerequisites](/setup/prerequisites): confirm both machines are ready
-2. [Server Setup](/setup/server-setup): bring the cloud/dashboard side up first, so there's something for a unit to enrol against
-3. [Unit Setup](/setup/unit-setup): bring the robot online and let it enrol itself
-4. [System Setup](/setup/system-setup): confirm the two are actually talking, end to end
+```mermaid
+flowchart LR
+  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
+  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
+  U --> SYS["4. System Setup<br/>End-to-end communication test"]
+```
 
-After that, keep [Maintenance](/setup/maintenance) and [Troubleshooting](/setup/troubleshooting) bookmarked: you'll come back to them, not just read them once.
+1. [Prerequisites](/setup/prerequisites): Verify compute sizing, Jetson hardware peripherals, and network firewall rules.
+2. [Server Setup](/setup/server-setup): Bring up the cloud server stack first so physical units have a central endpoint to enrol against.
+3. [Unit Setup](/setup/unit-setup): Build the robot container on the Jetson SBC and complete the automated cryptographic enrolment handshake.
+4. [System Setup](/setup/system-setup): Execute the 10-point end-to-end operational verification checklist.
 
-[Docker Reference](/setup/docker-reference) is not a step. It is the companion to steps 2 and 3:
-the setup pages tell you what to run, and that page explains what each flag and compose construct
-is doing, so keep it open in a second tab rather than reading it start to finish.
-
-::: info Already have a running Server?
-If you're only adding a new Unit to an existing MSD700 deployment (the common case: one Server,
-many robots), skip straight to [Unit Setup](/setup/unit-setup) after [Prerequisites](/setup/prerequisites).
-:::
+After initial installation, refer to [Maintenance](/setup/maintenance) and [Troubleshooting](/setup/troubleshooting) for ongoing fleet upkeep.

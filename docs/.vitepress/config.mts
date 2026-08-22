@@ -53,19 +53,19 @@ export default defineConfig({
           ]
         },
         {
-          text: 'Help',
+          text: 'Help & FAQ',
           items: [
             { text: 'FAQ', link: '/getting-started/faq' },
-            { text: 'Troubleshooting', link: '/getting-started/troubleshooting' },
+            { text: 'Operator Troubleshooting', link: '/getting-started/troubleshooting' },
           ]
         }
       ],
       '/setup/': [
         {
-          text: 'Setup',
+          text: 'Setup & Deployment',
           items: [
             { text: 'Overview', link: '/setup/' },
-            { text: 'Prerequisites', link: '/setup/prerequisites' },
+            { text: 'Prerequisites & Sizing', link: '/setup/prerequisites' },
           ]
         },
         {
@@ -73,11 +73,11 @@ export default defineConfig({
           items: [
             { text: 'Server Setup', link: '/setup/server-setup' },
             { text: 'Unit Setup', link: '/setup/unit-setup' },
-            { text: 'System Setup', link: '/setup/system-setup' },
+            { text: 'System Integration', link: '/setup/system-setup' },
           ]
         },
         {
-          text: 'Reference',
+          text: 'Reference & Networking',
           items: [
             { text: 'Docker Reference', link: '/setup/docker-reference' },
             { text: 'WiFi Hotspot + Client', link: '/setup/wifi-hotspot' },
@@ -106,9 +106,11 @@ export default defineConfig({
           text: 'ROS & Robot Subsystems',
           items: [
             { text: 'ROS Package Registry', link: '/development/ros-packages' },
+            { text: 'Coordinate Transforms (TF)', link: '/development/tf-transforms' },
             { text: 'Sensor Fusion & Control', link: '/development/sensor-fusion-and-control' },
             { text: 'Firmware & Hardware Bus', link: '/development/firmware-and-hardware' },
             { text: 'Costmaps & Motion Planners', link: '/development/costmaps-and-planners' },
+            { text: 'Dynamic Mode Switching', link: '/development/mode-switching' },
           ]
         },
         {
@@ -124,6 +126,7 @@ export default defineConfig({
             { text: 'Message Contracts', link: '/development/message-contracts' },
             { text: 'API Reference', link: '/development/api-reference' },
             { text: 'rosbridge WebSocket Protocol', link: '/development/rosbridge-protocol' },
+            { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
             { text: 'Camera Video Streaming', link: '/development/camera-streaming' },
           ]
         },
@@ -146,7 +149,7 @@ export default defineConfig({
           text: 'Contributing & Releases',
           items: [
             { text: 'Contributing Guide', link: '/development/contributing' },
-            { text: 'Changelog', link: '/development/changelog' },
+            { text: 'Platform Changelog', link: '/development/changelog' },
           ]
         }
       ],
