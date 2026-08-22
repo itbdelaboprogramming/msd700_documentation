@@ -85,6 +85,7 @@ export default defineConfig({
           text: 'Reference',
           items: [
             { text: 'Docker Reference', link: '/setup/docker-reference' },
+            { text: 'WiFi Hotspot + Client', link: '/setup/wifi-hotspot' },
           ]
         },
         {
@@ -103,6 +104,8 @@ export default defineConfig({
             { text: 'Architecture', link: '/development/architecture' },
             { text: 'State and Behavior', link: '/development/state-and-behavior' },
             { text: 'Repository Structure', link: '/development/repository-structure' },
+            { text: 'Simulation', link: '/development/simulation' },
+            { text: 'Boustrophedon Coverage', link: '/development/boustrophedon-and-alignment' },
           ]
         },
         {

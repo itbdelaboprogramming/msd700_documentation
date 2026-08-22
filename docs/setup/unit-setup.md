@@ -96,6 +96,50 @@ If the script just added you to the `docker` group, group membership does not ap
 shell. Log out and back in, or run `newgrp docker` for this shell only.
 :::
 
+## On a dev laptop that is not Ubuntu/Jetson (e.g. Arch Linux)
+
+Two assumptions elsewhere in this stack match Debian/Ubuntu's defaults and are not guaranteed on
+other distros. Skip this section entirely on the real Jetson; both are already fine there.
+
+**Hostname resolution.** `roslaunch` fails with `RLException: Unable to contact my own server at
+[http://<hostname>:...]` if the machine's own hostname does not resolve. Fix once, before the first
+`up`:
+
+```bash
+grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
+```
+
+**`::1` must not be mapped to `localhost`.** MySQL and Mosquitto in the `local_dev` profile
+deliberately bind to `127.0.0.1` only (see [Docker Reference](/setup/docker-reference#the-unit-s-own-stack-local-dev-profile)).
+If `/etc/hosts` resolves `localhost` to `::1` first, `backend_local` fails with
+`ECONNREFUSED ::1:3306` or `ECONNREFUSED ::1:1883` — the connection is refused, not timed out,
+because something IS listening on `::1`, just not the service being asked for.
+
+```bash
+grep "::1" /etc/hosts
+sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
+getent ahosts localhost   # must print only a 127.0.0.1 line, no ::1
+```
+
+Every service in the `msd700` container and the `local_dev` profile uses `network_mode: host`, so
+this fix is inherited automatically by all of them — but only by containers **created after** the
+fix. Anything already running needs `docker rm -f` before it picks up the corrected `/etc/hosts`.
+
+**The maps folder mount is hardcoded on the robot side.** The `msd700` service's own bind mount is
+pinned to `/home/ubuntu/ros_maps` on both sides regardless of `MAPS_FOLDER_LOCAL`, separately from
+every *other* service, which all follow that variable. On the real Jetson this is invisible because
+its user is already named `ubuntu`. On a dev laptop with a different username the path does not
+exist, Docker creates it as **root**, and map saving fails with a permission error. Create it by
+hand before the first `up`:
+
+```bash
+sudo mkdir -p /home/ubuntu/ros_maps
+sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
+```
+
+Do not point `MAPS_FOLDER_LOCAL` elsewhere while this mount stays hardcoded — the robot and the
+web services would then read and write maps in two different places.
+
 ## 3. Review `docker/.env`
 
 `docker-manager.sh` creates this from `docker/.env.example` on first run and generates this unit's
@@ -301,6 +345,12 @@ it from the local one.
 That is deliberate, and it is why `camera_client` fetches a credential from `/local/robot-token`
 rather than reusing `token.cred`. If local-mode video never appears, this is the first thing to
 check. See [Architecture](/development/architecture#trust-domains).
+:::
+
+::: tip No LAN to put the unit on?
+A unit can run its own WiFi hotspot for an operator to join directly, with the dashboard opening
+automatically the moment they connect (a captive portal). Optional, and layered entirely on top of
+what this page already sets up — see [WiFi Hotspot + Client](/setup/wifi-hotspot).
 :::
 
 ### Managing the local stack on its own

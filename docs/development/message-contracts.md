@@ -479,6 +479,43 @@ The web canvas ignores `frame_id` entirely. On a real unit the TEB local plan is
 runs with `odometrySource=world`, which makes `odom` and `map` coincide.
 :::
 
+### Local mode: the same namespaces, no MQTT
+
+On a unit running its own server stack, the dashboard, rosbridge and the robot all share **one**
+roscore. The robot still publishes flat `/string/*` and the browser still subscribes to
+`/unit_<ULID>/string/*`, so the prefix hop that MQTT performs in the cloud still has to happen.
+`topic2string/launch/local.launch` does it with `topic_tools/relay`, alongside the same
+string-to-typed converters the cloud side runs.
+
+| Direction | Relayed topic |
+| --- | --- |
+| dashboard to robot | `/unit_<ULID>/string/operation_sync` to `/string/operation_sync` |
+| dashboard to robot | `/unit_<ULID>/string/move_base/result_ack` to `/string/move_base/result_ack` |
+| dashboard to robot | `/unit_<ULID>/string/boustrophedon_path_ack` to `/string/boustrophedon_path_ack` |
+| robot to dashboard | `/string/operation_snapshot` to `/unit_<ULID>/string/operation_snapshot` |
+| robot to dashboard | `/string/operation_progress` to `/unit_<ULID>/string/operation_progress` |
+
+Geometric traffic is deliberately absent from that list. It already lives on this roscore and is
+handled by the converters, so bridging it again through `local_msd.launch` would deliver every
+`move_base` goal twice.
+
+::: warning A relay does not carry the latch
+`topic_tools/relay` always advertises its output unlatched, so `/string/operation_snapshot` arrives
+on the prefixed name as an ordinary message. A dashboard connecting later hears nothing until it
+asks: it sends `resync` (up to 8 times, 900 ms apart) and the supervisor answers by republishing.
+The cloud path leans on that same request and response whenever a reconnect loses the retained
+message, so this is one mechanism rather than a local-mode special case. Anything that genuinely
+needs a latched hop here has to be a real node, not a relay.
+:::
+
+::: danger The two robot-to-dashboard relays did not exist until 2026-08-15
+Before that, the supervisor published on one name and the dashboard listened on another, on the same
+master. Three unrelated-looking symptoms came from that single gap: Autopilot reported "did not
+engage" while it had in fact engaged (the handover waits for a snapshot as its ACK), logging back in
+recovered no pins and no coverage area, and during a takeover the pin highlight, the resume index
+and the `complete` message never moved.
+:::
+
 ### The two ACK topics
 
 MQTT drops messages, and a dropped one-shot message used to strand a multi-waypoint run: the robot
@@ -584,7 +621,12 @@ continue to opposite ends of the route.
 Latched on purpose. A dashboard opened in a brand-new tab has an empty `sessionStorage`, which is
 the browser's only copy of pins, mode and coverage state. Subscribing to a latched topic hands it
 the entire run on connect, so the navigation view is rebuilt from the robot rather than from
-anything the browser remembered.
+anything the browser remembered. In local mode the latch stops at the relay hop and `resync` takes
+its place; see [Local mode](#local-mode-the-same-namespaces-no-mqtt).
+
+A batch is only ever dropped by `stop` or `complete`, so **whoever ends an operation has to say so**.
+An operation that finished on the robot without either message stays `active` in this snapshot
+indefinitely, and the next login recovers it as a live run.
 
 | Field | Meaning |
 | --- | --- |
@@ -702,6 +744,7 @@ cross-UID container issue.
 | `dependencies/topic2string/launch/msd.launch` | robot-side typed/string relays |
 | `dependencies/topic2string/launch/cloud.launch` | cloud-side relays, one unit |
 | `dependencies/topic2string/launch/cloud_multi.launch` | cloud-side relays, whole fleet in one node |
+| `dependencies/topic2string/launch/local.launch` | on-unit relays, both directions, no MQTT hop |
 | `dependencies/topic2string/scripts/multi_unit.py` | expands `{unit_id}` templates over the roster |
 | `msd700_webui_control/scripts/system_command.py` | every command handler and the feedback envelope |
 | `msd700_webui_control/scripts/operation_supervisor.py` | operation sync, progress, snapshot |
