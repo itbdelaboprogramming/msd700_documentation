@@ -6,8 +6,8 @@ After=network.target
 Type=simple
 User=itbdelabo
 Group=itbdelabo
-WorkingDirectory=/home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation
-EnvironmentFile=/home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation/scripts/webhook.env
+WorkingDirectory=/home/itbdelabo/ITBdeLabo/V2/msd700_documentation
+EnvironmentFile=/home/itbdelabo/ITBdeLabo/V2/msd700_documentation/scripts/webhook.env
 # node is installed via nvm, not /usr/bin/node, update this path if nvm's
 # active node version changes (check with: nvm which current)
 ExecStart=/home/itbdelabo/.nvm/versions/node/v22.16.0/bin/node scripts/webhook-listener.mjs
