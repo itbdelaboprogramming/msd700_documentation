@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Peta Biaya dan Perencana Gerak
+
+
+# Costmaps and Motion Planners
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci arsitektur peta biaya berlapis, algoritma perencanaan jalur global (`navfn`), dan mekanisme optimasi lintasan lokal (`teb_local_planner`) yang diimplementasikan dalam tumpukan navigasi MSD700.
+This document details the layered costmap architecture, global path planning algorithms (`navfn`), and local trajectory optimization mechanics (`teb_local_planner`) implemented in the MSD700 navigation stack.
 
-## Saluran Perencanaan Gerak
+## Motion Planning Pipeline
 
 ```mermaid
 flowchart TD
@@ -25,24 +27,24 @@ flowchart TD
 
 ---
 
-## Arsitektur Costmap Berlapis
+## Layered Costmap Architecture
 
-Lingkungan direpresentasikan sebagai grid hunian 2D di mana setiap sel memiliki nilai biaya antara $0$ (ruang kosong) dan $254$ (rintangan mematikan).
+The environment is represented as a 2D occupancy grid where each cell holds a cost value between $0$ (free space) and $254$ (lethal obstacle).
 
-### Perhitungan Biaya dan Penurunan Inflasi Eksponensial
+### Cost Calculation and Exponential Inflation Decay
 
-Ketika sel hambatan diidentifikasi pada posisi $\mathbf{p}_{obs}$, biaya sel tetangga pada jarak $d = \|\mathbf{p} - \mathbf{p}_{obs}\|$ dihitung dengan lapisan inflasi:
+When an obstacle cell is identified at position $\mathbf{p}_{obs}$, the cost of any neighboring cell at distance $d = \|\mathbf{p} - \mathbf{p}_{obs}\|$ is computed by the inflation layer:
 
-$$\text{Biaya}(d) = \mulai{kasus}
-254 & \text{if } d \le r_{\text{tertulis}} \quad (\text{Penyangga Hambatan Mematikan}) \\
-\text{round}\left( 253 \cdot \exp\left(-\alpha \cdot (d - r_{\text{tertulis}})\right) \kanan) & \text{if } r_{\text{tertulis}} < d \le r_{\text{inflasi}} \\
-0 & \text{if } d > r_{\text{inflasi}} \quad (\text{Ruang Kosong})
-\end{kasus}$$
+$$\text{Cost}(d) = \begin{cases}
+254 & \text{if } d \le r_{\text{inscribed}} \quad (\text{Lethal Obstacle Buffer}) \\
+\text{round}\left( 253 \cdot \exp\left(-\alpha \cdot (d - r_{\text{inscribed}})\right) \right) & \text{if } r_{\text{inscribed}} < d \le r_{\text{inflation}} \\
+0 & \text{if } d > r_{\text{inflation}} \quad (\text{Free Space})
+\end{cases}$$
 
-### Parameter Inflasi yang Dikonfigurasi:
-- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0,425\text{ m}$ (setengah lebar amplop pengaman).
-- **Radius Inflasi ($r_{\text{inflasi}}$)**: $0,575\text{ m}$ ($r_{\text{tertulis}} + 0,150\text{ m}$margin keamanan).
-- **Faktor Penskalaan Biaya ($\alpha$)**: $5,0$.
+### Configured Inflation Parameters:
+- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0.425\text{ m}$ (half the width of the safety envelope).
+- **Inflation Radius ($r_{\text{inflation}}$)**: $0.575\text{ m}$ ($r_{\text{inscribed}} + 0.150\text{ m}$ safety margin).
+- **Cost Scaling Factor ($\alpha$)**: $5.0$.
 
 ```yaml
 # config/costmap/costmap_common_params.yaml
@@ -71,42 +73,42 @@ inflation_layer:
 
 ---
 
-## Optimasi Lintasan Pita Elastis Berwaktu (TEB).
+## Timed-Elastic-Band (TEB) Trajectory Optimization
 
-`teb_local_planner` merumuskan pembuatan lintasan sebagai masalah pengoptimalan multi-tujuan non-linier pada serangkaian status robot $\mathbf{s}_k = [x_k, y_k, \theta_k]^T$ dan perbedaan waktu $\Delta T_k$:
+The `teb_local_planner` formulates trajectory generation as a non-linear multi-objective optimization problem over a sequence of robot states $\mathbf{s}_k = [x_k, y_k, \theta_k]^T$ and time differences $\Delta T_k$:
 
-$$\mathcal{B} = \kiri\{ \mathbf{s}_0, \Delta T_0, \mathbf{s}_1, \Delta T_1, \titik, \mathbf{s}_N \kanan\}$$
+$$\mathcal{B} = \left\{ \mathbf{s}_0, \Delta T_0, \mathbf{s}_1, \Delta T_1, \dots, \mathbf{s}_N \right\}$$
 
-### Fungsi Tujuan:
-Perencana meminimalkan jumlah tertimbang dari fungsi penalti objektif:
+### Objective Function:
+The planner minimizes a weighted sum of objective penalty functions:
 
-$$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamma_{\text{path}} \cdot \|\mathbf{s}_{k+1} - \mathbf{s}_k\|^2 + \gamma_{\text{obs}} \cdot f_{\text{obs}}(\mathbf{s}_k) + \gamma_{\text{kin}} \cdot f_{\text{kin}}(\mathbf{s}_k, \mathbf{s}_{k+1}) \kanan)$$
+$$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamma_{\text{path}} \cdot \|\mathbf{s}_{k+1} - \mathbf{s}_k\|^2 + \gamma_{\text{obs}} \cdot f_{\text{obs}}(\mathbf{s}_k) + \gamma_{\text{kin}} \cdot f_{\text{kin}}(\mathbf{s}_k, \mathbf{s}_{k+1}) \right)$$
 
-### Fungsi Penalti Utama:
-1. **Penalti Optimalitas Waktu**:
-   $$f_{\text{waktu}}(\Delta T_k) = \Delta T_k^2$$
-   Mendorong robot untuk mencapai tujuan dalam waktu minimal dalam batas kecepatan ($v_{\max} = 0.40\text{ m/s}$, $\omega_{\max} = 1.0\text{ rad/s}$).
+### Key Penalty Functions:
+1. **Time-Optimality Penalty**:
+   $$f_{\text{time}}(\Delta T_k) = \Delta T_k^2$$
+   Encourages the robot to reach the goal in minimal time within velocity limits ($v_{\max} = 0.40\text{ m/s}$, $\omega_{\max} = 1.0\text{ rad/s}$).
 
-2. **Penalti Pembebasan Rintangan**:
-   $$f_{\text{obs}}(\mathbf{s}_k) = \begin{kasus}
-   \kiri( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \kanan)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
-   0 & \teks{sebaliknya}
-   \end{kasus}$$
-   Dimana $d_{\min} = 0.150\text{ m}$ adalah jarak bebas rintangan minimum.
+2. **Obstacle Clearance Penalty**:
+   $$f_{\text{obs}}(\mathbf{s}_k) = \begin{cases}
+   \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
+   0 & \text{otherwise}
+   \end{cases}$$
+   Where $d_{\min} = 0.150\text{ m}$ is the minimum obstacle clearance distance.
 
-3. **Kendala Non-Holonomik Kinematik**:
-   Menghukum kecepatan geser lateral untuk menerapkan kinematika penggerak diferensial:
+3. **Kinematic Non-Holonomic Constraint**:
+   Penalizes lateral sliding velocity to enforce differential drive kinematics:
    $$\dot{y}_k \cdot \cos(\theta_k) - \dot{x}_k \cdot \sin(\theta_k) = 0$$
 
 ---
 
-## Zona Larangan dan Konfigurasi Ulang Dinamis
+## Keep-Out Zones and Dynamic Reconfigure
 
-1. **Keep-Out Grid Layer (`keepout_layer`)**: Berlangganan ke `/msd700/keepout_grid` di mana poligon operator khusus diraster menjadi sel berbiaya $254$, sehingga mencegah perencana global dan lokal menghasilkan lintasan di zona yang dikecualikan.
-2. **Adaptasi Mode Cakupan**: Selama sapuan boustrophedon, `path_coverage_node` menurunkan bobot penggerak ke depan (`weight_kinematics_forward_drive`) dari `1000.0` ke `5.0` melalui `dynamic_reconfigure`, memungkinkan putaran pivot sisir 90 derajat yang mulus tanpa terhenti.
+1. **Keep-Out Grid Layer (`keepout_layer`)**: Subscribes to `/msd700/keepout_grid` where custom operator polygons are rasterized into cost $254$ cells, preventing the global and local planners from generating trajectories across excluded zones.
+2. **Coverage Mode Adaptation**: During boustrophedon sweep passes, `path_coverage_node` lowers forward drive weight (`weight_kinematics_forward_drive`) from `1000.0` to `5.0` via `dynamic_reconfigure`, allowing smooth 90-degree comb pivot turns without stalling.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Cakupan Boustrophedon](/id/development/boustrophedon-and-alignment): Geometri cakupan dan dekomposisi sel.
-- [Penggabungan dan Kontrol Sensor](/id/development/sensor-fusion-and-control): Estimasi keadaan kinematik dan EKF.
-- [Simulasi](/id/development/simulation): Lingkungan pengujian gudang.
+- [Boustrophedon Coverage](/id/development/boustrophedon-and-alignment): Coverage geometry and cell decomposition.
+- [Sensor Fusion and Control](/id/development/sensor-fusion-and-control): Kinematic state estimation and EKF.
+- [Simulation](/id/development/simulation): Warehouse testing environment.

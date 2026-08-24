@@ -2,76 +2,51 @@
 outline: deep
 search: false
 ---
-# 建築
+
+
+# Architecture
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、MSD700 自律ロボット プラットフォームのアーキテクチャ設計について詳しく説明し、コンポーネントがどのように相互作用するか、コンポーネント間のデータ境界、およびすべてのサブシステムの背後にあるエンジニアリング理論的根拠を説明します。
+This document details the architectural design of the MSD700 autonomous robotics platform, explaining how the components interact, the data boundaries between them, and the engineering rationale behind every subsystem.
 
-リポジトリの場所については、「リポジトリの構造」(@@MU1@@) を参照してください。正確なデータ ペイロードについては、[メッセージ コントラクト](/ja/development/message-contracts) を参照してください。有限状態マシンについては、[状態と動作](/ja/development/state-and-behavior) を参照してください。導入トポロジについては、[システム セットアップ](/ja/setup/system-setup) を参照してください。
+For repository locations, see [Repository Structure](/ja/development/repository-structure). For exact data payloads, see [Message Contracts](/ja/development/message-contracts). For finite state machines, see [State and Behavior](/ja/development/state-and-behavior). For deployment topology, see [System Setup](/ja/setup/system-setup).
 
-## 2 台のマシンのモデル
+## The Two-Machine Model
 
-MSD700 の中心的なアーキテクチャ上の決定は、**ユニット (物理ロボット) が完全なローカル サーバー スタック**を実行し、**MSD700 サーバー (クラウド)** がフリート全体の中央管理スタックを実行することです。これらは同一のデータ構造を共有するピアであり、暗号化された MQTT トランスポートを介して接続されます。
+The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
 
-```mermaid
-flowchart LR
-  subgraph Unit["MSD700 Unit (Jetson SBC)"]
-    R_CORE["ROS 1 Noetic Core<br/>bringup, nav, SLAM, drivers"]
-    U_BE["backend_local :5002"]
-    U_DB[("MySQL Local :3306")]
-    U_FE["frontend_local :3000"]
-    U_MQTT["Mosquitto :1883"]
-  end
+![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
-  subgraph Cloud["MSD700 Server (Cloud Host)"]
-    C_AP["Apache2 Reverse Proxy :443"]
-    C_BE["backend_node :5000"]
-    C_DB[("MySQL Central :3307")]
-    C_MQ["HiveMQ :8883 (TLS)"]
-    C_FE["frontend_prod :3000"]
-  end
-
-  R_CORE <-->|"internal topics"| U_BE
-  U_BE <-->|"local SQL"| U_DB
-  U_FE <-->|"HTTP / WS"| U_BE
-  R_CORE <-->|"loopback MQTT"| U_MQTT
-
-  R_CORE <-->|"TLS 8883 (Single Cloud Link)"| C_MQ
-  C_MQ <--> C_BE
-  C_BE <--> C_DB
-  C_AP --> C_BE
-  C_AP --> C_FE
-```
-
-|寸法 | MSD700ユニット（ロボット） | MSD700 サーバー (クラウド) |
+| Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |
-| **実行** | ROS 1 Noetic Bringup、move_base、gmapping、センサー ドライバー、および `backend_local`、`db_local`、`mosquitto_local`、および `frontend_local`。 |セントラル `backend_node`、`db` (MySQL)、`hivemq` (MQTT ブローカー)、`rosbridge`、`signalling_server`、`media-server`、および `frontend_prod`。 |
-| **権限** |ライブの物理ロボット、センサーの読み取り値、ローカル オペレーション リース、生の地図記録を所有します。 |ユーザー アカウント、認証キーリング、レンタル プロファイル、ロボット登録レジストリ、およびフリート全体で同期されたマップ/ルートを所有します。 |
-| **フォールト トレランス** |インターネットまたは Wi-Fi 接続が完全に失われた場合でも、自律的にオフラインで動作します。 |フリートのメタデータを失うことなく、ロボットのシャットダウン、ネットワークの切断、再起動に耐えます。 |
-| **制約** |独自のグローバル ID を割り当てることはできません (初期のクラウド登録が必要です)。 |アクティブなロボット接続がないと物理ロボットを移動できません。 |
+| **Execution** | ROS 1 Noetic bringup, move_base, gmapping, sensor drivers, plus `backend_local`, `db_local`, `mosquitto_local`, and `frontend_local`. | Central `backend_node`, `db` (MySQL), `hivemq` (MQTT broker), `rosbridge`, `signalling_server`, `media-server`, and `frontend_prod`. |
+| **Authority** | Owns the live physical robot, sensor readings, local operation lease, and raw map recordings. | Owns user accounts, authentication keyrings, rental profiles, robot enrolment registry, and fleet-wide synchronized maps/routes. |
+| **Fault Tolerance** | Operates autonomously offline during complete loss of internet or Wi-Fi connectivity. | Survives robot shutdowns, network disconnects, and restarts without losing fleet metadata. |
+| **Constraint** | Cannot assign its own global identity (requires initial cloud enrolment). | Cannot move a physical robot without an active robot connection. |
 
 ::: tip Core Design Principle: Local as Offline Cache
-ユニットのローカル スタックは、**クラウドのオフライン優先キャッシュであり、分離されたサイロ**ではありません。登録されたユニットは、アクティブなインターネット接続がなくても無期限に機能します。ネットワーク接続が復元されると、記録されたマップ、実行されたルート、構成状態が自動的にクラウドに同期されます。
+The unit's local stack is an **offline-first cache of the cloud, not an isolated silo**. An enrolled unit functions indefinitely without an active internet connection. When network connectivity is restored, recorded maps, executed routes, and configuration states automatically synchronize back to the cloud.
 :::
 
-## コンポーネントの概要
+## Component Overview
 
-|コンポーネント |テクノロジー |責任 |ホストの場所 |
+| Component | Technology | Responsibility | Host Location |
 | --- | --- | --- | --- |
-| **フロントエンド ダッシュボード** | Next.js、React、TypeScript |マップ キャンバス、テレメトリ ウィジェット、手動テロップ、およびナビゲーション コントロールを備えた単一ページのオペレーター インターフェイス。 | `ROS-dashboard-next-ts` (クラウド上では `frontend_prod` として、ユニット上では `frontend_local` として構築) |
-| **バックエンドノード** | Node.js、Express |認証ミドルウェア、マップ/ルート/エリア/プレイリストの CRUD、ロボット コマンド ディスパッチ、同期調整、コンテナー ライフサイクル マネージャー (`unit_manager.js`)。 | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
-| **unit_manager.js** | Node.js (Docker API) | `/var/run/docker.sock` を介してサーバー上のユニットごとのリレー コンテナ (`rosweb_unit_<ULID>`) を動的にスピンアップして取得します。 | `backend_node` 内に埋め込み |
-| **ロズブリッジ** | `rosbridge_suite` (WebSocket) |ライブ ROS トピック (ロボットのポーズ、レーザー スキャン、コストマップ、グローバル プラン) を WebSocket 経由でブラウザ キャンバスにブリッジします。 |クラウドコンテナ(`nakayama_cloud`)とユニットローカルスタック |
-| **HiveMQ (MQTT)** | HiveMQ CE (Java) |ロボットをポート 8883 (TLS) 経由でサーバーに接続する、暗号化された高スループットのメッセージ ブローカー。 |サーバーコンテナ (`hivemq` / `hivemq_dev`) |
-| **MySQL データベース** | MySQL 8.0 |ユーザー アカウント、レンタル プロファイル、登録済みユニット レコード、ルート ジオメトリ、カスタム エリア境界、および同期ジャーナルを保存します。 |サーバー（`db` / `db_dev`）とユニット（`db_local`） |
-| **メディアサーバー** | Node.js、Express |マップ アセットのアップロード、サムネイルの生成を管理し、静的な `.pgm` および `.yaml` マップ ファイルを提供します。 |サーバーコンテナとユニットコンテナ (`media_local`) |
-| **信号サーバー** | Node.js (WebSocket) | WebRTC ピア ネゴシエーション サーバーは、ロボット カメラとオペレーターのブラウザ間の直接ビデオ ストリーミングを促進します。 |サーバーコンテナ(`signalling`)とユニットコンテナ(`signalling_local`) |
-| **コーターン** |コターン(C) | RFC 5766 TURN / STUN リレー サーバーは、NAT トラバーサルによって直接ピアツーピア WebRTC ビデオが妨げられる場合にメディア フォールバックを提供します。 |サーバーホスト (`coturn` サービス、ホストネットワーキング) |
-| **Apache2** | Apache HTTP サーバー | TLS 終端、セキュリティ ヘッダーを処理し、すべてのパブリック トラフィックを `/services/...` パス経由でルーティングします。 |サーバーホスト（ネイティブサービス） |
-| **ROS ロボット パッケージ** | C++、Python、ROS 1 ノエティック | `msd700_robot` (ナビゲーション、SLAM、バストロフェドン カバレッジ、EKF、センサー ドライバー) および `ros-web-ui` ブリッジ パッケージ (`topic2string`、`system_command`、`operation_supervisor`)。 | Jetson SBC (`msd700` コンテナ) |
+| **Frontend Dashboard** | Next.js, React, TypeScript | Single-page operator interface with map canvas, telemetry widgets, manual teleop, and navigation controls. | `ROS-dashboard-next-ts` (built as `frontend_prod` on cloud and `frontend_local` on unit) |
+| **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, and sync coordination. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
+| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Multi-unit templated relay nodes serving all robots in a single unified ROS runtime via `/unit_<ULID>/...` namespaces. | Cloud backend container (`nakayama_cloud`) |
+| **unit_manager.js (Legacy)** | Node.js (Docker API) | (Deprecated) Legacy dynamic container manager that instantiated 1 container per robot; replaced by the single ROS runtime multi-unit relays. | Embedded inside `backend_node` |
+| **rosbridge** | `rosbridge_suite` (WebSocket) | Unified WebSocket bridge streaming live ROS topics for all units to browser canvases over port 9090. | Cloud container (`nakayama_cloud`) and unit local stack |
+| **HiveMQ (MQTT)** | HiveMQ CE (Java) | Encrypted, high-throughput message broker connecting robots to the server over port 8883 (TLS). | Server container (`hivemq` / `hivemq_dev`) |
+| **MySQL Database** | MySQL 8.0 | Stores user accounts, rental profiles, enrolled unit records, route geometry, custom area boundaries, and sync journals. | Server (`db` / `db_dev`) and unit (`db_local`) |
+| **media-server** | Node.js, Express | Manages map asset uploads, thumbnail generation, and serves static `.pgm` and `.yaml` map files. | Server container and unit container (`media_local`) |
+| **signalling_server** | Node.js (WebSocket) | WebRTC peer negotiation server facilitating direct video streaming between robot cameras and operator browsers. | Server container (`signalling`) and unit container (`signalling_local`) |
+| **coturn** | Coturn (C) | RFC 5766 TURN / STUN relay server providing media fallback when NAT traversal prevents direct peer-to-peer WebRTC video. | Server host (`coturn` service, host networking) |
+| **Apache2** | Apache HTTP Server | Handles TLS termination, security headers, and routes all public traffic via `/services/...` paths. | Server host (native service) |
+| **ROS Robot Packages** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigation, SLAM, boustrophedon coverage, EKF, sensor drivers) and `ros-web-ui` bridge packages (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (`msd700` container) |
 
-## システム トポロジとデータ フロー
+## System Topology and Data Flow
 
 ```mermaid
 flowchart TB
@@ -123,14 +98,14 @@ flowchart TB
   LOCAL_STACK --> ROS_NAV
 ```
 
-### アーキテクチャ上の重要なルール:
-1. **単一のパブリック Ingress としての Apache**: すべての HTTP および WebSocket リクエストは Apache ポート 443 を介して入力されます。バックエンド サービスは内部ポートまたはループバック アドレスにバインドされます。ロボットが直接到達できる唯一の外部ポートは、ポート 8883 (TLS) 上の HiveMQ です。
-2. **コマンド フローは ROS ではなく MQTT を介して**: `backend_node` によってディスパッチされたコマンドは、`/unit_<ULID>/system_command` MQTT トピックに乗り、`/unit_<ULID>/system_feedback` を介して確認されます。クラウド内の ROS トピックは、ブラウザーのマップ キャンバスとテレメトリ表示にフィードを提供するためだけに存在します。
-3. **デシリアライザーとしてのユニットごとのコンテナ**: コンテナ `rosweb_unit_<ULID>` はオンデマンドで実行され、MQTT からの JSON/文字列ペイロードをネイティブ ROS メッセージ (`nav_msgs/OccupancyGrid`、`geometry_msgs/PoseStamped`、`sensor_msgs/LaserScan`) に変換し、`rosbridge` がそれらをダッシュ​​ボードにストリーミングできるようにします。
+### Architectural Key Rules:
+1. **Apache as the Single Public Ingress**: All HTTP and WebSocket requests enter through Apache port 443. Backend services bind to internal ports or loopback addresses. The only external port directly reached by robots is HiveMQ on port 8883 (TLS).
+2. **Commands Flow over MQTT, Not ROS**: Commands dispatched by `backend_node` ride the `/unit_<ULID>/system_command` MQTT topic and are acknowledged over `/unit_<ULID>/system_feedback`. ROS topics in the cloud exist exclusively to feed the browser map canvas and telemetry displays.
+3. **Per-Unit Containers as Deserializers**: The container `rosweb_unit_<ULID>` runs on demand to convert JSON/string payloads from MQTT back into native ROS messages (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), allowing `rosbridge` to stream them to the dashboard.
 
-## 2 つの診断チャネル
+## Two Diagnostic Channels
 
-プラットフォームは、独立して失敗する 2 つの別個の通信チャネルを使用します。
+The platform uses two separate communication channels that fail independently:
 
 ```mermaid
 flowchart LR
@@ -143,15 +118,15 @@ flowchart LR
   end
 ```
 
-|チャンネル |輸送 |伝送されるデータ |障害の症状 |
+| Channel | Transport | Data Carried | Failure Symptom |
 | --- | --- | --- | --- |
-| **MQTT** | TCP / TLS (8883) |コマンド、確認応答、ポーズ文字列、ステータス ping。 |ロボットはコンソールに**オフライン**と表示されます。コマンドは HTTP 504 ですぐに失敗します。
-| **ロズブリッジ** | WebSocket (WSS) |入力された ROS メッセージ (`/map`、`/robot_pose`、`/scan`、`/global_plan`)。 |ロボットは **オンライン** として表示され、コマンドを受け入れますが、マップ キャンバスは空白のままです。 |
-| **ユニットリレーコンテナ** |サーバー上の Docker | MQTT 文字列を rosbridge の型付き ROS トピックに変換します。 |ロボットはオンラインで rosbridge に接続されていますが、`rosweb_unit_<ULID>` が停止しているか、非アクティブなためにリープされているため、キャンバスは空白のままです。 |
+| **MQTT** | TCP / TLS (8883) | Commands, acknowledgements, pose strings, status pings. | Robot appears **Offline** in the console. Commands fail immediately with HTTP 504. |
+| **rosbridge** | WebSocket (WSS) | Typed ROS messages (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot appears **Online** and accepts commands, but the map canvas remains blank. |
+| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because `rosweb_unit_<ULID>` is stopped or reaped due to inactivity. |
 
-## エンドツーエンドのコマンド実行フロー
+## End-to-End Command Execution Flow
 
-オペレーターがロボットに命令するとき (たとえば、地図上のウェイポイントをクリックする):
+When an operator commands the robot (for example, clicking a waypoint on the map):
 
 ```mermaid
 sequenceDiagram
@@ -183,13 +158,17 @@ sequenceDiagram
   end
 ```
 
-### 重要な実装の詳細:
-- **HTTP 応答はロボットの状態を反映します**: `backend_node` は、一致する `request_id` を持つ `system_feedback` がロボットから到着するまで、HTTP 接続を開いたままにします。ステータス 504 Gateway Timeout は、ロボットがコマンドを処理しなかったことを示します。
-- **選択的コマンド再試行**: 変更コマンド (ナビゲーション目標、モード切り替え、緊急停止) は、確認されるまで 1500 ミリ秒ごとに再試行されます。ハートビート ping は **決して再試行されません**: ping のドロップは、安全ウォッチドッグがゼロツイスト緊急停止を開始するために使用する正確な信号です。
+### Critical Implementation Details:
+- **HTTP Response Reflects Robot State**: `backend_node` holds the HTTP connection open until `system_feedback` with the matching `request_id` arrives from the robot. A status 504 Gateway Timeout signifies that the robot never processed the command.
+- **Selective Command Retry**: Mutating commands (navigation goals, mode switches, E-Stop) are retried every 1500 ms until acknowledged. Heartbeat pings are **never retried**: dropping a ping is the exact signal the safety watchdog uses to initiate zero-twist emergency stops.
 
-## ユニットごとのコンテナーのライフサイクル
+## Per-Unit Container Lifecycle (Legacy Architecture)
 
-サーバーのメモリと CPU を節約するために、サーバーは非アクティブなロボットに対して永続的な ROS マスター ノードを実行しません。代わりに、`backend_node` 内の `unit_manager.js` がアクティブなユニットごとに 1 つのコンテナを動的に管理します。
+::: info Single ROS Runtime Multi-Unit Architecture
+In active MSD700 deployments, multi-unit telemetry is processed inside a unified **Single ROS Runtime** using namespaced topics (`/unit_<ULID>/...`) and templated relays (`multi_unit.py` / `cloud_multi.launch`). The legacy dynamic 1-container-per-unit orchestration via `unit_manager.js` is deprecated due to server resource overhead when managing fleets.
+:::
+
+In earlier legacy configurations, `unit_manager.js` inside `backend_node` dynamically managed one container per active unit over `/var/run/docker.sock`:
 
 ```mermaid
 stateDiagram-v2
@@ -206,22 +185,22 @@ stateDiagram-v2
   Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
 ```
 
-|構成変数 |デフォルト値 |説明 |
+| Configuration Variable | Default Value | Description |
 | --- | --- | --- |
-| `UNIT_MANAGER_ENABLED` | `true` (サーバー)、`false` (ユニット) |動的コンテナ管理をアクティブにするかどうかを制御します。 |
-| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (開発では `:dev`) |ユニットリレー用にインスタンス化された Docker イメージ。 |
-| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 分) |コンテナーが刈り取られるまでのオペレーターの非アクティブ期間。 |
-| `UNIT_REAP_INTERVAL_MS` | `60000` (1分) |バックグラウンド リーパー スイープの頻度。 |
-| `UNIT_REMOVE_ON_REAP` | `false` | true の場合、コンテナーを削除します。 false の場合、停止したままになります。 |
-| `UNIT_MODE` | `prod` (または `dev`) |ポート オフセットを選択します (ROS マスター 11311/11312、rosbridge 9090/9091)。 |
+| `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Controls whether dynamic container management is active. |
+| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (`:dev` in dev) | Docker image instantiated for the unit relay. |
+| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Duration of operator inactivity before container is reaped. |
+| `UNIT_REAP_INTERVAL_MS` | `60000` (1 minute) | Frequency of the background reaper sweep. |
+| `UNIT_REMOVE_ON_REAP` | `false` | When true, deletes the container; when false, keeps it stopped. |
+| `UNIT_MODE` | `prod` (or `dev`) | Selects port offsets (ROS master 11311/11312, rosbridge 9090/9091). |
 
 ::: warning Autopilot Retention Guard
-ロボットが **オートパイロット モード**で自律ミッションを実行すると、その中継コンテナは **保持** 状態になります。保持されたコンテナはアイドル タイムアウトの対象外であり、オペレータがログアウトするかブラウザを閉じても終了されないため、継続的なミッション監視が保証されます。
+When a robot executes an autonomous mission in **Autopilot Mode**, its relay container enters the **Retained** state. Retained containers are exempt from idle timeouts and are not terminated when an operator logs out or closes their browser, ensuring continuous mission monitoring.
 :::
 
-## クロックドメインの境界と時間の同期
+## Clock Domain Boundary and Time Synchronization
 
-ロボットのオンボード コンピューターとクラウド サーバーは、独立したシステム クロックを持つ別個の ROS マスター インスタンスを実行します。タイムスタンプの相違を防ぐため、MQTT を通過するすべてのジオメトリック メッセージは、入力時に `BoundaryPublisher` を介してローカル ROS 時間に再スタンプされます。
+The robot onboard computer and the cloud server run separate ROS master instances with independent system clocks. To prevent timestamp divergence, all geometric messages crossing MQTT are restamped to local ROS time on ingress via `BoundaryPublisher`.
 
 ```mermaid
 flowchart LR
@@ -244,12 +223,12 @@ flowchart LR
 ```
 
 ::: danger Why Clock Restamping Is Mandatory
-タイム リスタンプを省略すると、RViz および Web レンダラーで即座に `TF_OLD_DATA` 警告が表示されます。さらに、アクティブな `/clock` ジェネレーターがない 1 つのマスターで `/use_sim_time` が有効になっている場合、TF ツリーの評価は完全にフリーズします。
+Omitting time restamping results in immediate `TF_OLD_DATA` warnings in RViz and web renderers. Furthermore, if `/use_sim_time` is enabled on one master without an active `/clock` generator, TF tree evaluation freezes completely.
 :::
 
-## 多層の信頼ドメインとセキュリティ
+## Multi-Tier Trust Domains and Security
 
-MSD700 アーキテクチャは、3 つの異なるセキュリティ信頼ドメインを強制します。 1 つのドメイン内で発行された資格情報は、他のドメインでは厳密に拒否されます。
+The MSD700 architecture enforces three distinct security trust domains. Credentials issued within one domain are strictly rejected by the others.
 
 ```mermaid
 flowchart TB
@@ -274,13 +253,13 @@ flowchart TB
   ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
 ```
 
-1. **オペレーター トークン**: `/srv/msd/secrets/` キーリングに対して検証された標準 HS256 JWT。トークンにはユーザー ID とアカウントのスコープが含まれます。管理者トークン (`typ=admin`) は、標準のロボット操作ルートでは拒否されます。
-2. **ロボット クラウド トークン**: 物理ロボットの登録時に生成されたデバイス シークレットを使用して、`/enroll/token` によって作成されました。 12 時間有効で、システムが起動するたびに更新されます。
-3. **ユニット ローカル トークン**: Jetson コンピューター上の `backend_local` によってローカルに発行されます。クラウド署名トークンは、ネットワーク分割中の完全なローカル自律性を確保するために、ローカル エンドポイントによって意図的に拒否されます。
+1. **Operator Tokens**: Standard HS256 JWTs verified against the `/srv/msd/secrets/` keyring. Tokens include user IDs and account scope. Admin tokens (`typ=admin`) are rejected by standard robot operation routes.
+2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours and refreshed on every system boot.
+3. **Unit Local Tokens**: Issued locally by `backend_local` on the Jetson computer. Cloud-signed tokens are intentionally rejected by local endpoints to ensure complete local autonomy during network partitions.
 
-## オペレーティング リース: 複数のオペレーター間の競合の防止
+## Operating Lease: Preventing Multi-Operator Conflicts
 
-ロボットはクラウド Web インターフェイスとオンボード ローカル ネットワーク ダッシュボードの両方からアクセスできるため、物理ロボットは単一の **オペレーティング リース**を適用します。
+Because a robot can be accessed from both the cloud web interface and the onboard local network dashboard, the physical robot enforces a single **Operating Lease**.
 
 ```mermaid
 flowchart LR
@@ -297,15 +276,15 @@ flowchart LR
   LEASE_MGR --> CONTROLLER
 ```
 
-- リースはサーバー バックエンドではなく、**ロボット** (`system_command.py` 内) で保持されます。
-- オペレーターがロボット ダッシュボードを開くと、クライアントはハートビート ping によって継続的に更新される 15 秒のリースを取得します。
-- 2 番目のオペレーターがコマンドを送信しようとすると、ロボットは `In Use` ステータスを返します。引き継ぎには、元のオペレーターからの明示的な確認またはリース期限が必要です。
+- The lease is held on the **robot** (inside `system_command.py`), not on the server backend.
+- When an operator opens a robot dashboard, the client acquires a 15-second lease renewed continuously by heartbeat pings.
+- If a second operator attempts to send commands, the robot returns an `In Use` status. Takeover requires explicit confirmation from the original operator or lease expiration.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [メッセージ コントラクト](/ja/development/message-contracts): MQTT、ROS、および WebSocket ペイロードの完全な仕様。
-- [状態と動作](/ja/development/state-and-behavior): ナビゲーション、ブーストロフェドン スイープ、非常停止のための詳細なステート マシン。
-- [API リファレンス](/ja/development/api-reference): REST API エンドポイントと認証コントラクト。
-- [データベース スキーマ](/ja/development/database-schema): MySQL スキーマ、テーブル、外部キー、および移行スクリプト。
-- [カメラ ストリーミング](/ja/development/camera-streaming): WebRTC ビデオ パイプラインと ICE 候補のネゴシエーション。
-- [データ同期](/ja/development/data-sync): ユニット キャッシュと中央サーバー間の同期メカニズム。
+- [Message Contracts](/ja/development/message-contracts): Full specification of MQTT, ROS, and WebSocket payloads.
+- [State and Behavior](/ja/development/state-and-behavior): Detailed state machines for navigation, boustrophedon sweep, and E-Stop.
+- [API Reference](/ja/development/api-reference): REST API endpoints and authentication contracts.
+- [Database Schema](/ja/development/database-schema): MySQL schema, tables, foreign keys, and migration scripts.
+- [Camera Streaming](/ja/development/camera-streaming): WebRTC video pipeline and ICE candidate negotiation.
+- [Data Sync](/ja/development/data-sync): Synchronization mechanics between unit cache and central server.

@@ -2,33 +2,35 @@
 outline: deep
 search: false
 ---
-# 状態と動作
+
+
+# State and Behavior
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、ナビゲーション状態の遷移、SLAM マッピング フェーズ、自動操縦の自律性、安全ウォッチドッグ、障害回復メカニズムなど、MSD700 ロボットのライフサイクルを管理する有限状態マシンについて詳しく説明します。
+This document details the finite state machines governing the MSD700 robot lifecycle, including navigation state transitions, SLAM mapping phases, autopilot autonomy, safety watchdogs, and fault recovery mechanisms.
 
-MSD700 の核となるアーキテクチャ原則: **物理ロボットは究極の真実の情報源**。トグル、リース、および操作の進行状況はロボット コンピューター (`system_command.py` および `operation_supervisor.py`) に常駐し、ブラウザーのタブが閉じられたり、サーバーが再起動されたり、ネットワークが切断されたりしても残ります。
+The core architectural principle of MSD700: **the physical robot is the ultimate source of truth**. Toggles, leases, and operational progress reside on the robot computer (`system_command.py` and `operation_supervisor.py`), surviving browser tab closures, server reboots, and network disconnects.
 
-## 国家の所有権と永続性のマトリックス
+## State Ownership and Persistence Matrix
 
-|状態ドメイン |主要所有者 |永続性のスコープ |読者消費者 |
+| State Domain | Primary Owner | Persistence Scope | Reader Consumer |
 | --- | --- | --- | --- |
-| **ロボットのアクティビティ** | `system_command.py` (`RobotStateTracker`) |ブラウザを閉じてもバックエンドを再起動しても持続します。 |テレメトリ ping 応答 |
-| **オペレーティング リース** | `system_command.py` |サーバーを再起動しても持続します。更新されない場合は 15 秒で期限切れになります。 | Ping フィードバック (`in_use`、`origin_conflict`) |
-| **オートパイロット/マニュアルモード** | `system_command.py` |ブラウザーのタブを閉じても持続します。 |テレメトリ ping 応答 |
-| **アクティブなミッション バッチ** | `operation_supervisor.py` |ブラウザを閉じても持続します。 RAMに保存されます。 |ラッチ付き `/string/operation_snapshot` |
-| **コンテナのライフサイクル** | `unit_manager.js` (サーバー RAM) |サーバーランタイムのみ。ブート時に `adoptExisting()` によって再構築されます。 |管理者 Web コンソールとリーパー |
-| **UI のドラフトと選択** |ブラウザ `sessionStorage` |セッションの有効期間。タブを閉じるとクリアされます。 |ダッシュボード React コンポーネント |
-| **艦隊の記録と地図** |セントラル MySQL (`db`) |永久保存。 |バックエンド REST API |
+| **Robot Activity** | `system_command.py` (`RobotStateTracker`) | Persists through browser closures and backend restarts. | Telemetry ping response |
+| **Operating Lease** | `system_command.py` | Persists through server restarts; expires in 15 seconds if unrefreshed. | Ping feedback (`in_use`, `origin_conflict`) |
+| **Autopilot / Manual Mode** | `system_command.py` | Persists across browser tab closures. | Telemetry ping response |
+| **Active Mission Batch** | `operation_supervisor.py` | Persists across browser closures; stored in RAM. | Latched `/string/operation_snapshot` |
+| **Container Lifecycle** | `unit_manager.js` (Server RAM) | Server runtime only; reconstructed by `adoptExisting()` on boot. | Admin web console and reaper |
+| **UI Drafts & Selections** | Browser `sessionStorage` | Session lifetime; cleared on tab close. | Dashboard React components |
+| **Fleet Records & Maps** | Central MySQL (`db`) | Permanent storage. | Backend REST API |
 
 ::: warning Browser Storage Limitation
-ブラウザのタブを閉じると、`sessionStorage` がクリアされます。シームレスなミッション再開を保証するために、アクティブなウェイポイントとカバレッジ境界は `/string/operation_snapshot` にラッチされます。オペレーターが新しいタブでダッシュボードを再度開くと、UI はこのラッチされたトピックをサブスクライブし、アクティブな実行を完全に再構築します。
+Closing a browser tab clears `sessionStorage`. To ensure seamless mission resumption, active waypoints and coverage boundaries are latched on `/string/operation_snapshot`. When an operator re-opens the dashboard in a new tab, the UI subscribes to this latched topic and fully reconstructs the active run.
 :::
 
-## ロボットアクティビティステートマシン
+## Robot Activity State Machine
 
-ロボットのアクティビティ文字列は `RobotStateTracker` によって継続的に追跡され、ハートビート ping ごとに報告されます。
+The robot activity string is tracked continuously by `RobotStateTracker` and reported in every heartbeat ping.
 
 ```mermaid
 stateDiagram-v2
@@ -64,31 +66,31 @@ stateDiagram-v2
   emergency_stopped --> emergency_cleared: E-Stop released
 ```
 
-### 完全なアクティビティ状態
+### Complete Activity States
 
-|アクティビティキー |ターゲット UI タブ |説明 |
+| Activity Key | Target UI Tab | Description |
 | --- | --- | --- |
-| `idle` |アイドル |システムが初期化されました。モーターコントローラーは有効になっていますが、アクティブな目標がありません。 |
-| `manual` |アイドル | WASD キーボード コントロール経由で手動テロップがアクティブになります。 |
-| `mapping_active` |マッピング | `explore_lite` フロンティア探索によるアクティブな SLAM マッピング。 |
-| `mapping_paused` |マッピング | SLAM 探査はオペレーターによって一時停止されました。 |
-| `mapping_stop_failed` |マッピング |マップの保存に失敗しました。 SLAM 状態はアクティブのままであるため、オペレータは再試行できます。 |
-| `navigation_ready` |ナビゲーション |マップがロードされ、`move_base` が操作可能になり、ゴールのディスパッチを待っています。 |
-| `navigation_point_published` |ナビゲーション |ナビゲーション目標に向かって積極的に移動するロボット。 |
-| `boustrophedon_initializing` |ナビゲーション |カバレッジ スイープ ラインの生成 (アイドル/スタック タイムアウトを免除)。 |
-| `boustrophedon_ready` |ナビゲーション |バストロフェドン カバレッジ スイープ ラインを実行します。 |
-| `supervisor_navigating` |ナビゲーション | `operation_supervisor` によって管理される自律ウェイポイントのディスパッチ。 |
-| `arrived` |ナビゲーション |目的地のウェイポイントに正常に到着したか、カバーエリアを完了しました。 |
-| `coverage_failed` |ナビゲーション |カバレッジ計画またはパスの実行が中止されました。 |
-| `auto_aligning` |ナビゲーション | Auto Align 粒子フィルターの方向のキャリブレーションを実行しています。 |
-| `paused` |ナビゲーション |明示的なオペレーターコマンドによりミッションが一時停止されました。 |
-| `paused_due_to_ping_loss` | (内部) |安全ウォッチドッグは、ハートビート ping の低下によりロボットの動作を一時停止しました。 |
-| `emergency_stopped` |アイドル |ハードウェア緊急停止が作動しています (優先度 255 でゼロ速度がクランプされています)。 |
-| `emergency_cleared` |アイドル |非常停止が解除されました。モーターを再初期化する準備ができています。 |
+| `idle` | Idle | System initialized; motor controllers enabled but no active goal. |
+| `manual` | Idle | Manual teleop active via WASD keyboard controls. |
+| `mapping_active` | Mapping | Active SLAM mapping with `explore_lite` frontier exploration. |
+| `mapping_paused` | Mapping | SLAM exploration temporarily paused by operator. |
+| `mapping_stop_failed` | Mapping | Map saving failed; SLAM state remains active so operator can retry. |
+| `navigation_ready` | Navigation | Map loaded, `move_base` operational, waiting for goal dispatch. |
+| `navigation_point_published` | Navigation | Robot actively traversing towards a navigation goal. |
+| `boustrophedon_initializing` | Navigation | Generating coverage sweep lines (exempt from idle/stuck timeouts). |
+| `boustrophedon_ready` | Navigation | Executing boustrophedon coverage sweep lines. |
+| `supervisor_navigating` | Navigation | Autonomous waypoint dispatch managed by `operation_supervisor`. |
+| `arrived` | Navigation | Successfully reached destination waypoint or completed coverage area. |
+| `coverage_failed` | Navigation | Coverage planning or path execution aborted. |
+| `auto_aligning` | Navigation | Executing Auto Align particle filter orientation calibration. |
+| `paused` | Navigation | Mission paused by explicit operator command. |
+| `paused_due_to_ping_loss` | (Internal) | Safety watchdog paused robot motion due to dropped heartbeat pings. |
+| `emergency_stopped` | Idle | Hardware emergency stop engaged (zero velocity clamped at priority 255). |
+| `emergency_cleared` | Idle | Emergency stop released; motors ready for re-initialization. |
 
-## 安全監視とハートビートの監視
+## Safety Watchdog and Heartbeat Supervision
 
-オンボード ソフトウェアは、連続スライディング ウィンドウ ウォッチドッグを介して通信の健全性を監視します。
+The onboard software monitors communication health via a continuous sliding window watchdog.
 
 ```mermaid
 flowchart TB
@@ -102,18 +104,18 @@ flowchart TB
   RESET -.->|Ping Restored| UNPAUSE["Clear Emergency Pause<br/>Resume active mission safely"]
 ```
 
-### ハートビート ウォッチドッグのタイミング層:
-1. **10 秒 (モーション一時停止)**: 有効なハートビートが 10 秒間到着しない場合、`system_command.py` はラッチされた `/emergency_pause` ツイスト コマンドを優先度 255 でアサートします。ロボットはアクティブな `move_base` 目標をキャンセルせずに完全に停止するまで減速します。通信が戻ると一時停止が解除され、動作が自動的に再開されます。
-2. **10 分 (セッション ティアダウン)**: オペレーターが 10 分間切断されたままの場合、アクティブなナビゲーション セッションまたはマッピング セッションはモーターの過熱を防ぐために正常にアンロードされます。
-3. **30 分 (ハードウェア シャットダウン)**: 30 分間連続して操作が行われないと、ハードウェア ドライバーの電源がオフになり、低電力スタンバイ モードになります。
+### Heartbeat Watchdog Timing Tiers:
+1. **10 Seconds (Motion Pause)**: If no valid heartbeat arrives for 10 seconds, `system_command.py` asserts a latched `/emergency_pause` twist command at priority 255. The robot decelerates to a complete stop without canceling the active `move_base` goal. When communication returns, the pause is lifted and motion resumes automatically.
+2. **10 Minutes (Session Teardown)**: If the operator remains disconnected for 10 minutes, the active navigation or mapping session is gracefully unloaded to prevent motor overheating.
+3. **30 Minutes (Hardware Shutdown)**: After 30 minutes of continuous absence, hardware drivers power down into a low-power standby mode.
 
 ::: warning Autopilot Mode Exemption
-**オートパイロット モード**がアクティブな場合、10 秒間の通信一時停止は一時停止されます。オペレーターがノートパソコンを閉じたり、Wi-Fi のデッドゾーンを走行したりしても、ロボットは自律的な検査ルートを続行します。
+When **Autopilot Mode** is active, the 10-second communication pause is suspended. The robot continues its autonomous inspection route even if the operator closes their laptop or drives through Wi-Fi dead zones.
 :::
 
-## マップストレージと 2 層レプリケーション
+## Map Storage and Two-Tier Replication
 
-`POST /api/mapping/stop` 経由で SLAM マップを保存すると、ロボットはマップ アセットを 2 つの独立したターゲットに書き込みます。
+When saving a SLAM map via `POST /api/mapping/stop`, the robot writes map assets to two independent targets:
 
 ```mermaid
 flowchart TB
@@ -131,14 +133,14 @@ flowchart TB
   CHK_CLOUD -->|"No (Offline)"| DONE_LOCAL["Outcome = cloud_pending<br/>Unit stores map; sync_agent replicates later"]
 ```
 
-|ストレージターゲット |要件レベル |失敗の影響 |
+| Storage Target | Requirement Level | Failure Implication |
 | --- | --- | --- |
-| **ユニットローカルメディアサーバー** | **必須** |ローカル保存が失敗すると、ロボットはこのマップを移動できなくなります。 SLAM セッションは `mapping_stop_failed` でアクティブなままであるため、オペレータは保存を再試行できます。 |
-| **Cloud Central メディアサーバー** | **ベストエフォート** |クラウドのアップロードが失敗した場合 (ロボットが倉庫でオフラインになっている場合など)、マップには `cloud_pending` のマークが付けられます。インターネット接続が回復すると、バックグラウンドの `sync_agent` によってマップ ファイルが自動的に複製されます。 |
+| **Unit Local media-server** | **Mandatory** | If local save fails, the robot cannot navigate this map. The SLAM session remains active in `mapping_stop_failed` so the operator can retry saving. |
+| **Cloud Central media-server** | **Best Effort** | If cloud upload fails (e.g. robot is offline in a warehouse), the map is marked `cloud_pending`. The background `sync_agent` replicates the map files automatically once internet connectivity returns. |
 
-## セッションの再接続と回復
+## Session Reconnection and Recovery
 
-オペレータが閉じたブラウザ タブを再度開くか、新しいワークステーションからログインすると、次のようになります。
+When an operator reopens a closed browser tab or logs in from a new workstation:
 
 ```mermaid
 sequenceDiagram
@@ -160,13 +162,13 @@ sequenceDiagram
   Note over Browser: Reconnection complete without losing mission state
 ```
 
-### 回復の原則:
-1. **`active_page`** によるルーティング: フロントエンドは、ライブ ロボット テレメトリに基づいて、オペレーターをアクティブな操作タブ (ナビゲーションまたはマッピング) に直接リダイレクトします。
-2. **ラッチされたスナップショットの再構築**: ミッション状態全体 (アクティブなウェイポイント、現在のインデックス、移動方向、およびカバレッジ ポリゴン) が、ラッチされた `/string/operation_snapshot` ROS トピックから復元されます。
-3. **ゴースト状態の検証**: ブラウザー キャッシュがミッション進行中であることを示しているが、ロボットが 8 つの連続テレメトリ サンプルにわたって `idle` を報告する場合、フロントエンドは自動的に `idle` にリセットして、ファントム実行の表示を防ぎます。
+### Recovery Principles:
+1. **Routing by `active_page`**: The frontend redirects the operator directly to the active operational tab (Navigation or Mapping) based on live robot telemetry.
+2. **Latched Snapshot Rebuild**: The entire mission state (active waypoints, current index, travel direction, and coverage polygons) is restored from the latched `/string/operation_snapshot` ROS topic.
+3. **Ghost State Validation**: If the browser cache indicates a mission in progress but the robot reports `idle` across 8 consecutive telemetry samples, the frontend automatically resets to `idle` to prevent phantom execution displays.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [メッセージ コントラクト](/ja/development/message-contracts): シリアル化されたトピック スキーマとハートビート ping エンベロープ。
-- [アーキテクチャ](/ja/development/architecture): ハードウェアとサーバー トポロジの概要。
-- [API リファレンス](/ja/development/api-reference): HTTP エンドポイントとエラー コードのリファレンス。
+- [Message Contracts](/ja/development/message-contracts): Serialized topic schemas and heartbeat ping envelopes.
+- [Architecture](/ja/development/architecture): Hardware and server topology overview.
+- [API Reference](/ja/development/api-reference): HTTP endpoints and error code references.

@@ -15,35 +15,7 @@ For repository locations, see [Repository Structure](/development/repository-str
 
 The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
 
-```mermaid
-flowchart LR
-  subgraph Unit["MSD700 Unit (Jetson SBC)"]
-    R_CORE["ROS 1 Noetic Core<br/>bringup, nav, SLAM, drivers"]
-    U_BE["backend_local :5002"]
-    U_DB[("MySQL Local :3306")]
-    U_FE["frontend_local :3000"]
-    U_MQTT["Mosquitto :1883"]
-  end
-
-  subgraph Cloud["MSD700 Server (Cloud Host)"]
-    C_AP["Apache2 Reverse Proxy :443"]
-    C_BE["backend_node :5000"]
-    C_DB[("MySQL Central :3307")]
-    C_MQ["HiveMQ :8883 (TLS)"]
-    C_FE["frontend_prod :3000"]
-  end
-
-  R_CORE <-->|"internal topics"| U_BE
-  U_BE <-->|"local SQL"| U_DB
-  U_FE <-->|"HTTP / WS"| U_BE
-  R_CORE <-->|"loopback MQTT"| U_MQTT
-
-  R_CORE <-->|"TLS 8883 (Single Cloud Link)"| C_MQ
-  C_MQ <--> C_BE
-  C_BE <--> C_DB
-  C_AP --> C_BE
-  C_AP --> C_FE
-```
+![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
 | Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |
@@ -61,9 +33,11 @@ The unit's local stack is an **offline-first cache of the cloud, not an isolated
 | Component | Technology | Responsibility | Host Location |
 | --- | --- | --- | --- |
 | **Frontend Dashboard** | Next.js, React, TypeScript | Single-page operator interface with map canvas, telemetry widgets, manual teleop, and navigation controls. | `ROS-dashboard-next-ts` (built as `frontend_prod` on cloud and `frontend_local` on unit) |
-| **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, sync coordination, and container lifecycle manager (`unit_manager.js`). | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
-| **unit_manager.js** | Node.js (Docker API) | Dynamically spins up and reaps per-unit relay containers (`rosweb_unit_<ULID>`) on the server over `/var/run/docker.sock`. | Embedded inside `backend_node` |
-| **rosbridge** | `rosbridge_suite` (WebSocket) | Bridges live ROS topics (robot pose, laser scan, costmaps, global plan) to the browser canvas over WebSockets. | Cloud container (`nakayama_cloud`) and unit local stack |
+| **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, and sync coordination. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
+| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Multi-unit templated relay nodes serving all robots in a single unified ROS runtime via `/unit_<ULID>/...` namespaces. | Fleet relay container (`rosweb_unit_relays`), deliberately separate from the backend so a code deploy is not a fleet-wide data-plane outage |
+| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python, ROS 1 Noetic | Expands the MQTT bridge topic map over a roster of units so one `mqtt_client` nodelet and one TLS connection serve the whole fleet. | Fleet relay container (`rosweb_unit_relays`) |
+| **unit_manager.js (Legacy)** | Node.js (Docker API) | (Deprecated) Legacy dynamic container manager that instantiated 1 container per robot; replaced by the single ROS runtime multi-unit relays. | Embedded inside `backend_node` |
+| **rosbridge** | `rosbridge_suite` (WebSocket) | Unified WebSocket bridge streaming live ROS topics for all units to browser canvases over port 9090. | Cloud container (`nakayama_cloud`) and unit local stack |
 | **HiveMQ (MQTT)** | HiveMQ CE (Java) | Encrypted, high-throughput message broker connecting robots to the server over port 8883 (TLS). | Server container (`hivemq` / `hivemq_dev`) |
 | **MySQL Database** | MySQL 8.0 | Stores user accounts, rental profiles, enrolled unit records, route geometry, custom area boundaries, and sync journals. | Server (`db` / `db_dev`) and unit (`db_local`) |
 | **media-server** | Node.js, Express | Manages map asset uploads, thumbnail generation, and serves static `.pgm` and `.yaml` map files. | Server container and unit container (`media_local`) |
@@ -190,7 +164,11 @@ sequenceDiagram
 
 ## Per-Unit Container Lifecycle
 
-To conserve server memory and CPU, the server does not run persistent ROS master nodes for inactive robots. Instead, `unit_manager.js` inside `backend_node` dynamically manages one container per active unit.
+::: info The fleet relay is the default
+Multi-unit telemetry is processed by a single **fleet relay** container serving the whole fleet through namespaced topics (`/unit_<ULID>/...`) and templated relays (`multi_unit.py` / `cloud_multi.launch`, plus `nakayama_cloud_multi.launch` for the MQTT half). Its roster comes from the `units` table, so enrolling a robot is all it takes to make it reachable. The per-unit path below still ships and is one environment variable away, but the two must never run for the same unit. See [Unit Container Lifecycle](/development/unit-container-lifecycle#fleet-relay-one-container-for-every-unit).
+:::
+
+In the per-unit path, `unit_manager.js` inside `backend_node` dynamically manages one container per active unit over `/var/run/docker.sock`:
 
 ```mermaid
 stateDiagram-v2

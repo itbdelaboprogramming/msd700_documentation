@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# WebSocket dan Protokol rosbridge
+
+
+# WebSocket and rosbridge Protocol
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci antarmuka WebSocket yang disediakan oleh `rosbridge_suite`, menjelaskan spesifikasi protokol JSON, format langganan pesan, skema pemanggilan layanan, teknik kompresi, dan integrasi rendering kanvas web.
+This document details the WebSocket interface provided by `rosbridge_suite`, explaining the JSON protocol specification, message subscription formats, service invocation schemas, compression techniques, and web canvas rendering integration.
 
-## Ikhtisar Arsitektur rosbridge
+## rosbridge Architecture Overview
 
-Dasbor web berinteraksi dengan topik dan layanan ROS langsung melalui `rosbridge_server` melalui koneksi WebSocket yang persisten.
+The web dashboard interacts with live ROS topics and services through `rosbridge_server` over a persistent WebSocket connection.
 
 ```mermaid
 flowchart LR
@@ -29,20 +31,20 @@ flowchart LR
   ROSBRIDGE <-->|"Native ROS Topics"| RELAY
 ```
 
-## Titik Akhir Koneksi
+## Connection Endpoints
 
-| Lingkungan | Protokol & Jalur | Pelabuhan Tujuan |
+| Environment | Protocol & Path | Destination Port |
 | --- | --- | --- |
-| **Server Produksi** | `wss://msd.nglobal.jp/services/rosbridge` | Diproksi ke internal `localhost:9090` |
-| **Server Pengembangan** | `ws://<server-ip>:9091` | Arahkan WebSocket ke wadah dev rosbridge |
-| **Unit Server Lokal** | `ws://<unit-ip>:9090` | Arahkan WebSocket ke onboard `rosbridge_suite` |
+| **Production Server** | `wss://msd.nglobal.jp/services/rosbridge` | Proxied to internal `localhost:9090` |
+| **Development Server** | `ws://<server-ip>:9091` | Direct WebSocket to dev rosbridge container |
+| **Unit Local Server** | `ws://<unit-ip>:9090` | Direct WebSocket to onboard `rosbridge_suite` |
 
-## Operasi Protokol rosbridge
+## rosbridge Protocol Operations
 
-Protokol rosbridge v2 menggunakan operasi JSON standar (`op`):
+The rosbridge v2 protocol uses standardized JSON operations (`op`):
 
-### 1. Berlangganan Topik (`op: "subscribe"`)
-Memulai streaming topik ROS ke browser:
+### 1. Topic Subscription (`op: "subscribe"`)
+Initiates streaming of a ROS topic to the browser:
 
 ```json
 {
@@ -56,12 +58,12 @@ Memulai streaming topik ROS ke browser:
 }
 ```
 
-- `topic`: Nama topik ROS yang sepenuhnya memenuhi syarat termasuk namespace unit ULID.
-- `throttle_rate`: Waktu minimum dalam milidetik antar pesan (misalnya 40 ms = 25 Hz).
-- `compression`: Mendukung `none` atau `png` (untuk jaringan hunian bandwidth tinggi).
+- `topic`: Fully qualified ROS topic name including unit ULID namespace.
+- `throttle_rate`: Minimum time in milliseconds between messages (e.g. 40 ms = 25 Hz).
+- `compression`: Supports `none` or `png` (for high-bandwidth occupancy grids).
 
-### 2. Penerbitan Topik (`op: "publish"`)
-Menerbitkan pesan ROS yang diketik dari browser ke master ROS:
+### 2. Topic Publishing (`op: "publish"`)
+Publishes a typed ROS message from browser to ROS master:
 
 ```json
 {
@@ -76,8 +78,8 @@ Menerbitkan pesan ROS yang diketik dari browser ke master ROS:
 }
 ```
 
-### 3. Permintaan Layanan (`op: "call_service"`)
-Memanggil layanan ROS secara sinkron:
+### 3. Service Invocation (`op: "call_service"`)
+Calls a ROS service synchronously:
 
 ```json
 {
@@ -88,7 +90,7 @@ Memanggil layanan ROS secara sinkron:
 }
 ```
 
-- **Amplop Respons Layanan**:
+- **Service Response Envelope**:
 ```json
 {
   "op": "service_response",
@@ -99,26 +101,26 @@ Memanggil layanan ROS secara sinkron:
 }
 ```
 
-## Langganan Kanvas Web Utama
+## Primary Web Canvas Subscriptions
 
-Dasbor web (`ROS-dashboard-next-ts`) berlangganan topik visual utama berikut:
+The web dashboard (`ROS-dashboard-next-ts`) subscribes to the following primary visual topics:
 
-| Pengidentifikasi Topik | Jenis Pesan ROS | Tujuan di Atas Kanvas |
+| Topic Identifier | ROS Message Type | Purpose on Canvas |
 | --- | --- | --- |
-| `/server/robot_pose` | `geometry_msgs/PoseStamped` | Memperbarui posisi ikon robot 2D dan arah panah (25 Hz). |
-| `/server/slam/map` | `nav_msgs/OccupancyGrid` | Merender bitmap denah lantai SLAM langsung di kanvas EaselJS. |
-| `/server/scan` | `sensor_msgs/LaserScan` | Membuat titik sinar laser merah di sekitar robot. |
-| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` | Membuat lintasan navigasi terencana menjadi biru global. |
-| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Membuat garis lintasan lokal yang dinamis. |
-| `/server/boustrophedon_path` | `nav_msgs/Path` | Menampilkan jalur sapuan cakupan area boustrophedon oranye. |
+| `/server/robot_pose` | `geometry_msgs/PoseStamped` | Updates 2D robot icon position and heading arrow (25 Hz). |
+| `/server/slam/map` | `nav_msgs/OccupancyGrid` | Renders the live SLAM floorplan bitmap on EaselJS canvas. |
+| `/server/scan` | `sensor_msgs/LaserScan` | Renders red laser beam points around the robot. |
+| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` | Renders global blue planned navigation trajectory. |
+| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Renders dynamic local trajectory line. |
+| `/server/boustrophedon_path` | `nav_msgs/Path` | Renders orange boustrophedon area coverage sweep path. |
 
-## Ketahanan Frontend dan Pemulihan Diri
+## Frontend Resilience and Self-Healing
 
-1. **`ROS2D.js` Stage Prototype Patch**: Untuk mencegah error ketika objek stage EaselJS kehilangan fungsi transformasi koordinat ROS selama pemasangan ulang komponen secara cepat, frontend secara dinamis memasukkan metode `globalToRos` dan `rosToGlobal` ke dalam `createjs.Stage.prototype` sebelum instantiasi penampil.
-2. **Reconnection Debounce**: Jika WebSocket terputus, klien menunggu tiga kali upaya koneksi ulang berturut-turut sebelum memunculkan peringatan pemutusan sambungan, sehingga mencegah UI berkedip selama gangguan jaringan sementara.
+1. **`ROS2D.js` Stage Prototype Patch**: To prevent crashes where EaselJS stage objects lose ROS coordinate transform functions during rapid component remounting, the frontend dynamically injects `globalToRos` and `rosToGlobal` methods into `createjs.Stage.prototype` prior to viewer instantiation.
+2. **Reconnection Debounce**: If the WebSocket drops, the client waits for three consecutive reconnection attempts before surfacing a disconnect warning, preventing UI flickering during temporary network blips.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Kontrak Pesan](/id/development/message-contracts): MQTT dan kontrak topik berseri.
-- [Arsitektur](/id/development/architecture): Model dua mesin dan perutean rosbridge.
-- [Referensi API](/id/development/api-reference): Titik akhir HTTP REST API.
+- [Message Contracts](/id/development/message-contracts): MQTT and serialized topic contracts.
+- [Architecture](/id/development/architecture): Two-machine model and rosbridge routing.
+- [API Reference](/id/development/api-reference): HTTP REST API endpoints.

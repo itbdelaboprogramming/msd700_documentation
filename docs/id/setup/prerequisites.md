@@ -1,13 +1,15 @@
 ---
 outline: deep
 ---
-# Prasyarat
+
+
+# Prerequisites
 
 <RoleBadge role="technician" />
 
-Dokumen ini merinci spesifikasi perangkat keras, persyaratan sistem operasi, aturan jaringan, dan ketergantungan perangkat lunak yang diperlukan sebelum menerapkan **Server MSD700** atau **Unit Robot Fisik MSD700**.
+This document details the hardware specifications, operating system requirements, networking rules, and software dependencies needed before deploying the **MSD700 Server** or **MSD700 Physical Robot Units**.
 
-## Ukuran Sistem dan Spesifikasi Perangkat Keras
+## System Sizing and Hardware Specifications
 
 ```mermaid
 flowchart LR
@@ -27,31 +29,31 @@ flowchart LR
   end
 ```
 
-### 1. Spesifikasi Perangkat Keras Server (Cloud Host)
+### 1. Server Hardware Specifications (Cloud Host)
 
-| Komponen | Spesifikasi Minimal | Produksi yang Direkomendasikan |
+| Component | Minimum Specification | Recommended Production |
 | --- | --- | --- |
-| **Prosesor** | 2 vCPU (x86_64 / amd64) | 4 hingga 8 vCPU |
-| **Memori Sistem** | RAM 4GB | RAM 8 hingga 16 GB |
-| **Penyimpanan Disk** | SSD 30GB | NVMe 100 GB (untuk arsip peta dan log media) |
-| **Masuknya Jaringan** | IPv4 Publik Statis dengan Port 443, 8883 diteruskan | 100 Mbps+ Tautan Dupleks Penuh |
+| **Processor** | 2 vCPUs (x86_64 / amd64) | 4 to 8 vCPUs |
+| **System Memory** | 4 GB RAM | 8 to 16 GB RAM |
+| **Disk Storage** | 30 GB SSD | 100 GB NVMe (for map archives and media logs) |
+| **Network Ingress** | Static Public IPv4 with Port 443, 8883 forwarded | 100 Mbps+ Full Duplex link |
 
-### 2. Spesifikasi Unit Robot Fisik (Jetson SBC)
+### 2. Physical Robot Unit Specifications (Jetson SBC)
 
-| Komponen | Spesifikasi Perangkat Keras | Tujuan |
+| Component | Hardware Specification | Purpose |
 | --- | --- | --- |
-| **Komputer Papan Tunggal** | NVIDIA Jetson (JetPack 5.x / 6.x) | Menjalankan runtime ROS Noetic di Docker, fusi sensor, dan tumpukan web lokal. |
-| **LiDAR 3D Utama** | Velodyne VLP-16 (16 Saluran, Ethernet) | Pemetaan lingkungan 360 derajat dan deteksi rintangan jarak 100 m. |
-| **IMU Negara** | Sensor MEMS 9-DOF (I2C/UART) | Disatukan dengan odometri roda melalui filter Madgwick untuk orientasi kecepatan tinggi. |
-| **Mikrokontroler Motor** | Arduino / Pengontrol Tertanam Kecil | Menjalankan kontrol kecepatan PID loop tertutup dan interupsi tick encoder. |
-| **Sasis & Penggerak** | Penggerak Diferensial dengan 4 Kastor Putar | tapak sasis fisik 0,90 x 0,70 m; Kecepatan desain maksimum 2,5 m/s. |
-| **Panggung Kekuatan** | Paket Baterai LiFePO4 24V | 4 hingga 6 jam operasi otonom terus menerus; relai E-Stop perangkat keras. |
+| **Single-Board Computer** | NVIDIA Jetson (JetPack 5.x / 6.x) | Runs ROS Noetic runtime in Docker, sensor fusion, and local web stack. |
+| **Primary 3D LiDAR** | Velodyne VLP-16 (16 Channels, Ethernet) | 360-degree environmental mapping and 100 m range obstacle detection. |
+| **State IMU** | 9-DOF MEMS Sensor (I2C/UART) | Fused with wheel odometry via Madgwick filter for high-rate orientation. |
+| **Motor Microcontroller** | Arduino / Teensy Embedded Controller | Executes closed-loop PID velocity control and encoder tick interrupts. |
+| **Chassis & Drive** | Differential Drive with 4 Swivel Casters | 0.90 x 0.70 m physical chassis footprint; 2.5 m/s maximum design speed. |
+| **Power Stage** | 24V LiFePO4 Battery Pack | 4 to 6 hours continuous autonomous operation; hardware E-Stop relay. |
 
 ---
 
-## Firewall Jaringan dan Matriks Port
+## Network Firewall and Port Matrix
 
-Pastikan router jaringan dan grup keamanan mengizinkan lalu lintas berikut:
+Ensure network routers and security groups allow the following traffic:
 
 ```mermaid
 flowchart TD
@@ -70,43 +72,43 @@ flowchart TD
   end
 ```
 
-| Pelabuhan | Protokol | Ruang Lingkup | Layanan | Diperlukan Untuk |
+| Port | Protocol | Scope | Service | Required For |
 | --- | --- | --- | --- | --- |
-| **`443`** | TCP | Publik | Proksi Terbalik Apache2 | Dasbor web HTTPS, REST API, dan aliran WebSocket rosbridge. |
-| **`8883`** | TCP | Publik | Pialang TLS HiveMQ | Perintah MQTT terenkripsi dan jembatan telemetri yang menghubungkan robot ke cloud. |
-| **`3478`** | UDP + TCP | Publik | kembali MENGHIDUPKAN Server | Traversal video kamera WebRTC ketika pukulan NAT peer-to-peer diblokir. |
-| **`49152 - 65535`** | UDP | Publik | Rentang Media Dinamis coturn | Muatan video WebRTC diteruskan melalui NAT simetris. |
-| **`3307`** | TCP | Host Lokal | DB Produksi MySQL | Toko relasional pusat untuk akun, peta, rute, dan profil persewaan. |
-| **`5000`** | TCP | Host Lokal | API Backend Ekspres | REST API internal dan orkestrator kontainer Docker. |
-| **`9090`** | TCP | Host Lokal | rosbridge WebSocket | Kanvas web pengumpan deserializer topik ROS frekuensi tinggi. |
+| **`443`** | TCP | Public | Apache2 Reverse Proxy | Web dashboard HTTPS, REST API, and rosbridge WebSocket streams. |
+| **`8883`** | TCP | Public | HiveMQ TLS Broker | Encrypted MQTT command and telemetry bridge connecting robots to the cloud. |
+| **`3478`** | UDP + TCP | Public | coturn TURN Server | WebRTC camera video traversal when peer-to-peer NAT punch is blocked. |
+| **`49152 - 65535`** | UDP | Public | coturn Dynamic Media Range | WebRTC video payload relaying across symmetric NATs. |
+| **`3307`** | TCP | Localhost | MySQL Production DB | Central relational store for accounts, maps, routes, and rental profiles. |
+| **`5000`** | TCP | Localhost | Express Backend API | Internal REST API and Docker container orchestrator. |
+| **`9090`** | TCP | Localhost | rosbridge WebSocket | High-frequency ROS topic deserializer feeding web canvases. |
 
 ---
 
-## Sistem Operasi & Ketergantungan Host
+## Host Operating System & Dependencies
 
-### Untuk Server Awan:
-1. **Sistem Operasi**: Ubuntu 22.04 LTS atau Ubuntu 24.04 LTS (x86_64).
-2. **Mesin Docker**: Docker CE 20.10+ dengan Plugin Compose (`docker compose` v2).
-3. **Server Web**: Apache 2.4+ (`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`).
-4. **Sertifikat SSL**: Certbot diinstal untuk pembaruan Let's Encrypt otomatis.
+### For the Cloud Server:
+1. **Operating System**: Ubuntu 22.04 LTS or Ubuntu 24.04 LTS (x86_64).
+2. **Docker Engine**: Docker CE 20.10+ with Compose Plugin (`docker compose` v2).
+3. **Web Server**: Apache 2.4+ (`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`).
+4. **SSL Certificates**: Certbot installed for automatic Let's Encrypt renewal.
 
-### Untuk Unit Fisik Jetson:
-1. **Sistem Operasi**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x di ARM64).
-2. **Mesin Docker**: Docker CE dengan dukungan `network_mode: host`.
-3. **Aturan Perangkat USB**: Aturan `udev` yang memberikan akses non-root ke `/dev/ttyUSB*` (pengontrol motor).
-4. **Konfigurasi IP Statis**: IP Statis `192.168.103.100` dikonfigurasi pada port Ethernet LiDAR khusus (`end0`).
+### For the Physical Jetson Unit:
+1. **Operating System**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x on ARM64).
+2. **Docker Engine**: Docker CE with `network_mode: host` support.
+3. **USB Device Rules**: `udev` rules granting non-root access to `/dev/ttyUSB*` (motor controller).
+4. **Static IP Configuration**: Static IP `192.168.103.100` configured on the dedicated LiDAR Ethernet port (`end0`).
 
 ---
 
-## Daftar Periksa Keamanan
+## Safety Checklist
 
 ::: danger Safety First
-1. **Jaga agar E-Stop Dapat Dijangkau**: Sebelum menjalankan tes motorik, pastikan tombol jamur Berhenti Darurat fisik berada dalam jangkauan fisik langsung.
-2. **Tinggikan Sasis untuk Penyalaan Pertama**: Selama pengujian awal firmware dan uji arah motor, letakkan sasis robot pada balok kayu sehingga roda penggerak berputar bebas tanpa menyentuh lantai.
-3. **Keamanan Mata LiDAR**: Velodyne VLP-16 adalah perangkat laser yang aman untuk mata Kelas 1 ($905\text{ nm}$panjang gelombang); hindari menempatkan lensa pembesar optik langsung di depan optik aktif.
+1. **Keep E-Stop Reachable**: Before running motor tests, verify that the physical Emergency Stop mushroom button is within immediate physical reach.
+2. **Elevate Chassis for First Power-Up**: During initial firmware bringup and motor direction tests, place the robot chassis on wooden blocks so drive wheels spin freely without touching the floor.
+3. **LiDAR Eye Safety**: The Velodyne VLP-16 is a Class 1 eye-safe laser device ($905\text{ nm}$ wavelength); avoid placing optical magnifying lenses directly in front of active optics.
 :::
 
-## Langkah Selanjutnya
+## Next Step
 
-- Lanjutkan ke [Pengaturan Server](/id/setup/server-setup) untuk menerapkan backend cloud.
-- Atau langsung ke [Unit Setup](/id/setup/unit-setup) jika server sudah aktif.
+- Proceed to [Server Setup](/id/setup/server-setup) to deploy the cloud backend.
+- Or proceed directly to [Unit Setup](/id/setup/unit-setup) if the server is already active.

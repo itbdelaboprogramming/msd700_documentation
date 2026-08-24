@@ -2,33 +2,35 @@
 outline: deep
 search: false
 ---
-# Keadaan dan Perilaku
+
+
+# State and Behavior
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci mesin negara terbatas yang mengatur siklus hidup robot MSD700, termasuk transisi keadaan navigasi, fase pemetaan SLAM, otonomi autopilot, pengawas keselamatan, dan mekanisme pemulihan kesalahan.
+This document details the finite state machines governing the MSD700 robot lifecycle, including navigation state transitions, SLAM mapping phases, autopilot autonomy, safety watchdogs, and fault recovery mechanisms.
 
-Prinsip arsitektur inti MSD700: **robot fisik adalah sumber kebenaran tertinggi**. Pengalihan, penyewaan, dan kemajuan operasional berada di komputer robot (`system_command.py` dan `operation_supervisor.py`), bertahan dari penutupan tab browser, reboot server, dan pemutusan jaringan.
+The core architectural principle of MSD700: **the physical robot is the ultimate source of truth**. Toggles, leases, and operational progress reside on the robot computer (`system_command.py` and `operation_supervisor.py`), surviving browser tab closures, server reboots, and network disconnects.
 
-## Matriks Kepemilikan dan Persistensi Negara
+## State Ownership and Persistence Matrix
 
-| Domain Negara | Pemilik Utama | Lingkup Persistensi | Konsumen Pembaca |
+| State Domain | Primary Owner | Persistence Scope | Reader Consumer |
 | --- | --- | --- | --- |
-| **Aktivitas Robot** | `system_command.py` (`RobotStateTracker`) | Bertahan hingga penutupan browser dan restart backend. | Respon ping telemetri |
-| **Sewa Operasi** | `system_command.py` | Bertahan melalui restart server; kedaluwarsa dalam 15 detik jika tidak disegarkan. | Umpan balik Ping (`in_use`, `origin_conflict`) |
-| **Mode Autopilot / Manual** | `system_command.py` | Tetap ada di seluruh penutupan tab browser. | Respon ping telemetri |
-| **Batch Misi Aktif** | `operation_supervisor.py` | Tetap ada meskipun browser ditutup; disimpan dalam RAM. | Terkunci `/string/operation_snapshot` |
-| **Siklus Hidup Kontainer** | `unit_manager.js` (RAM Server) | Hanya waktu proses server; direkonstruksi oleh `adoptExisting()` saat boot. | Konsol web admin dan penuai |
-| **Draf & Pilihan UI** | Peramban `sessionStorage` | Sesi seumur hidup; dibersihkan pada tab tutup. | Komponen Dashboard React |
-| **Catatan & Peta Armada** | MySQL Pusat (`db`) | Penyimpanan permanen. | API REST Bagian Belakang |
+| **Robot Activity** | `system_command.py` (`RobotStateTracker`) | Persists through browser closures and backend restarts. | Telemetry ping response |
+| **Operating Lease** | `system_command.py` | Persists through server restarts; expires in 15 seconds if unrefreshed. | Ping feedback (`in_use`, `origin_conflict`) |
+| **Autopilot / Manual Mode** | `system_command.py` | Persists across browser tab closures. | Telemetry ping response |
+| **Active Mission Batch** | `operation_supervisor.py` | Persists across browser closures; stored in RAM. | Latched `/string/operation_snapshot` |
+| **Container Lifecycle** | `unit_manager.js` (Server RAM) | Server runtime only; reconstructed by `adoptExisting()` on boot. | Admin web console and reaper |
+| **UI Drafts & Selections** | Browser `sessionStorage` | Session lifetime; cleared on tab close. | Dashboard React components |
+| **Fleet Records & Maps** | Central MySQL (`db`) | Permanent storage. | Backend REST API |
 
 ::: warning Browser Storage Limitation
-Menutup tab browser akan menghapus `sessionStorage`. Untuk memastikan dimulainya kembali misi dengan lancar, titik arah aktif dan batas cakupan dipasang di `/string/operation_snapshot`. Saat operator membuka kembali dasbor di tab baru, UI berlangganan topik yang terkunci ini dan sepenuhnya merekonstruksi proses aktif.
+Closing a browser tab clears `sessionStorage`. To ensure seamless mission resumption, active waypoints and coverage boundaries are latched on `/string/operation_snapshot`. When an operator re-opens the dashboard in a new tab, the UI subscribes to this latched topic and fully reconstructs the active run.
 :::
 
-## Mesin Status Aktivitas Robot
+## Robot Activity State Machine
 
-String aktivitas robot dilacak terus menerus oleh `RobotStateTracker` dan dilaporkan dalam setiap ping detak jantung.
+The robot activity string is tracked continuously by `RobotStateTracker` and reported in every heartbeat ping.
 
 ```mermaid
 stateDiagram-v2
@@ -64,31 +66,31 @@ stateDiagram-v2
   emergency_stopped --> emergency_cleared: E-Stop released
 ```
 
-### Status Aktivitas Lengkap
+### Complete Activity States
 
-| Kunci Aktivitas | Tab UI Target | Deskripsi |
+| Activity Key | Target UI Tab | Description |
 | --- | --- | --- |
-| `idle` | Menganggur | Sistem diinisialisasi; pengontrol motor diaktifkan tetapi tidak ada tujuan aktif. |
-| `manual` | Menganggur | Teleop manual aktif melalui kontrol keyboard WASD. |
-| `mapping_active` | Pemetaan | Pemetaan SLAM aktif dengan `explore_lite` eksplorasi perbatasan. |
-| `mapping_paused` | Pemetaan | Eksplorasi SLAM dihentikan sementara oleh operator. |
-| `mapping_stop_failed` | Pemetaan | Gagal menyimpan peta; Status SLAM tetap aktif sehingga operator dapat mencoba lagi. |
-| `navigation_ready` | Navigasi | Peta dimuat, `move_base` beroperasi, menunggu pengiriman tujuan. |
-| `navigation_point_published` | Navigasi | Robot aktif melintasi menuju tujuan navigasi. |
-| `boustrophedon_initializing` | Navigasi | Menghasilkan garis sapuan cakupan (dibebaskan dari batas waktu idle/macet). |
-| `boustrophedon_ready` | Navigasi | Melaksanakan garis sapuan cakupan boustrophedon. |
-| `supervisor_navigating` | Navigasi | Pengiriman titik jalan otonom dikelola oleh `operation_supervisor`. |
-| `arrived` | Navigasi | Berhasil mencapai waypoint tujuan atau menyelesaikan cakupan area. |
-| `coverage_failed` | Navigasi | Perencanaan cakupan atau eksekusi jalur dibatalkan. |
-| `auto_aligning` | Navigasi | Menjalankan kalibrasi orientasi filter partikel Penyelarasan Otomatis. |
-| `paused` | Navigasi | Misi dijeda oleh perintah operator eksplisit. |
-| `paused_due_to_ping_loss` | (Internal) | Pengawas keselamatan menghentikan gerakan robot karena ping detak jantung menurun. |
-| `emergency_stopped` | Menganggur | Penghentian darurat perangkat keras diaktifkan (kecepatan nol dijepit pada prioritas 255). |
-| `emergency_cleared` | Menganggur | Penghentian darurat dilepaskan; motor siap untuk inisialisasi ulang. |
+| `idle` | Idle | System initialized; motor controllers enabled but no active goal. |
+| `manual` | Idle | Manual teleop active via WASD keyboard controls. |
+| `mapping_active` | Mapping | Active SLAM mapping with `explore_lite` frontier exploration. |
+| `mapping_paused` | Mapping | SLAM exploration temporarily paused by operator. |
+| `mapping_stop_failed` | Mapping | Map saving failed; SLAM state remains active so operator can retry. |
+| `navigation_ready` | Navigation | Map loaded, `move_base` operational, waiting for goal dispatch. |
+| `navigation_point_published` | Navigation | Robot actively traversing towards a navigation goal. |
+| `boustrophedon_initializing` | Navigation | Generating coverage sweep lines (exempt from idle/stuck timeouts). |
+| `boustrophedon_ready` | Navigation | Executing boustrophedon coverage sweep lines. |
+| `supervisor_navigating` | Navigation | Autonomous waypoint dispatch managed by `operation_supervisor`. |
+| `arrived` | Navigation | Successfully reached destination waypoint or completed coverage area. |
+| `coverage_failed` | Navigation | Coverage planning or path execution aborted. |
+| `auto_aligning` | Navigation | Executing Auto Align particle filter orientation calibration. |
+| `paused` | Navigation | Mission paused by explicit operator command. |
+| `paused_due_to_ping_loss` | (Internal) | Safety watchdog paused robot motion due to dropped heartbeat pings. |
+| `emergency_stopped` | Idle | Hardware emergency stop engaged (zero velocity clamped at priority 255). |
+| `emergency_cleared` | Idle | Emergency stop released; motors ready for re-initialization. |
 
-## Pengawas Keamanan dan Pengawasan Detak Jantung
+## Safety Watchdog and Heartbeat Supervision
 
-Perangkat lunak onboard memantau kesehatan komunikasi melalui pengawas jendela geser yang terus menerus.
+The onboard software monitors communication health via a continuous sliding window watchdog.
 
 ```mermaid
 flowchart TB
@@ -102,18 +104,18 @@ flowchart TB
   RESET -.->|Ping Restored| UNPAUSE["Clear Emergency Pause<br/>Resume active mission safely"]
 ```
 
-### Tingkatan Waktu Pengawas Detak Jantung:
-1. **10 Detik (Jeda Gerakan)**: Jika tidak ada detak jantung valid yang muncul selama 10 detik, `system_command.py` menerapkan perintah pelintiran `/emergency_pause` pada prioritas 255. Robot melambat hingga berhenti total tanpa membatalkan sasaran aktif `move_base`. Saat komunikasi kembali, jeda akan hilang dan gerakan dilanjutkan secara otomatis.
-2. **10 Menit (Sesi Teardown)**: Jika operator tetap terputus selama 10 menit, sesi navigasi atau pemetaan aktif akan dibongkar dengan baik untuk mencegah motor terlalu panas.
-3. **30 Menit (Pematian Perangkat Keras)**: Setelah 30 menit tidak ada secara terus-menerus, driver perangkat keras akan mati ke mode siaga berdaya rendah.
+### Heartbeat Watchdog Timing Tiers:
+1. **10 Seconds (Motion Pause)**: If no valid heartbeat arrives for 10 seconds, `system_command.py` asserts a latched `/emergency_pause` twist command at priority 255. The robot decelerates to a complete stop without canceling the active `move_base` goal. When communication returns, the pause is lifted and motion resumes automatically.
+2. **10 Minutes (Session Teardown)**: If the operator remains disconnected for 10 minutes, the active navigation or mapping session is gracefully unloaded to prevent motor overheating.
+3. **30 Minutes (Hardware Shutdown)**: After 30 minutes of continuous absence, hardware drivers power down into a low-power standby mode.
 
 ::: warning Autopilot Mode Exemption
-Saat **Mode Autopilot** aktif, jeda komunikasi 10 detik akan ditangguhkan. Robot melanjutkan rute inspeksi otonomnya meskipun operator menutup laptopnya atau berkendara melalui zona mati Wi-Fi.
+When **Autopilot Mode** is active, the 10-second communication pause is suspended. The robot continues its autonomous inspection route even if the operator closes their laptop or drives through Wi-Fi dead zones.
 :::
 
-## Penyimpanan Peta dan Replikasi Dua Tingkat
+## Map Storage and Two-Tier Replication
 
-Saat menyimpan peta SLAM melalui `POST /api/mapping/stop`, robot menulis aset peta ke dua target independen:
+When saving a SLAM map via `POST /api/mapping/stop`, the robot writes map assets to two independent targets:
 
 ```mermaid
 flowchart TB
@@ -131,14 +133,14 @@ flowchart TB
   CHK_CLOUD -->|"No (Offline)"| DONE_LOCAL["Outcome = cloud_pending<br/>Unit stores map; sync_agent replicates later"]
 ```
 
-| Target Penyimpanan | Tingkat Persyaratan | Implikasi Kegagalan |
+| Storage Target | Requirement Level | Failure Implication |
 | --- | --- | --- |
-| **Unit Server media lokal** | **Wajib** | Jika penyimpanan lokal gagal, robot tidak dapat menavigasi peta ini. Sesi SLAM tetap aktif di `mapping_stop_failed` sehingga operator dapat mencoba menyimpan kembali. |
-| **Server media Cloud Central** | **Upaya Terbaik** | Jika pengunggahan cloud gagal (misalnya robot sedang offline di gudang), peta ditandai `cloud_pending`. Latar belakang `sync_agent` mereplikasi file peta secara otomatis setelah konektivitas internet kembali. |
+| **Unit Local media-server** | **Mandatory** | If local save fails, the robot cannot navigate this map. The SLAM session remains active in `mapping_stop_failed` so the operator can retry saving. |
+| **Cloud Central media-server** | **Best Effort** | If cloud upload fails (e.g. robot is offline in a warehouse), the map is marked `cloud_pending`. The background `sync_agent` replicates the map files automatically once internet connectivity returns. |
 
-## Koneksi Ulang dan Pemulihan Sesi
+## Session Reconnection and Recovery
 
-Saat operator membuka kembali tab browser yang tertutup atau masuk dari stasiun kerja baru:
+When an operator reopens a closed browser tab or logs in from a new workstation:
 
 ```mermaid
 sequenceDiagram
@@ -160,13 +162,13 @@ sequenceDiagram
   Note over Browser: Reconnection complete without losing mission state
 ```
 
-### Prinsip Pemulihan:
-1. **Perutean oleh `active_page`**: Frontend mengarahkan operator langsung ke tab operasional aktif (Navigasi atau Pemetaan) berdasarkan telemetri robot langsung.
-2. **Pembuatan Ulang Snapshot Terkunci**: Seluruh status misi (titik jalan aktif, indeks saat ini, arah perjalanan, dan poligon cakupan) dipulihkan dari topik ROS `/string/operation_snapshot` yang terkunci.
-3. **Validasi Status Hantu**: Jika cache browser menunjukkan misi sedang berlangsung tetapi robot melaporkan `idle` pada 8 sampel telemetri berturut-turut, frontend secara otomatis disetel ulang ke `idle` untuk mencegah tampilan eksekusi hantu.
+### Recovery Principles:
+1. **Routing by `active_page`**: The frontend redirects the operator directly to the active operational tab (Navigation or Mapping) based on live robot telemetry.
+2. **Latched Snapshot Rebuild**: The entire mission state (active waypoints, current index, travel direction, and coverage polygons) is restored from the latched `/string/operation_snapshot` ROS topic.
+3. **Ghost State Validation**: If the browser cache indicates a mission in progress but the robot reports `idle` across 8 consecutive telemetry samples, the frontend automatically resets to `idle` to prevent phantom execution displays.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Kontrak Pesan](/id/development/message-contracts): Skema topik berseri dan amplop ping detak jantung.
-- [Arsitektur](/id/development/architecture): Ikhtisar topologi perangkat keras dan server.
-- [Referensi API](/id/development/api-reference): Titik akhir HTTP dan referensi kode kesalahan.
+- [Message Contracts](/id/development/message-contracts): Serialized topic schemas and heartbeat ping envelopes.
+- [Architecture](/id/development/architecture): Hardware and server topology overview.
+- [API Reference](/id/development/api-reference): HTTP endpoints and error code references.

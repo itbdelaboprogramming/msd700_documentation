@@ -68,10 +68,10 @@ Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` fronte
 
 ```bash
 # 1. Clone main server repository on branch v2
-git clone -b v2 https://github.com/itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
+git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
 
 # 2. Clone the frontend dashboard repository directly into dependencies on branch v2
-git clone -b v2 https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts.git \
+git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 

@@ -2,34 +2,36 @@
 outline: deep
 search: false
 ---
-# APIリファレンス
+
+
+# API Reference
 
 <RoleBadge role="developer" />
 
-このドキュメントは、`backend_node` (Express API サーバー) の完全な REST API リファレンスであり、すべてのエンドポイント、認証メカニズム、リクエスト パラメーター、応答構造、HTTP ステータス コードについて詳しく説明しています。
+This document is the complete REST API reference for `backend_node` (Express API server), detailing all endpoints, authentication mechanisms, request parameters, response structures, and HTTP status codes.
 
-これらのエンドポイントによってラップされる MQTT ペイロードについては、[メッセージ コントラクト](/ja/development/message-contracts) を参照してください。有限状態マシンについては、[状態と動作](/ja/development/state-and-behavior) を参照してください。システムアーキテクチャについては、「アーキテクチャ」(@@MU3@@)を参照してください。
+For MQTT payloads wrapped by these endpoints, see [Message Contracts](/ja/development/message-contracts). For finite state machines, see [State and Behavior](/ja/development/state-and-behavior). For system architecture, see [Architecture](/ja/development/architecture).
 
-## API 規約
+## API Conventions
 
-### ベース URL
+### Base URLs
 
-|環境 |ベース URL |ルーティングの説明 |
+| Environment | Base URL | Routing Description |
 | --- | --- | --- |
-| **実稼働サーバー** | `https://msd.nglobal.jp/services/rosbackend` | Apache2 経由で `localhost:5000` にリバース プロキシ接続 |
-| **開発サーバー** | `http://<server-ip>:5001` |開発バックエンドコンテナへの直接 HTTP アクセス |
-| **ユニット ローカル サーバー** | `http://<unit-ip>:5002` | `backend_local` オンボードの Jetson SBC への直接 HTTP アクセス |
+| **Production Server** | `https://msd.nglobal.jp/services/rosbackend` | Reverse-proxied via Apache2 to `localhost:5000` |
+| **Development Server** | `http://<server-ip>:5001` | Direct HTTP access to development backend container |
+| **Unit Local Server** | `http://<unit-ip>:5002` | Direct HTTP access to Jetson SBC onboard `backend_local` |
 
-### 認証と認可
+### Authentication and Authorization
 
-すべての保護されたルートには、JSON Web トークン (JWT) を含む HTTP `Authorization` ヘッダーが必要です。
+All protected routes require an HTTP `Authorization` header carrying a JSON Web Token (JWT):
 
 ```http
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-トークンは HS256 を使用して暗号署名され、共有キーリング (`/srv/msd/secrets/jwt_keyring`) に対して検証されます。アクティブな秘密鍵は新しいトークンに署名しますが、最近ローテーションされた鍵は移行猶予期間中は有効のままです。
+Tokens are cryptographically signed using HS256 and validated against a shared keyring (`/srv/msd/secrets/jwt_keyring`). The active secret key signs new tokens, while recently rotated keys remain valid during a transition grace period.
 
 ```mermaid
 sequenceDiagram
@@ -51,15 +53,15 @@ sequenceDiagram
   Backend-->>Client: 200 OK { token, refresh_token } (fresh token pair)
 ```
 
-|トークンの要求 `typ` |範囲と承認 |拒否ルール |
+| Token Claim `typ` | Scope & Acceptance | Rejection Rules |
 | --- | --- | --- |
-| **標準オペレータ** (不在または `operator`) |割り当てられたロボット フリートの操作とマップへの完全なアクセス。 |有効期限が切れているか、無効なシークレットで署名されている場合は拒否されます。 |
-| `refresh` | `/user/refresh` 限定で受け付けております。 |標準 API ミドルウェアによって HTTP 401 で拒否されました。
-| `admin` |管理ルート（`/admin/api/*`）で受け付けます。 |ユーザーコンテキストが欠如しているため、標準のロボットオペレータールートでは拒否されます。 |
+| **Standard Operator** (absent or `operator`) | Full access to assigned robot fleet operations and maps. | Rejected if expired or signed with invalid secret. |
+| `refresh` | Exclusively accepted on `/user/refresh`. | Rejected by standard API middleware with HTTP 401. |
+| `admin` | Accepted on administrative routes (`/admin/api/*`). | Rejected by standard robot operator routes because it lacks user context. |
 
-### ユニット認可ミドルウェア (`attachUnit`)
+### Unit Authorization Middleware (`attachUnit`)
 
-リクエストが特定のロボットをアドレス指定するたびに、リクエスト本文の `unit_id` フィールド (またはクエリ パラメーター) が `attachUnit` ミドルウェアを通じて処理されます。
+Whenever a request addresses a specific robot, the `unit_id` field in the request body (or query parameter) is processed through the `attachUnit` middleware:
 
 ```mermaid
 flowchart TB
@@ -72,9 +74,9 @@ flowchart TB
   ATTACH -->|Valid & Authorized| EXEC["Execute Target Handler"]
 ```
 
-## 標準応答エンベロープ
+## Standard Response Envelopes
 
-### 成功の応答
+### Success Response
 ```json
 {
   "success": true,
@@ -86,7 +88,7 @@ flowchart TB
 }
 ```
 
-### エラー応答
+### Error Response
 ```json
 {
   "success": false,
@@ -94,7 +96,7 @@ flowchart TB
 }
 ```
 
-### 配列/リスト応答
+### Array / List Response
 ```json
 {
   "success": true,
@@ -109,21 +111,21 @@ flowchart TB
 }
 ```
 
-## 認証エンドポイント
+## Authentication Endpoints
 
-### 1. ユーザーログイン
+### 1. User Login
 `POST /user/login`
 
-オペレーターアカウントを認証し、アクセス/リフレッシュトークンを発行します。
+Authenticates an operator account and issues access/refresh tokens.
 
-- **リクエスト本文**:
+- **Request Body**:
 ```json
 {
   "username": "operator1",
   "password": "SecurePassword123"
 }
 ```
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -135,18 +137,18 @@ flowchart TB
 }
 ```
 
-### 2. トークンのリフレッシュ
+### 2. Token Refresh
 `POST /user/refresh`
 
-有効なリフレッシュ トークンを新しいトークン ペアと交換します。
+Exchanges a valid refresh token for a fresh token pair.
 
-- **リクエスト本文**:
+- **Request Body**:
 ```json
 {
   "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -155,15 +157,15 @@ flowchart TB
 }
 ```
 
-## 部隊管理と艦隊運用
+## Unit Management and Fleet Operations
 
-### 1. アクセス可能なユニットをリストする
+### 1. List Accessible Units
 `GET /api/units`
 
-認証されたユーザーのアクティブなレンタル プロファイルに割り当てられているすべての登録ロボットを返します。
+Returns all enrolled robots assigned to the authenticated user's active rental profile.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **応答 (200 OK)**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -181,13 +183,13 @@ flowchart TB
 }
 ```
 
-### 2. ロボットのハートビート Ping
+### 2. Robot Heartbeat Ping
 `POST /api/units/ping`
 
-liveness ハートビートを送信し、オペレーティング リースを更新し、現在のテレメトリを返します。
+Transmits liveness heartbeat, updates operating lease, and returns current telemetry.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **リクエスト本文**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
@@ -198,7 +200,7 @@ liveness ハートビートを送信し、オペレーティング リースを�
   "force_takeover": false
 }
 ```
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -216,20 +218,20 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-### 3. 緊急停止/一時停止
+### 3. Emergency Stop / Pause
 `POST /api/hardware/emergency`
 
-ハードウェアの緊急停止または動作一時停止を切り替えます。
+Toggles hardware emergency stop or motion pause.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **リクエスト本文**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
   "action": "activate"
 }
 ```
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -237,15 +239,15 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-## ナビゲーションとミッションの派遣
+## Navigation and Mission Dispatch
 
-### 1. ナビゲーションモードを初期化する
+### 1. Initialize Navigation Mode
 `POST /api/navigation/init`
 
-指定されたマップを使用してロボット上のナビゲーション スタックを起動します。
+Launches the navigation stack on the robot with a specified map.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **リクエスト本文**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
@@ -253,13 +255,13 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-### 2. 派遣のウェイポイント目標
+### 2. Dispatch Waypoint Goal
 `POST /api/navigation/pointstamped`
 
-単一のターゲット目的地座標をロボットのナビゲーション スタックに送信します。
+Sends a single target destination coordinate to the robot's navigation stack.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **リクエスト本文**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
@@ -269,13 +271,13 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-### 3. ボストロフェドン地域のカバーを開始する
+### 3. Start Boustrophedon Area Coverage
 `POST /api/boustrophedon/init`
 
-定義されたポリゴン境界を越える自律的なバストフェドン スイープ カバレッジを開始します。
+Launches autonomous boustrophedon sweep coverage over defined polygon boundaries.
 
-- **ヘッダー**: `Authorization: Bearer <token>`
-- **リクエスト本文**:
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
@@ -298,21 +300,21 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-## マッピング (SLAM) 操作
+## Mapping (SLAM) Operations
 
-### 1. マッピングセッションの開始
+### 1. Start Mapping Session
 `POST /api/mapping/start`
 
-ターゲット ユニットで SLAM (gmapping) モードを開始します。
+Initiates SLAM (gmapping) mode on the target unit.
 
-- **リクエスト本文**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
 
-### 2. マッピングを停止してマップを保存する
+### 2. Stop Mapping and Save Map
 `POST /api/mapping/stop`
 
-アクティブな占有グリッドを保存し、サムネイル メタデータを生成し、アセットをアップロードします。
+Saves the active occupancy grid, generates thumbnail metadata, and uploads assets.
 
-- **リクエスト本文**:
+- **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
@@ -321,7 +323,7 @@ liveness ハートビートを送信し、オペレーティング リースを�
   "homebase_y": 0.0
 }
 ```
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -330,12 +332,12 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-## 地図とルートのデータ管理
+## Map and Route Data Management
 
-### 1. リストマップ
+### 1. List Maps
 `GET /api/maps?profile_id=4`
 
-- **応答 (200 OK)**:
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -352,10 +354,10 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-### 2. カスタムウェイポイントルートを保存する
+### 2. Save Custom Waypoint Route
 `POST /api/routes`
 
-- **リクエスト本文**:
+- **Request Body**:
 ```json
 {
   "profile_id": 4,
@@ -369,14 +371,14 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-## オートアラインシステム
+## Auto Align System
 
 `POST /api/autoalign/start`
 
-パーティクル フィルターの収束検証と、参照ジオメトリに対する自動方向調整を開始します。
+Initiates particle filter convergence validation and automatic orientation alignment against reference geometry.
 
-- **リクエスト本文**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
-- **応答 (200 OK)**:
+- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+- **Response (200 OK)**:
 ```json
 {
   "success": true,
@@ -384,8 +386,8 @@ liveness ハートビートを送信し、オペレーティング リースを�
 }
 ```
 
-## 関連ドキュメント
+## Related Documentation
 
-- [メッセージ コントラクト](/ja/development/message-contracts): MQTT および ROS トピックのシリアル化形式。
-- [状態と動作](/ja/development/state-and-behavior): 詳細なステート マシンと障害遷移。
-- [データベース スキーマ](/ja/development/database-schema): MySQL テーブルとエンティティ関係モデル。
+- [Message Contracts](/ja/development/message-contracts): MQTT and ROS topic serialization formats.
+- [State and Behavior](/ja/development/state-and-behavior): Detailed state machines and failure transitions.
+- [Database Schema](/ja/development/database-schema): MySQL tables and entity relationship models.

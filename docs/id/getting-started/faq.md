@@ -2,70 +2,72 @@
 outline: deep
 search: false
 ---
-# Pertanyaan yang Sering Diajukan (FAQ)
+
+
+# Frequently Asked Questions (FAQ)
 
 <RoleBadge role="user" />
 
-Jawaban atas pertanyaan operasional umum mengenai platform robot MSD700.
+Answers to common operational questions regarding the MSD700 robotic platform.
 
 ---
 
 ::: details 1. What is the MSD700 robot designed to do?
-MSD700 adalah platform robot bergerak otonom yang dirancang untuk pemetaan lingkungan (SLAM), transportasi titik-ke-titik otonom, dan cakupan area sistematis (misalnya pembersihan lantai, desinfeksi, atau pemindaian permukaan) di fasilitas dalam ruangan seperti gudang, koridor kantor, dan pabrik industri.
+The MSD700 is an autonomous mobile robot platform designed for environmental mapping (SLAM), autonomous point-to-point transport, and systematic area coverage (e.g. floor cleaning, disinfection, or surface scanning) in indoor facilities such as warehouses, office corridors, and industrial plants.
 :::
 
 ::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
-Akun pengguna Anda ada, namun administrator belum menugaskannya ke **Profil Penyewaan** yang berisi robot aktif. Hubungi administrator fasilitas atau penyelia lab Anda untuk memberikan akses akun Anda ke profil persewaan organisasi Anda.
+Your user account exists, but an administrator has not yet assigned it to a **Rental Profile** containing active robots. Contact your facility administrator or lab supervisor to grant your account access to your organization's rental profile.
 :::
 
 ::: details 3. Can two operators control the same robot simultaneously?
-Tidak. Untuk memastikan keselamatan, setiap robot diatur oleh **sewa operasi eksklusif** yang diadakan dalam satu sesi aktif:
-- Jika ada rekan yang mengoperasikan robot, unit akan menampilkan lencana **Sedang Digunakan** dan perintah diblokir.
-- Jika Anda membuka tab kedua atau berpindah perangkat dengan akun Anda sendiri, dasbor akan menampilkan tombol **Ambil Alih Kontrol**, sehingga Anda dapat secara eksplisit mentransfer sewa ke jendela baru.
+No. To ensure safety, each robot is governed by an **exclusive operating lease** held by a single active session:
+- If a colleague is operating the robot, the unit displays an **In Use** badge and commands are blocked.
+- If you open a second tab or switch devices under your own account, the dashboard displays a **Take Over Control** button, allowing you to explicitly transfer the lease to your new window.
 :::
 
 ::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
-Sistem merespons berdasarkan mode operasi aktif:
-- **Manual Standar / Mode Navigasi**: Jika robot kehilangan kontak dengan browser Anda selama **10 detik**, robot secara otomatis menjalankan **Jeda Gerakan Aman** dan berhenti sambil menyimpan misi di memori. Menghubungkan kembali browser Anda secara otomatis melanjutkan misi.
-- **Mode Autopilot AKTIF**: Jika Autopilot diaktifkan, robot mengabaikan pemutusan koneksi browser dan secara mandiri menyelesaikan seluruh urutan titik jalan atau daftar putar cakupan area sebelum kembali ke basisnya.
+The system responds based on the active operating mode:
+- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
+- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and autonomously completes its entire waypoint sequence or area coverage playlist before returning to its homebase.
 :::
 
 ::: details 5. What is the Homebase point and why is it important?
-Saat membuat peta selama sesi SLAM, mengklik **Set Homebase Here** mencatat koordinat stasiun dok fisik robot $(x=0, y=0, \theta=0)$. Daftar putar otomatis di masa depan menggunakan koordinat ini untuk secara otomatis menavigasi robot kembali ke stasiun pengisian dayanya setelah menyelesaikan misi.
+When creating a map during a SLAM session, clicking **Set Homebase Here** records the robot's physical docking station coordinates $(x=0, y=0, \theta=0)$. Future automated playlists use this coordinate to automatically navigate the robot back to its charging station upon completing a mission.
 :::
 
 ::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?
-Sinar optik LiDAR 2D/3D dapat menembus kaca bening atau menyebarkan cermin reflektif, yang dapat menyebabkan batas tidak terlihat pada peta SLAM mentah. Untuk melindungi robot:
-1. Buka peta di dashboard.
-2. Gunakan alat **Zona Jauhkan** untuk menggambar batas pengecualian berwarna merah virtual di sepanjang partisi kaca dan titik drop-off.
-3. Perencana gerak memperlakukan garis maya ini sebagai dinding kokoh yang tidak dapat ditembus.
+Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mirrors, which may cause invisible boundaries on a raw SLAM map. To protect the robot:
+1. Open the map in the dashboard.
+2. Use the **Keep-Out Zone** tool to draw virtual red exclusion boundaries along all glass partitions and drop-offs.
+3. The motion planner treats these virtual lines as solid impenetrable walls.
 :::
 
 ::: details 7. How fast does the robot drive?
-Batas kecepatan maksimum diberlakukan dalam perangkat lunak untuk keselamatan tempat kerja:
-- **Kecepatan Default**: `0.20 m/s` (kira-kira 0,72 km/jam).
-- **Rentang yang Dapat Disesuaikan**: Anda dapat menyesuaikan kecepatan linier antara `0.05 m/s` dan `0.40 m/s` menggunakan penggeser kecepatan di panel kontrol kanan bawah.
-- **Kecepatan Putar Sudut**: Dapat dikonfigurasi hingga `0.50 rad/s`.
+Maximum speed limits are enforced in software for workplace safety:
+- **Default Speed**: `0.20 m/s` (approx. 0.72 km/h).
+- **Adjustable Range**: You can adjust linear speed between `0.05 m/s` and `0.40 m/s` using the speed slider in the bottom-right control panel.
+- **Angular Turning Speed**: Configurable up to `0.50 rad/s`.
 :::
 
 ::: details 8. How long does the battery last and how is it monitored?
-Robot ini ditenagai oleh baterai berkapasitas tinggi LiFePO4 24V yang menyediakan **4 hingga 6 jam** pengoperasian otonom terus menerus:
-- Tegangan dan persentase baterai langsung ditampilkan di bilah header atas.
-- Jika baterai turun di bawah **20%**, dasbor akan menampilkan peringatan kuning.
-- Jika baterai turun di bawah **15%**, misi yang sedang berjalan akan dijeda dan robot memprioritaskan untuk kembali ke stasiun pengisian daya di pangkalannya.
+The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 to 6 hours** of continuous autonomous operation:
+- Live battery voltage and percentage are displayed in the top header bar.
+- If the battery falls below **20%**, the dashboard surfaces an amber warning.
+- If the battery falls below **15%**, running missions are paused and the robot prioritizes returning to its homebase charging station.
 :::
 
 ::: details 9. Can I operate the robot if there is no internet connection in the building?
-Ya. Setiap robot MSD700 menjalankan server web onboard. Hubungkan laptop atau tablet Anda langsung ke jaringan Wi-Fi robot (`MSD700_Unit_<ULID>`) dan buka `http://<jetson-ip>:3000`. Anda dapat melakukan semua pemetaan, teleoperasi, dan rutinitas cakupan sepenuhnya secara offline.
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop or tablet directly to the robot's Wi-Fi network (`MSD700_Unit_<ULID>`) and open `http://<jetson-ip>:3000`. You can perform all mapping, teleoperation, and coverage routines completely offline.
 :::
 
 ::: details 10. How does the Emergency Stop work?
-Mengklik tombol merah **Berhenti Darurat** (atau menekan tombol `Escape` pada keyboard Anda) akan langsung mengesampingkan semua rencana otonom yang aktif, menjadikan kecepatan motor ke nol dalam hitungan milidetik, dan mengunci status keselamatan. Untuk melanjutkan pengoperasian, selesaikan kondisi keselamatan dan klik **Lepaskan Berhenti Darurat**.
+Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your keyboard) instantly overrides all active autonomous plans, brings motor velocity to zero within milliseconds, and latches the safety state. To resume operations, resolve the safety condition and click **Release Emergency Stop**.
 :::
 
 ---
 
-## Masih ada pertanyaan?
+## Still have questions?
 
-- Lihat [Panduan Mengatasi Masalah Operator](/id/getting-started/troubleshooting).
-- Untuk pemeliharaan dan pemasangan perangkat keras, lihat [Pengaturan Sistem](/id/setup/system-setup).
+- Consult the [Operator Troubleshooting Guide](/id/getting-started/troubleshooting).
+- For hardware maintenance and installation, see [System Setup](/id/setup/system-setup).

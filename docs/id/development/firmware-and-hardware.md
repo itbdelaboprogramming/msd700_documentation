@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Firmware, Mikrokontroler, dan Bus Perangkat Keras
+
+
+# Firmware, Microcontroller, and Hardware Bus
 
 <RoleBadge role="developer" />
 
-Dokumen ini memberikan spesifikasi teknis mendalam tentang firmware mikrokontroler tertanam, antarmuka driver motor, decoding encoder optik, algoritma kontrol kecepatan PID diskrit, dan sirkuit telemetri analog yang diterapkan pada robot MSD700.
+This document provides a deep technical specification of the embedded microcontroller firmware, motor driver interfaces, optical encoder decoding, discrete PID velocity control algorithms, and analog telemetry circuitry implemented on the MSD700 robot.
 
-## Topologi Kontrol Tertanam
+## Embedded Control Topology
 
 ```mermaid
 flowchart TD
@@ -57,72 +59,72 @@ flowchart TD
 
 ---
 
-## Pinout dan Pengkabelan Listrik Perangkat Keras
+## Hardware Electrical Pinout and Wiring
 
-Komunikasi antara NVIDIA Jetson dan mikrokontroler berjalan melalui USB UART berkecepatan tinggi dengan isolasi optik:
+Communication between the NVIDIA Jetson and microcontroller runs over high-speed USB UART with optical isolation:
 
-| Fungsi Sinyal | Pin Mikrokontroler | Koneksi Driver / Periferal | Karakteristik Listrik |
+| Signal Function | Microcontroller Pin | Driver / Peripheral Connection | Electrical Characteristics |
 | --- | --- | --- | --- |
-| **PWM Motor Kiri** | Pin 5 (Pengatur Waktu 3) | Gerbang Kecepatan H-Bridge Kiri | Logika 0 hingga 5V, PWM 20 kHz (Drive Tak Terdengar Senyap) |
-| **DIR Motor Kiri** | Sematkan 4 | Masukan Arah H-Jembatan Kiri | Logika Tinggi : Maju, Logika Rendah : Mundur |
-| **PWM Motor Kanan** | Pin 6 (Pengatur Waktu 4) | Gerbang Kecepatan H-Bridge Kanan | Logika 0 hingga 5V, PWM 20 kHz |
-| **DIR Motor Kanan** | Sematkan 7 | Input Arah H-Jembatan Kanan | Logika Tinggi : Maju, Logika Rendah : Mundur |
-| **Encoder Kiri A** | Pin 2 (INT0) | Saluran Encoder Optik Kiri A | Interupsi TTL 5V (Tepi Naik/Turun) |
-| **Encoder Kiri B** | Pin 3 (INT1) | Saluran Encoder Optik Kiri B | Interupsi TTL 5V |
-| **Encoder Kanan A** | Pin 18 (INT5) | Saluran Encoder Optik Kanan A | Interupsi TTL 5V |
-| **Encoder Kanan B** | Pin 19 (INT4) | Saluran Encoder Optik Kanan B | Interupsi TTL 5V |
-| **ADC Tegangan Baterai**| Pin A0 (ADC0) | Output Pembagi Resistor Presisi | Tegangan Analog 0 hingga 5.0V |
-| **Jalur Keamanan E-Stop** | Sematkan 12 | Driver Gerbang Relai Perangkat Keras | Logika Tinggi: Motor Diaktifkan, Rendah: Cutoff |
+| **Left Motor PWM** | Pin 5 (Timer 3) | Left H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM (Quiet Inaudible Drive) |
+| **Left Motor DIR** | Pin 4 | Left H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
+| **Right Motor PWM** | Pin 6 (Timer 4) | Right H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM |
+| **Right Motor DIR** | Pin 7 | Right H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
+| **Left Encoder A** | Pin 2 (INT0) | Left Optical Encoder Channel A | 5V TTL Interrupt (Rising/Falling Edge) |
+| **Left Encoder B** | Pin 3 (INT1) | Left Optical Encoder Channel B | 5V TTL Interrupt |
+| **Right Encoder A** | Pin 18 (INT5) | Right Optical Encoder Channel A | 5V TTL Interrupt |
+| **Right Encoder B** | Pin 19 (INT4) | Right Optical Encoder Channel B | 5V TTL Interrupt |
+| **Battery Voltage ADC**| Pin A0 (ADC0) | Precision Resistor Divider Output | 0 to 5.0V Analog Voltage |
+| **E-Stop Safety Line** | Pin 12 | Hardware Relay Gate Driver | Logic High: Motors Enabled, Low: Cutoff |
 
 ---
 
-## Kontrol Kecepatan PID Diskrit Loop Tertutup
+## Closed-Loop Discrete PID Velocity Control
 
-Firmware menjalankan loop kontrol PID diskrit ganda pada $100\text{ Hz}$ ($\Delta t = 0.01\text{ s}$) dengan penjepitan anti-windup untuk mengontrol kecepatan roda:
+The firmware runs dual discrete PID control loops at $100\text{ Hz}$ ($\Delta t = 0.01\text{ s}$) with anti-windup clamping to control wheel velocity:
 
-### Formulasi Kesalahan Diskrit:
-$$e_k = v_{\text{target}} - v_{\text{diukur}}$$
+### Discrete Error Formulation:
+$$e_k = v_{\text{target}} - v_{\text{measured}}$$
 
-### Output Kontrol PID dengan Penjepit:
+### PID Control Output with Clamping:
 $$\text{PWM}_k = K_p \cdot e_k + K_i \sum_{j=0}^k e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
 
-### Perlindungan Integrator Anti-Windup:
-Untuk mencegah kerusakan integrator ketika motor dibebani sementara atau terhenti pada bidang miring:
+### Anti-Windup Integrator Protection:
+To prevent integrator windup when motors are temporarily loaded or stalled against an incline:
 
-$$\jumlah e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \kanan)$$
+$$\sum e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \right)$$
 
-$$\text{PWM}_k = \text{penjepit}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
+$$\text{PWM}_k = \text{clamp}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
 
-Dimana $\text{PWM}_{\max} = 255$ ($8$-bit resolusi timer).
-
----
-
-## Sirkuit Penginderaan Tegangan Baterai
-
-Robot ini ditenagai oleh baterai LiFePO4 24V (pengisian penuh: $29,2\text{ V}$, nominal: $25,6\text{ V}$, batas: $21,0\text{ V}$).
-
-Pembagi tegangan terpasang menurunkan tegangan baterai ke kisaran $0\text{ hingga }5\text{ V}$ dari mikrokontroler ADC:
-
-$$V_{adc} = V_{kelelawar} \cdot \frac{R_2}{R_1 + R_2}$$
-
-Dimana $R_1 = 30\text{ k}\Omega$ dan $R_2 = 5,1\text{ k}\Omega$ (Rasio Pembagi $K_{div} = 0,1453$).
-
-### Rekonstruksi Tegangan di Firmware:
-$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \kiri( \frac{R_1 + R_2}{R_2} \kanan)$$
-
-Dimana $V_{ref} = 5,00\teks{ V}$.
+Where $\text{PWM}_{\max} = 255$ ($8$-bit timer resolution).
 
 ---
 
-## Pengawas Keamanan Perangkat Keras
+## Battery Voltage Sensing Circuitry
 
-Untuk mencegah kondisi robot yang kabur karena OS host terkunci atau kabel serial putus, mikrokontroler menjalankan pengawas perangkat keras otonom:
+The robot is powered by a 24V LiFePO4 battery pack (full charge: $29.2\text{ V}$, nominal: $25.6\text{ V}$, cutoff: $21.0\text{ V}$).
 
-1. **Timer Expiry**: Register timer pengawas direset ke $500\text{ ms}$ pada setiap paket kecepatan valid yang diverifikasi checksum.
-2. **Safety Cutoff**: Jika tidak ada paket yang tiba sebesar $500\text{ ms}$, mikrokontroler segera menjepit output PWM motor ke nol dan memutus jalur gerbang `ESTOP_RELAY`.
+An onboard voltage divider scales battery voltage down to the $0\text{ to }5\text{ V}$ range of the microcontroller ADC:
 
-## Dokumentasi Terkait
+$$V_{adc} = V_{bat} \cdot \frac{R_2}{R_1 + R_2}$$
 
-- [Penggabungan dan Kontrol Sensor](/id/development/sensor-fusion-and-control): Integrasi odometri dan EKF.
-- [Peta Biaya dan Perencana](/id/development/costmaps-and-planners): Parameter batas kecepatan.
-- [Status dan Perilaku](/id/development/state-and-behavior): Mesin status berhenti darurat.
+Where $R_1 = 30\text{ k}\Omega$ and $R_2 = 5.1\text{ k}\Omega$ (Divider Ratio $K_{div} = 0.1453$).
+
+### Voltage Reconstruction in Firmware:
+$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \left( \frac{R_1 + R_2}{R_2} \right)$$
+
+Where $V_{ref} = 5.00\text{ V}$.
+
+---
+
+## Hardware Safety Watchdog
+
+To prevent runaway robot conditions caused by host OS lockups or severed serial cables, the microcontroller executes an autonomous hardware watchdog:
+
+1. **Timer Expiry**: The watchdog timer register resets to $500\text{ ms}$ upon every valid checksum-verified velocity packet.
+2. **Safety Cutoff**: If no packet arrives for $500\text{ ms}$, the microcontroller immediately clamps motor PWM outputs to zero and drops the `ESTOP_RELAY` gate line.
+
+## Related Documentation
+
+- [Sensor Fusion and Control](/id/development/sensor-fusion-and-control): Odometry integration and EKF.
+- [Costmaps and Planners](/id/development/costmaps-and-planners): Velocity limit parameters.
+- [State and Behavior](/id/development/state-and-behavior): Emergency stop state machines.

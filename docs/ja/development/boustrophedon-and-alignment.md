@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# Boustrophedon カバレッジとゼロスピン アライメント アーキテクチャ
+
+
+# Boustrophedon Coverage & Zero-Spin Alignment Architecture
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、Boustrophedon Cellular Decomposition カバレッジ プランニング パイプライン、デュアル ジオメトリ クリアランス計算、5 層障害物管理、および Correlative Scan Matcher (CSM) ゼロスピン アライメントの包括的なアルゴリズム仕様を提供します。
+This document provides a comprehensive algorithmic specification of the Boustrophedon Cellular Decomposition coverage planning pipeline, dual-geometry clearance calculations, five-layer obstacle management, and Correlative Scan Matcher (CSM) zero-spin alignment.
 
-## デュアル ロボット ジオメトリ
+## Dual Robot Geometries
 
-MSD700 カバレッジ計画の基本的な設計原則は、**ロボットには、異なる計算に使用される 2 つの異なる幾何学的寸法がある**ということです。
+A foundational design principle in MSD700 coverage planning is that **the robot has two distinct geometric dimensions used for different calculations**:
 
 ```mermaid
 flowchart LR
@@ -27,36 +29,36 @@ flowchart LR
   PhysicalBody -.->|"Includes 0.075 m Lateral Safety Padding"| SafetyEnvelope
 ```
 
-|幾何学的定義 |サイズ 寸法 |アルゴリズムの使用法 |
+| Geometric Definition | Size Dimensions | Algorithmic Usage |
 | --- | --- | --- |
-| **肉体** (`~body_footprint`) |長さ 0.90 m x 幅 0.70 m |レーンピッチとスイープエリア到達計算を決定します。 |
-| **コストマップ安全封筒** |長さ 1.20 m x 幅 0.85 m | TEB ローカル プランナーの許可と実現可能性の転換を強制します。 |
+| **Physical Body** (`~body_footprint`) | 0.90 m length x 0.70 m width | Determines lane pitch and swept-area attainment calculations. |
+| **Costmap Safety Envelope** | 1.20 m length x 0.85 m width | Enforces TEB local planner clearances and turning feasibility. |
 
-`costmap_common_params.yaml` のコストマップ エンベロープには、意図的な安全パッド (片側あたり横方向 0.075 m、縦方向 0.150 m) が含まれています。 `path_coverage_node` は、`/move_base/global_costmap/footprint` からエンベロープを直接読み取り、ナビゲーション プランナーとの同期を維持します。
+The costmap envelope in `costmap_common_params.yaml` includes intentional safety padding (0.075 m lateral and 0.150 m longitudinal per side). `path_coverage_node` reads the envelope directly from `/move_base/global_costmap/footprint` to maintain synchronization with navigation planners.
 
-### 派生クリアランス定数 (`libs/coverage_geometry.py`)
+### Derived Clearance Constants (`libs/coverage_geometry.py`)
 
-|クリアランス定数 |値 |数式 |
+| Clearance Constant | Value | Mathematical Formula |
 | --- | --- | --- |
-| `wall_clearance` | **0.575 m** | $r_{\text{刻印}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `turn_clearance` | **0.885 m** | $r_{\text{外接}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `wall_clearance` | **0.575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `turn_clearance` | **0.885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
 | `pitch` | **0.574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
 
-### 物理的な幾何学的制限:
-- **ロボットが進入できる最も狭い廊下**: **1.15 m** ($2 \times \text{wall\_clearance}$)。
-- **180 度回転できる最も狭い廊下ロボット**: **1.77 m** ($2 \times \text{turn\_clearance}$)。
-- **2 車線の清掃に相当する最も狭い廊下**: **1.72 m**。
-- **壁に沿った到達不能な境界ストリップ**: **0.225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$)。
+### Physical Geometric Limits:
+- **Narrowest corridor robot can enter**: **1.15 m** ($2 \times \text{wall\_clearance}$).
+- **Narrowest corridor robot can pivot 180 degrees**: **1.77 m** ($2 \times \text{turn\_clearance}$).
+- **Narrowest corridor worth 2-lane sweeping**: **1.72 m**.
+- **Unreachable boundary strip along walls**: **0.225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Raw Coverage
-周囲 0.225 m のストリップは衝突せずに横断できないため、長方形の部屋 (例: 3 x 6 m) は理論上の最大カバー率 **78.6%** に達します。システムのパフォーマンスは、未調整の生の面積の割合ではなく、**到達率** (実際に掃引された到達可能なフロアの割合) によって測定されます。
+Because the 0.225 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of **78.6%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
 :::
 
 ---
 
-## ブストロフェドンの細胞分解アルゴリズム
+## Boustrophedon Cellular Decomposition Algorithm
 
-カバレッジ プランナーは、内部障害物のある任意の凹面の多角形境界を、凸面の障害物のないサブセルに分解します。
+The coverage planner decomposes arbitrary concave polygonal boundaries with internal obstacles into convex, obstacle-free sub-cells:
 
 ```mermaid
 flowchart TD
@@ -68,16 +70,16 @@ flowchart TD
   F --> G["Goal Dispatch to move_base"]
 ```
 
-### クリティカルポイントの分類:
-$x$ 軸に沿った垂直スイープ ラインの進行中、境界頂点は自由空間のローカル接続に基づいて分類されます。
-1. **IN クリティカル ポイント**: 空き領域が拡大すると、新しいセルが開きます。
-2. **OUT クリティカル ポイント**: セルは境界が収束すると終了します。
-3. **分割臨界点**: 内部障害物により、アクティブ セルが 2 つの異なる並列サブセルに分割されます。
-4. **臨界点をマージ**: 2 つの平行なサブセルが障害物の後縁を越えて再結合します。
+### Critical Point Classification:
+During vertical sweep line progression along the $x$-axis, boundary vertices are classified based on the local connectivity of the free space:
+1. **IN Critical Point**: A new cell opens as free space expands.
+2. **OUT Critical Point**: A cell terminates as boundaries converge.
+3. **SPLIT Critical Point**: An internal obstacle divides an active cell into two distinct parallel sub-cells.
+4. **MERGE Critical Point**: Two parallel sub-cells rejoin past the trailing edge of an obstacle.
 
 ---
 
-## 5 層の障害物管理
+## Five-Layer Obstacle Management
 
 ```mermaid
 flowchart TB
@@ -92,11 +94,11 @@ flowchart TB
 
 ---
 
-## ゼロスピン方向のアライメント (相関スキャン マッチング)
+## Zero-Spin Orientation Alignment (Correlative Scan Matching)
 
-ロボットが事前に記録されたマップ上で未知のポーズに配置される場合、従来の AMCL では粒子の分散を崩壊させるためにその場で 360 度回転する必要があります。
+When the robot is placed in an unknown pose on a pre-recorded map, traditional AMCL requires a 360-degree in-place rotation to collapse particle dispersion.
 
-MSD700 は **相関スキャン マッチング (CSM)** を実装し、動きを伴わずに方向と位置を瞬時に計算します。
+MSD700 implements **Correlative Scan Matching (CSM)** to calculate orientation and position instantly without motion:
 
 ```mermaid
 flowchart LR
@@ -107,18 +109,18 @@ flowchart LR
   CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
 
-### 数学的定式化:
-$N$ レーザー スキャン ポイント $\mathbf{p}_i = [x_i, y_i]^T$ と静的占有グリッド マップ $M(x, y)$ が与えられると、スキャン マッチャーは相関スコアを最大化する剛体変換 $(\Delta x, \Delta y, \Delta \theta)$ を見つけます。
+### Mathematical Formulation:
+Given $N$ laser scan points $\mathbf{p}_i = [x_i, y_i]^T$ and a static occupancy grid map $M(x, y)$, the scan matcher finds the rigid transform $(\Delta x, \Delta y, \Delta \theta)$ that maximizes the correlation score:
 
 $$S(\Delta x, \Delta y, \Delta \theta) = \sum_{i=1}^N M\left( \mathbf{R}(\Delta \theta) \mathbf{p}_i + \begin{bmatrix} \Delta x \\ \Delta y \end{bmatrix} \right)$$
 
-$\mathbf{R}(\Delta \theta)$ は 2D 回転行列です。
+Where $\mathbf{R}(\Delta \theta)$ is the 2D rotation matrix:
 $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta \theta) \\ \sin(\Delta \theta) & \cos(\Delta \theta) \end{bmatrix}$$
 
-一致スコアの信頼度が $65\%$ を超えると、推定されたポーズが `/initialpose` に公開され、回転モーションがゼロの $50\text{ ms}$ 未満でロボットの位置を特定します。
+When the match score confidence exceeds $65\%$, the estimated pose is published to `/initialpose`, localizing the robot in less than $50\text{ ms}$ with zero rotational motion.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [シミュレーション](/ja/development/simulation): 倉庫のテスト環境とスケール モデル。
-- [メッセージ コントラクト](/ja/development/message-contracts): カバレッジ コマンド エンベロープと ACK プロトコル。
-- [状態と動作](/ja/development/state-and-behavior): ナビゲーションとカバレッジの有限状態マシン。
+- [Simulation](/ja/development/simulation): Warehouse testing environment and scale models.
+- [Message Contracts](/ja/development/message-contracts): Coverage command envelopes and ACK protocols.
+- [State and Behavior](/ja/development/state-and-behavior): Navigation and coverage finite state machines.

@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# 座標フレーム、変換、TF アーキテクチャ
+
+
+# Coordinate Frames, Transforms, and TF Architecture
 
 <RoleBadge role="developer" />
 
-この文書は、MSD700 ロボット システムに実装される座標変換ツリー (`tf` / `tf2`)、空間参照フレーム、動的変換ブロードキャスター、センサー オフセット、およびクロスマシン クロック リスタンプの包括的な仕様を提供します。
+This document provides a comprehensive specification of the coordinate transform tree (`tf` / `tf2`), spatial reference frames, dynamic transform broadcasters, sensor offsets, and cross-machine clock restamping implemented in the MSD700 robot system.
 
-## 座標フレーム階層 (TF ツリー)
+## Coordinate Frame Hierarchy (TF Tree)
 
-座標変換ツリーは、ROS REP-103 (標準測定単位および座標規則) および REP-105 (モバイル プラットフォーム用の座標フレーム) に準拠しています。
+The coordinate transform tree adheres to ROS REP-103 (Standard Units of Measure & Coordinate Conventions) and REP-105 (Coordinate Frames for Mobile Platforms):
 
 ```mermaid
 flowchart TD
@@ -29,22 +31,22 @@ flowchart TD
 
 ---
 
-## パブリッシャーの変換とレートの更新
+## Transform Publishers and Update Rates
 
-|エッジの変換 |ブロードキャスターノード |レート |数学的ソース |停止中の動作 |
+| Transform Edge | Broadcaster Node | Rate | Mathematical Source | Behavior During Outages |
 | --- | --- | --- | --- | --- |
-| `map -> odom` | `amcl` / `slam_gmapping` | 10Hz |静的なレーザー占有グリッドに対する走行距離のドリフトを修正します。 |ローカライズされた場合は離散ジャンプ。レーザー スキャンが中断された場合でも、最後の変換を保持します。 |
-| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30Hz |ホイールエンコーダー速度と IMU ヨー/角速度の継続的な融合。 |継続的でスムーズな、ドリフトのない短期軌道。 |
-| `base_footprint -> base_link` | `robot_state_publisher` |静的 |標高オフセットを修正しました ($z = 0.010\text{ m}$)。 | URDF からの変換を修正しました。 |
-| `base_link -> base_scan` | `robot_state_publisher` |静的 |物理的なマストの取り付け座標 ($x = 0.250\text{ m}, z = 0.610\text{ m}$)。 | URDF からの変換を修正しました。 |
-| `base_link -> imu_link` | `robot_state_publisher` |静的 |物理シャーシ マウント ($z = 0.200\text{ m}$)。 | URDF からの変換を修正しました。 |
-| `base_link -> camera_link` | `robot_state_publisher` |静的 |フロントシャーシマウント ($x = 0.450\text{ m}、z = 0.350\text{ m}$)。 | URDF からの変換を修正しました。 |
+| `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Corrects odometric drift against static laser occupancy grid. | Discrete jumps when localized; preserves last transform if laser scans drop. |
+| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Continuous fusion of wheel encoder velocities and IMU yaw/angular rates. | Continuous, smooth, drift-free short-term trajectory. |
+| `base_footprint -> base_link` | `robot_state_publisher` | Static | Fixed elevation offset ($z = 0.010\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> base_scan` | `robot_state_publisher` | Static | Physical mast mounting coordinates ($x = 0.250\text{ m}, z = 0.610\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> imu_link` | `robot_state_publisher` | Static | Physical chassis mount ($z = 0.200\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> camera_link` | `robot_state_publisher` | Static | Front chassis mount ($x = 0.450\text{ m}, z = 0.350\text{ m}$). | Fixed transform from URDF. |
 
 ---
 
-## 空間座標の規則 (REP-103)
+## Spatial Coordinate Conventions (REP-103)
 
-MSD700 は、右手のデカルト座標系を厳密に適用します。
+MSD700 strictly enforces right-handed Cartesian coordinate systems:
 
 ```
         +X (Forward / Roll Axis)
@@ -58,16 +60,16 @@ MSD700 は、右手のデカルト座標系を厳密に適用します。
         +Z (Upward / Yaw Axis)
 ```
 
-- **$+X$**: ロボットの主な移動方向に沿って真前を指します。
-- **$+Y$**: ロボットの横幅の真左方向を指します。
-- **$+Z$**: 床面に対して垂直に垂直上向きを指します。
-- **回転角度**: 右手の法則に従います ($+Z$ を中心とした反時計回りの回転は、正のヨー レート $+\dot{\theta}$ に対応します)。
+- **$+X$**: Points directly forward along the robot's primary direction of travel.
+- **$+Y$**: Points directly leftward across the robot's lateral width.
+- **$+Z$**: Points vertically upward perpendicular to the floor plane.
+- **Rotation Angles**: Follow right-hand rule (Counter-Clockwise rotation around $+Z$ corresponds to positive yaw rate $+\dot{\theta}$).
 
 ---
 
-## クロスマシン クロック ドメイン リスタンピング (`BoundaryPublisher`)
+## Cross-Machine Clock Domain Restamping (`BoundaryPublisher`)
 
-テレメトリ (ロボットのポーズやレーザー スキャンなど) が物理ロボットからインターネットを介してクラウド サーバーにブリッジされるとき、タイムスタンプが直接評価される場合、**物理マシン間のクロック ドリフトによって `TF_OLD_DATA` 外挿警告が生成されます**。
+When telemetry (such as robot pose and laser scans) is bridged from the physical robot across the internet to the cloud server, **clock drift between physical machines creates `TF_OLD_DATA` extrapolation warnings** if timestamps are evaluated directly.
 
 ```mermaid
 sequenceDiagram
@@ -86,13 +88,13 @@ sequenceDiagram
   Canvas->>Canvas: Render smooth icon position without TF latency drops
 ```
 
-### 再スタンプに負荷がかかる理由:
-1. **Jetson RTC の制限**: NTP アクセスのないフィールド環境の物理 SBC は、数秒または数か月ずれたクロックで起動できます。
-2. **バッファ削除**: 受信ポーズ メッセージにサーバーの ROS マスターを基準にして過去のタイムスタンプが含まれている場合、`tf2_ros::Buffer` はそれらを直ちに破棄し、Web キャンバスがロボットの動きをレンダリングするのを防ぎます。
-3. **`BoundaryPublisher` 解決策**: `patch_time.py` は、サーバー ROS マスターに入るときに、ロボット ハードウェアのタイムスタンプを削除し、`ros::Time::now()` で幾何学的ペイロードを再スタンプします。
+### Why Restamping Is Load-Bearing:
+1. **Jetson RTC Limitations**: Physical SBCs in field environments without NTP access can boot with clocks skewed by seconds or months.
+2. **Buffer Eviction**: If incoming pose messages carry timestamps in the past relative to the server's ROS master, `tf2_ros::Buffer` immediately discards them, preventing the web canvas from rendering robot movement.
+3. **`BoundaryPublisher` Solution**: `patch_time.py` strips the robot hardware timestamp and restamps geometric payloads with `ros::Time::now()` upon entry into the server ROS master.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [センサー フュージョンと制御](/ja/development/sensor-fusion-and-control): 運動学的状態推定と EKF。
-- [コストマップとプランナー](/ja/development/costmaps-and-planners): ナビゲーション コストマップの座標フレーム。
-- [rosbridge プロトコル](/ja/development/rosbridge-protocol): WebSocket トピックのシリアル化。
+- [Sensor Fusion and Control](/ja/development/sensor-fusion-and-control): Kinematic state estimation and EKF.
+- [Costmaps and Planners](/ja/development/costmaps-and-planners): Navigation costmap coordinate frames.
+- [rosbridge Protocol](/ja/development/rosbridge-protocol): WebSocket topic serialization.

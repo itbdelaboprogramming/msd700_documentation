@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# Cakupan Boustrophedon & Arsitektur Penyelarasan Zero-Spin
+
+
+# Boustrophedon Coverage & Zero-Spin Alignment Architecture
 
 <RoleBadge role="developer" />
 
-Dokumen ini memberikan spesifikasi algoritmik komprehensif dari jalur perencanaan cakupan Dekomposisi Seluler Boustrophedon, penghitungan jarak bebas geometri ganda, pengelolaan rintangan lima lapis, dan penyelarasan putaran nol Korelatif Scan Matcher (CSM).
+This document provides a comprehensive algorithmic specification of the Boustrophedon Cellular Decomposition coverage planning pipeline, dual-geometry clearance calculations, five-layer obstacle management, and Correlative Scan Matcher (CSM) zero-spin alignment.
 
-## Geometri Robot Ganda
+## Dual Robot Geometries
 
-Prinsip desain dasar dalam perencanaan cakupan MSD700 adalah **robot memiliki dua dimensi geometris berbeda yang digunakan untuk perhitungan berbeda**:
+A foundational design principle in MSD700 coverage planning is that **the robot has two distinct geometric dimensions used for different calculations**:
 
 ```mermaid
 flowchart LR
@@ -27,36 +29,36 @@ flowchart LR
   PhysicalBody -.->|"Includes 0.075 m Lateral Safety Padding"| SafetyEnvelope
 ```
 
-| Definisi Geometris | Dimensi Ukuran | Penggunaan Algoritma |
+| Geometric Definition | Size Dimensions | Algorithmic Usage |
 | --- | --- | --- |
-| **Tubuh Fisik** (`~body_footprint`) | Panjang 0,90 m x lebar 0,70 m | Menentukan jarak jalur dan penghitungan pencapaian area sapuan. |
-| **Amplop Keamanan Costmap** | Panjang 1,20 m x lebar 0,85 m | Menegakkan izin perencana lokal TEB dan kelayakan belokan. |
+| **Physical Body** (`~body_footprint`) | 0.90 m length x 0.70 m width | Determines lane pitch and swept-area attainment calculations. |
+| **Costmap Safety Envelope** | 1.20 m length x 0.85 m width | Enforces TEB local planner clearances and turning feasibility. |
 
-Amplop peta biaya di `costmap_common_params.yaml` mencakup bantalan pengaman yang disengaja (0,075 m lateral dan 0,150 m memanjang per sisi). `path_coverage_node` membaca amplop langsung dari `/move_base/global_costmap/footprint` untuk menjaga sinkronisasi dengan perencana navigasi.
+The costmap envelope in `costmap_common_params.yaml` includes intentional safety padding (0.075 m lateral and 0.150 m longitudinal per side). `path_coverage_node` reads the envelope directly from `/move_base/global_costmap/footprint` to maintain synchronization with navigation planners.
 
-### Konstanta Izin Turunan (`libs/coverage_geometry.py`)
+### Derived Clearance Constants (`libs/coverage_geometry.py`)
 
-| Izin Konstan | Nilai | Rumus Matematika |
+| Clearance Constant | Value | Mathematical Formula |
 | --- | --- | --- |
-| `wall_clearance` | **0,575m** | $r_{\text{tertulis}} (0,425\text{ m}) + d_{\min} (0,150\text{ m})$ |
-| `turn_clearance` | **0,885 m** | $r_{\text{dibatasi}} (0,735\text{ m}) + d_{\min} (0,150\text{ m})$ |
-| `pitch` | **0,574 m** | $w_{\text{body}} (0,70\text{ m}) \kali (1 - \text{tumpang tindih} (0,18))$ |
+| `wall_clearance` | **0.575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `turn_clearance` | **0.885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
+| `pitch` | **0.574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
 
-### Batas Fisika Geometris:
-- **Robot koridor tersempit yang bisa masuk**: **1,15 m** ($2 \times \text{wall\_clearance}$).
-- **Robot koridor tersempit dapat berputar 180 derajat**: **1,77 m** ($2 \times \text{turn\_clearance}$).
-- **Koridor tersempit senilai 2 jalur**: **1,72 m**.
-- **Jalur batas yang tidak dapat dijangkau di sepanjang dinding**: **0,225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
+### Physical Geometric Limits:
+- **Narrowest corridor robot can enter**: **1.15 m** ($2 \times \text{wall\_clearance}$).
+- **Narrowest corridor robot can pivot 180 degrees**: **1.77 m** ($2 \times \text{turn\_clearance}$).
+- **Narrowest corridor worth 2-lane sweeping**: **1.72 m**.
+- **Unreachable boundary strip along walls**: **0.225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Raw Coverage
-Karena garis keliling 0,225 m tidak dapat dilalui tanpa tumbukan, sebuah ruangan berbentuk persegi panjang (misalnya 3 x 6 m) mencapai cakupan maksimum teoritis **78,6%**. Performa sistem diukur dengan **Rasio Pencapaian** (bagian dari luas lantai yang dapat dijangkau yang benar-benar tersapu), bukan persentase area mentah yang tidak disesuaikan.
+Because the 0.225 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of **78.6%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
 :::
 
 ---
 
-## Algoritma Dekomposisi Seluler Boustrophedon
+## Boustrophedon Cellular Decomposition Algorithm
 
-Perencana cakupan menguraikan batas poligonal cekung sembarang dengan hambatan internal menjadi subsel cembung dan bebas hambatan:
+The coverage planner decomposes arbitrary concave polygonal boundaries with internal obstacles into convex, obstacle-free sub-cells:
 
 ```mermaid
 flowchart TD
@@ -68,16 +70,16 @@ flowchart TD
   F --> G["Goal Dispatch to move_base"]
 ```
 
-### Klasifikasi Titik Kritis:
-Selama perkembangan garis sapuan vertikal sepanjang sumbu $x$, simpul batas diklasifikasikan berdasarkan konektivitas lokal dari ruang bebas:
-1. **DI Titik Kritis**: Sel baru terbuka seiring bertambahnya ruang kosong.
-2. **KELUAR Titik Kritis**: Sel berakhir saat batas bertemu.
-3. **Titik Kritis SPLIT**: Kendala internal membagi sel aktif menjadi dua subsel paralel yang berbeda.
-4. **MERGE Critical Point**: Dua sub-sel paralel bergabung kembali melewati tepi belakang rintangan.
+### Critical Point Classification:
+During vertical sweep line progression along the $x$-axis, boundary vertices are classified based on the local connectivity of the free space:
+1. **IN Critical Point**: A new cell opens as free space expands.
+2. **OUT Critical Point**: A cell terminates as boundaries converge.
+3. **SPLIT Critical Point**: An internal obstacle divides an active cell into two distinct parallel sub-cells.
+4. **MERGE Critical Point**: Two parallel sub-cells rejoin past the trailing edge of an obstacle.
 
 ---
 
-## Manajemen Kendala Lima Lapis
+## Five-Layer Obstacle Management
 
 ```mermaid
 flowchart TB
@@ -92,11 +94,11 @@ flowchart TB
 
 ---
 
-## Penyelarasan Orientasi Putaran Nol (Pencocokan Pemindaian Korelatif)
+## Zero-Spin Orientation Alignment (Correlative Scan Matching)
 
-Ketika robot ditempatkan dalam pose yang tidak diketahui pada peta yang telah direkam sebelumnya, AMCL tradisional memerlukan rotasi 360 derajat di tempat untuk menghentikan penyebaran partikel.
+When the robot is placed in an unknown pose on a pre-recorded map, traditional AMCL requires a 360-degree in-place rotation to collapse particle dispersion.
 
-MSD700 mengimplementasikan **Correlative Scan Matching (CSM)** untuk menghitung orientasi dan posisi secara instan tanpa gerakan:
+MSD700 implements **Correlative Scan Matching (CSM)** to calculate orientation and position instantly without motion:
 
 ```mermaid
 flowchart LR
@@ -107,18 +109,18 @@ flowchart LR
   CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
 
-### Rumusan Matematika:
-Mengingat $N$ titik pemindaian laser $\mathbf{p}_i = [x_i, y_i]^T$ dan peta kisi hunian statis $M(x, y)$, pencocokan pemindaian menemukan transformasi kaku $(\Delta x, \Delta y, \Delta \theta)$ yang memaksimalkan skor korelasi:
+### Mathematical Formulation:
+Given $N$ laser scan points $\mathbf{p}_i = [x_i, y_i]^T$ and a static occupancy grid map $M(x, y)$, the scan matcher finds the rigid transform $(\Delta x, \Delta y, \Delta \theta)$ that maximizes the correlation score:
 
-$$S(\Delta x, \Delta y, \Delta \theta) = \sum_{i=1}^N M\left( \mathbf{R}(\Delta \theta) \mathbf{p}_i + \begin{bmatrix} \Delta x \\ \Delta y \end{bmatrix} \kanan)$$
+$$S(\Delta x, \Delta y, \Delta \theta) = \sum_{i=1}^N M\left( \mathbf{R}(\Delta \theta) \mathbf{p}_i + \begin{bmatrix} \Delta x \\ \Delta y \end{bmatrix} \right)$$
 
-Dimana $\mathbf{R}(\Delta \theta)$ adalah matriks rotasi 2D:
+Where $\mathbf{R}(\Delta \theta)$ is the 2D rotation matrix:
 $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta \theta) \\ \sin(\Delta \theta) & \cos(\Delta \theta) \end{bmatrix}$$
 
-Ketika kepercayaan skor pertandingan melebihi $65\%$, perkiraan pose dipublikasikan ke `/initialpose`, melokalisasi robot dalam waktu kurang dari $50\text{ ms}$ dengan gerakan rotasi nol.
+When the match score confidence exceeds $65\%$, the estimated pose is published to `/initialpose`, localizing the robot in less than $50\text{ ms}$ with zero rotational motion.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Simulasi](/id/development/simulation): Lingkungan pengujian gudang dan model skala.
-- [Kontrak Pesan](/id/development/message-contracts): Cakupan amplop perintah dan protokol ACK.
-- [Status dan Perilaku](/id/development/state-and-behavior): Navigasi dan cakupan mesin negara terbatas.
+- [Simulation](/id/development/simulation): Warehouse testing environment and scale models.
+- [Message Contracts](/id/development/message-contracts): Coverage command envelopes and ACK protocols.
+- [State and Behavior](/id/development/state-and-behavior): Navigation and coverage finite state machines.

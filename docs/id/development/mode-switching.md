@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Arsitektur Node Dinamis dan Peralihan Mode
+
+
+# Dynamic Node and Mode Switching Architecture
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci bagaimana robot MSD700 secara dinamis beralih antara mode operasional (`idle`, `navigation`, `mapping`, `coverage`, dan `exploration`) saat runtime menggunakan `switch_mode.py`, `system_command.py`, dan `operation_supervisor.py` tanpa memulai ulang inti ROS utama.
+This document details how the MSD700 robot dynamically switches between operational modes (`idle`, `navigation`, `mapping`, `coverage`, and `exploration`) at runtime using `switch_mode.py`, `system_command.py`, and `operation_supervisor.py` without restarting the primary ROS core.
 
-## Topologi Orkestrasi Mode
+## Mode Orchestration Topology
 
 ```mermaid
 flowchart TD
@@ -31,21 +33,21 @@ flowchart TD
 
 ---
 
-## Mode Pengoperasian dan Tumpukan Node Aktif
+## Operating Modes and Active Node Stacks
 
-| Modus Operasional | Node ROS Aktif | Node Tidak Aktif / Menuai | Memori & Jejak CPU |
+| Operational Mode | Active ROS Nodes | Inactive / Reaped Nodes | Memory & CPU Footprint |
 | --- | --- | --- | --- |
-| **`idle`** | `roscore`, `serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`. | `move_base`, `amcl`, `slam_gmapping`, `path_coverage_node`. | Minimal (sekitar 5% CPU, 200 MB RAM). |
-| **`navigation`** | Semua node `idle` + `map_server`, `amcl`, `move_base`, `costmap_2d`. | `slam_gmapping`, `explore_lite`. | Navigasi Standar (sekitar 25% CPU). |
-| **`mapping`** | Semua node `idle` + `slam_gmapping`, `teleop`. | `amcl`, `map_server` (sebagai gantinya membaca peta langsung). | Sedang (sekitar 35% CPU). |
-| **`coverage`** | Semua node `navigation` + `path_coverage_node`. | `explore_lite`. | Beban Misi Penuh (sekitar 40% CPU). |
-| **`exploration`** | Semua `mapping` node + `explore_lite` pencarian perbatasan. | `amcl`. | Beban Algoritma Tinggi (sekitar 45% CPU). |
+| **`idle`** | `roscore`, `serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`. | `move_base`, `amcl`, `slam_gmapping`, `path_coverage_node`. | Minimal (approx. 5% CPU, 200 MB RAM). |
+| **`navigation`** | All `idle` nodes + `map_server`, `amcl`, `move_base`, `costmap_2d`. | `slam_gmapping`, `explore_lite`. | Standard Navigation (approx. 25% CPU). |
+| **`mapping`** | All `idle` nodes + `slam_gmapping`, `teleop`. | `amcl`, `map_server` (reads live map instead). | Moderate (approx. 35% CPU). |
+| **`coverage`** | All `navigation` nodes + `path_coverage_node`. | `explore_lite`. | Full Mission Load (approx. 40% CPU). |
+| **`exploration`** | All `mapping` nodes + `explore_lite` frontier search. | `amcl`. | High Algorithmic Load (approx. 45% CPU). |
 
 ---
 
-## Siklus Hidup Proses Dinamis melalui `roslaunch` API Induk
+## Dynamic Process Lifecycle via `roslaunch` Parent API
 
-Daripada menjalankan perintah shell seperti `system("roslaunch ...")` yang membiarkan proses zombie terpisah, `switch_mode.py` menggunakan API asli Python `roslaunch.parent.ROSLaunchParent`:
+Rather than executing shell commands like `system("roslaunch ...")` which leave detached zombie processes, `switch_mode.py` utilizes the native Python `roslaunch.parent.ROSLaunchParent` API:
 
 ```python
 import roslaunch
@@ -76,16 +78,16 @@ class ModeSwitcher:
         rospy.loginfo(f"Successfully transitioned to mode: {target_mode}")
 ```
 
-### Pembongkaran yang Anggun dan Pencegahan Zombi:
-1. **Pengiriman SIGINT**: `launch_parent.shutdown()` mengirim `SIGINT` ke semua proses anak yang dikelola dalam urutan ketergantungan terbalik.
-2. **Jendela Tenggang 5 Detik**: Node diberikan waktu hingga 5 detik untuk mengosongkan buffer disk (misalnya `map_saver` menulis `.pgm` dan gambar `.yaml`).
-3. **Eskalasi**: Jika sebuah node gagal keluar dengan bersih dalam masa tenggang, proses induk akan meningkat ke `SIGTERM` dan `SIGKILL`, memastikan tidak ada node zombie yang tersisa di grafik master ROS.
+### Graceful Teardown and Zombie Prevention:
+1. **SIGINT Dispatch**: `launch_parent.shutdown()` sends `SIGINT` to all managed child processes in reverse dependency order.
+2. **5-Second Grace Window**: Nodes are granted up to 5 seconds to flush disk buffers (e.g. `map_saver` writing `.pgm` and `.yaml` images).
+3. **Escalation**: If a node fails to exit cleanly within the grace period, the parent process escalates to `SIGTERM` and `SIGKILL`, ensuring zero zombie nodes remain on the ROS master graph.
 
 ---
 
-## Urutan Misi Autopilot (`operation_supervisor.py`)
+## Autopilot Mission Sequencing (`operation_supervisor.py`)
 
-`operation_supervisor.py` mengelola eksekusi mandiri rute titik jalan multi-langkah dan daftar putar cakupan area:
+`operation_supervisor.py` manages autonomous execution of multi-step waypoint routes and area coverage playlists:
 
 ```mermaid
 stateDiagram-v2
@@ -100,12 +102,12 @@ stateDiagram-v2
   Completed --> SupervisorIdle: Return to Homebase and latch final snapshot
 ```
 
-### Kemampuan Supervisor Utama:
-- **Snapshot Operasi Terkunci**: Publikasikan `/string/operation_snapshot` dengan QoS yang terkunci. Ketika operator mana pun membuka tab browser, status penuh misi aktif (indeks titik jalan aktif, pin rute yang tersisa, pengatur waktu diam) dipulihkan dalam milidetik.
-- **Pengecualian Keamanan Autopilot**: Saat Autopilot diaktifkan, supervisor menekan jeda pemutusan operator selama 10 detik, sehingga misi penyisiran yang sudah berjalan lama dapat dilanjutkan tanpa pengawasan.
+### Key Supervisor Capabilities:
+- **Latched Operation Snapshot**: Publishes `/string/operation_snapshot` with latched QoS. When any operator opens a browser tab, the full state of the active mission (active waypoint index, remaining route pins, dwell timer) is recovered in milliseconds.
+- **Autopilot Safety Exemption**: When Autopilot is toggled ON, the supervisor suppresses the 10-second operator disconnect pause, allowing long-running sweeping missions to proceed unattended.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [ROS Package Registry](/id/development/ros-packages): Struktur paket dan definisi file peluncuran.
-- [Status dan Perilaku](/id/development/state-and-behavior): Mesin status terbatas dan tingkatan pengawas yang terperinci.
-- [Kontrak Pesan](/id/development/message-contracts): MQTT dan muatan pesan sinkronisasi operasi.
+- [ROS Package Registry](/id/development/ros-packages): Package structures and launch file definitions.
+- [State and Behavior](/id/development/state-and-behavior): Detailed finite state machines and watchdog tiers.
+- [Message Contracts](/id/development/message-contracts): MQTT and operation sync message payloads.

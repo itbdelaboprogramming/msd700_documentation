@@ -1,40 +1,42 @@
 ---
 outline: deep
 ---
-# ロボットの動作
+
+
+# How the Robot Behaves
 
 <RoleBadge role="user" />
 
-MSD700 は、頼まれてもいないのに、いくつかのことを自動的に実行します。あなたがいなくなると一時停止し、拒否します。
-2人が同時に運転できるようにすると、戻ってきたときに何をしていたかを記憶します。そんなことはありません
-は任意であり、ルールを知っているかどうかで、「ロボットが何か奇妙なことをした」かどうかが変わります。
-そして「もちろんそうなりました。」
+MSD700 does several things on its own, without being asked: it pauses when you disappear, it refuses
+to let two people drive at once, and it remembers what it was doing when you come back. None of that
+is arbitrary, and knowing the rules makes the difference between "the robot did something strange"
+and "of course it did that."
 
-このページは平文版です。エンジニアリングの詳細については、
-[状態と動作](/ja/development/state-and-behavior)。
+This page is the plain-language version. The engineering detail is in
+[State and Behavior](/ja/development/state-and-behavior).
 
-## ロボットは今何をしているのか
+## What the robot is doing right now
 
-ダッシュボードには、ロボットのステータスが常に 1 つ表示されます。これらは実際に見ることになるものです。
+The dashboard always shows one status for the robot. These are the ones you will actually see.
 
-|ステータス |手段 |普通？ |
+| Status | Means | Normal? |
 | --- | --- | --- |
-| **アイドル** |何も実行されていません。コマンドの準備ができました。 |はい |
-| **マニュアル** | W-A-S-D で運転しています。 |はい |
-| **進行中** |ある地点まで運転する、またはルートを実行する。 |はい |
-| **到着** |ゴールに到達したか、取材を終えた。 |はい |
-| **マッピング** |地図を構築する。 |はい |
-| **一時停止中** |あなたはそれを一時停止しました。中断したところから再開されます。 |はい |
-| **ロボットがスタックした** |動いているはずなのに動いていない。 | [下記](#robot-stuck)を参照してください。
-| **緊急停止** |非常停止が作動しています。それが解放されない限り何も動きません。 |あなたがそれをしたときだけ |
+| **Idle** | Nothing running. Ready for a command. | Yes |
+| **Manual** | You are driving with W-A-S-D. | Yes |
+| **On Progress** | Driving to a point, or running a route. | Yes |
+| **Arrived** | Reached the goal, or finished a coverage run. | Yes |
+| **Mapping** | Building a map. | Yes |
+| **Paused** | You paused it. It resumes where it left off. | Yes |
+| **Robot Stuck** | It should be moving and it is not. | See [below](#robot-stuck) |
+| **Emergency Stopped** | E-Stop is engaged. Nothing will move until it is released. | Only when you did it |
 
 ::: info The robot is the one keeping score, not your browser
-これらの状態はすべてロボット自体に存在します。そのため、タブを閉じるか、更新するか、
-別のコンピュータに切り替えても操作が失われることはありません。また、トグルが切り替わる理由も教えてください。
-パネルは、最後にクリックしたものではなく、ロボットが実際に操作したものにスナップバックします。
+Every one of those states lives on the robot itself. That is why closing the tab, refreshing, or
+switching to a different computer does not lose your operation, and why the toggle switches in the
+panel snap back to whatever the robot actually has engaged rather than what you last clicked.
 :::
 
-## 一度に運転できるのは 1 人のみ
+## Only one person drives at a time
 
 ```mermaid
 flowchart TB
@@ -45,26 +47,26 @@ flowchart TB
   E --> F["Click it, and the other tab<br/>is told it lost control"]
 ```
 
-|目に見えるもの |意味 |あなたにできること |
+| What you see | What it means | What you can do |
 | --- | --- | --- |
-|特別なことは何もありません |本体は無料です |ドライブ |
-|ユニットリストの **使用中** バッジ |別の **アカウント** が運転中です |待つか、彼らに尋ねてください。ユニットを開けても問題ありません。あなたはただコントロールを得ることができません。
-| **引き継ぎ**プロンプト | **あなた自身** アカウントの別のセッションが制御します: 2 番目のタブ、またはユニット独自のローカル ダッシュボード |意図的に引き継ぐと、もう一方が目に見えて立ち止まる |
+| Nothing special | The unit is free | Drive |
+| **In Use** badge on the unit list | Another **account** is driving | Wait, or ask them. Opening the unit is fine; you just do not get control |
+| A **Take Over** prompt | Another session of **your own** account has control: a second tab, or the unit's own local dashboard | Take over deliberately, and the other one stands down visibly |
 
 ::: warning Two of your own tabs cannot both drive
-それは意図的なものです。 2 つのタブがそれぞれ 1 台のロボットにコマンドを送信し、どちらのタブも送信しません
-相手について語られることはありません。どちらのタブが引き継いでも勝ち、もう一方のタブは負けたと言われます。
-黙ってコマンドを送信するよりも、誰も適用されません。
+That is deliberate. Two tabs each sending commands to one robot interleave, and neither one would
+ever be told about the other. Whichever tab takes over wins, and the other is told it lost, rather
+than silently sending commands nobody applies.
 :::
 
-管理は**リース**であり、更新する必要があります。ブラウザが更新を停止すると、約 15 時間が経過します。
-数秒後、そのユニットは次の人のために無料になります。それがクラッシュしたタブや
-ノートパソコンを閉じて、誰も使えないロボットを立ち往生させるのはやめましょう。
+Control is a **lease** that has to be renewed. If your browser stops renewing it, it lapses about 15
+seconds later and the unit becomes free for the next person. That is what makes a crashed tab or a
+closed laptop stop stranding a robot nobody can use.
 
-## 切断するとどうなるか
+## What happens when you disconnect
 
-ロボットはダッシュボードを監視します。あなたからの連絡が途絶えると、次の 3 つのことが起こります。
-間隔が増えていく。
+The robot watches for your dashboard. When it stops hearing from you, three things happen at
+increasing intervals.
 
 ```mermaid
 timeline
@@ -77,27 +79,27 @@ timeline
              : must be restarted by hand
 ```
 
-|後 |何が起こるか |自然に回復しますか？ |
+| After | What happens | Recovers by itself? |
 | --- | --- | --- |
-| **10 秒** |ロボットの動きが止まります。何をしていても、下に読み込まれたままになります。 | **はい。** 再接続すると、停止したところから再開します。
-| **10 分** |操作全体が中止され、ロボットはアイドル状態になります。 |いいえ。操作をやり直してください。
-| **30 分** |すべてのハードウェアの電源がオフになります。 |いいえ。技術者または明示的な再起動が必要です。
+| **10 seconds** | The robot stops moving. Whatever it was doing stays loaded underneath. | **Yes.** Reconnect and it picks up where it stopped |
+| **10 minutes** | The whole operation is torn down and the robot goes idle. | No. Start the operation again |
+| **30 minutes** | All hardware powers down. | No. A technician or an explicit restart is needed |
 
 ::: info Which page you have open matters
-10 秒間の一時停止は、実行中の操作を所有するページが応答を停止したときにのみカウントされます。
-ユニット リストやログイン ページに座っていても、ロボットは実行されません。これらのページは
-意図的に読み取り専用になっているため、ダッシュボードを開いたままにしても、管理者としてカウントされることはありません。
-ロボット。
+The 10 second pause only counts time when the page that owns the running operation stops responding.
+Sitting on the unit list, or on the login page, does not hold a robot running: those pages are
+deliberately read-only so that leaving a dashboard open somewhere never counts as supervising a
+robot.
 :::
 
-### 一時停止を意図的にオフにする: オートパイロット
+### Turning the pause off on purpose: Autopilot
 
-自動操縦は、「私はそこから立ち去ることを許可されています」と言う方法です。それをオンにした状態:
+Autopilot is how you say "I am allowed to walk away." With it on:
 
-- ロボットは **ブラウザがまったく接続されていない**状態でも実行され続けます。
-- 切断一時停止、10 分間のアイドル、および 30 分間のシャットダウンはすべて一時停止されます。
-- ブラウザーがウェイポイントを通過する代わりに、ロボット自体がウェイポイントの通過を引き継ぎます。
-- ログアウトしても実行は**停止しません**。
+- The robot keeps running with **no browser attached at all**.
+- The disconnect pause, the 10 minute idle and the 30 minute shutdown are all suspended.
+- The robot itself takes over stepping through your waypoints, instead of the browser doing it.
+- Logging out does **not** stop the run.
 
 ```mermaid
 flowchart LR
@@ -110,19 +112,19 @@ flowchart LR
 ```
 
 ::: danger Autopilot means the robot will keep moving with nobody watching
-それが重要なポイントであり、長い無人のルートには正しい選択です。それは
-人の近くや、これまで走ったことがない空間では間違った選択をしてしまいます。オフに戻す
-すべての安全一時停止をすぐに再設定します。
+That is the entire point of it, and it is the right choice for a long unattended route. It is the
+wrong choice for anything near people or in a space you have not run before. Turning it back off
+re-arms every safety pause immediately.
 :::
 
 ::: info Autopilot keeps the robot running; it does not reserve your seat
-コントロール リースは、15 秒間更新しないと失効します。他の人がユニットを選択できます
-立ち上がって、進行中の実行を引き継ぎます。どちらにしても走行は継続します。
+Your control lease still lapses after 15 seconds of not renewing it. Someone else can pick the unit
+up and take over the run in progress. The run continues either way.
 :::
 
-## 戻ってきます
+## Coming back
 
-すべてを閉じてから再度ログインすると、ダッシュボードが元の状態に戻ります。
+Log in again after closing everything and the dashboard puts you back where you were.
 
 ```mermaid
 sequenceDiagram
@@ -138,54 +140,54 @@ sequenceDiagram
   Dashboard->>You: pins, map and progress restored
 ```
 
-ロボットは操作全体 (ウェイポイント、ロボットがいる場所、地図、その他の情報) をすべて返します。
-カバーエリア。これらはいずれもブラウザからのものではないため、別のコンピュータでもブラウザが生き残ることができます。
+The robot hands back the whole operation: your waypoints, which one it is on, the map, and any
+coverage areas. None of that came from your browser, which is why it survives a different computer.
 
-|状況 |得られるもの |
+| Situation | What you get back |
 | --- | --- |
-|途中で更新 |すべて、そしてルートは続く |
-|タブを閉じて、新しいタブを開いた |すべて、そしてルートは続く |
-|別のマシンにログインしています |すべて、そしてルートは続く |
-|ロボットは一時停止しました |すべてが、まだ一時停止しています。再生 | を押します。
-|あなたがいない間にロボットが完成しました |幻の走行ではなく完成した状態 |
+| Refresh mid-route | Everything, and the route continues |
+| Closed the tab, opened a new one | Everything, and the route continues |
+| Logged in on a different machine | Everything, and the route continues |
+| The robot was paused | Everything, still paused. You press play |
+| The robot finished while you were away | The finished state, not a phantom run |
 
 ::: info Opening a map from the Database page is a deliberate reset
-これは、現在のセッション状態を復元するのではなくクリアする 1 つのアクションです。ご希望であれば
-実行中の内容を再開するには、マップを再度開くのではなく、ユニットに戻ります。
+That is the one action that clears the current session state rather than restoring it. If you want
+to resume what was running, go back to the unit rather than re-opening its map.
 :::
 
-## ロボットがスタックしてしまう
+## Robot Stuck
 
-バナーは、ロボットが自分が動いているはずだと信じているのに、実際には動いていないことを意味します。
+The banner means the robot believes it should be moving and is not.
 
-|表示されるとき |通常 |
+| When it appears | Usually |
 | --- | --- |
-|簡単に言えば、小回り中 |普通。無視してください |
-|エリア カバレッジ実行開始直後 |普通。スイープ パスを計算しているため、最大 1 分かかる場合があります。
-|明らかに動かない数分間 |実際の障害、または計画の失敗 |
-|ロボットが目に見えて運転している間 |バグです。回避せずに報告してください。
+| Briefly, during a tight turn | Normal. Ignore it |
+| Right after starting an area coverage run | Normal. It is computing a sweep path and can take up to a minute |
+| For several minutes while it plainly is not moving | A real obstruction, or a planning failure |
+| While the robot is visibly driving | A bug. Report it, do not work around it |
 
-数分間起動したままの場合は、カメラのフィードに障害物がないか確認してから、次の点を確認してください。
-[トラブルシューティング](/ja/getting-started/troubleshooting)。
+If it stays up for several minutes, check the camera feed for something in the way, then see
+[Troubleshooting](/ja/getting-started/troubleshooting).
 
-## 緊急停止
+## Emergency Stop
 
-E-Stop は通常のコマンドではなく、何かの後ろに待機することはありません。
+E-Stop is not a normal command and it does not queue behind anything.
 
-- ロボットの他のすべての動きのソースよりも優先されるため、何が起こってもすぐに効果が発揮されます。
-  他は実行中です。
-- 明示的に解放されるまで、関与したままになります。
-- 誰が制御しているかに関係なく、どのページでも常に利用できます。
+- It outranks every other source of movement on the robot, so it takes effect immediately whatever
+  else is running.
+- It stays engaged until it is explicitly released.
+- It is always available, on every page, regardless of who holds control.
 
 ::: warning Test it once on every new unit
-できれば必要になる前に、ロボットの周囲に空きスペースを確保してください。ユニットは完全に見える
-コマンドパスが一方向に切断されている間に接続されている場合、非常停止はまさにあなたが行うことです
-それを発見したくない。
+Preferably before you need it, with clear space around the robot. A unit can look completely
+connected while its command path is broken in one direction, and E-Stop is exactly the thing you do
+not want to discover that on.
 :::
 
-## 関連
+## Related
 
-- [クイックスタート](/ja/getting-started/quick-start)
-- [機能](/ja/getting-started/features)
-- [よくある質問](/ja/getting-started/faq)
-- [トラブルシューティング](/ja/getting-started/troubleshooting)
+- [Quick Start](/ja/getting-started/quick-start)
+- [Features](/ja/getting-started/features)
+- [FAQ](/ja/getting-started/faq)
+- [Troubleshooting](/ja/getting-started/troubleshooting)

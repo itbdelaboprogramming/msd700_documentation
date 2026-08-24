@@ -1,10 +1,10 @@
-# トラブルシューティング
+# Troubleshooting
 
 <RoleBadge role="technician" />
 
-インストールおよび展開の問題に関する技術診断。ユーザーが直面する問題については、代わりに [はじめに > トラブルシューティング](/ja/getting-started/troubleshooting) を参照してください。
+Technical diagnostics for installation and deployment issues. For user-facing issues, see [Getting Started &gt; Troubleshooting](/ja/getting-started/troubleshooting) instead.
 
-## ここから始めましょう: どの層が壊れていますか?
+## Start here: which layer is broken?
 
 ```mermaid
 flowchart TB
@@ -22,59 +22,59 @@ flowchart TB
   J -->|yes| M["Application-level issue.<br/>See the tables below."]
 ```
 
-## 診断チェックリスト
+## Diagnostic checklist
 
-これらを順番に処理してください。それぞれがレイヤー全体を除外します。
+Work through these in order: each one rules out an entire layer.
 
-1. **サーバーは実行されていますか?** `docker compose --profile server_prod ps`: すべてのサービスが表示されるはずです
-   `Up` または `healthy` ([サーバーセットアップ](/ja/setup/server-setup#_7-verify))。
-2. **ユニットのコンテナは実行されていますか?** ユニット上の `./scripts/docker-manager.sh status`。
-3. **ユニットは正常に登録されましたか?** 管理コンソールで **登録されたユニット** を確認してください。
-   ULID、それがオンラインで表示されます。
-4. **ユニットごとのコンテナは実行されていますか?** サーバー上で `docker ps --filter name=rosweb_unit_`。
-5. **ネットワーク パスは開いていますか**。
-   [システムセットアップ](/ja/setup/system-setup#_1-confirm-the-network-path)?
-6. **ログを確認します**: サーバー上の `docker compose logs -f <service>`、
-   ユニット上の `docker exec -it msd700 tmux attach -t robot_services` (Windows: `roscore`、
-   `ros_webui`、`camera_client`、`switch_mode`、`log_janitor`)。
+1. **Is the Server running?** `docker compose --profile server_prod ps`: every service should show
+   `Up` or `healthy` ([Server Setup](/ja/setup/server-setup#_7-verify)).
+2. **Is the Unit's container running?** `./scripts/docker-manager.sh status` on the Unit.
+3. **Did the Unit enrol successfully?** Check **Registered Units** in the admin console for its
+   ULID, and that it shows online.
+4. **Is the per-unit container running?** `docker ps --filter name=rosweb_unit_` on the Server.
+5. **Is the network path open**, on the ports in
+   [System Setup](/ja/setup/system-setup#_1-confirm-the-network-path)?
+6. **Check the logs**: `docker compose logs -f <service>` on the Server,
+   `docker exec -it msd700 tmux attach -t robot_services` on the Unit (windows: `roscore`,
+   `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`).
 
-## よくある問題
+## Common issues
 
-|症状 |考えられる原因 |修正 |
+| Symptom | Likely cause | Fix |
 | --- | --- | --- |
-|ロボットが起動し、すべてが正常に見えますが、ダッシュボードには何も表示されません。ユニットの ULID が、ダッシュボード/管理コンソールに記録されているものと一致しません。これは**サイレントに**失敗します。ROSは、誰もサブスクライブしていない名前空間にパブリッシュするだけです。 |サーバー側の `rostopic list \| grep unit_<ULID>` で ID を確認し、管理コンソールの登録ユニットと照合してください。 `UNIT_ID` を手動で設定する場合は、必ず大文字にしてください。ULID エンコードでは大文字と小文字が区別されなくても、トピック名では大文字と小文字が区別されます。 |
-| `docker: permission denied` ユニット上 |あなたのユーザーは (まだ) `docker` グループに属していないか、グループのメンバーシップがこのシェルに適用されていません。 `sudo usermod -aG docker $USER`、ログアウトしてから再度ログインします (現在のシェルの場合は `newgrp docker`) |
-| RViz/Gazebo ウィンドウが開かない | X11 転送はコンテナ内からは許可されません。コンテナを起動する前に、ホスト上で `xhost +local:docker` |
-| `catkin_make`/`catkin build` がコンテナ内で失敗します。通常、依存関係が欠落しているか、`logs/` がワークスペース独自のログ ディレクトリにマウントされています (uid の不一致: ホスト コピーの所有者は uid 2002、コンテナ内ビルド ユーザーは 1000)。シェル (`./scripts/docker-manager.sh shell`) 内で再実行して、実際のエラーを確認します。 `logs/` を `/workspace/logs` の上にマウントしないでください。
-| `up` の直後の `Connection lost` でバックエンドが起動できない |バックエンドは MySQL のヘルス チェックが完了する前に開始され、通常はワークスペースのビルドが遅い (コールド キャッシュ) 場合にのみ表示されます。自動的に再試行されるはずです。そうでない場合は、`docker compose ps` が DB を `healthy` として表示してから、`docker compose up -d <backend service>` を再度実行します。
-|プロファイルのバックアップが保存できない | `/srv/msd/media/backup` (または `_dev`) はまだ存在しないか、アプリのユーザーによって所有されていません。ワンショット権限フィクサーを明示的に起動します: `docker compose up fix_perms_prod` (または `fix_perms_dev`)、`ls -la /srv/msd/media/backup` を確認します。
-| `resource not found: gazebo_ros` で最初の起動時にシミュレーターのビルドが失敗する |イメージは `--simulator` なしでビルドされました。Gazebo はデフォルトでは依存関係として宣言されていないため、ストック イメージには依存関係がありません。 `./scripts/docker-manager.sh build --simulator`、次に `up --simulator` |
-|開発用ラップトップ (実際の Jetson ではない) でのみ、マップの保存が権限エラーで失敗します。 `docker/.env` の `USER_UID`/`USER_GID` は、依然として自分のユーザーではなく Jetson のデフォルト (2002) を指しています。独自の `id -u`/`id -g` に設定します。
-|すでに存在するコンテナーは正常に起動しません。以前の `down`/crash から残ったコンテナ/ネットワークの状態 | `docker compose down --remove-orphans`、その後元に戻します |
-|マップ キャンバスは空白ですが、ユニットはオンラインでコマンドは機能します。ユニットごとのコンテナーが実行されていないため、rosbridge がサブスクライブしているクラウド側のリレーは存在しません。 `docker ps --filter name=rosweb_unit_`。ダッシュボードでユニットを再度開きます。それでも表示されない場合は、バックエンド ログの `unit_manager` 行を確認してください。
-|ブラウザ コンソールに rosbridge ハンドシェイクの失敗が表示される | Apache は `Host` ヘッダーを書き換えずに rosbridge をプロキシしているため、rosbridge は `missing port in HTTP Host header` に応答します。 [サーバー セットアップ](/ja/setup/server-setup#the-vhost-block) から `<Location /services/rosbridge>` ブロックを追加します。
-|すべての WebSocket パスは失敗しますが、HTTP パスは問題ありません。 `mod_proxy_wstunnel` は有効になっていません | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
-|カメラのフィードは LAN 上で機能し、外部からは機能しません | TURN リレーが到達不能なアドレスをアドバタイズしているか、そのポートが転送されていません。 `TURN_EXTERNAL_IP` をチェックするとルーターが転送されます。 [メンテナンス](/ja/setup/maintenance#the-turn-relay) を参照してください。
-| TLS エラーによりフリート全体が一度にオフラインになります。 HiveMQ キーストアは期限切れの証明書を提供しています。 `certbot renew` だけでは更新されません。 `sudo ./source/dependencies/ssl_update/update_ssl.sh`、メンテナンス期間中にブローカーを再起動します。
-| `coturn` はループ内で再起動され、決してバインドされません。 apt/systemd `coturn` はまだポート 3478 を保持しています。 `sudo systemctl disable --now coturn`、コンテナを起動します |
-|バックエンド ログ `ECONNREFUSED 127.0.0.1:1883` が繰り返し発生します | `MQTT_BROKER_TYPE` が設定されていない、または `nakayama` ではないため、バックエンドは何もサービスを提供しないローカル ブローカーにフォールバックしました。 `.env` に `MQTT_BROKER_TYPE=nakayama` を設定し、バックエンドを再作成します。
-|バックエンド ログ `EACCES /var/run/docker.sock` がユニット コンテナーが表示されない | `DOCKER_GID` はこのホストの Docker グループと一致しません。 `getent group docker \| cut -d: -f3`、`.env` を修正、バックエンドを再作成 |
-|新しいエンドポイントは、ソースが明らかにそれを持っているユニットに対して 404 を返します。ユニットのローカル サーバー イメージが古いです。これらのサービスはイメージに**コピー**され、バインドマウントされません。 `./scripts/docker-manager.sh local-build`、次に `up` |
-|ローカルモードのソースを編集した後、バッジに画像が古いと表示される | 2026 年 8 月 13 日以降、`up` は警告 (`[WARN] ... OUT OF DATE`) のみを実行し、古いイメージを実行し続けます。自動的に再構築されなくなりました。そのため、ユニットをオンラインにするのにインターネットは必要ありません。意図的に再構築します: `./scripts/docker-manager.sh local-build` (またはロボット イメージの場合も `build`)、または `up --build` の両方を実行して 1 つのコマンドで開始します。
+| Robot starts, everything looks fine, but the dashboard shows nothing for it | The unit's ULID doesn't match what the dashboard/admin console has on record. This fails **silently**: ROS just publishes into a namespace nobody is subscribed to. | Confirm the id with `rostopic list \| grep unit_<ULID>` on the Server side, and cross-check against the admin console's Registered Units. If you ever set `UNIT_ID` by hand, make sure it's uppercase: the topic name is case-sensitive even though the ULID encoding isn't. |
+| `docker: permission denied` on the Unit | Your user isn't (yet) in the `docker` group, or the group membership hasn't applied to this shell | `sudo usermod -aG docker $USER`, then log out and back in (or `newgrp docker` for the current shell) |
+| RViz/Gazebo windows don't open | X11 forwarding isn't allowed from inside the container | `xhost +local:docker` on the host, before starting the container |
+| `catkin_make`/`catkin build` fails inside the container | Usually a missing dependency, or `logs/` mounted over the workspace's own log directory (a uid mismatch: the host copy is owned by uid 2002, the in-container build user is 1000) | Re-run inside a shell (`./scripts/docker-manager.sh shell`) to see the real error; do not mount `logs/` over `/workspace/logs` |
+| Backend fails to start with `Connection lost` right after `up` | The backend started before MySQL finished its health check, usually only visible when the workspace build was slow (cold cache) | It should retry automatically; if it doesn't, `docker compose up -d <backend service>` again once `docker compose ps` shows the DB as `healthy` |
+| Profile backups fail to save | `/srv/msd/media/backup` (or `_dev`) doesn't exist yet, or isn't owned by the app's user | Bring up the one-shot permissions fixer explicitly: `docker compose up fix_perms_prod` (or `fix_perms_dev`), then check `ls -la /srv/msd/media/backup` |
+| Simulator build fails at the first launch with `resource not found: gazebo_ros` | The image was built *without* `--simulator`: Gazebo isn't declared as a dependency by default, so a stock image doesn't have it | `./scripts/docker-manager.sh build --simulator`, then `up --simulator` |
+| Map saving fails with a permission error, only on a dev laptop (not the real Jetson) | `USER_UID`/`USER_GID` in `docker/.env` still point at the Jetson's default (2002) instead of your own user | Set them to your own `id -u`/`id -g` |
+| A container that already exists won't start cleanly | Leftover container/network state from a previous `down`/crash | `docker compose down --remove-orphans`, then bring it back up |
+| Map canvas blank, but the unit is online and commands work | The per-unit container is not running, so the cloud-side relays rosbridge subscribes to do not exist | `docker ps --filter name=rosweb_unit_`. Re-open the unit in the dashboard; if it still does not appear, check `unit_manager` lines in the backend log |
+| Browser console shows a rosbridge handshake failure | Apache is proxying rosbridge without the `Host` header rewrite, so rosbridge answers `missing port in HTTP Host header` | Add the `<Location /services/rosbridge>` block from [Server Setup](/ja/setup/server-setup#the-vhost-block) |
+| Every WebSocket path fails, HTTP paths are fine | `mod_proxy_wstunnel` is not enabled | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
+| Camera feed works on the LAN, never from outside | The TURN relay is advertising an unreachable address, or its ports are not forwarded | Check `TURN_EXTERNAL_IP` and the router forward; see [Maintenance](/ja/setup/maintenance#the-turn-relay) |
+| The whole fleet drops offline at once with TLS errors | The HiveMQ keystore is serving an expired certificate. `certbot renew` alone does not update it | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, then restart the broker in a maintenance window |
+| `coturn` restarts in a loop and never binds | The apt/systemd `coturn` still holds port 3478 | `sudo systemctl disable --now coturn`, then start the container |
+| Backend logs `ECONNREFUSED 127.0.0.1:1883` repeatedly | `MQTT_BROKER_TYPE` is unset or not `nakayama`, so the backend fell back to a local broker nothing serves | Set `MQTT_BROKER_TYPE=nakayama` in `.env` and recreate the backend |
+| Backend logs `EACCES /var/run/docker.sock` and no unit containers appear | `DOCKER_GID` does not match this host's docker group | `getent group docker \| cut -d: -f3`, fix `.env`, recreate the backend |
+| A new endpoint returns 404 on a unit whose source clearly has it | The unit's local server image is stale. Those services are **copied** into the image, not bind-mounted | `./scripts/docker-manager.sh local-build`, then `up` |
+| Badge says image is out of date after editing local-mode source | Since 2026-08-13, `up` only warns (`[WARN] ... OUT OF DATE`) and keeps running the old image, it no longer rebuilds automatically, so bringing a unit online never requires internet | Rebuild deliberately: `./scripts/docker-manager.sh local-build` (or `build` for the robot image too), or `up --build` to do both and start in one command |
 
-## 知っておく価値のある回帰
+## Regressions worth knowing about
 
-過去のいくつかの事件は、症状が明らかに示すものではないため、一目で認識する価値があります。
-彼らの理由で：
+A couple of past incidents are worth recognizing on sight, since their symptoms don't obviously point
+at their cause:
 
-- **動作していたユニットがコード更新後に表示されなくなり、それ以外の場合はビルドが表示されなくなります。
-  問題ありません。** `CATKIN_IGNORE` マーカー ファイルが誤ってパッケージにコミットされていないか確認してください
-  それはロボットの*唯一*の構築可能なコピーです。このようなことは以前にも発生しました (`robot_pose_publisher`)
-  `navigation.launch` は、実際の原因を示す明らかなエラーなしでサイレントに中止されます。
-- **ナビゲーションとマッピングが完全にフリーズし、「シミュレートされた時間」に関する TF エラーが表示されます。** これは、
-  `/use_sim_time` は、`/clock` パブリッシャーのない roscore で `true` をスタックしました。単独での起動の再開
-  古い値は 1 つのノードではなく ROS マスター上に存在するため、これは修正されません。これは
-  デプロイメントミスではなく、コードレベルのバグです。ローカルで回避しようとするのではなく、エスカレーションしてください。
+- **A unit that was working stops appearing after a code update, with a build that otherwise looks
+  fine.** Check whether a `CATKIN_IGNORE` marker file accidentally got committed into a package
+  that's the robot's *only* buildable copy. This has happened before (`robot_pose_publisher`) and
+  silently aborts `navigation.launch` with no obvious error pointing at the real cause.
+- **Navigation and mapping freeze completely, with TF errors mentioning "simulated time."** This is
+  `/use_sim_time` stuck `true` on a roscore with no `/clock` publisher. Restarting the bringup alone
+  does not fix it, because the stale value lives on the ROS master, not in any one node. This is a
+  code-level bug, not a deployment mistake; escalate it rather than trying to work around it locally.
 
 - **普通に運転しているロボットには「ロボットスタック」のバナーが表示されます。** これは常にそうなっていることが判明しました。
   `idle_detector` 独自のロジック (スティッキー アンカー ポイント、または低速には大きすぎる変位しきい値)
@@ -189,12 +189,12 @@ flowchart TB
   32 の 16 進文字ではありません。 `collectChanges needs a rental profile` は 15% で止まっており、まさに次のとおりでした。
   プロファイル検索は `HEX(pu.profile_id)` で書き込まれており、それを使用するすべての行は解決できませんでした。
 
-症状が次のいずれかに似ている場合 (表面的にはもっともらしいですが、上記のチェックリストはそうではありません)
-説明してください）、それは推測し続けるのではなくエスカレートする信号です。
+If a symptom looks like one of these (plausible on the surface, but the checklist above does not
+explain it), that is the signal to escalate rather than keep guessing.
 
-## エスカレーション
+## Escalation
 
-チェックリストと上の表では表示されている内容が説明できない場合、または問題が次のとおりであることが判明した場合
-導入ミスではなくソフトウェア/ロジックのバグの場合は、開発チームにエスカレーションします。
-[ドキュメント](/ja/development/) セクションに、チェックリストのどのステップで最初に問題が発生したかを含めます。
-問題と関連するログ出力。
+If the checklist and the table above don't explain what you're seeing, or the issue turns out to be
+a software/logic bug rather than a deployment mistake, escalate to the development team: see the
+[Documentation](/ja/development/) section, and include what step of the checklist first showed the
+problem plus the relevant log output.

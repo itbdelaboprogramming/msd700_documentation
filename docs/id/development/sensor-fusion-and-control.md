@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Sensor Fusion, Kinematika, dan Estimasi Keadaan
+
+
+# Sensor Fusion, Kinematics, and State Estimation
 
 <RoleBadge role="developer" />
 
-Dokumen ini memberikan spesifikasi matematis dan arsitektur lengkap dari pipa estimasi keadaan, konfigurasi Extended Kalman Filter (EKF), pemfilteran orientasi IMU, dan kinematika penggerak diferensial yang diterapkan pada robot MSD700.
+This document provides an exhaustive mathematical and architectural specification of the state estimation pipeline, Extended Kalman Filter (EKF) configuration, IMU orientation filtering, and differential drive kinematics implemented on the MSD700 robot.
 
-## Persepsi dan Arsitektur Fusi
+## Perception and Fusion Architecture
 
 ```mermaid
 flowchart TD
@@ -41,85 +43,85 @@ flowchart TD
 
 ---
 
-## Kinematika Maju Penggerak Diferensial
+## Differential Drive Forward Kinematics
 
-Robot fisik beroperasi sebagai platform penggerak diferensial dua roda yang didukung oleh empat roda kastor pasif.
+The physical robot operates as a two-wheel differential drive platform supported by four passive caster wheels.
 
-### Parameter Kinematik:
-- Radius Roda: $r = 0,075\text{ m}$ (Diameter Roda: $0,150\text{ m}$).
-- Pengukur Track (Jarak antara garis tengah roda penggerak): $L = 0,580\text{ m}$.
-- Resolusi Encoder: $CPR = 4000\text{ hitungan/revolusi}$ (setelah $4\times$ decoding kuadratur).
-- Rasio Pengurangan Gearbox: $N = 30:1$.
+### Kinematic Parameters:
+- Wheel Radius: $r = 0.075\text{ m}$ (Wheel Diameter: $0.150\text{ m}$).
+- Track Gauge (Distance between drive wheel centerlines): $L = 0.580\text{ m}$.
+- Encoder Resolution: $CPR = 4000\text{ counts/revolution}$ (after $4\times$ quadrature decoding).
+- Gearbox Reduction Ratio: $N = 30:1$.
 
-### Perhitungan Perpindahan per Periode Kontrol $\Delta t$:
-Diberikan delta encoder kiri $\Delta \text{ticks}_L$ dan delta encoder kanan $\Delta \text{ticks}_R$:
+### Displacement Calculations per Control Period $\Delta t$:
+Given left encoder delta $\Delta \text{ticks}_L$ and right encoder delta $\Delta \text{ticks}_R$:
 
 $$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{CPR \cdot N}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{CPR \cdot N}$$
 
-Perpindahan linier $\Delta s$ dan perubahan arah $\Delta \theta$:
+Linear displacement $\Delta s$ and heading change $\Delta \theta$:
 
 $$\Delta s = \frac{\Delta s_R + \Delta s_L}{2}, \quad \Delta \theta = \frac{\Delta s_R - \Delta s_L}{L}$$
 
-### Integrasi Odometri Diskrit:
-Dalam bingkai lokal robot dengan integrasi Runge-Kutta orde ke-2 (titik tengah):
+### Discrete Odometry Integration:
+In the robot local frame with Runge-Kutta 2nd-order (midpoint) integration:
 
-$$x_{k+1} = x_k + \Delta s \cdot \cos\left(\theta_k + \frac{\Delta \theta}{2}\kanan)$$
+$$x_{k+1} = x_k + \Delta s \cdot \cos\left(\theta_k + \frac{\Delta \theta}{2}\right)$$
 
-$$y_{k+1} = y_k + \Delta s \cdot \sin\left(\theta_k + \frac{\Delta \theta}{2}\kanan)$$
+$$y_{k+1} = y_k + \Delta s \cdot \sin\left(\theta_k + \frac{\Delta \theta}{2}\right)$$
 
 $$\theta_{k+1} = \theta_k + \Delta \theta$$
 
 ---
 
-## Filter Orientasi IMU Madgwick AHRS
+## Madgwick AHRS IMU Orientation Filter
 
-Data IMU mentah di `/imu/data_raw` ($50\text{ Hz}$) diproses oleh `imu_filter_madgwick` untuk memperoleh orientasi angka empat bebas drift $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$:
+Raw IMU data on `/imu/data_raw` ($50\text{ Hz}$) is processed by `imu_filter_madgwick` to derive drift-free quaternion orientation $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$:
 
-### Optimasi Penurunan Gradien:
-$$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \kanan) \Delta t$$
+### Gradient Descent Optimization:
+$$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \right) \Delta t$$
 
-- $\mathbf{\omega}_{gyro} = [0, \omega_x, \omega_y, \omega_z]^T$: Vektor kecepatan sudut dari giroskop.
-- $\nabla \mathbf{f}$: Gradien fungsi tujuan menyelaraskan vektor gravitasi akselerometer terukur dengan referensi gravitasi kerangka bumi $[0, 0, 1]^T$.
-- $\beta = 0,05$: Filter parameter tingkat divergensi yang menyeimbangkan respons giroskop terhadap kebisingan getaran akselerometer.
+- $\mathbf{\omega}_{gyro} = [0, \omega_x, \omega_y, \omega_z]^T$: Angular rate vector from gyroscope.
+- $\nabla \mathbf{f}$: Objective function gradient aligning measured accelerometer gravity vector with reference earth-frame gravity $[0, 0, 1]^T$.
+- $\beta = 0.05$: Filter divergence rate parameter balancing gyroscope responsiveness against accelerometer vibration noise.
 
 ---
 
-## Filter Kalman Diperluas (EKF) 15 Dimensi
+## 15-Dimensional Extended Kalman Filter (EKF)
 
-Node estimasi keadaan (`ekf_localization_node` dari `robot_localization`) mempertahankan vektor variabel acak Gaussian 15 keadaan:
+The state estimation node (`ekf_localization_node` from `robot_localization`) maintains a 15-state Gaussian random variable vector:
 
 $$\mathbf{x} = \begin{bmatrix} x & y & z & \phi & \theta & \psi & \dot{x} & \dot{y} & \dot{z} & \dot{\phi} & \dot{\theta} & \dot{\psi} & \ddot{x} & \ddot{y} & \ddot{z} \end{bmatrix}^T$$
 
-Dimana:
-- $x, y, z$: posisi 3D dalam bingkai odometri ($z$ dijepit ke $0$ dalam mode 2D).
-- $\phi, \theta, \psi$: Roll, pitch, dan yaw (sudut Euler).
-- $\dot{x}, \dot{y}, \dot{z}$: Kecepatan linier kerangka badan.
-- $\dot{\phi}, \dot{\theta}, \dot{\psi}$: Kecepatan sudut.
-- $\ddot{x}, \ddot{y}, \ddot{z}$: Akselerasi linier.
+Where:
+- $x, y, z$: 3D position in odometry frame ($z$ clamped to $0$ in 2D mode).
+- $\phi, \theta, \psi$: Roll, pitch, and yaw (Euler angles).
+- $\dot{x}, \dot{y}, \dot{z}$: Body-frame linear velocities.
+- $\dot{\phi}, \dot{\theta}, \dot{\psi}$: Angular velocities.
+- $\ddot{x}, \ddot{y}, \ddot{z}$: Linear accelerations.
 
-### Pembaruan Proses (Langkah Prediksi):
+### Process Update (Prediction Step):
 $$\hat{\mathbf{x}}_{k|k-1} = \mathbf{f}(\hat{\mathbf{x}}_{k-1|k-1}, \mathbf{u}_k)$$
 
 $$\mathbf{P}_{k|k-1} = \mathbf{F}_k \mathbf{P}_{k-1|k-1} \mathbf{F}_k^T + \mathbf{Q}$$
 
-- $\mathbf{F}_k = \kiri. \frac{\partial \mathbf{f}}{\partial \mathbf{x}} \right|_{\hat{\mathbf{x}}_{k-1|k-1}}$: Matriks Jacobian transisi keadaan.
-- $\mathbf{Q}$: Matriks Kovariansi Kebisingan Proses Diagonal (mencerminkan dinamika dan slip roda yang tidak dimodelkan).
+- $\mathbf{F}_k = \left. \frac{\partial \mathbf{f}}{\partial \mathbf{x}} \right|_{\hat{\mathbf{x}}_{k-1|k-1}}$: State transition Jacobian matrix.
+- $\mathbf{Q}$: Diagonal Process Noise Covariance Matrix (reflecting unmodeled dynamics and wheel slip).
 
-### Pembaruan Pengukuran (Langkah Koreksi):
-$$\mathbf{K}_k = \mathbf{P}_{k|k-1} \mathbf{H}_k^T \kiri( \mathbf{H}_k \mathbf{P}_{k|k-1} \mathbf{H}_k^T + \mathbf{R}_k \kanan)^{-1}$$
+### Measurement Update (Correction Step):
+$$\mathbf{K}_k = \mathbf{P}_{k|k-1} \mathbf{H}_k^T \left( \mathbf{H}_k \mathbf{P}_{k|k-1} \mathbf{H}_k^T + \mathbf{R}_k \right)^{-1}$$
 
-$$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \kiri( \mathbf{z}_k - \mathbf{h}(\hat{\mathbf{x}}_{k|k-1}) \kanan)$$
+$$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \left( \mathbf{z}_k - \mathbf{h}(\hat{\mathbf{x}}_{k|k-1}) \right)$$
 
 $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}$$
 
-- $\mathbf{z}_k$: Pengukuran kecepatan fusi vektor $\dot{x}$ dari odometri roda, dan yaw absolut $\psi$ dan kecepatan sudut $\dot{\psi}$ dari IMU.
-- $\mathbf{R}_k$: Matriks Kovariansi Kebisingan Pengukuran disetel untuk varians sensor ($R_{\dot{x}, \text{roda}} = 10^{-3}$, $R_{\psi, \text{imu}} = 10^{-4}$).
+- $\mathbf{z}_k$: Measurement vector fusing velocity $\dot{x}$ from wheel odometry, and absolute yaw $\psi$ and angular velocity $\dot{\psi}$ from IMU.
+- $\mathbf{R}_k$: Measurement Noise Covariance Matrix tuned for sensor variance ($R_{\dot{x}, \text{wheel}} = 10^{-3}$, $R_{\psi, \text{imu}} = 10^{-4}$).
 
 ---
 
-## Saluran Proyeksi LiDAR PointCloud
+## LiDAR PointCloud Projection Pipeline
 
-Sensor Velodyne VLP-16 menghasilkan 300.000 titik/detik di 16 cincin laser. Untuk meminimalkan penggunaan CPU sekaligus menjaga kewaspadaan terhadap hambatan spasial, `pointcloud_to_laserscan` membagi titik cloud 3D menjadi pemindaian planar 2D berkecepatan tinggi:
+The Velodyne VLP-16 sensor produces 300,000 points/sec across 16 laser rings. To minimize CPU utilization while preserving spatial obstacle awareness, `pointcloud_to_laserscan` slices the 3D point cloud into a high-rate 2D planar scan:
 
 ```mermaid
 flowchart LR
@@ -128,10 +130,10 @@ flowchart LR
   PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 20 Hz, 720 points/rev)"]
 ```
 
-Hal ini memastikan bahwa hambatan (seperti kaki meja, palet rendah, dan personel berdiri) dalam zona ketinggian $0,46\text{ m}$ hingga $0,96\text{ m}$ dimasukkan ke dalam peta biaya navigasi tanpa kekacauan pantulan lantai.
+This ensures that obstacles (such as table legs, low pallets, and standing personnel) within the $0.46\text{ m}$ to $0.96\text{ m}$ elevation zone are captured into the navigation costmaps without floor-reflection clutter.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Peta Biaya dan Perencana](/id/development/costmaps-and-planners): Lapisan navigasi dan hambatan inflasi.
-- [Firmware dan Perangkat Keras](/id/development/firmware-and-hardware): Penghitungan pulsa mikrokontroler dan loop PID.
-- [Simulasi](/id/development/simulation): Verifikasi sensor Gazebo skala sebenarnya.
+- [Costmaps and Planners](/id/development/costmaps-and-planners): Navigation layers and obstacle inflation.
+- [Firmware and Hardware](/id/development/firmware-and-hardware): Microcontroller pulse counting and PID loops.
+- [Simulation](/id/development/simulation): True-scale Gazebo sensor verification.

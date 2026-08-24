@@ -1,52 +1,29 @@
 ---
 outline: deep
 ---
-# Pengaturan Unit
+
+
+# Unit Setup
 
 <RoleBadge role="technician" />
 
-Panduan ini memberikan petunjuk langkah demi langkah untuk menginstal dan mengonfigurasi **Unit MSD700** (robot fisik yang berjalan pada komputer papan tunggal NVIDIA Jetson).
+This guide provides step-by-step instructions for installing and configuring an **MSD700 Unit** (the physical robot running on an NVIDIA Jetson single-board computer).
 
-Pastikan [MSD700 Server](/id/setup/server-setup) yang sedang berjalan ada sebelum melanjutkan.
+Ensure that a running [MSD700 Server](/id/setup/server-setup) exists before proceeding.
 
 ::: info Production-First Architecture
-Panduan ini secara default menerapkan robot perangkat keras nyata yang terhubung ke **Cloud Produksi**. Opsi simulasi (`--simulator`) dan perutean cloud pengembangan (`--dev`) ada di bagian [Konfigurasi Lanjutan](#advanced-configurations).
+This guide defaults to deploying a real hardware robot connecting to the **Production Cloud**. Simulation options (`--simulator`) and development cloud routing (`--dev`) are in the [Advanced Configurations](#advanced-configurations) section.
 :::
 
-## Topologi Sistem
+## System Topology
 
-```mermaid
-flowchart TD
-  subgraph JetsonHost["NVIDIA Jetson Host (JetPack Ubuntu)"]
-    DM["scripts/docker-manager.sh (CLI Orchestrator)"]
+![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
-    subgraph RobotContainer["msd700 Container (ROS Core)"]
-      TM["tmux Session: robot_services"]
-      TM --> W1["roscore (:11311)"]
-      TM --> W2["msd700_bringup / navigation / SLAM"]
-      TM --> W3["camera_client (WebRTC Video)"]
-      TM --> W4["system_command.py (Lease & Actions)"]
-      TM --> W5["aws_mqtt Bridge (TLS :8883)"]
-    end
 
-    subgraph LocalStack["Local Web UI Stack (Offline Operation)"]
-      L1["backend_local (:5002) + rosbridge (:9090)"]
-      L2["frontend_local (:3000)"]
-      L3["media_local (:3003)"]
-      L4["MySQL Local (:3306)"]
-      L5["Mosquitto Local (:1883)"]
-    end
-  end
 
-  W5 <-->|"TLS Port 8883 (Single Cloud Link)"| CLOUD["MSD700 Cloud Server"]
-  W2 <-->|"Loopback MQTT :1883"| L5
-  L1 --> L4
-  L1 -.->|"Bidirectional Sync"| CLOUD
-```
+## Directory Structure Overview
 
-## Ikhtisar Struktur Direktori
-
-Ruang kerja Jetson mengelola paket robot, jembatan web, dan UI web onboard sebagai submodul:
+The Jetson workspace manages robot packages, web bridges, and onboard web UI as submodules:
 
 ```
 ~/msd700_noetic/                              # Main Jetson Orchestration Workspace
@@ -65,31 +42,34 @@ Ruang kerja Jetson mengelola paket robot, jembatan web, dan UI web onboard sebag
 
 ---
 
-## Pengaturan Inti Langkah-demi-Langkah
+## Core Step-by-Step Setup
 
-Ikuti 5 langkah berikut secara berurutan untuk menyiapkan robot fisik.
+Follow these 5 steps in sequence to set up the physical robot.
 
-### Langkah 1: Kloning Ruang Kerja dengan Submodul
+### Step 1: Clone Workspace and Source Repositories
 
-Kloning `msd700_noetic` dengan `--recursive` sehingga semua submodul di `src/` terisi secara otomatis:
+Clone the `msd700_noetic` orchestration workspace, then clone the three required repositories into the `src/` directory:
 
 ```bash
-git clone --recursive https://github.com/itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
+# 1. Clone orchestration workspace
+git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
+
+# 2. Clone source packages into src/ on branch v2
+git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
+git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip Cloned without `--recursive`?
-Jika Anda sudah mengkloning tanpa submodul, jalankan:
-```bash
-git submodule update --init --recursive
-```
+::: tip Why Manual Clone into `src/`?
+`msd700_noetic` ignores `src/*/` in its `.gitignore` to avoid Git-in-Git conflicts and allow each sub-repository to be managed on its own independent branch.
 :::
 
 ---
 
-### Langkah 2: Penyiapan Host Satu Kali
+### Step 2: One-Time Host Setup
 
-Jalankan skrip pengaturan host untuk mengonfigurasi izin grup Docker dan penerusan grafis:
+Run the host setup script to configure Docker group permissions and graphics forwarding:
 
 ```bash
 cd ~/msd700_noetic
@@ -97,7 +77,7 @@ cd ~/msd700_noetic
 ```
 
 ::: warning Apply Group Permissions
-Jika skrip menambahkan pengguna Anda ke grup `docker`, keluar dan masuk kembali, atau jalankan:
+If the script added your user to the `docker` group, log out and back in, or run:
 ```bash
 newgrp docker
 ```
@@ -105,9 +85,11 @@ newgrp docker
 
 ---
 
-### Langkah 3: Konfigurasikan Lingkungan (`docker/.env`)
+### Step 3: Review Environment Configuration (`docker/.env`)
 
-Hasilkan dan tinjau file lingkungan lokal:
+On first launch, `./scripts/docker-manager.sh` automatically creates `docker/.env` from `docker/.env.example` and generates secure, loopback-only local MySQL passwords (`ensure_local_secrets`).
+
+If you wish to pre-configure or review settings manually before launch:
 
 ```bash
 cd ~/msd700_noetic
@@ -115,83 +97,96 @@ cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-Pengaturan lingkungan utama:
+Key settings in `docker/.env`:
 
 ```ini
 # Storage path for map occupancy grids on the Jetson
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Cloud Server Hostname for MQTT and Sync
-NAKAYAMA_HOST=msd.nglobal.jp
-CLOUD_BASE_URL=https://msd.nglobal.jp/services
+# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+USER_UID=
+USER_GID=
 
-# Local Ports (Default settings)
-FRONTEND_PORT_LOCAL=3000
+# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+WITH_SIMULATOR=false
+
+# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+UNIT_ID=
+
+# Local Ports (Default settings for on-board local stack)
+MYSQL_PORT_LOCAL=3306
+MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
 ROSBRIDGE_PORT_LOCAL=9090
+FRONTEND_PORT_LOCAL=3000
 MEDIA_SERVER_PORT_LOCAL=3003
 SIGNALLING_PORT_WS_LOCAL=3001
-MYSQL_PORT_LOCAL=3306
+SIGNALLING_PORT_HTTP_LOCAL=3002
+NETWORK_AGENT_PORT_LOCAL=5011
 
-# Leave UNIT_ID empty; assigned automatically during enrolment
-UNIT_ID=
+# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+#LOCAL_IP=192.168.4.1
 ```
+
+::: info Cloud Connection Routing
+Cloud connection parameters (Production Cloud `https://msd.nglobal.jp/services` or Dev Cloud via `--dev`) are managed automatically by `docker-manager.sh` during launch and enrolment, and are not configured in `docker/.env`.
+:::
 
 ---
 
-### Langkah 4: Bangun Gambar Robot Docker
+### Step 4: Build Robot Docker Image
 
-Bangun wadah runtime robot ROS Noetic:
+Build the ROS Noetic robot runtime container:
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh build
 ```
 
-Ini membangun gambar `msd700:latest` yang berisi ROS Noetic, tumpukan navigasi, driver sensor, dan jembatan web.
+This builds the `msd700:latest` image containing ROS Noetic, navigation stacks, sensor drivers, and web bridges.
 
 ---
 
-### Langkah 5: Mulai Robot dan Selesaikan Pendaftaran
+### Step 5: Start Robot and Complete Enrolment
 
-Luncurkan tumpukan robot dalam mode terpisah:
+Launch the robot stack in detached mode:
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
-#### Alur Pendaftaran Otomatis:
-1. Pada peluncuran pertama, robot menghubungi server cloud dan mengeluarkan **Kode Klaim** 6 karakter (misalnya `K7M2QP`).
-2. Administrator membuka `https://msd.nglobal.jp/admin` dan login.
-3. Di bawah **Unit Tertunda**, temukan kode klaim yang cocok, tetapkan unit ke **Profil Penyewaan** yang aktif, dan klik **Setuju**.
-4. Robot menerima kredensial yang ditandatangani secara kriptografis (`Certificates/robot/device.json`), diikat ke HiveMQ melalui port TLS 8883, dan muncul langsung di peta armada.
+#### Automated Enrolment Flow:
+1. On its very first launch, the robot contacts the cloud server and outputs a 6-character **Claim Code** (e.g. `K7M2QP`).
+2. An administrator opens `https://msd.nglobal.jp/admin` and logs in.
+3. Under **Pending Units**, locate the matching claim code, assign the unit to an active **Rental Profile**, and click **Approve**.
+4. The robot receives its cryptographically signed credentials (`Certificates/robot/device.json`), binds to HiveMQ over TLS port 8883, and appears live on the fleet map.
 
 ---
 
-## Mengoperasikan Unit Secara Lokal (Mode Offline)
+## Operating the Unit Locally (Offline Mode)
 
-Saat robot beroperasi di lokasi tanpa konektivitas internet, sambungkan laptop atau tablet Anda langsung ke jaringan lokal robot (atau hotspot Wi-Fi robot):
+When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network (or robot Wi-Fi hotspot):
 
-1. Buka browser Anda dan navigasikan ke: `http://<jetson-ip>:3000`.
-2. Dasbor lokal memungkinkan teleoperasi penuh, pemetaan SLAM, pembuatan rute, dan penyisiran cakupan area.
-3. Ketika konektivitas internet pulih, semua peta yang direkam secara lokal secara otomatis disinkronkan kembali ke server cloud pusat.
+1. Open your browser and navigate to: `http://<jetson-ip>:3000`.
+2. The local dashboard allows full teleoperation, SLAM mapping, route creation, and area coverage sweeps.
+3. When internet connectivity is restored, all locally recorded maps automatically synchronize back to the central cloud server.
 
 ---
 
-## Konfigurasi Lanjutan
+## Advanced Configurations
 
 <details>
-<summary><b>Mode Simulasi (Gudang Gazebo)</b></summary>
+<summary><b>Simulation Mode (Gazebo Warehouse)</b></summary>
 
-Untuk menguji algoritme pada laptop tanpa perangkat keras robot fisik:
+To test algorithms on a laptop without physical robot hardware:
 
-1. Buat gambar yang mendukung simulator:
+1. Build the simulator-enabled image:
    ```bash
    ./scripts/docker-manager.sh build --simulator
    ```
 
-2. Mulai tumpukan simulasi:
+2. Start the simulation stack:
    ```bash
    ./scripts/docker-manager.sh up --simulator -d
    ```
@@ -199,34 +194,34 @@ Untuk menguji algoritme pada laptop tanpa perangkat keras robot fisik:
 </details>
 
 <details>
-<summary><b>Perutean Cloud Pengembangan (`--dev`)</b></summary>
+<summary><b>Development Cloud Routing (`--dev`)</b></summary>
 
-Untuk mengarahkan unit ke server cloud pengembangan, bukan produksi:
+To point the unit at a development cloud server instead of production:
 
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-Ini menghubungkan MQTT ke port dev `8884` dan menyinkronkan dengan database pengembangan.
+This connects MQTT to dev port `8884` and synchronizes with the development database.
 
 </details>
 
 <details>
-<summary><b>Perbaikan Jaringan Host untuk Laptop Non-Ubuntu/Arch</b></summary>
+<summary><b>Host Networking Fixes for Non-Ubuntu/Arch Laptops</b></summary>
 
-Jika berjalan di Arch Linux atau distribusi non-standar:
+If running on Arch Linux or non-standard distributions:
 
-1. **Resolusi Nama Host**:
+1. **Hostname Resolution**:
    ```bash
    grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
    ```
 
-2. **Nonaktifkan Pemetaan Loopback IPv6**:
+2. **Disable IPv6 Loopback Mapping**:
    ```bash
    sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
    ```
 
-3. **Buat Direktori Peta Bersama**:
+3. **Create Shared Maps Directory**:
    ```bash
    sudo mkdir -p /home/ubuntu/ros_maps
    sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
@@ -236,9 +231,9 @@ Jika berjalan di Arch Linux atau distribusi non-standar:
 
 ---
 
-## Verifikasi & Diagnostik
+## Verification & Diagnostics
 
-Gunakan perintah diagnostik berikut untuk memverifikasi kesehatan robot:
+Use these diagnostic commands to verify robot health:
 
 ```bash
 # 1. View overall container and service status
@@ -252,8 +247,8 @@ tmux attach -t robot_services
 ./scripts/docker-manager.sh logs -f
 ```
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Pengaturan Server](/id/setup/server-setup): Instalasi backend cloud.
-- [Pengaturan Sistem](/id/setup/system-setup): Kalibrasi dan verifikasi sensor.
-- [Referensi Docker](/id/setup/docker-reference): Referensi sintaksis CLI yang komprehensif.
+- [Server Setup](/id/setup/server-setup): Cloud backend installation.
+- [System Setup](/id/setup/system-setup): Sensor calibration and verification.
+- [Docker Reference](/id/setup/docker-reference): Comprehensive CLI syntax reference.

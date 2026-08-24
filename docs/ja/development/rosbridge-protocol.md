@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# WebSocket と rosbridge プロトコル
+
+
+# WebSocket and rosbridge Protocol
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、`rosbridge_suite` によって提供される WebSocket インターフェイスについて詳しく説明し、JSON プロトコル仕様、メッセージ サブスクリプション形式、サービス呼び出しスキーマ、圧縮技術、および Web キャンバス レンダリングの統合について説明します。
+This document details the WebSocket interface provided by `rosbridge_suite`, explaining the JSON protocol specification, message subscription formats, service invocation schemas, compression techniques, and web canvas rendering integration.
 
-## rosbridge アーキテクチャの概要
+## rosbridge Architecture Overview
 
-Web ダッシュボードは、永続的な WebSocket 接続を介して `rosbridge_server` を通じてライブ ROS トピックおよびサービスと対話します。
+The web dashboard interacts with live ROS topics and services through `rosbridge_server` over a persistent WebSocket connection.
 
 ```mermaid
 flowchart LR
@@ -29,20 +31,20 @@ flowchart LR
   ROSBRIDGE <-->|"Native ROS Topics"| RELAY
 ```
 
-## 接続エンドポイント
+## Connection Endpoints
 
-|環境 |プロトコルとパス |宛先ポート |
+| Environment | Protocol & Path | Destination Port |
 | --- | --- | --- |
-| **実稼働サーバー** | `wss://msd.nglobal.jp/services/rosbridge` |内部 `localhost:9090` にプロキシされます |
-| **開発サーバー** | `ws://<server-ip>:9091` | WebSocket を dev rosbridge コンテナにダイレクトする |
-| **ユニット ローカル サーバー** | `ws://<unit-ip>:9090` | WebSocket をオンボード `rosbridge_suite` に指示する |
+| **Production Server** | `wss://msd.nglobal.jp/services/rosbridge` | Proxied to internal `localhost:9090` |
+| **Development Server** | `ws://<server-ip>:9091` | Direct WebSocket to dev rosbridge container |
+| **Unit Local Server** | `ws://<unit-ip>:9090` | Direct WebSocket to onboard `rosbridge_suite` |
 
-## rosbridge プロトコルの操作
+## rosbridge Protocol Operations
 
-rosbridge v2 プロトコルは、標準化された JSON 操作 (`op`) を使用します。
+The rosbridge v2 protocol uses standardized JSON operations (`op`):
 
-### 1. トピックの購読 (`op: "subscribe"`)
-ブラウザへの ROS トピックのストリーミングを開始します。
+### 1. Topic Subscription (`op: "subscribe"`)
+Initiates streaming of a ROS topic to the browser:
 
 ```json
 {
@@ -56,12 +58,12 @@ rosbridge v2 プロトコルは、標準化された JSON 操作 (`op`) を使�
 }
 ```
 
-- `topic`: ユニットの ULID 名前空間を含む完全修飾 ROS トピック名。
-- `throttle_rate`: メッセージ間の最小時間 (ミリ秒単位) (例: 40 ms = 25 Hz)。
-- `compression`: `none` または `png` (高帯域幅占有グリッド用) をサポートします。
+- `topic`: Fully qualified ROS topic name including unit ULID namespace.
+- `throttle_rate`: Minimum time in milliseconds between messages (e.g. 40 ms = 25 Hz).
+- `compression`: Supports `none` or `png` (for high-bandwidth occupancy grids).
 
-### 2. トピックの公開 (`op: "publish"`)
-型指定された ROS メッセージをブラウザから ROS マスターにパブリッシュします。
+### 2. Topic Publishing (`op: "publish"`)
+Publishes a typed ROS message from browser to ROS master:
 
 ```json
 {
@@ -76,8 +78,8 @@ rosbridge v2 プロトコルは、標準化された JSON 操作 (`op`) を使�
 }
 ```
 
-### 3. サービス呼び出し (`op: "call_service"`)
-ROS サービスを同期的に呼び出します。
+### 3. Service Invocation (`op: "call_service"`)
+Calls a ROS service synchronously:
 
 ```json
 {
@@ -88,7 +90,7 @@ ROS サービスを同期的に呼び出します。
 }
 ```
 
-- **サービス応答エンベロープ**:
+- **Service Response Envelope**:
 ```json
 {
   "op": "service_response",
@@ -99,26 +101,26 @@ ROS サービスを同期的に呼び出します。
 }
 ```
 
-## プライマリ Web キャンバスのサブスクリプション
+## Primary Web Canvas Subscriptions
 
-Web ダッシュボード (`ROS-dashboard-next-ts`) は、次の主要なビジュアル トピックをサブスクライブします。
+The web dashboard (`ROS-dashboard-next-ts`) subscribes to the following primary visual topics:
 
-|トピック識別子 | ROS メッセージ タイプ |キャンバス上の目的 |
+| Topic Identifier | ROS Message Type | Purpose on Canvas |
 | --- | --- | --- |
-| `/server/robot_pose` | `geometry_msgs/PoseStamped` | 2D ロボット アイコンの位置と方向矢印を更新します (25 Hz)。 |
-| `/server/slam/map` | `nav_msgs/OccupancyGrid` | EaselJS キャンバス上にライブ SLAM フロアプラン ビットマップをレンダリングします。 |
-| `/server/scan` | `sensor_msgs/LaserScan` |ロボットの周囲に赤いレーザー ビーム ポイントをレンダリングします。 |
-| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` |グローバルな青色の計画ナビゲーション軌道をレンダリングします。 |
-| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` |ダイナミックなローカル軌道ラインをレンダリングします。 |
-| `/server/boustrophedon_path` | `nav_msgs/Path` |オレンジ色のボストロフェドン エリア カバレッジ スイープ パスをレンダリングします。 |
+| `/server/robot_pose` | `geometry_msgs/PoseStamped` | Updates 2D robot icon position and heading arrow (25 Hz). |
+| `/server/slam/map` | `nav_msgs/OccupancyGrid` | Renders the live SLAM floorplan bitmap on EaselJS canvas. |
+| `/server/scan` | `sensor_msgs/LaserScan` | Renders red laser beam points around the robot. |
+| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` | Renders global blue planned navigation trajectory. |
+| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Renders dynamic local trajectory line. |
+| `/server/boustrophedon_path` | `nav_msgs/Path` | Renders orange boustrophedon area coverage sweep path. |
 
-## フロントエンドの復元力と自己修復
+## Frontend Resilience and Self-Healing
 
-1. **`ROS2D.js` ステージ プロトタイプ パッチ**: コンポーネントの高速再マウント中に EaselJS ステージ オブジェクトが ROS 座標変換機能を失うクラッシュを防ぐため、フロントエンドはビューアのインスタンス化前に `globalToRos` メソッドと `rosToGlobal` メソッドを `createjs.Stage.prototype` に動的に挿入します。
-2. **再接続デバウンス**: WebSocket が切断された場合、クライアントは切断警告が表示される前に 3 回連続して再接続が試行されるまで待機し、一時的なネットワーク ブリップ中の UI のちらつきを防ぎます。
+1. **`ROS2D.js` Stage Prototype Patch**: To prevent crashes where EaselJS stage objects lose ROS coordinate transform functions during rapid component remounting, the frontend dynamically injects `globalToRos` and `rosToGlobal` methods into `createjs.Stage.prototype` prior to viewer instantiation.
+2. **Reconnection Debounce**: If the WebSocket drops, the client waits for three consecutive reconnection attempts before surfacing a disconnect warning, preventing UI flickering during temporary network blips.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [メッセージ コントラクト](/ja/development/message-contracts): MQTT およびシリアル化されたトピック コントラクト。
-- [アーキテクチャ](/ja/development/architecture): 2 マシン モデルとロスブリッジ ルーティング。
-- [API リファレンス](/ja/development/api-reference): HTTP REST API エンドポイント。
+- [Message Contracts](/ja/development/message-contracts): MQTT and serialized topic contracts.
+- [Architecture](/ja/development/architecture): Two-machine model and rosbridge routing.
+- [API Reference](/ja/development/api-reference): HTTP REST API endpoints.

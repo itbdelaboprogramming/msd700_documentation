@@ -1,15 +1,17 @@
 ---
 search: false
 ---
-# リポジトリ構造
+
+
+# Repository Structure
 
 <RoleBadge role="developer" />
 
-MSD700 は 4 つのリポジトリにまたがります。これ (`msd700_documentation`) は単なるドキュメント サイトです。製品
-それ自体は他の 3 つの中に存在します。これらはサーバー チェックアウト上の兄弟であり、
-ユニット チェックアウトの `msd700_noetic`: 同じコードで、2 つの異なる方法で組み立てます。
+MSD700 spans four repositories. This one (`msd700_documentation`) is just the docs site; the product
+itself lives in the other three, which are siblings on a Server checkout and submodules of
+`msd700_noetic` on a Unit checkout: same code, two different ways of assembling it.
 
-## `ros-web-ui`: Web 対応パッケージ、バックエンド、フロントエンドのビルド コンテキスト
+## `ros-web-ui`: web-facing packages, backend, and frontend build context
 
 ```
 ros-web-ui/
@@ -42,14 +44,14 @@ ros-web-ui/
 └── logs/
 ```
 
-`ros-web-ui` は **3 つの異なるコンテキスト**で使用される 1 つのリポジトリです。サーバーのとして構築されます。
-バックエンド/ロスブリッジ (`docker-compose.yml`)、ロボットの Web 接続用にユニットのワークスペースにソースされます
-ノード (`msd700_noetic/src/ros-web-ui`) を介してロボット半分としてスタンドアロンで実行します。
-Jetson 以外のホスト (開発用ラップトップ、またはこのドキュメント サーバー、テスト) 上の `docker-compose.robot.yml`
-シミュレーター）。どちらを取得できるかは、それを呼び出す構成ファイル/スクリプトによってではなく、完全に依存します。
-リポジトリ自体にあるもの。
+`ros-web-ui` is the one repository used in **three different contexts**: built as the Server's
+backend/rosbridge (`docker-compose.yml`), sourced into a Unit's workspace for the robot's web-facing
+nodes (`msd700_noetic/src/ros-web-ui`), and run standalone as the robot half via
+`docker-compose.robot.yml` on a non-Jetson host (a dev laptop, or this documentation server, testing
+the simulator). Which one you get depends entirely on which compose file / script invokes it, not on
+anything in the repo itself.
 
-## `msd700_robot`: ロボットを動かすための ROS パッケージ
+## `msd700_robot`: the ROS packages that make the robot move
 
 ```
 msd700_robot/
@@ -69,15 +71,15 @@ msd700_robot/
 └── ros_msd700_msgs/
 ```
 
-`msd700_field.urdf.xacro` のみが実際の 0.90 x 0.70 m ロボットです。ここにある他のモデルはすべて
-TurtleBot3 ワッフルの派生サイズは 0.266 m で、コミットされたワールドはそれに一致するサイズになっています。参照
-[シミュレーション](/ja/development/simulation) どの組み合わせでカバレッジ ジオメトリを検証できるか。
+Only `msd700_field.urdf.xacro` is the real 0.90 x 0.70 m robot; every other model here is a
+TurtleBot3 Waffle derivative at 0.266 m, and the committed worlds are sized to match. See
+[Simulation](/ja/development/simulation) for which combination can validate coverage geometry.
 
-`msd700_noetic` (サブモジュール `src/msd700_robot` として) の両方によってソースされ、`ros-web-ui` にコピーされます
-自分の`source/msd700_robot`。ロボットのビルドの半分には、このリポジトリのナビゲーション スタックと
-同じ catkin ワークスペース内の `ros-web-ui` の Web 向けパッケージ。
+Sourced by both `msd700_noetic` (as a submodule, `src/msd700_robot`) and copied into `ros-web-ui`'s
+own `source/msd700_robot`. The robot half of a build needs both this repo's navigation stack and
+`ros-web-ui`'s web-facing packages in the same catkin workspace.
 
-## `msd700_noetic`: Jetson/ロボット オーケストレーション
+## `msd700_noetic`: Jetson/robot orchestration
 
 ```
 msd700_noetic/
@@ -94,29 +96,29 @@ msd700_noetic/
     └── ROS-dashboard-next-ts/
 ```
 
-これが実際にユニットが動作する様子です。 `src/` はコンテナにバインドマウントされている (ベイクインされていない) ため、
-ホスト上の起動ファイルまたは Python ノードの編集は、再構築せずに次回の起動時に有効になります。
-`docker-manager.sh build` が必要なのは、依存関係またはベースイメージの変更のみです。サーバー マシン上 (次のように)
-ドキュメント サイト自身のホスト)、`src/` は、特に指定しない限り、正当に存在しないか空です。
-ここで半分ロボットをテストしています。サーバーは代わりに `ros-web-ui` 自身の `docker-compose.yml` を実行します。
-これは何も必要ありません。
+This is what a Unit actually runs. `src/` is bind-mounted into the container (not baked in), so
+editing a launch file or a Python node on the host takes effect on the next launch with no rebuild;
+only dependency or base-image changes need `docker-manager.sh build`. On a Server machine (like this
+documentation site's own host), `src/` is legitimately absent or empty unless you're specifically
+testing the robot half here. The Server runs `ros-web-ui`'s own `docker-compose.yml` instead, which
+needs none of this.
 
-## `ROS-dashboard-next-ts`: オペレーター ダッシュボード
+## `ROS-dashboard-next-ts`: the operator dashboard
 
-独自の Next.js アプリ。異なる焼き付けられた URL を使用して同じソースから 2 回ビルドされます。
+Its own Next.js app, built twice from the same source with different baked-in URLs:
 
-- **サーバー ビルド** (`frontend_prod`/`frontend_dev`、`ros-web-ui/docker-compose.yml`):
-  サーバー独自のバックエンド/rosbridge/media/signalling、パブリック HTTPS/WSS パス、Apache プロキシ経由。
-- **ユニット ビルド** (`msd700_noetic` のコンテナ内、または `ros-web-ui` の `docker-compose.yml` の場合
-  ロボットを半分スタンドアロンで実行): 経由で組み込まれた、同じユニット自体のローカル サービスと通信します。
-  `NEXT_PUBLIC_*` ビルド引数はユニット自身の IP を指します。
+- **Server build** (`frontend_prod`/`frontend_dev` in `ros-web-ui/docker-compose.yml`): talks to the
+  Server's own backend/rosbridge/media/signalling, over the public HTTPS/WSS paths Apache proxies.
+- **Unit build** (inside `msd700_noetic`'s container, or `ros-web-ui`'s `docker-compose.yml` when
+  running the robot half standalone): talks to that same unit's own local services, baked in via
+  `NEXT_PUBLIC_*` build args pointed at the unit's own IP.
 
-これらの URL は実行時に読み取られるのではなく、JS バンドルに**コンパイルされ、変更されるためです。
-ビルドポイントのサーバーでは、再起動だけではなく、常にイメージの再構築が必要です。
+Because those URLs are compiled **into** the JS bundle rather than read at runtime, changing which
+server a build points at always requires a rebuild of the image, never just a restart.
 
-## このリポジトリ (`msd700_documentation`)
+## This repository (`msd700_documentation`)
 
-VitePress ドキュメント サイトのみで、製品コードはありません。
+Just the VitePress docs site, no product code.
 
 ```
 msd700_documentation/
@@ -141,9 +143,9 @@ msd700_documentation/
 └── package-lock.json
 ```
 
-### 図表
+### Diagrams
 
-図は ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
+Diagrams are authored as ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
 browser. Two pieces make that work:
 
 | Piece | Job |
@@ -155,48 +157,48 @@ The component follows the reader's light or dark theme and re-renders on a theme
 mermaid bakes its palette into the SVG at render time. If a diagram fails to parse, the raw source is
 shown instead of an empty gap.
 
-```bash として作成されています
-npm run docs:check-diagrams # すべての図を解析します。構文エラーが発生するとゼロ以外で終了します
-「」
+```bash
+npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+```
 
 ::: warning A broken diagram does not fail the build
-VitePress は図のソースを解析しません。それを通過させるだけです。構文エラーは次のように表面化します。
-公開されたページのソースの赤いブロック。図を編集した後にチェッカーを実行します。
+VitePress never parses the diagram source; it only passes it through. A syntax error surfaces as a
+red block of source on the published page. Run the checker after editing diagrams.
 :::
 
 ::: info Keep `<br/>` out of state-diagram transition labels
-これは、`flowchart` ノード ラベルとシーケンス図のメモで機能し、このサイトで使用されています。
-状態図のエッジ ラベルはプレーン テキストであるため、そこにある `<br/>` は文字通りレンダリングされます。
+It works in `flowchart` node labels and in sequence-diagram notes, which is where this site uses it.
+State-diagram edge labels are plain text, so a `<br/>` there renders literally.
 :::
 
-### ドキュメント サイトの展開方法
+### How the docs site is deployed
 
 ::: details Deployment pipeline (click to expand)
-1. `main` へのプッシュにより、GitHub Webhook がトリガーされます。
-2. `scripts/webhook-listener.mjs` は Webhook 署名 (HMAC SHA-256) を検証し、`refs/heads/main` への `push` イベントで `scripts/deploy.sh` を生成します。
+1. A push to `main` triggers a GitHub webhook.
+2. `scripts/webhook-listener.mjs` verifies the webhook signature (HMAC SHA-256) and, on a `push` event to `refs/heads/main`, spawns `scripts/deploy.sh`.
 3. `deploy.sh`:
-   - 作業ツリーにローカルな変更がある場合、またはデプロイが既に進行中の場合 (`flock` 経由) は実行を拒否します。
-   - `origin/main` へのフェッチとハード リセット
-   - `npm ci` を実行します
-   - サイトを新しい `docs/.vitepress/dist_new` ディレクトリに構築します
-   - `docs/.vitepress/dist` (プレーンな `mv`) にアトミックにスワップします
-4. 運用環境では、Apache は `Alias` 経由で `docs/.vitepress/dist` **ディスクから直接** サービスを提供します (
-   `000-default-le-ssl.conf` vhost);リクエスト内に実行中の `vitepress preview` プロセスがありません
-   パスがあり、systemd ユニットがありません。 `npm run docs:preview` はローカルのスポットチェック専用です。
-5. `webhook-listener.mjs` 自体は、`127.0.0.1:4701` 上の `msd700-docs-webhook` systemd ユニットの下で実行されます。
+   - refuses to run if the working tree has local changes, or if a deploy is already in progress (via `flock`)
+   - fetches and hard-resets to `origin/main`
+   - runs `npm ci`
+   - builds the site into a fresh `docs/.vitepress/dist_new` directory
+   - atomically swaps it into `docs/.vitepress/dist` (a plain `mv`)
+4. In production, Apache serves `docs/.vitepress/dist` **directly off disk** via an `Alias` (see the
+   `000-default-le-ssl.conf` vhost); there is no running `vitepress preview` process in the request
+   path, and no systemd unit for one. `npm run docs:preview` is for local spot-checks only.
+5. `webhook-listener.mjs` itself runs under the `msd700-docs-webhook` systemd unit on `127.0.0.1:4701`.
 :::
 
 ::: danger Never put `vitepress preview` behind Apache in production
-以前は、これがサイトの提供方法でした (`ProxyPass` から長期存続する `vitepress preview` プロセスまで)
-ポート 4700)、デプロイのたびに静かに壊れました: `preview` の静的サーバー (`sirv`、
-プロダクション モード) は、起動時に出力ディレクトリを 1 回スキャンし、各ファイルの名前とサイズをキャッシュします。あ
-ハッシュ化されたアセットのファイル名を変更する再構築では、キャッシュが存在しないファイルを指したままになります。
-そのため、すべての CSS/JS 404 が実行され、`index.html` は古い `Content-Length` に切り詰められて提供されました。給仕
-`dist/` Apache 自身の `Alias` (現在のセットアップ、以下を参照) 経由で直接そのようなキャッシュはありません: Apache stats
-各ファイルはリクエストごとに処理されるため、`dist/` スワップは再起動せずにすぐに取得されます。
+This used to be how the site was served (`ProxyPass` to a long-lived `vitepress preview` process on
+port 4700), and it silently broke after every deploy: `preview`'s static server (`sirv`, in
+production mode) scans the output directory once at startup and caches each file's name and size. A
+rebuild that changes hashed asset filenames left that cache pointing at files that no longer existed
+so every CSS/JS 404'd, and `index.html` was served truncated to its stale `Content-Length`. Serving
+`dist/` directly via Apache's own `Alias` (current setup, see below) has no such cache: Apache stats
+each file per request, so a `dist/` swap is picked up immediately with no restart.
 :::
 
-## 関連
+## Related
 
-- [寄稿](/ja/development/contributing) - ローカル開発ワークフロー
-- [建築](/ja/development/architecture)
+- [Contributing](/ja/development/contributing) - local dev workflow
+- [Architecture](/ja/development/architecture)

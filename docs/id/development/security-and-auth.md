@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# Keamanan dan Otentikasi
+
+
+# Security and Authentication
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci model keamanan, mekanisme otentikasi kriptografi, isolasi domain kepercayaan, dan kebijakan kontrol akses yang diterapkan di seluruh platform robotika MSD700.
+This document details the security model, cryptographic authentication mechanisms, trust domain isolation, and access control policies implemented across the MSD700 robotics platform.
 
-## Ikhtisar Arsitektur Keamanan
+## Security Architecture Overview
 
-MSD700 menerapkan pertahanan mendalam di seluruh frontend web, backend cloud, perantara pesan, dan komputer papan tunggal (SBC) Jetson fisik.
+MSD700 enforces defense-in-depth across the web frontend, cloud backend, message broker, and physical Jetson single-board computers (SBCs).
 
 ```mermaid
 flowchart TB
@@ -42,19 +44,19 @@ flowchart TB
   LOCAL_KEYRING -.->|"Local Auth Only"| RobotDomain
 ```
 
-## Tiga Domain Perwalian Independen
+## Three Independent Trust Domains
 
-Batasan keamanan dipisahkan menjadi tiga domain kepercayaan yang tidak dapat dipertukarkan:
+Security boundaries are separated into three non-interchangeable trust domains:
 
-| Kepercayaan Domain | Otoritas Penerbit | Tujuan Token | Titik Akhir Validasi | Aturan Isolasi |
+| Trust Domain | Issuer Authority | Token Purpose | Validation Endpoint | Isolation Rule |
 | --- | --- | --- | --- | --- |
-| **Domain Operator** | Backend Server Cloud (`backend_node`) | Mengautentikasi operator manusia yang mengakses dasbor web. | `verifyToken` di semua rute `/api/*` | Tidak dapat digunakan langsung oleh robot; ditolak pada rute `/local/*`. |
-| **Robot Cloud Domain** | Layanan Pendaftaran Cloud (`/enroll/token`) | Mengautentikasi robot fisik yang terhubung ke HiveMQ dan server media cloud. | TLS HiveMQ + awan `media-server` | Dicakup secara ketat pada ULID yang ditetapkan robot; berlaku selama 12 jam. |
-| **Satuan Domain Lokal** | Backend Lokal Terintegrasi (`backend_local`) | Mengautentikasi operator LAN lokal dan klien streaming video onboard. | `/local/*` titik akhir | Token cloud ditolak dengan tegas untuk memastikan kedaulatan offline lokal. |
+| **Operator Domain** | Cloud Server Backend (`backend_node`) | Authenticates human operators accessing the web dashboard. | `verifyToken` on all `/api/*` routes | Cannot be used directly by robots; rejected on `/local/*` routes. |
+| **Robot Cloud Domain** | Cloud Enrolment Service (`/enroll/token`) | Authenticates physical robots connecting to HiveMQ and cloud media servers. | HiveMQ TLS + cloud `media-server` | Scoped strictly to the robot's assigned ULID; valid for 12 hours. |
+| **Unit Local Domain** | Onboard Local Backend (`backend_local`) | Authenticates local LAN operators and onboard video streaming clients. | `/local/*` endpoints | Cloud tokens are strictly rejected to ensure local offline sovereignty. |
 
-## Pendaftaran Perangkat Keras Kriptografi (Protokol Nonce)
+## Cryptographic Hardware Enrolment (The Nonce Protocol)
 
-Robot yang belum terdaftar mendaftarkan dirinya ke server cloud melalui jabat tangan kriptografi tiga tahap.
+Unenrolled robots register themselves with the cloud server through a three-stage cryptographic handshake.
 
 ```mermaid
 sequenceDiagram
@@ -85,14 +87,14 @@ sequenceDiagram
   Robot->>Robot: Write Certificates/robot/device.json (mode 0600)
 ```
 
-### Mengapa Protokol Nonce 32-Byte Penting:
-- **MAC / Perlindungan Spoofing Sidik Jari**: Alamat MAC perangkat keras dan nomor seri disiarkan di jaringan lokal dan terlihat di konsol admin. Tanpa rahasia, penyerang yang memalsukan alamat MAC dapat mengklaim kredensial saat robot fisik dimatikan.
-- **Verifikasi Sekali Pakai**: Nonce teks biasa dikirimkan tepat satu kali melalui TLS selama penyerahan kredensial akhir. Setelah diverifikasi, server menghapus nonce yang tertunda.
-- **Penyimpanan Rahasia Nol Mentah**: Basis data cloud hanya menyimpan hash `bcrypt` dari `device_secret`. Bahkan kebocoran database lengkap tidak membahayakan rahasia perangkat robot yang aktif.
+### Why the 32-Byte Nonce Protocol Is Critical:
+- **MAC / Fingerprint Spoofing Protection**: Hardware MAC addresses and serial numbers are broadcast on local networks and visible in the admin console. Without the secret nonce, an attacker spoofing a MAC address could claim credentials while the physical robot is powered off.
+- **Single-Use Verification**: The plaintext nonce is transmitted exactly once over TLS during final credential handover. Once verified, the server clears the pending nonce.
+- **Zero Raw Secret Storage**: The cloud database stores only the `bcrypt` hash of `device_secret`. Even a complete database leak does not compromise active robot device secrets.
 
-## Gantungan Kunci JWT dan Rotasi Rahasia Tanpa Waktu Henti
+## JWT Keyring and Zero-Downtime Secret Rotation
 
-Token autentikasi diverifikasi berdasarkan **JWT Keyring** yang disimpan di `/srv/msd/secrets/jwt_keyring`, bukan satu variabel lingkungan statis.
+Authentication tokens are verified against a **JWT Keyring** stored in `/srv/msd/secrets/jwt_keyring` rather than a single static environment variable.
 
 ```json
 {
@@ -110,14 +112,14 @@ Token autentikasi diverifikasi berdasarkan **JWT Keyring** yang disimpan di `/sr
 }
 ```
 
-### Aturan Rotasi Gantungan Kunci:
-1. **Kunci Penandatanganan Aktif**: Semua token akses dan penyegaran yang baru dibuat ditandatangani dengan kunci yang diidentifikasi oleh `active_kid`.
-2. **Verifikasi Grace Window**: Ketika token masuk tiba, `verifyToken` memeriksa tanda tangannya terhadap `active_kid`. Jika verifikasi gagal, verifikasi akan menguji kunci sebelumnya di gantungan kunci sebelum menolak dengan HTTP 401.
-3. **Gangguan Sesi Nol**: Rotasi rahasia dalam produksi tidak memaksa semua operator aktif untuk login ulang secara bersamaan.
+### Keyring Rotation Rules:
+1. **Active Signing Key**: All newly minted access and refresh tokens are signed with the key identified by `active_kid`.
+2. **Grace Window Verification**: When an incoming token arrives, `verifyToken` checks its signature against `active_kid`. If verification fails, it tests previous keys in the keyring before rejecting with HTTP 401.
+3. **Zero Session Disruption**: Rotating secrets in production does not force all active operators to re-login simultaneously.
 
-## Keamanan Sewa Operasi: Mencegah Pengambilalihan Multi-Operator
+## Operating Lease Security: Preventing Multi-Operator Takeover
 
-Untuk mencegah perintah yang bertentangan dari pengguna atau tab browser secara bersamaan, akses ke aktuasi motor diatur oleh **sewa pengoperasian eksklusif** yang disimpan dalam memori pada robot fisik.
+To prevent conflicting commands from simultaneous users or browser tabs, access to motor actuation is governed by an **exclusive operating lease** held in memory on the physical robot.
 
 ```mermaid
 flowchart LR
@@ -126,19 +128,19 @@ flowchart LR
   OP1_TAB2["Operator 1 (Second Tab)"] -.->|"Origin Conflict (Prompt Takeover)"| ROBOT
 ```
 
-- **Kedaluwarsa Detak Jantung**: Sewa berlaku selama 15 detik dan harus diperbarui melalui ping berkala.
-- **Pemisahan Akun vs Sesi**:
-  - `in_use`: Jika akun pengguna lain memegang sewa, eksekusi perintah diblokir.
-  - `origin_conflict`: Jika akun pengguna yang sama membuka tab kedua atau beralih dari cloud ke jaringan lokal, UI akan meminta pengambilalihan secara eksplisit daripada mengganggu tab aktif secara diam-diam.
+- **Heartbeat Expiry**: The lease is valid for 15 seconds and must be renewed by periodic pings.
+- **Account vs Session Separation**:
+  - `in_use`: If another user account holds the lease, command execution is blocked.
+  - `origin_conflict`: If the same user account opens a second tab or switches from cloud to local network, the UI prompts for explicit takeover rather than silently interrupting the active tab.
 
-## Keamanan Jaringan dan Penghentian TLS
+## Network Security and TLS Termination
 
-1. **Apache Reverse Proxy**: Semua lalu lintas HTTP, SSE, dan WebSocket eksternal menghentikan TLS di port Apache 443 menggunakan sertifikat dari Let's Encrypt (`/etc/letsencrypt/live/`).
-2. **HiveMQ Mutual Transport Security**: Robot terhubung ke HiveMQ pada port 8883 melalui TLS. Sertifikat Keystore PKCS#12 berada di `/srv/msd/secrets/hivemq/keystore.p12`.
-3. **Isolasi Kontainer**: Kontainer backend berkomunikasi melalui jaringan jembatan Docker internal (`ros_backend_net`), sehingga tidak mengekspos database internal atau port rosbridge langsung ke internet publik.
+1. **Apache Reverse Proxy**: All external HTTP, SSE, and WebSocket traffic terminates TLS at Apache port 443 using certificates from Let's Encrypt (`/etc/letsencrypt/live/`).
+2. **HiveMQ Mutual Transport Security**: Robots connect to HiveMQ on port 8883 over TLS. Keystore PKCS#12 certificates reside in `/srv/msd/secrets/hivemq/keystore.p12`.
+3. **Container Isolation**: Backend containers communicate across internal Docker bridge networks (`ros_backend_net`), exposing no internal database or rosbridge ports directly to the public internet.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Arsitektur](/id/development/architecture): Topologi platform lengkap dan domain kepercayaan.
-- [Kontrak Pesan](/id/development/message-contracts): Definisi payload pendaftaran perangkat keras.
-- [Referensi API](/id/development/api-reference): Otentikasi pengguna dan titik akhir penyegaran sesi.
+- [Architecture](/id/development/architecture): Full platform topology and trust domains.
+- [Message Contracts](/id/development/message-contracts): Hardware enrolment payload definitions.
+- [API Reference](/id/development/api-reference): User authentication and session refresh endpoints.

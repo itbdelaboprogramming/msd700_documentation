@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Kanvas Frontend & Saluran Visualisasi React
+
+
+# Frontend Canvas & React Visualization Pipeline
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci pipeline rendering 2D, konversi ruang koordinat, arsitektur penumpukan lapisan, dan integrasi siklus hidup React yang diterapkan di `ROS-dashboard-next-ts` menggunakan HTML5 Canvas, EaselJS, dan `ROS2D.js`.
+This document details the 2D rendering pipeline, coordinate space conversions, layer stacking architecture, and React lifecycle integration implemented in `ROS-dashboard-next-ts` using HTML5 Canvas, EaselJS, and `ROS2D.js`.
 
-## Arsitektur Pipa Rendering Kanvas
+## Canvas Rendering Pipeline Architecture
 
 ```mermaid
 flowchart TD
@@ -36,31 +38,31 @@ flowchart TD
 
 ---
 
-## Transformasi Koordinat: Ruang Metrik ke Piksel Layar
+## Coordinate Transformations: Metric Space to Screen Pixels
 
-Bingkai koordinat ROS adalah metrik (meter, dengan $(0, 0)$ di asal peta), sedangkan HTML5 Canvas menggunakan koordinat piksel asal kiri atas $(p_x, p_y)$.
+The ROS coordinate frame is metric (meters, with $(0, 0)$ at map origin), while HTML5 Canvas uses top-left origin pixel coordinates $(p_x, p_y)$.
 
-Mengingat resolusi peta $r$ (meter per piksel), tinggi gambar $H$ (piksel), dan asal peta $\mathbf{o} = [x_0, y_0]^T$:
+Given map resolution $r$ (meters per pixel), image height $H$ (pixels), and map origin $\mathbf{o} = [x_0, y_0]^T$:
 
-### 1. Konversi Metrik ke Piksel Kanvas:
+### 1. Metric to Canvas Pixel Conversion:
 $$p_x = \frac{x - x_0}{r}$$
 
 $$p_y = H - \frac{y - y_0}{r}$$
 
-*(Sumbu $y$ terbalik karena ROS $Y$ naik ke atas sedangkan Canvas $Y$ naik ke bawah).*
+*(The $y$-axis is inverted because ROS $Y$ increases upward while Canvas $Y$ increases downward).*
 
-### 2. Konversi Piksel Kanvas ke Metrik (Untuk Pengiriman Sasaran):
+### 2. Canvas Pixel to Metric Conversion (For Goal Dispatching):
 $$x = x_0 + (p_x \cdot r)$$
 
 $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ---
 
-## Patch `createjs.Stage.prototype` (`rosScriptLoader.ts`)
+## The `createjs.Stage.prototype` Patch (`rosScriptLoader.ts`)
 
-Dalam kerangka React SPA modern (seperti Next.js 14+), komponen dipasang dan dilepas dengan cepat selama transisi halaman. Standar `ROS2D.js` mengikat fungsi konversi koordinat ke tahapan instance pada pembuatan, yang dapat hilang saat React DOM dirender ulang, sehingga menyebabkan kesalahan `TypeError: this.stage.globalToRos is not a function` yang fatal.
+In modern React SPA frameworks (such as Next.js 14+), components mount and unmount rapidly during page transitions. Standard `ROS2D.js` binds coordinate conversion functions to stage instances on creation, which can be lost upon React DOM re-renders, causing fatal `TypeError: this.stage.globalToRos is not a function` errors.
 
-Untuk menjamin ketahanan visualisasi tanpa kerusakan, `rosScriptLoader.ts` melakukan patch secara dinamis pada `createjs.Stage.prototype` sebelum pembuatan instance kanvas:
+To guarantee zero-crash visualization resilience, `rosScriptLoader.ts` dynamically patches `createjs.Stage.prototype` prior to canvas instantiation:
 
 ```typescript
 // scripts/rosScriptLoader.ts
@@ -89,15 +91,15 @@ export function patchEaselJSStage(): void {
 
 ---
 
-## Mesin Gambar Poligon Interaktif
+## Interactive Polygon Drawing Engine
 
-Saat operator menentukan poligon sapuan cakupan area atau zona larangan masuk:
-1. **Penempatan Vertex**: Mengklik koordinat metrik catatan kanvas $(x_i, y_i)$.
-2. **Pengikat Karet Dinamis**: Saat mouse bergerak, garis tepi sementara yang dinamis ditampilkan ke posisi kursor.
-3. **Closing Snapping**: Jika kursor masuk ke dalam $15\text{ piksel}$ dari titik awal, poligon akan menutup dan melakukan rasterisasi ke dalam `/msd700/keepout_grid` atau batas cakupan.
+When an operator defines area coverage sweep polygons or keep-out zones:
+1. **Vertex Placement**: Clicking the canvas records metric coordinates $(x_i, y_i)$.
+2. **Dynamic Rubberbanding**: As the mouse moves, a dynamic temporary edge line renders to the cursor position.
+3. **Closing Snapping**: If the cursor enters within $15\text{ pixels}$ of the initial vertex, the polygon snaps closed and rasterizes into the `/msd700/keepout_grid` or coverage boundary.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [rosbridge Protocol](/id/development/rosbridge-protocol): Operasi WebSocket JSON dan topik streaming.
-- [Cakupan Boustrophedon](/id/development/boustrophedon-and-alignment): Perhitungan sapuan geometri ganda.
-- [Referensi API](/id/development/api-reference): Peta dan rute titik akhir REST.
+- [rosbridge Protocol](/id/development/rosbridge-protocol): WebSocket JSON operations and streaming topics.
+- [Boustrophedon Coverage](/id/development/boustrophedon-and-alignment): Dual-geometry sweep calculations.
+- [API Reference](/id/development/api-reference): Map and route REST endpoints.

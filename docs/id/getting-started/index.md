@@ -1,24 +1,26 @@
 ---
 search: false
 ---
-# Memulai
+
+
+# Getting Started
 
 <RoleBadge role="user" />
 
-Selamat datang di **Panduan Pengguna Operator MSD700**. Dokumentasi ini dirancang untuk operator armada, peneliti, dan teknisi lapangan yang menggunakan dasbor web untuk mengontrol, memetakan, dan mengawasi robot otonom MSD700.
+Welcome to the **MSD700 Operator User Guide**. This documentation is designed for fleet operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots.
 
-Tidak diperlukan pengalaman pemrograman atau robotika untuk mengoperasikan robot melalui antarmuka web.
+No programming or robotics experience is required to operate the robot via the web interface.
 
 <LinkCards>
-  <LinkCard icon="📖" title="Perkenalan" details="Pelajari tentang platform MSD700, kemampuan perangkat keras, dan arsitektur cloud." link="/id/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Panduan Memulai Cepat" details="Petunjuk langkah demi langkah untuk masuk, memilih robot, dan menjalankan misi pertama Anda." link="/id/getting-started/quick-start" />
-  <LinkCard icon="✨" title="Fitur Sistem" details="Panduan komprehensif untuk teleoperasi, pemetaan SLAM, sapuan area, dan streaming kamera." link="/id/getting-started/features" />
-  <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami pengawas keselamatan, sewa operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/getting-started/behavior" />
-  <LinkCard icon="❓" title="Pertanyaan yang Sering Diajukan" details="Jawaban atas pertanyaan operasional umum mengenai baterai, peta, dan konektivitas." link="/id/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Pemecahan Masalah Operator" details="Solusi cepat untuk gejala umum operator seperti video terhenti dan tujuan dibatalkan." link="/id/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/id/getting-started/introduction" />
+  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/id/getting-started/quick-start" />
+  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/id/getting-started/features" />
+  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/id/getting-started/behavior" />
+  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/id/getting-started/faq" />
+  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/id/getting-started/troubleshooting" />
 </LinkCards>
 
-## Jalur Bacaan yang Direkomendasikan untuk Operator
+## Recommended Reading Path for Operators
 
 ```mermaid
 flowchart LR
@@ -28,8 +30,8 @@ flowchart LR
   D --> E["5. FAQ & Help<br/>Troubleshooting"]
 ```
 
-## Persyaratan Sistem
+## System Requirements
 
-- **Browser yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge (browser modern berbasis Chromium dengan dukungan WebRTC).
-- **Resolusi Tampilan**: Dioptimalkan untuk tampilan desktop dan laptop (1366 x 768 atau lebih tinggi) untuk menampilkan kanvas peta, umpan kamera langsung, dan telemetri secara berdampingan.
-- **Jaringan**: Akses internet untuk cloud dashboard (`msd.nglobal.jp`), atau koneksi Wi-Fi lokal saat mengoperasikan robot secara offline di lapangan.
+- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
+- **Display Resolution**: Optimized for desktop and laptop displays (1366 x 768 or higher) to display map canvases, live camera feeds, and telemetry side-by-side.
+- **Network**: Internet access for cloud dashboard (`msd.nglobal.jp`), or local Wi-Fi connection when operating robots offline in the field.

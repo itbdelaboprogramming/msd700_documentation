@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Registri Paket ROS
+
+
+# ROS Package Registry
 
 <RoleBadge role="developer" />
 
-Dokumen ini menyediakan registri komprehensif semua paket ROS 1 Noetic dalam ruang kerja MSD700 di `msd700_robot` dan `ros-web-ui/source`, merinci peran paket, file peluncuran utama, node aktif, topik yang diterbitkan/dilanggankan, dan parameter.
+This document provides a comprehensive registry of all ROS 1 Noetic packages within the MSD700 workspace across `msd700_robot` and `ros-web-ui/source`, detailing package roles, key launch files, active nodes, published/subscribed topics, and parameters.
 
-## Tata Letak Paket Ruang Kerja
+## Workspace Package Layout
 
 ```mermaid
 flowchart TD
@@ -38,89 +40,89 @@ flowchart TD
   HW --> FIRM
 ```
 
-## Direktori Paket: `msd700_robot`
+## Package Directory: `msd700_robot`
 
-### 1.`msd700_navigation`
-Gerakan inti otonom, pemetaan SLAM, dan paket cakupan wilayah.
+### 1. `msd700_navigation`
+The core autonomous movement, SLAM mapping, and area coverage package.
 
-- **Node Utama**:
-  - `move_base`: Server tindakan navigasi ROS standar yang memanfaatkan `navfn/NavfnROS` untuk perencanaan jalur global dan `teb_local_planner/TebLocalPlannerROS` untuk optimalisasi lintasan.
-  - `path_coverage_node.py`: Perencana sapuan Boustrophedon menghitung jalur berkelok-kelok dan menangani perencanaan ulang rintangan secara real-time menggunakan `libs/coverage_geometry.py`.
-  - `slam_gmapping`: Node pemetaan SLAM berbasis laser 2D yang menghasilkan jaringan hunian.
-  - `amcl`: Filter partikel Lokalisasi Monte Carlo Adaptif untuk lokalisasi peta statis.
-- **File Peluncuran Kunci**:
-  - `msd700_navigation.launch`: Tampilan navigasi lengkap dengan server peta, AMCL, dan move_base.
-  - `msd700_boustrophedon.launch`: Tumpukan eksekusi cakupan area dengan `path_coverage_node`.
-  - `msd700_slam.launch`: Peluncuran Gmapping SLAM dengan teleoperasi.
-  - `msd700_explore.launch`: Eksplorasi perbatasan SLAM otonom (`explore_lite`).
+- **Primary Nodes**:
+  - `move_base`: Standard ROS navigation action server utilizing `navfn/NavfnROS` for global path planning and `teb_local_planner/TebLocalPlannerROS` for trajectory optimization.
+  - `path_coverage_node.py`: Boustrophedon sweep planner computing serpentine paths and handling real-time obstacle replanning using `libs/coverage_geometry.py`.
+  - `slam_gmapping`: 2D laser-based SLAM mapping node generating occupancy grids.
+  - `amcl`: Adaptive Monte Carlo Localization particle filter for static map localization.
+- **Key Launch Files**:
+  - `msd700_navigation.launch`: Full navigation bringup with map server, AMCL, and move_base.
+  - `msd700_boustrophedon.launch`: Area coverage execution stack with `path_coverage_node`.
+  - `msd700_slam.launch`: Gmapping SLAM launch with teleoperation.
+  - `msd700_explore.launch`: Autonomous SLAM frontier exploration (`explore_lite`).
 
-### 2.`msd700_control`
-Mengelola estimasi keadaan, mengoordinasikan hierarki transformasi, dan fusi sensor.
+### 2. `msd700_control`
+Manages state estimation, coordinate transform hierarchies, and sensor fusion.
 
-- **Node Utama**:
-  - `ekf_localization_node` (`robot_localization`): Odometri encoder roda sekering Kalman Filter yang diperluas (`/wheel/odom`) dan data sensor IMU (`/imu/data`) menjadi topik `/odometry/filtered` yang stabil.
-  - `imu_filter_node` (`imu_tools`): Filter sensor Madgwick AHRS mengubah laju sudut mentah dan percepatan menjadi angka empat orientasi.
-- **File Peluncuran Kunci**:
-  - `robot_localization.launch`: Mengonfigurasi dan meluncurkan fusi EKF dengan pemuatan parameter dari `ekf_localization_config.yaml`.
-  - `imu_filter.launch`: Meluncurkan estimasi orientasi Madgwick.
+- **Primary Nodes**:
+  - `ekf_localization_node` (`robot_localization`): Extended Kalman Filter fusing wheel encoder odometry (`/wheel/odom`) and IMU sensor data (`/imu/data`) into a stable `/odometry/filtered` topic.
+  - `imu_filter_node` (`imu_tools`): Madgwick AHRS sensor filter converting raw angular rate and acceleration into orientation quaternions.
+- **Key Launch Files**:
+  - `robot_localization.launch`: Configures and launches EKF fusion with parameter loading from `ekf_localization_config.yaml`.
+  - `imu_filter.launch`: Launches Madgwick orientation estimation.
 
-### 3.`msd700_description`
-Mendefinisikan struktur kinematik fisik, geometri tumbukan, dan penempatan sensor menggunakan URDF dan Xacro.
+### 3. `msd700_description`
+Defines physical kinematic structures, collision geometries, and sensor placements using URDF and Xacro.
 
-- **Model URDF Utama**:
-  - `urdf/msd700_field.urdf.xacro`: Model robot produksi skala sebenarnya (0,90 x 0,70 m, 4 roda, poros penggerak di tengah, tiang Velodyne).
-  - `urdf/velodyne/VLP_16.urdf.xacro`: Model LiDAR 3D 16 saluran dengan ketelitian tinggi dan plugin sensor Gazebo.
-  - `urdf/turtlebot3_waffle.urdf.xacro`: Model prototipe skala kecil yang lama.
+- **Primary URDF Models**:
+  - `urdf/msd700_field.urdf.xacro`: True-scale production robot model (0.90 x 0.70 m, 4 casters, centered drive axle, Velodyne mast).
+  - `urdf/velodyne/VLP_16.urdf.xacro`: High-fidelity 16-channel 3D LiDAR model and Gazebo sensor plugins.
+  - `urdf/turtlebot3_waffle.urdf.xacro`: Legacy small-scale prototype model.
 
 ### 4. `msd700_hardware` & `msd700_firmware`
-Menangani antarmuka perangkat keras tingkat rendah, aktuasi motor, penghitungan pulsa encoder, dan status baterai.
+Handles low-level hardware interfaces, motor actuation, encoder pulse counting, and battery status.
 
-- **Arsitektur Perangkat Keras**:
-  - `serial_launch.launch`: Menghubungkan port serial host ke mikrokontroler Arduino/Teensy tingkat rendah melalui `/dev/ttyUSB*` pada 115200 baud.
-  - Firmware Arduino mengeksekusi kontrol kecepatan PID loop tertutup, mendengarkan perintah kecepatan `/cmd_vel`, dan menerbitkan jumlah tick encoder roda.
+- **Hardware Architecture**:
+  - `serial_launch.launch`: Connects host serial ports to the low-level Arduino/Teensy microcontroller over `/dev/ttyUSB*` at 115200 baud.
+  - Arduino firmware executes closed-loop PID velocity control, listens for `/cmd_vel` velocity commands, and publishes wheel encoder tick counts.
 
-### 5.`msd700_simulation`
-Lingkungan simulasi gazebo untuk menguji algoritma navigasi dalam perangkat lunak.
+### 5. `msd700_simulation`
+Gazebo simulation environment for testing navigation algorithms in software.
 
-- **Lingkungan Utama**:
-  - `msd700_warehouse_nav.launch`: Meluncurkan Gudang Kecil AWS RoboMaker berukuran 14 x 21 m dengan model robot `msd700_field` skala sebenarnya.
-  - `scripts/fetch_sim_worlds.sh`: Pengunduh sesuai permintaan untuk jerat simulasi 3D (12 MB) dari cabang GitHub `ros1`.
+- **Key Environments**:
+  - `msd700_warehouse_nav.launch`: Launches the 14 x 21 m AWS RoboMaker Small Warehouse with true-scale `msd700_field` robot model.
+  - `scripts/fetch_sim_worlds.sh`: On-demand downloader for 3D simulation meshes (12 MB) from GitHub `ros1` branch.
 
-### 6.`third_party/ira_laser_tools`
-Menggabungkan beberapa pemindai LiDAR 2D atau mengubah pointclouds 3D menjadi pemindaian planar virtual.
+### 6. `third_party/ira_laser_tools`
+Merges multiple 2D LiDAR scanners or converts 3D pointclouds into virtual planar scans.
 
-- **Node**:
-  - `laserscan_multi_merger`: Menggabungkan LiDAR planar ganda menjadi satu topik `/scan` 360 derajat.
+- **Nodes**:
+  - `laserscan_multi_merger`: Merges dual planar LiDARs into a single 360-degree `/scan` topic.
 
-## Direktori Paket: `ros-web-ui/source`
+## Package Directory: `ros-web-ui/source`
 
-### 1.`msd700_webui_control`
-Menjembatani perintah web dan telemetri dasbor ke perangkat keras robot fisik.
+### 1. `msd700_webui_control`
+Bridges web commands and dashboard telemetry to physical robot hardware.
 
-- **Node Kunci**:
-  - `system_command.py`: Berlangganan MQTT `/system_command`, mengelola sewa operasi eksklusif, mengirimkan tindakan, dan menerbitkan `/system_feedback`.
-  - `operation_supervisor.py`: Urutan misi otonom yang mengelola kemajuan titik jalan Autopilot dan mengunci `/string/operation_snapshot`.
-  - `switch_mode.py`: Orkestra layanan ROS secara dinamis beralih antara tumpukan peluncuran mode `idle`, `navigation`, dan `mapping`.
-  - `hardware_monitor.py`: Pengawas latar belakang memverifikasi bahwa proses sensor penting dan perangkat USB tetap sehat.
+- **Key Nodes**:
+  - `system_command.py`: Subscribes to MQTT `/system_command`, manages the exclusive operating lease, dispatches actions, and publishes `/system_feedback`.
+  - `operation_supervisor.py`: Autonomous mission sequencer managing Autopilot waypoint advancement and latching `/string/operation_snapshot`.
+  - `switch_mode.py`: ROS service orchestrator dynamically switching between `idle`, `navigation`, and `mapping` mode launch stacks.
+  - `hardware_monitor.py`: Background watchdog verifying that critical sensor processes and USB devices remain healthy.
 
-### 2.`dependencies/topic2string`
-Lapisan serialisasi berkinerja tinggi mengonversi jenis pesan ROS berat menjadi string JSON.
+### 2. `dependencies/topic2string`
+High-performance serialization layer converting heavy ROS message types to JSON strings.
 
-- **Node Kunci**:
-  - `robotpose_from_string.py` / `robotpose_to_string`: serializer telemetri pose 25 Hz.
-  - `laserscan_to_string.py`: Serializer pemindaian laser terkompresi 2 Hz.
-  - `map_compression_node` / `map_decompression_node`: Kompresi zlib Base64 untuk jaringan hunian SLAM langsung.
+- **Key Nodes**:
+  - `robotpose_from_string.py` / `robotpose_to_string`: 25 Hz pose telemetry serializer.
+  - `laserscan_to_string.py`: 2 Hz compressed laser scan serializer.
+  - `map_compression_node` / `map_decompression_node`: Base64 zlib compression for live SLAM occupancy grids.
 
-### 3.`dependencies/aws_mqtt`
-Jembatan transportasi terenkripsi yang menghubungkan topik ROS lokal ke broker HiveMQ pusat.
+### 3. `dependencies/aws_mqtt`
+Encrypted transport bridge linking local ROS topics to the central HiveMQ broker.
 
-- **Luncurkan File**:
-  - `nakayama_msd.launch`: Jembatan sisi robot yang menghubungkan topik ROS onboard ke cloud HiveMQ pada port 8883 (TLS).
-  - `nakayama_cloud.launch`: Jembatan sisi server menerjemahkan topik MQTT menjadi topik cloud ROS per unit.
-  - `local_msd.launch`: Jembatan sisi unit yang menghubungkan ke broker Mosquitto lokal (`127.0.0.1:1883`).
+- **Launch Files**:
+  - `nakayama_msd.launch`: Robot-side bridge connecting onboard ROS topics to cloud HiveMQ on port 8883 (TLS).
+  - `nakayama_cloud.launch`: Server-side bridge translating MQTT topics into per-unit cloud ROS topics.
+  - `local_msd.launch`: Unit-side bridge connecting to local Mosquitto broker (`127.0.0.1:1883`).
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Arsitektur](/id/development/architecture): Struktur dan lapisan sistem tingkat tinggi.
-- [Penggabungan dan Kontrol Sensor](/id/development/sensor-fusion-and-control): Pengaturan EKF dan pipeline sensor yang mendetail.
-- [Status dan Perilaku](/id/development/state-and-behavior): Mesin status terperinci untuk semua node kontrol.
+- [Architecture](/id/development/architecture): High-level system structure and seams.
+- [Sensor Fusion and Control](/id/development/sensor-fusion-and-control): Detailed EKF and sensor pipeline setup.
+- [State and Behavior](/id/development/state-and-behavior): Detailed state machines for all control nodes.

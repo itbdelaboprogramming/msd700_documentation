@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# バックアップ、復元、データ移行
+
+
+# Backup, Restore, and Data Migration
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、MSD700 のデータベース バックアップ アーキテクチャ、エクスポート/インポート アーカイブ構造、レンタル プロファイル転送メカニズム、および移行スクリプトについて詳しく説明します。
+This document details the database backup architecture, export/import archive structures, rental profile transfer mechanics, and migration scripts in MSD700.
 
-## デュアルスコープ バックアップ アーキテクチャ
+## Dual-Scope Backup Architecture
 
-プラットフォームは、2 つの独立したバックアップ スコープをサポートしています。
+The platform supports two independent backup scopes:
 
 ```mermaid
 flowchart TD
@@ -27,16 +29,16 @@ flowchart TD
   end
 ```
 
-|寸法 |プロファイル スコープのバックアップ |ユニットスコープのバックアップ |
+| Dimension | Profile-Scoped Backup | Unit-Scoped Backup |
 | --- | --- | --- |
-| **主スコープ キー** | `profile_id` (レンタルプロフィール) | `unit_id` (物理ロボット ULID) |
-| **典型的な使用例** |顧客の地図とルートを代替ロボットに移行します。 |工場でのハードウェアの保守または改修の前にロボットをアーカイブします。 |
-| **データが含まれています** |そのプロファイルのマップ、ウェイポイント、プレイリスト、およびユーザー メタデータ。 |すべてのマップとセンサー記録は、その特定のハードウェア ユニットから生成されます。 |
-| **復元戦略** |追加的 (無関係なテナント データを上書きせずに更新/挿入)。 |ハードウェアユニットへの直接復元。 |
+| **Primary Scope Key** | `profile_id` (Rental Profile) | `unit_id` (Physical Robot ULID) |
+| **Typical Use Case** | Migrating a customer's maps and routes to a replacement robot. | Archiving a robot before factory hardware servicing or refurbishment. |
+| **Data Included** | Maps, waypoints, playlists, and user metadata for that profile. | All maps and sensor records originating from that specific hardware unit. |
+| **Restore Strategy** | Additive (upsert without overwriting unrelated tenant data). | Direct restoration to the hardware unit. |
 
-## アーカイブ構造 (`.tar.gz`)
+## Archive Structure (`.tar.gz`)
 
-バックアップは、構造化メタデータとバイナリ マップ ファイルを含む圧縮 `.tar.gz` アーカイブとしてエクスポートされます。
+Backups are exported as compressed `.tar.gz` archives containing structured metadata and binary map files:
 
 ```
 msd700_backup_01JZ8QK2H.tar.gz
@@ -48,7 +50,7 @@ msd700_backup_01JZ8QK2H.tar.gz
     └── 01JZ8QK2H0001_thumb.png
 ```
 
-### マニフェスト形式 (`manifest.json`)
+### Manifest Format (`manifest.json`)
 
 ```json
 {
@@ -67,14 +69,14 @@ msd700_backup_01JZ8QK2H.tar.gz
 }
 ```
 
-## REST API バックアップ操作
+## REST API Backup Operations
 
-### 1. アーカイブのエクスポート
+### 1. Export Archive
 `POST /api/backup/export`
 
-`.tar.gz` アーカイブを生成してダウンロードします。
+Generates and downloads a `.tar.gz` archive.
 
-- **リクエスト本文**:
+- **Request Body**:
 ```json
 {
   "scope": "profile",
@@ -82,30 +84,30 @@ msd700_backup_01JZ8QK2H.tar.gz
 }
 ```
 
-### 2. アーカイブのインポートと復元
+### 2. Import and Restore Archive
 `POST /api/backup/import`
 
-アーカイブをアップロードし、追加的に適用します。
+Uploads an archive and applies it additively.
 
-- **リクエスト ペイロード**: `file: <archive.tar.gz>` とターゲット `profile_id` を含むマルチパート フォーム データ。
+- **Request Payload**: Multipart form-data with `file: <archive.tar.gz>` and target `profile_id`.
 
-## スキーマ移行スクリプト
+## Schema Migration Scripts
 
-データベース スキーマの進化は、`ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/` の自動スクリプトによって管理されます。
+Database schema evolutions are managed by automated scripts in `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:
 
-|スクリプト名 |目的 |実行コマンド |
+| Script Name | Purpose | Execution Command |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` |従来のユーザー名/ユニット名のパスを ULID アドレス指定に移行します。 | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | 32 バイトの nonce 認証用の `pending_units` テーブルと `unit_devices` テーブルを作成します。 | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` |オフライン データ同期用に `sync_state` テーブルと `sync_tombstones` テーブルをインストールします。 | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | `profile_backups` テーブルを `scope` 列でアップグレードします。 | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | Migrates legacy username/unitname paths to ULID addressing. | `node migrate_unit_id_refactor.js --apply` |
+| `migrate_enrolment.js` | Creates `pending_units` and `unit_devices` tables for 32-byte nonce auth. | `node migrate_enrolment.js --apply` |
+| `migrate_sync.js` | Installs `sync_state` and `sync_tombstones` tables for offline data sync. | `node migrate_sync.js --profile dev --apply` |
+| `migrate_backup_scope.js` | Upgrades `profile_backups` table with `scope` column. | `node migrate_backup_scope.js --profile dev --apply` |
 
 ::: danger Migration Testing Rule
-移行スクリプトは、ポート 3307 で運用環境に適用する前に、**ポート 3308** で開発データベースに対して必ずテストしてください。移行スクリプトには、偶発的なターゲットの不一致を防ぐために、明示的な `--profile` 引数が必要です。
+Always test migration scripts against the development database on **port 3308** before applying them to production on port 3307. Migration scripts require an explicit `--profile` argument to prevent accidental target mismatch.
 :::
 
-## 関連ドキュメント
+## Related Documentation
 
-- [データベース スキーマ](/ja/development/database-schema): 完全な MySQL テーブル定義と外部キー。
-- [データ同期](/ja/development/data-sync): オフライン データ レプリケーションと競合解決。
-- [API リファレンス](/ja/development/api-reference): フリート管理用の REST API エンドポイント。
+- [Database Schema](/ja/development/database-schema): Full MySQL table definitions and foreign keys.
+- [Data Sync](/ja/development/data-sync): Offline data replication and conflict resolution.
+- [API Reference](/ja/development/api-reference): REST API endpoints for fleet management.

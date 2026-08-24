@@ -3,32 +3,32 @@
 layout: home
 
 hero:
-  name: "MSD700 プラットフォームのドキュメント"
+  name: "MSD700 Platform Documentation"
   text: "by ITB de Labo Research Lab"
-  tagline: "オペレーター、現場技術者、ロボット開発者向けの完全な技術マニュアル。"
+  tagline: "Complete technical manual for operators, field technicians, and robotics developers."
   actions:
     - theme: brand
-      text: はじめる
+      text: Getting Started
       link: /ja/getting-started/
     - theme: alt
-      text: セットアップガイド
+      text: Setup Guide
       link: /ja/setup/
     - theme: alt
-      text: 開発者ドキュメント
+      text: Developer Docs
       link: /ja/development/
 
 features:
-  - title: はじめる
-    details: "フリート オペレーター向け: ロボットの制御、SLAM マップの記録、エリア スイープの実行、ライブ ビデオの監視方法を学びます。"
+  - title: Getting Started
+    details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
     link: /ja/getting-started/
-    linkText: オペレーターガイドを読む
-  - title: セットアップと導入
-    details: "フィールド技術者向け: クラウド サーバー スタックと NVIDIA Jetson ロボット ハードウェアのステップバイステップのインストール ガイド。"
+    linkText: Read the operator guide
+  - title: Setup & Deployment
+    details: "For field technicians: step-by-step installation guides for the cloud server stack and NVIDIA Jetson robot hardware."
     link: /ja/setup/
-    linkText: 技術者向けセットアップ ガイドを読む
-  - title: 開発者向けドキュメント
-    details: "ソフトウェア エンジニア向け: ディープ システム アーキテクチャ、15 ステート EKF キネマティクス、メッセージ コントラクト、および REST API リファレンス。"
+    linkText: Read the technician setup guide
+  - title: Developer Documentation
+    details: "For software engineers: deep system architecture, 15-state EKF kinematics, message contracts, and REST API reference."
     link: /ja/development/
-    linkText: 開発者向けドキュメントを読む
+    linkText: Read the developer documentation
 ---
 

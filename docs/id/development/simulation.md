@@ -2,17 +2,19 @@
 outline: deep
 search: false
 ---
-#Simulasi
+
+
+# Simulation
 
 <RoleBadge role="developer" />
 
-Dokumen ini menjelaskan bagaimana robot MSD700 disimulasikan di Gazebo pada skala fisik sebenarnya, lingkungan Gudang Kecil AWS RoboMaker, konfigurasi sensor, dan apa yang dapat dan tidak dapat divalidasi oleh simulator.
+This document describes how the MSD700 robot is simulated in Gazebo at true physical scale, the AWS RoboMaker Small Warehouse environment, sensor configurations, and what the simulator can and cannot validate.
 
-Untuk geometri perencanaan cakupan yang diperoleh dari dimensi fisik robot, lihat [Cakupan Boustrophedon](/id/development/boustrophedon-and-alignment).
+For coverage planning geometry derived from physical robot dimensions, see [Boustrophedon Coverage](/id/development/boustrophedon-and-alignment).
 
-## Latar Belakang: Model Dimensi Skala Sebenarnya
+## Background: The True-Scale Dimension Model
 
-Pengaturan simulator lama di repositori menggunakan model TurtleBot3 Waffle: **0,266 x 0,266 m** tapak pada lintasan roda 0,287 m. Sebaliknya, robot MSD700 produksi sebenarnya berukuran **0,90 x 0,70 m**, yang direpresentasikan dalam peta biaya navigasi sebagai tapak empuk **1,20 x 0,85 m**.
+Older simulator setups in the repository used TurtleBot3 Waffle models: **0.266 x 0.266 m** footprint on a 0.287 m wheel track. In contrast, the real production MSD700 robot measures **0.90 x 0.70 m**, represented in the navigation costmap as a padded **1.20 x 0.85 m** footprint.
 
 ```mermaid
 flowchart LR
@@ -30,41 +32,41 @@ flowchart LR
   OldModel -.->|"3.2x Scale Discrepancy"| FieldModel
 ```
 
-### Konsekuensi dari Kesenjangan Skala:
-1. **Masalah Lorong Sempit yang Tidak Dapat Direproduksi**: Laporan nyata mengenai kegagalan perencanaan jalur di koridor gudang sempit tidak dapat direproduksi pada TurtleBot dengan radius 0,133 m.
-2. **Kebocoran Konfigurasi**: Parameter lama (`robot_width: 0.32`) tetap ada dalam konfigurasi cakupan hingga pemodelan skala sebenarnya menggantikannya.
-3. **Ketidakcocokan Skala Lingkungan**: Peta TurtleBot standar tidak memiliki jarak yang memadai untuk robot berukuran 0,9 x 0,7 m:
-   - `turtlebot_world`: Jarak bebas maksimum 0,39 m (tidak dapat memuat radius tertulis 0,425 m di mana pun).
-   - `AWS RoboMaker Small Warehouse`: Jarak bebas maksimum **3,68 m** (58% lantai dapat dilintasi, 38% dapat diputar di tempat).
+### Consequences of the Scale Gap:
+1. **Unreproducible Narrow-Aisle Issues**: Real-world reports of path planning failures in narrow warehouse corridors could not reproduce on a 0.133 m radius TurtleBot.
+2. **Configuration Leakage**: A legacy parameter (`robot_width: 0.32`) lingered in coverage configurations until true-scale modeling replaced it.
+3. **Environment Scale Mismatch**: Standard TurtleBot maps lacked adequate clearance for a 0.9 x 0.7 m robot:
+   - `turtlebot_world`: Maximum clearance 0.39 m (cannot fit a 0.425 m inscribed radius anywhere).
+   - `AWS RoboMaker Small Warehouse`: Maximum clearance **3.68 m** (58% traversable floor, 38% in-place pivotable).
 
-## Dunia Simulasi: Gudang Kecil AWS
+## The Simulation World: AWS Small Warehouse
 
-Simulator ini terstandarisasi pada lingkungan [AWS RoboMaker Small Warehouse](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world): aula industri berukuran 13,98 x 20,91 m dengan ruang lantai terbuka seluas 234 m², rak penyimpanan, dongkrak palet, dan rintangan.
+The simulator standardizes on the [AWS RoboMaker Small Warehouse](https://github.com/aws-robotics/aws-robomaker-small-warehouse-world) environment: a 13.98 x 20.91 m industrial hall with 234 m² of open floor space, storage racks, pallet jacks, and obstacles.
 
-Aset mesh 3D (12 MB) diambil sesuai permintaan untuk menjaga repositori git tetap ringan:
+3D mesh assets (12 MB) are fetched on demand to keep the git repository lightweight:
 
 ```bash
 rosrun msd700_simulation fetch_sim_worlds.sh
 ```
 
 ::: warning Upstream Branch Selection
-AWS RoboMaker diarsipkan pada 10-09-2025. Cabang GitHub defaultnya hanya berisi README penghentian. Aset simulasi berada di cabang **`ros1`**, yang dikloning oleh `fetch_sim_worlds.sh` secara eksplisit.
+AWS RoboMaker was archived on 2025-09-10. Its default GitHub branch contains only a deprecation README. The simulation assets reside on the **`ros1`** branch, which `fetch_sim_worlds.sh` clones explicitly.
 :::
 
-### Koordinat dan Izin Peneluran
+### Spawn Coordinates and Clearance
 
-Pose spawn default yang terverifikasi adalah **`x: 0.50, y: -2.40, yaw: 1.5708 (facing North)`**, memberikan jarak terbuka **3,79 m**.
+The verified default spawn pose is **`x: 0.50, y: -2.40, yaw: 1.5708 (facing North)`**, providing **3.79 m** of open clearance.
 
-| Nama Lokasi | Koordinat (x, y) | Radius Jarak Bebas | Status |
+| Location Name | Coordinates (x, y) | Clearance Radius | Status |
 | --- | --- | --- | --- |
-| **Pemunculan Gudang Default** | `(0.50, -2.40)` | **3,79 m** | Terverifikasi Aman (Default) |
-| Teluk Alternatif 1 | `(1.81, -7.25)` | 2,47 m | Aman |
-| Teluk Alternatif 2 | `(0.81, 2.75)` | 1,49 m | Aman |
-| Rak yang Berantakan (Tidak Valid) | `(4.00, 1.00)` | **0,29 m** | **BERBAHAYA**: Di dalam zona tabrakan rak |
+| **Default Warehouse Spawn** | `(0.50, -2.40)` | **3.79 m** | Verified Safe (Default) |
+| Alternate Bay 1 | `(1.81, -7.25)` | 2.47 m | Safe |
+| Alternate Bay 2 | `(0.81, 2.75)` | 1.49 m | Safe |
+| Shelving Clutter (Invalid) | `(4.00, 1.00)` | **0.29 m** | **DANGEROUS**: Inside shelf collision zone |
 
-## Model Robot URDF: `msd700_field`
+## The Robot URDF Model: `msd700_field`
 
-Robot fisik dimodelkan di `msd700_description/urdf/msd700_field.urdf.xacro` dengan plugin Gazebo di `msd700_field.gazebo.xacro`.
+The physical robot is modeled in `msd700_description/urdf/msd700_field.urdf.xacro` with Gazebo plugins in `msd700_field.gazebo.xacro`.
 
 ```mermaid
 flowchart TB
@@ -82,30 +84,30 @@ flowchart TB
   DRIVE --> EKF
 ```
 
-### Spesifikasi Fisik:
-- **Dimensi**: panjang 0,90 m, lebar 0,70 m, tinggi 0,45 m, massa 60 kg.
-- **Geometri Penggerak**: Penggerak skid-steer / diferensial berpusat pada titik tengah untuk memastikan selubung belokan yang simetris.
-- **Kastor Empat Sudut**: Menghilangkan osilasi pitching dan roll yang menyebabkan LiDAR planar menciptakan penghalang lantai bayangan.
-- **Velodyne VLP-16 LiDAR**: Ditinggikan 0,61 m di atas tanah pada tiang pemasangan, sesuai dengan unit fisiknya.
-- **Bingkai ROS Standar**: Menggunakan konvensi bingkai standar (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
+### Physical Specifications:
+- **Dimensions**: 0.90 m length, 0.70 m width, 0.45 m height, mass 60 kg.
+- **Drive Geometry**: Skid-steer / differential drive centered on the midpoint to ensure symmetrical turning envelopes.
+- **Four Corner Casters**: Eliminates pitching and roll oscillations that cause planar LiDAR to create phantom floor obstacles.
+- **Velodyne VLP-16 LiDAR**: Elevated 0.61 m above ground on a mounting mast, matching the physical unit.
+- **Standardized ROS Frames**: Uses standard frame conventions (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
-## Meluncurkan Tumpukan Simulasi
+## Launching Simulation Stacks
 
-### 1. Simulasi Penuh dengan Integrasi Web UI
+### 1. Full Simulation with Web UI Integration
 ```bash
 roslaunch msd700_simulation msd700_warehouse_nav.launch
 ```
 
-### 2. Pemetaan SLAM di Gudang
+### 2. SLAM Mapping in Warehouse
 ```bash
 roslaunch msd700_simulation msd700_warehouse_slam.launch
 ```
 
-### 3. Pindahkan Parameterisasi Basis (`sim_body`)
-File peluncuran menerima `sim_body:=field` (default untuk peluncuran gudang) untuk mengonfigurasi peta biaya untuk tapak 1,20 x 0,85 m, atau `sim_body:=waffle` untuk pengujian skala kecil yang lama.
+### 3. Move Base Parameterization (`sim_body`)
+Launch files accept `sim_body:=field` (default for warehouse launch) to configure costmaps for the 1.20 x 0.85 m footprint, or `sim_body:=waffle` for legacy small-scale testing.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Cakupan Boustrophedon](/id/development/boustrophedon-and-alignment): Perhitungan jalur geometris dan toleransi jarak bebas.
-- [Struktur Repositori](/id/development/repository-structure): Tata letak direktori paket simulasi.
-- [Arsitektur](/id/development/architecture): Topologi komunikasi sistem lengkap.
+- [Boustrophedon Coverage](/id/development/boustrophedon-and-alignment): Geometric path calculations and clearance tolerances.
+- [Repository Structure](/id/development/repository-structure): Directory layout of simulation packages.
+- [Architecture](/id/development/architecture): Full system communication topology.

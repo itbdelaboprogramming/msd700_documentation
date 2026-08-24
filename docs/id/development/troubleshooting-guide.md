@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# Diagnostik dan Pemecahan Masalah Pengembang
+
+
+# Developer Diagnostics and Troubleshooting
 
 <RoleBadge role="developer" />
 
-Dokumen ini menyediakan alur kerja diagnostik terstruktur, pemetaan gejala-ke-penyebab, dan prosedur pemulihan untuk menyelesaikan masalah teknik umum di seluruh tumpukan MSD700.
+This document provides structured diagnostic workflows, symptom-to-cause mappings, and recovery procedures for resolving common engineering issues across the MSD700 stack.
 
-## Diagram Alir Diagnostik Sistematis
+## Systematic Diagnostic Flowchart
 
 ```mermaid
 flowchart TD
@@ -27,45 +29,45 @@ flowchart TD
   Q4 -->|Yes| APP_OK["All Core Subsystems Operational"]
 ```
 
-## Mode dan Solusi Kegagalan Umum
+## Common Failure Modes and Solutions
 
-### 1. Unit Muncul Offline (Lapisan Broker MQTT)
-- **Gejala**: Lencana status unit di dasbor ditampilkan `offline`.
-- **Akar Penyebab**: Robot fisik tidak dapat membuat koneksi TLS terenkripsi ke port HiveMQ 8883.
-- **Langkah Diagnostik**:
-  1. Periksa status kontainer HiveMQ di server: `docker ps | grep hivemq`.
-  2. Verifikasi bahwa keystore sertifikat TLS (`/srv/msd/secrets/hivemq/keystore.p12`) valid dan dapat dibaca oleh UID 1001.
-  3. Pada robot, periksa log jembatan MQTT: `tmux attach -t robot_services` dan periksa jendela `aws_mqtt`.
+### 1. Unit Appears Offline (MQTT Broker Layer)
+- **Symptom**: The unit status badge in the dashboard displays `offline`.
+- **Root Cause**: The physical robot cannot establish an encrypted TLS connection to HiveMQ port 8883.
+- **Diagnostic Steps**:
+  1. Check HiveMQ container status on the server: `docker ps | grep hivemq`.
+  2. Verify that the TLS certificate keystore (`/srv/msd/secrets/hivemq/keystore.p12`) is valid and readable by UID 1001.
+  3. On the robot, inspect MQTT bridge logs: `tmux attach -t robot_services` and check the `aws_mqtt` window.
 
-### 2. Unit Online, Namun Kanvas Peta Tetap Kosong (rosbridge/Relay Container)
-- **Gejala**: Perintah berhasil, tetapi tidak ada peta, ikon robot, atau pemindaian laser yang muncul di kanvas web.
-- **Akar Penyebab**: Kontainer relai on-demand `rosweb_unit_<ULID>` dihentikan oleh idle reaper, atau proksi Apache WebSocket diblokir.
-- **Langkah Diagnostik**:
-  1. Verifikasi apakah kontainer per unit berjalan di server: `docker ps | grep rosweb_unit`.
-  2. Jika tidak ada, muat ulang halaman unit di browser untuk memicu peristiwa `touch` di `unit_manager.js`.
-  3. Uji konektivitas WebSocket ke `/services/rosbridge` menggunakan alat pengembang browser.
+### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
+- **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
+- **Root Cause**: The on-demand relay container `rosweb_unit_<ULID>` was stopped by the idle reaper, or Apache WebSocket proxying is blocked.
+- **Diagnostic Steps**:
+  1. Verify if the per-unit container is running on the server: `docker ps | grep rosweb_unit`.
+  2. If absent, reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`.
+  3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
-### 3. Navigasi Macet dengan Kesalahan TF (`use_sim_time` Staleness)
-- **Gejala**: Robot menolak bergerak, dan log konsol menampilkan peringatan TF berulang yang menyebutkan "waktu simulasi" atau `TF_OLD_DATA`.
-- **Root Cause**: `/use_sim_time` disetel ke `true` pada master ROS melalui simulasi yang dijalankan, namun tidak ada penerbit `/clock` selama operasi robot sebenarnya.
-- **Resolusi**:
+### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
+- **Symptom**: The robot refuses to move, and console logs display repeated TF warnings mentioning "simulated time" or `TF_OLD_DATA`.
+- **Root Cause**: `/use_sim_time` was set to `true` on the ROS master by a simulation run, but no `/clock` publisher exists during real robot operation.
+- **Resolution**:
   ```bash
   rosparam set /use_sim_time false
   ```
-  Mulai ulang tumpukan kemunculan robot. Perhatikan bahwa memulai ulang node saja tidak akan menghapus parameter karena berada langsung di `roscore`.
+  Restart the robot bringup stack. Note that restarting nodes alone will not clear the parameter because it resides directly on `roscore`.
 
-### 4. Streaming Video Terhenti atau Gagal pada Wi-Fi Lokal (Kesalahan Kandidat mDNS)
-- **Gejala**: Video WebRTC gagal terhubung di jaringan lokal dengan `Errno 19: No such device`.
-- **Akar Penyebab**: Chrome mengeluarkan nama kandidat mDNS `.local` yang menjaga privasi. Ketika robot tidak memiliki gateway internet, `aioice` gagal mencoba bergabung dengan DNS multicast.
-- **Resolusi**: Verifikasi bahwa `camera_client.py` berisi filter `_strip_mdns_candidates()` dan variabel konfigurasi ICE lokal (`LOCAL_STUN_URLS`, `LOCAL_TURN_URL`) disetel ke `none`.
+### 4. Video Stream Stalls or Fails on Local Wi-Fi (mDNS Candidate Error)
+- **Symptom**: WebRTC video fails to connect on a local network with `Errno 19: No such device`.
+- **Root Cause**: Chrome emits privacy-preserving `.local` mDNS candidate names. When the robot has no internet gateway, `aioice` fails attempting to join multicast DNS.
+- **Resolution**: Verify that `camera_client.py` contains the `_strip_mdns_candidates()` filter and that local ICE configuration variables (`LOCAL_STUN_URLS`, `LOCAL_TURN_URL`) are set to `none`.
 
-### 5. Hindari Kebuntuan Peta Biaya
-- **Gejala**: Gol diterima oleh `move_base`, namun robot tidak pernah bergerak maju.
-- **Root Cause**: `keepout_layer` diaktifkan di `costmap_common_params.yaml` tetapi menunggu `/msd700/keepout_grid`. Jika tidak ada grid pencegahan yang dipublikasikan, peta biaya tidak pernah ditandai "saat ini".
-- **Resolusi**: Pastikan `path_coverage_node` atau `system_command.py` memublikasikan grid keepout kosong pada inisialisasi.
+### 5. Keep-Out Costmap Deadlock
+- **Symptom**: Goals are accepted by `move_base`, but the robot never drives forward.
+- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
+- **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Arsitektur](/id/development/architecture): Model komunikasi dua saluran.
-- [Kontrak Pesan](/id/development/message-contracts): Format topik dan muatan yang diharapkan.
-- [Pengaturan: Pemecahan Masalah](/id/setup/troubleshooting): Langkah-langkah pemecahan masalah teknisi dan penerapan.
+- [Architecture](/id/development/architecture): Two-channel communication models.
+- [Message Contracts](/id/development/message-contracts): Expected topic formats and payloads.
+- [Setup: Troubleshooting](/id/setup/troubleshooting): Technician and deployment troubleshooting steps.

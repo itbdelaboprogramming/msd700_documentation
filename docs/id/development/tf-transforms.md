@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# Koordinat Frame, Transformasi, dan Arsitektur TF
+
+
+# Coordinate Frames, Transforms, and TF Architecture
 
 <RoleBadge role="developer" />
 
-Dokumen ini memberikan spesifikasi komprehensif tentang pohon transformasi koordinat (`tf` / `tf2`), kerangka referensi spasial, penyiar transformasi dinamis, offset sensor, dan restamping jam lintas mesin yang diterapkan dalam sistem robot MSD700.
+This document provides a comprehensive specification of the coordinate transform tree (`tf` / `tf2`), spatial reference frames, dynamic transform broadcasters, sensor offsets, and cross-machine clock restamping implemented in the MSD700 robot system.
 
-## Hierarki Bingkai Koordinat (Pohon TF)
+## Coordinate Frame Hierarchy (TF Tree)
 
-Pohon transformasi koordinat mematuhi ROS REP-103 (Konvensi Satuan Ukuran & Koordinat Standar) dan REP-105 (Bingkai Koordinat untuk Platform Seluler):
+The coordinate transform tree adheres to ROS REP-103 (Standard Units of Measure & Coordinate Conventions) and REP-105 (Coordinate Frames for Mobile Platforms):
 
 ```mermaid
 flowchart TD
@@ -29,22 +31,22 @@ flowchart TD
 
 ---
 
-## Transformasi Penerbit dan Perbarui Tarif
+## Transform Publishers and Update Rates
 
-| Transformasi Tepi | Node Penyiar | Nilai | Sumber Matematika | Perilaku Selama Pemadaman |
+| Transform Edge | Broadcaster Node | Rate | Mathematical Source | Behavior During Outages |
 | --- | --- | --- | --- | --- |
-| `map -> odom` | `amcl` / `slam_gmapping` | 10Hz | Memperbaiki penyimpangan odometrik terhadap jaringan hunian laser statis. | Lompatan diskrit saat dilokalisasi; mempertahankan transformasi terakhir jika pemindaian laser menurun. |
-| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30Hz | Penggabungan berkelanjutan kecepatan encoder roda dan laju yaw/sudut IMU. | Lintasan jangka pendek yang berkesinambungan, mulus, dan bebas penyimpangan. |
-| `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset ketinggian tetap ($z = 0,010\text{ m}$). | Memperbaiki transformasi dari URDF. |
-| `base_link -> base_scan` | `robot_state_publisher` | Statis | Koordinat pemasangan tiang fisik ($x = 0.250\text{ m}, z = 0.610\text{ m}$). | Memperbaiki transformasi dari URDF. |
-| `base_link -> imu_link` | `robot_state_publisher` | Statis | Pemasangan sasis fisik ($z = 0,200\text{ m}$). | Memperbaiki transformasi dari URDF. |
-| `base_link -> camera_link` | `robot_state_publisher` | Statis | Pemasangan sasis depan ($x = 0,450\text{ m}, z = 0,350\text{ m}$). | Memperbaiki transformasi dari URDF. |
+| `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Corrects odometric drift against static laser occupancy grid. | Discrete jumps when localized; preserves last transform if laser scans drop. |
+| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Continuous fusion of wheel encoder velocities and IMU yaw/angular rates. | Continuous, smooth, drift-free short-term trajectory. |
+| `base_footprint -> base_link` | `robot_state_publisher` | Static | Fixed elevation offset ($z = 0.010\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> base_scan` | `robot_state_publisher` | Static | Physical mast mounting coordinates ($x = 0.250\text{ m}, z = 0.610\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> imu_link` | `robot_state_publisher` | Static | Physical chassis mount ($z = 0.200\text{ m}$). | Fixed transform from URDF. |
+| `base_link -> camera_link` | `robot_state_publisher` | Static | Front chassis mount ($x = 0.450\text{ m}, z = 0.350\text{ m}$). | Fixed transform from URDF. |
 
 ---
 
-## Konvensi Koordinat Spasial (REP-103)
+## Spatial Coordinate Conventions (REP-103)
 
-MSD700 secara ketat menerapkan sistem koordinat Cartesian tangan kanan:
+MSD700 strictly enforces right-handed Cartesian coordinate systems:
 
 ```
         +X (Forward / Roll Axis)
@@ -58,16 +60,16 @@ MSD700 secara ketat menerapkan sistem koordinat Cartesian tangan kanan:
         +Z (Upward / Yaw Axis)
 ```
 
-- **$+X$**: Menunjuk langsung ke depan sepanjang arah perjalanan utama robot.
-- **$+Y$**: Menunjuk langsung ke kiri melintasi lebar lateral robot.
-- **$+Z$**: Menunjuk vertikal ke atas tegak lurus terhadap bidang lantai.
-- **Sudut Rotasi**: Ikuti aturan tangan kanan (Rotasi berlawanan arah jarum jam di sekitar $+Z$ berhubungan dengan tingkat yaw positif $+\dot{\theta}$).
+- **$+X$**: Points directly forward along the robot's primary direction of travel.
+- **$+Y$**: Points directly leftward across the robot's lateral width.
+- **$+Z$**: Points vertically upward perpendicular to the floor plane.
+- **Rotation Angles**: Follow right-hand rule (Counter-Clockwise rotation around $+Z$ corresponds to positive yaw rate $+\dot{\theta}$).
 
 ---
 
-## Penataan Ulang Domain Jam Lintas Mesin (`BoundaryPublisher`)
+## Cross-Machine Clock Domain Restamping (`BoundaryPublisher`)
 
-Saat telemetri (seperti pose robot dan pemindaian laser) dihubungkan dari robot fisik melalui internet ke server cloud, **pergeseran jam antar mesin fisik akan menghasilkan peringatan ekstrapolasi `TF_OLD_DATA`** jika stempel waktu dievaluasi secara langsung.
+When telemetry (such as robot pose and laser scans) is bridged from the physical robot across the internet to the cloud server, **clock drift between physical machines creates `TF_OLD_DATA` extrapolation warnings** if timestamps are evaluated directly.
 
 ```mermaid
 sequenceDiagram
@@ -86,13 +88,13 @@ sequenceDiagram
   Canvas->>Canvas: Render smooth icon position without TF latency drops
 ```
 
-### Mengapa Restamping Menahan Beban:
-1. **Batasan RTC Jetson**: SBC fisik di lingkungan lapangan tanpa akses NTP dapat melakukan booting dengan jam yang dimiringkan dalam hitungan detik atau bulan.
-2. **Pengusiran Buffer**: Jika pesan pose yang masuk membawa stempel waktu di masa lalu yang berhubungan dengan master ROS server, `tf2_ros::Buffer` segera membuangnya, sehingga mencegah kanvas web merender gerakan robot.
-3. **`BoundaryPublisher` Solusi**: `patch_time.py` menghapus stempel waktu perangkat keras robot dan memberi stempel ulang muatan geometris dengan `ros::Time::now()` saat masuk ke master ROS server.
+### Why Restamping Is Load-Bearing:
+1. **Jetson RTC Limitations**: Physical SBCs in field environments without NTP access can boot with clocks skewed by seconds or months.
+2. **Buffer Eviction**: If incoming pose messages carry timestamps in the past relative to the server's ROS master, `tf2_ros::Buffer` immediately discards them, preventing the web canvas from rendering robot movement.
+3. **`BoundaryPublisher` Solution**: `patch_time.py` strips the robot hardware timestamp and restamps geometric payloads with `ros::Time::now()` upon entry into the server ROS master.
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Penggabungan dan Kontrol Sensor](/id/development/sensor-fusion-and-control): Estimasi keadaan kinematik dan EKF.
-- [Peta Biaya dan Perencana](/id/development/costmaps-and-planners): Bingkai koordinat peta biaya navigasi.
-- [rosbridge Protocol](/id/development/rosbridge-protocol): serialisasi topik WebSocket.
+- [Sensor Fusion and Control](/id/development/sensor-fusion-and-control): Kinematic state estimation and EKF.
+- [Costmaps and Planners](/id/development/costmaps-and-planners): Navigation costmap coordinate frames.
+- [rosbridge Protocol](/id/development/rosbridge-protocol): WebSocket topic serialization.

@@ -1,74 +1,76 @@
 ---
 search: false
 ---
-# Dokumentasi Pengembang
+
+
+# Developer Documentation
 
 <RoleBadge role="developer" />
 
-Dokumentasi teknis yang komprehensif untuk insinyur perangkat lunak, pengembang robotika, dan arsitek sistem yang bekerja pada platform MSD700.
+Comprehensive technical documentation for software engineers, robotics developers, and systems architects working on the MSD700 platform.
 
-## Arsitektur dan Sistem Inti
-
-<LinkCards>
-  <LinkCard icon="🏗️" title="Arsitektur" details="Model rekan dua mesin, topologi sistem, domain kepercayaan, dan jahitan." link="/id/development/architecture" />
-  <LinkCard icon="🛡️" title="Keamanan & Otentikasi" details="Gantungan kunci JWT, nonce pendaftaran kriptografi 3 tahap, dan isolasi kepercayaan." link="/id/development/security-and-auth" />
-  <LinkCard icon="🔁" title="Keadaan dan Perilaku" details="Aktivitas robot, tingkat pengawas keselamatan, mode Autopilot, dan pemulihan sesi." link="/id/development/state-and-behavior" />
-  <LinkCard icon="🗂️" title="Struktur Repositori" details="Tata letak basis kode di msd700_robot, ros-web-ui, dan msd700_noetic." link="/id/development/repository-structure" />
-</LinkCards>
-
-## Subsistem ROS & Robot
+## Architecture and Core Systems
 
 <LinkCards>
-  <LinkCard icon="📦" title="Registri Paket ROS" details="Direktori lengkap node ROS 1 Noetic, file peluncuran, dan topik." link="/id/development/ros-packages" />
-  <LinkCard icon="📐" title="Transformasi Koordinat (TF)" details="Pohon transformasi REP-103/105, offset sensor, dan stempel ulang BoundaryPublisher." link="/id/development/tf-transforms" />
-  <LinkCard icon="📡" title="Penggabungan & Kontrol Sensor" details="Velodyne VLP-16 LiDAR, pemfilteran IMU, dan estimasi status EKF." link="/id/development/sensor-fusion-and-control" />
-  <LinkCard icon="⚡" title="Firmware & Perangkat Keras" details="Protokol UART serial mikrokontroler, loop kecepatan PID, dan telemetri baterai." link="/id/development/firmware-and-hardware" />
-  <LinkCard icon="🗺️" title="Peta Biaya & Perencana" details="Pindahkan basis, navfn perencana global, dan optimalisasi lintasan lokal TEB." link="/id/development/costmaps-and-planners" />
-  <LinkCard icon="🔄" title="Peralihan Mode Dinamis" details="switch_mode.py, pemijahan proses API Python roslaunch, dan sequencer Autopilot." link="/id/development/mode-switching" />
+  <LinkCard icon="🏗️" title="Architecture" details="Two-machine peer model, system topology, trust domains, and seams." link="/id/development/architecture" />
+  <LinkCard icon="🛡️" title="Security & Authentication" details="JWT keyring, 3-stage cryptographic enrolment nonce, and trust isolation." link="/id/development/security-and-auth" />
+  <LinkCard icon="🔁" title="State and Behavior" details="Robot activities, safety watchdog tiers, Autopilot mode, and session recovery." link="/id/development/state-and-behavior" />
+  <LinkCard icon="🗂️" title="Repository Structure" details="Codebase layout across msd700_robot, ros-web-ui, and msd700_noetic." link="/id/development/repository-structure" />
 </LinkCards>
 
-## Navigasi, Cakupan & Simulasi
+## ROS & Robot Subsystems
 
 <LinkCards>
-  <LinkCard icon="📐" title="Cakupan Boustrophedon" details="Model geometri ganda, dekomposisi seluler, dan penyelarasan putaran nol." link="/id/development/boustrophedon-and-alignment" />
-  <LinkCard icon="🏭" title="Simulasi" details="Simulasi Gazebo skala nyata, dunia AWS Small Warehouse, dan pengujian izin." link="/id/development/simulation" />
+  <LinkCard icon="📦" title="ROS Package Registry" details="Complete directory of ROS 1 Noetic nodes, launch files, and topics." link="/id/development/ros-packages" />
+  <LinkCard icon="📐" title="Coordinate Transforms (TF)" details="REP-103/105 transform tree, sensor offsets, and BoundaryPublisher restamping." link="/id/development/tf-transforms" />
+  <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/id/development/sensor-fusion-and-control" />
+  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/id/development/firmware-and-hardware" />
+  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/id/development/costmaps-and-planners" />
+  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, roslaunch Python API process spawning, and Autopilot sequencer." link="/id/development/mode-switching" />
 </LinkCards>
 
-## Komunikasi & Antarmuka
+## Navigation, Coverage & Simulation
 
 <LinkCards>
-  <LinkCard icon="📨" title="Kontrak Pesan" details="Amplop perintah MQTT, skema umpan balik, dan protokol ARQ ACK." link="/id/development/message-contracts" />
-  <LinkCard icon="🔌" title="Referensi API" details="Titik akhir REST API, parameter permintaan, dan badan respons yang lengkap." link="/id/development/api-reference" />
-  <LinkCard icon="🌐" title="Protokol Rosbridge" details="Protokol streaming WebSocket JSON, langganan topik, dan rendering kanvas." link="/id/development/rosbridge-protocol" />
-  <LinkCard icon="🎨" title="Kanvas Frontend & UI Web" details="Rendering tahap EaselJS, matematika metrik-ke-piksel, dan patch prototipe pembuatan." link="/id/development/frontend-canvas" />
-  <LinkCard icon="📷" title="Streaming Kamera" details="Pipeline video WebRTC, relai STUN/TURN, dan pemfilteran kandidat mDNS." link="/id/development/camera-streaming" />
+  <LinkCard icon="📐" title="Boustrophedon Coverage" details="Dual geometry models, cellular decomposition, and zero-spin alignment." link="/id/development/boustrophedon-and-alignment" />
+  <LinkCard icon="🏭" title="Simulation" details="True-scale Gazebo simulation, AWS Small Warehouse world, and clearance testing." link="/id/development/simulation" />
 </LinkCards>
 
-## Data, Penyimpanan & Sinkronisasi Cloud
+## Communications & Interfaces
 
 <LinkCards>
-  <LinkCard icon="🗄️" title="Skema Basis Data" details="Tabel MySQL 8.0, stempel waktu seragam, dan kunci asing profil sewa." link="/id/development/database-schema" />
-  <LinkCard icon="🔄" title="Sinkronisasi Data" details="Rekonsiliasi basis data yang mengutamakan offline, resolusi konflik, dan lencana Lokal." link="/id/development/data-sync" />
-  <LinkCard icon="💾" title="Pencadangan & Migrasi" details="Pencadangan cakupan profil dan unit, manifes tar.gz, dan migrasi skema." link="/id/development/backup-and-restore" />
+  <LinkCard icon="📨" title="Message Contracts" details="MQTT command envelopes, feedback schemas, and ARQ ACK protocols." link="/id/development/message-contracts" />
+  <LinkCard icon="🔌" title="API Reference" details="Exhaustive REST API endpoints, request parameters, and response bodies." link="/id/development/api-reference" />
+  <LinkCard icon="🌐" title="rosbridge Protocol" details="WebSocket JSON streaming protocol, topic subscriptions, and canvas rendering." link="/id/development/rosbridge-protocol" />
+  <LinkCard icon="🎨" title="Frontend Canvas & Web UI" details="EaselJS stage rendering, metric-to-pixel math, and createjs prototype patches." link="/id/development/frontend-canvas" />
+  <LinkCard icon="📷" title="Camera Streaming" details="WebRTC video pipeline, STUN/TURN relays, and mDNS candidate filtering." link="/id/development/camera-streaming" />
 </LinkCards>
 
-## Operasi & Diagnostik
+## Data, Storage & Cloud Sync
 
 <LinkCards>
-  <LinkCard icon="🐳" title="Siklus Hidup Kontainer Unit" details="unit_manager.js, proksi soket Docker, dan sapuan reaper yang menganggur." link="/id/development/unit-container-lifecycle" />
-  <LinkCard icon="🔧" title="Diagnostik & Pemecahan Masalah" details="Pohon keputusan kegagalan pengembang, pemetaan akar permasalahan, dan pemulihan." link="/id/development/troubleshooting-guide" />
-  <LinkCard icon="🤝" title="Panduan Berkontribusi" details="Alur kerja pengembangan, penerapan konvensi, dan prosedur permintaan tarik." link="/id/development/contributing" />
-  <LinkCard icon="📝" title="log perubahan" details="Log perubahan platform historis dan catatan rilis." link="/id/development/changelog" />
+  <LinkCard icon="🗄️" title="Database Schema" details="MySQL 8.0 tables, uniform timestamps, and rental profile foreign keys." link="/id/development/database-schema" />
+  <LinkCard icon="🔄" title="Data Sync" details="Offline-first database reconciliation, conflict resolution, and Local badge." link="/id/development/data-sync" />
+  <LinkCard icon="💾" title="Backup & Migration" details="Profile and unit scoped backups, tar.gz manifests, and schema migrations." link="/id/development/backup-and-restore" />
 </LinkCards>
 
-## Urutan Bacaan yang Direkomendasikan
+## Operations & Diagnostics
 
-Untuk teknisi yang baru bergabung dengan MSD700, perkembangan dasar yang disarankan adalah:
+<LinkCards>
+  <LinkCard icon="🐳" title="Unit Container Lifecycle" details="unit_manager.js, Docker socket proxying, and idle reaper sweeps." link="/id/development/unit-container-lifecycle" />
+  <LinkCard icon="🔧" title="Diagnostics & Troubleshooting" details="Developer failure decision trees, root cause mappings, and recovery." link="/id/development/troubleshooting-guide" />
+  <LinkCard icon="🤝" title="Contributing Guide" details="Development workflow, commit conventions, and pull request procedures." link="/id/development/contributing" />
+  <LinkCard icon="📝" title="Changelog" details="Historical platform changelog and release notes." link="/id/development/changelog" />
+</LinkCards>
 
-1. [Arsitektur](/id/development/architecture): Memahami model dua mesin dan pemisahan antara MQTT dan rosbridge.
-2. [Keamanan & Otentikasi](/id/development/security-and-auth): Pelajari tiga domain kepercayaan dan pendaftaran perangkat kriptografi.
-3. [ROS Package Registry](/id/development/ros-packages): Jelajahi node ROS dan pengikatan paket.
-4. [Coordinate Transforms (TF)](/id/development/tf-transforms): Memahami pohon referensi spasial dan penataan ulang domain jam.
-5. [Kontrak Pesan](/id/development/message-contracts): Kuasai format kabel yang tepat melintasi batas mesin.
-6. [Status dan Perilaku](/id/development/state-and-behavior): Melacak transisi mesin negara yang terbatas dan pengawas keselamatan.
-7. [Referensi API](/id/development/api-reference): Integrasikan pengontrol klien eksternal dan web.
+## Recommended Reading Order
+
+For engineers newly onboarding to MSD700, the recommended foundational progression is:
+
+1. [Architecture](/id/development/architecture): Understand the two-machine model and the separation between MQTT and rosbridge.
+2. [Security & Authentication](/id/development/security-and-auth): Learn the three trust domains and cryptographic device enrolment.
+3. [ROS Package Registry](/id/development/ros-packages): Explore the ROS nodes and package bindings.
+4. [Coordinate Transforms (TF)](/id/development/tf-transforms): Understand the spatial reference tree and clock domain restamping.
+5. [Message Contracts](/id/development/message-contracts): Master the exact wire formats crossing machine boundaries.
+6. [State and Behavior](/id/development/state-and-behavior): Trace finite state machine transitions and safety watchdogs.
+7. [API Reference](/id/development/api-reference): Integrate web and external client controllers.

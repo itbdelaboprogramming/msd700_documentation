@@ -1,40 +1,42 @@
 ---
 outline: deep
 ---
-# Bagaimana Robot Berperilaku
+
+
+# How the Robot Behaves
 
 <RoleBadge role="user" />
 
-MSD700 melakukan beberapa hal sendiri, tanpa diminta: ia berhenti ketika Anda menghilang, ia menolak
-untuk membiarkan dua orang mengemudi sekaligus, dan ia mengingat apa yang dilakukannya saat Anda kembali. Tidak satupun dari itu
-bersifat sewenang-wenang, dan mengetahui aturannya membuat perbedaan antara "robot melakukan sesuatu yang aneh"
-dan "tentu saja hal itu terjadi."
+MSD700 does several things on its own, without being asked: it pauses when you disappear, it refuses
+to let two people drive at once, and it remembers what it was doing when you come back. None of that
+is arbitrary, and knowing the rules makes the difference between "the robot did something strange"
+and "of course it did that."
 
-Halaman ini adalah versi bahasa sederhana. Detail tekniknya sudah masuk
-[Keadaan dan Perilaku](/id/development/state-and-behavior).
+This page is the plain-language version. The engineering detail is in
+[State and Behavior](/id/development/state-and-behavior).
 
-## Apa yang sedang dilakukan robot saat ini
+## What the robot is doing right now
 
-Dasbor selalu menampilkan satu status untuk robot. Inilah yang sebenarnya akan Anda lihat.
+The dashboard always shows one status for the robot. These are the ones you will actually see.
 
-| Status | Berarti | Normal? |
+| Status | Means | Normal? |
 | --- | --- | --- |
-| **Menganggur** | Tidak ada yang berjalan. Siap untuk perintah. | Ya |
-| **Pedoman** | Anda mengemudi dengan W-A-S-D. | Ya |
-| **Sedang Berlangsung** | Mengemudi ke suatu titik, atau menjalankan rute. | Ya |
-| **Tiba** | Mencapai tujuan, atau menyelesaikan liputan. | Ya |
-| **Pemetaan** | Membangun peta. | Ya |
-| **Dijeda** | Anda menjedanya. Ini melanjutkan dari bagian terakhirnya. | Ya |
-| **Robot Terjebak** | Itu harusnya bergerak dan ternyata tidak. | Lihat [di bawah](#robot-stuck) |
-| **Darurat Dihentikan** | E-Stop bertunangan. Tidak ada yang akan bergerak sampai dilepaskan. | Hanya ketika Anda melakukannya |
+| **Idle** | Nothing running. Ready for a command. | Yes |
+| **Manual** | You are driving with W-A-S-D. | Yes |
+| **On Progress** | Driving to a point, or running a route. | Yes |
+| **Arrived** | Reached the goal, or finished a coverage run. | Yes |
+| **Mapping** | Building a map. | Yes |
+| **Paused** | You paused it. It resumes where it left off. | Yes |
+| **Robot Stuck** | It should be moving and it is not. | See [below](#robot-stuck) |
+| **Emergency Stopped** | E-Stop is engaged. Nothing will move until it is released. | Only when you did it |
 
 ::: info The robot is the one keeping score, not your browser
-Setiap negara bagian tersebut bergantung pada robot itu sendiri. Itu sebabnya menutup tab, menyegarkan, atau
-beralih ke komputer lain tidak kehilangan operasi Anda, dan mengapa tombol beralih di
-panel kembali ke apa pun yang sebenarnya dilakukan robot, bukan apa yang terakhir Anda klik.
+Every one of those states lives on the robot itself. That is why closing the tab, refreshing, or
+switching to a different computer does not lose your operation, and why the toggle switches in the
+panel snap back to whatever the robot actually has engaged rather than what you last clicked.
 :::
 
-## Hanya satu orang yang mengemudi dalam satu waktu
+## Only one person drives at a time
 
 ```mermaid
 flowchart TB
@@ -45,26 +47,26 @@ flowchart TB
   E --> F["Click it, and the other tab<br/>is told it lost control"]
 ```
 
-| Apa yang Anda lihat | Artinya | Apa yang dapat Anda lakukan |
+| What you see | What it means | What you can do |
 | --- | --- | --- |
-| Tidak ada yang istimewa | Unitnya gratis | Berkendara |
-| Lencana **Sedang Digunakan** pada daftar unit | **akun** lain sedang mengemudi | Tunggu, atau tanyakan pada mereka. Membuka unit baik-baik saja; anda hanya tidak mendapatkan kendali |
-| Perintah **Ambil Alih** | Sesi lain dari akun **Anda sendiri** memiliki kendali: tab kedua, atau dasbor lokal unit itu sendiri | Ambil alih dengan sengaja, dan yang lainnya terlihat mundur |
+| Nothing special | The unit is free | Drive |
+| **In Use** badge on the unit list | Another **account** is driving | Wait, or ask them. Opening the unit is fine; you just do not get control |
+| A **Take Over** prompt | Another session of **your own** account has control: a second tab, or the unit's own local dashboard | Take over deliberately, and the other one stands down visibly |
 
 ::: warning Two of your own tabs cannot both drive
-Itu disengaja. Dua tab masing-masing mengirimkan perintah ke satu robot interleave, dan tidak ada yang mau
-pernah diberitahu tentang yang lain. Tab mana pun yang mengambil alih akan menang, dan tab lainnya akan diberi tahu bahwa tab tersebut kalah
-daripada mengirimkan perintah secara diam-diam, tidak ada yang menerapkan.
+That is deliberate. Two tabs each sending commands to one robot interleave, and neither one would
+ever be told about the other. Whichever tab takes over wins, and the other is told it lost, rather
+than silently sending commands nobody applies.
 :::
 
-Pengendalian adalah **sewa** yang harus diperbarui. Jika browser Anda berhenti memperbaruinya, durasinya akan habis sekitar 15
-beberapa detik kemudian dan unit tersebut menjadi gratis untuk orang berikutnya. Hal itulah yang membuat tab crash atau a
-laptop tertutup berhenti membuat robot tidak dapat digunakan oleh siapa pun.
+Control is a **lease** that has to be renewed. If your browser stops renewing it, it lapses about 15
+seconds later and the unit becomes free for the next person. That is what makes a crashed tab or a
+closed laptop stop stranding a robot nobody can use.
 
-## Apa yang terjadi jika Anda memutuskan sambungan
+## What happens when you disconnect
 
-Robot mengawasi dasbor Anda. Ketika ia berhenti mendengar kabar dari Anda, ada tiga hal yang terjadi
-peningkatan interval.
+The robot watches for your dashboard. When it stops hearing from you, three things happen at
+increasing intervals.
 
 ```mermaid
 timeline
@@ -77,27 +79,27 @@ timeline
              : must be restarted by hand
 ```
 
-| Setelah | Apa yang terjadi | Sembuh dengan sendirinya? |
+| After | What happens | Recovers by itself? |
 | --- | --- | --- |
-| **10 detik** | Robot berhenti bergerak. Apapun yang dilakukannya tetap dimuat di bawahnya. | **Ya.** Hubungkan kembali dan melanjutkan di tempat berhentinya |
-| **10 menit** | Seluruh operasi dihentikan dan robot menjadi menganggur. | Tidak. Mulai operasi lagi |
-| **30 menit** | Semua perangkat keras mati. | Tidak. Diperlukan teknisi atau restart eksplisit |
+| **10 seconds** | The robot stops moving. Whatever it was doing stays loaded underneath. | **Yes.** Reconnect and it picks up where it stopped |
+| **10 minutes** | The whole operation is torn down and the robot goes idle. | No. Start the operation again |
+| **30 minutes** | All hardware powers down. | No. A technician or an explicit restart is needed |
 
 ::: info Which page you have open matters
-Jeda 10 detik hanya menghitung waktu ketika halaman yang memiliki operasi yang sedang berjalan berhenti merespons.
-Duduk di daftar unit, atau di halaman login, tidak membuat robot tetap berjalan: halaman-halaman itu yang ada
-sengaja hanya dibaca agar membiarkan dasbor terbuka di suatu tempat tidak dihitung sebagai pengawasan a
+The 10 second pause only counts time when the page that owns the running operation stops responding.
+Sitting on the unit list, or on the login page, does not hold a robot running: those pages are
+deliberately read-only so that leaving a dashboard open somewhere never counts as supervising a
 robot.
 :::
 
-### Sengaja mematikan jeda: Autopilot
+### Turning the pause off on purpose: Autopilot
 
-Autopilot adalah cara Anda mengatakan, "Saya diizinkan pergi." Dengan itu:
+Autopilot is how you say "I am allowed to walk away." With it on:
 
-- Robot tetap berjalan tanpa browser terpasang sama sekali**.
-- Jeda pemutusan sambungan, waktu idle 10 menit, dan penghentian 30 menit semuanya ditangguhkan.
-- Robot itu sendiri mengambil alih langkah melalui titik jalan Anda, bukan browser yang melakukannya.
-- Logout **tidak** menghentikan proses.
+- The robot keeps running with **no browser attached at all**.
+- The disconnect pause, the 10 minute idle and the 30 minute shutdown are all suspended.
+- The robot itself takes over stepping through your waypoints, instead of the browser doing it.
+- Logging out does **not** stop the run.
 
 ```mermaid
 flowchart LR
@@ -110,19 +112,19 @@ flowchart LR
 ```
 
 ::: danger Autopilot means the robot will keep moving with nobody watching
-Itulah intinya, dan ini adalah pilihan tepat untuk rute panjang tanpa pengawasan. Itu adalah
-pilihan yang salah untuk apa pun di dekat orang atau di tempat yang belum pernah Anda jalani sebelumnya. Mematikannya kembali
-mempersenjatai kembali setiap jeda keselamatan segera.
+That is the entire point of it, and it is the right choice for a long unattended route. It is the
+wrong choice for anything near people or in a space you have not run before. Turning it back off
+re-arms every safety pause immediately.
 :::
 
 ::: info Autopilot keeps the robot running; it does not reserve your seat
-Sewa kendali Anda masih berakhir setelah 15 detik tidak diperpanjang. Orang lain dapat memilih unitnya
-naik dan mengambil alih proses yang sedang berlangsung. Perjalanan terus berlanjut.
+Your control lease still lapses after 15 seconds of not renewing it. Someone else can pick the unit
+up and take over the run in progress. The run continues either way.
 :::
 
-## Kembali
+## Coming back
 
-Masuk lagi setelah menutup semuanya dan dasbor akan mengembalikan Anda ke tempat semula.
+Log in again after closing everything and the dashboard puts you back where you were.
 
 ```mermaid
 sequenceDiagram
@@ -138,54 +140,54 @@ sequenceDiagram
   Dashboard->>You: pins, map and progress restored
 ```
 
-Robot mengembalikan seluruh operasi: titik jalan Anda, di mana ia berada, peta, dan apa saja
-wilayah cakupan. Tak satu pun dari itu berasal dari browser Anda, itulah sebabnya ia bertahan di komputer lain.
+The robot hands back the whole operation: your waypoints, which one it is on, the map, and any
+coverage areas. None of that came from your browser, which is why it survives a different computer.
 
-| Situasi | Apa yang Anda dapatkan kembali |
+| Situation | What you get back |
 | --- | --- |
-| Segarkan pertengahan rute | Semuanya, dan rute berlanjut |
-| Tutup tab, buka yang baru | Semuanya, dan rute berlanjut |
-| Masuk di mesin lain | Semuanya, dan rute berlanjut |
-| Robot dijeda | Semuanya, masih terhenti. Anda menekan putar |
-| Robot selesai saat Anda pergi | Keadaan selesai, bukan proses hantu |
+| Refresh mid-route | Everything, and the route continues |
+| Closed the tab, opened a new one | Everything, and the route continues |
+| Logged in on a different machine | Everything, and the route continues |
+| The robot was paused | Everything, still paused. You press play |
+| The robot finished while you were away | The finished state, not a phantom run |
 
 ::: info Opening a map from the Database page is a deliberate reset
-Itu adalah tindakan yang menghapus status sesi saat ini daripada memulihkannya. Jika kamu mau
-untuk melanjutkan apa yang sedang berjalan, kembali ke unit daripada membuka kembali petanya.
+That is the one action that clears the current session state rather than restoring it. If you want
+to resume what was running, go back to the unit rather than re-opening its map.
 :::
 
-## Robot Terjebak
+## Robot Stuck
 
-Spanduk berarti robot yakin ia seharusnya bergerak dan tidak.
+The banner means the robot believes it should be moving and is not.
 
-| Ketika muncul | Biasanya |
+| When it appears | Usually |
 | --- | --- |
-| Singkatnya, saat tikungan tajam | Normal. Abaikan saja |
-| Tepat setelah memulai menjalankan cakupan area | Normal. Ini sedang menghitung jalur sapuan dan dapat memakan waktu hingga satu menit |
-| Selama beberapa menit sementara itu jelas tidak bergerak | Hambatan nyata, atau kegagalan perencanaan |
-| Saat robot terlihat sedang mengemudi | Sebuah bug. Laporkan, jangan disia-siakan |
+| Briefly, during a tight turn | Normal. Ignore it |
+| Right after starting an area coverage run | Normal. It is computing a sweep path and can take up to a minute |
+| For several minutes while it plainly is not moving | A real obstruction, or a planning failure |
+| While the robot is visibly driving | A bug. Report it, do not work around it |
 
-Jika tetap menyala selama beberapa menit, periksa feed kamera apakah ada yang menghalangi, lalu lihat
-[Pemecahan Masalah](/id/getting-started/troubleshooting).
+If it stays up for several minutes, check the camera feed for something in the way, then see
+[Troubleshooting](/id/getting-started/troubleshooting).
 
-## Berhenti Darurat
+## Emergency Stop
 
-E-Stop bukanlah perintah biasa dan tidak mengantri di belakang apa pun.
+E-Stop is not a normal command and it does not queue behind anything.
 
-- Ini mengungguli semua sumber pergerakan lain pada robot, sehingga akan langsung berpengaruh apa pun
-  lain sedang berjalan.
-- Ia tetap terlibat sampai dirilis secara eksplisit.
-- Selalu tersedia, di setiap halaman, terlepas dari siapa yang memegang kendali.
+- It outranks every other source of movement on the robot, so it takes effect immediately whatever
+  else is running.
+- It stays engaged until it is explicitly released.
+- It is always available, on every page, regardless of who holds control.
 
 ::: warning Test it once on every new unit
-Sebaiknya sebelum Anda membutuhkannya, dengan ruang kosong di sekitar robot. Sebuah unit dapat terlihat utuh
-terhubung sementara jalur perintahnya terputus dalam satu arah, dan E-Stop adalah hal yang tepat untuk Anda lakukan
-tidak ingin menemukannya.
+Preferably before you need it, with clear space around the robot. A unit can look completely
+connected while its command path is broken in one direction, and E-Stop is exactly the thing you do
+not want to discover that on.
 :::
 
-## Terkait
+## Related
 
-- [Mulai Cepat](/id/getting-started/quick-start)
-- [Fitur](/id/getting-started/features)
-- [Tanya Jawab](/id/getting-started/faq)
-- [Pemecahan Masalah](/id/getting-started/troubleshooting)
+- [Quick Start](/id/getting-started/quick-start)
+- [Features](/id/getting-started/features)
+- [FAQ](/id/getting-started/faq)
+- [Troubleshooting](/id/getting-started/troubleshooting)

@@ -1,15 +1,17 @@
 ---
 search: false
 ---
-# Struktur Repositori
+
+
+# Repository Structure
 
 <RoleBadge role="developer" />
 
-MSD700 mencakup empat repositori. Yang ini (`msd700_documentation`) hanyalah situs dokumen; produk
-sendiri tinggal di tiga lainnya, yang merupakan saudara kandung di checkout Server dan submodul dari
-`msd700_noetic` pada checkout Unit: kode yang sama, dua cara perakitan yang berbeda.
+MSD700 spans four repositories. This one (`msd700_documentation`) is just the docs site; the product
+itself lives in the other three, which are siblings on a Server checkout and submodules of
+`msd700_noetic` on a Unit checkout: same code, two different ways of assembling it.
 
-## `ros-web-ui`: paket yang terhubung ke web, backend, dan konteks pembangunan frontend
+## `ros-web-ui`: web-facing packages, backend, and frontend build context
 
 ```
 ros-web-ui/
@@ -42,14 +44,14 @@ ros-web-ui/
 └── logs/
 ```
 
-`ros-web-ui` adalah satu repositori yang digunakan dalam **tiga konteks berbeda**: dibuat sebagai Server
-backend/rosbridge (`docker-compose.yml`), bersumber ke ruang kerja Unit untuk robot yang menghadap ke web
-node (`msd700_noetic/src/ros-web-ui`), dan dijalankan secara mandiri sebagai robot setengah jalan
-`docker-compose.robot.yml` pada host non-Jetson (laptop dev, atau server dokumentasi ini, pengujian
-simulatornya). Yang mana yang Anda dapatkan bergantung sepenuhnya pada file penulisan/skrip mana yang memintanya, bukan pada
-apa pun di repo itu sendiri.
+`ros-web-ui` is the one repository used in **three different contexts**: built as the Server's
+backend/rosbridge (`docker-compose.yml`), sourced into a Unit's workspace for the robot's web-facing
+nodes (`msd700_noetic/src/ros-web-ui`), and run standalone as the robot half via
+`docker-compose.robot.yml` on a non-Jetson host (a dev laptop, or this documentation server, testing
+the simulator). Which one you get depends entirely on which compose file / script invokes it, not on
+anything in the repo itself.
 
-## `msd700_robot`: paket ROS yang membuat robot bergerak
+## `msd700_robot`: the ROS packages that make the robot move
 
 ```
 msd700_robot/
@@ -69,15 +71,15 @@ msd700_robot/
 └── ros_msd700_msgs/
 ```
 
-Hanya `msd700_field.urdf.xacro` yang merupakan robot asli berukuran 0,90 x 0,70 m; setiap model lain di sini adalah a
-Turunan TurtleBot3 Waffle pada ketinggian 0,266 m, dan ukuran dunia yang berkomitmen disesuaikan. Lihat
-[Simulasi](/id/development/simulation) yang kombinasinya dapat memvalidasi geometri cakupan.
+Only `msd700_field.urdf.xacro` is the real 0.90 x 0.70 m robot; every other model here is a
+TurtleBot3 Waffle derivative at 0.266 m, and the committed worlds are sized to match. See
+[Simulation](/id/development/simulation) for which combination can validate coverage geometry.
 
-Bersumber dari `msd700_noetic` (sebagai submodul, `src/msd700_robot`) dan disalin ke `ros-web-ui`
-milik `source/msd700_robot`. Robot setengah dari sebuah build membutuhkan tumpukan navigasi repo ini dan
-`ros-web-ui` paket yang terhubung ke web di ruang kerja catkin yang sama.
+Sourced by both `msd700_noetic` (as a submodule, `src/msd700_robot`) and copied into `ros-web-ui`'s
+own `source/msd700_robot`. The robot half of a build needs both this repo's navigation stack and
+`ros-web-ui`'s web-facing packages in the same catkin workspace.
 
-## `msd700_noetic`: Orkestrasi Jetson/robot
+## `msd700_noetic`: Jetson/robot orchestration
 
 ```
 msd700_noetic/
@@ -94,29 +96,29 @@ msd700_noetic/
     └── ROS-dashboard-next-ts/
 ```
 
-Inilah yang sebenarnya dijalankan oleh Unit. `src/` diikat ke dalam wadah (tidak dipanggang), jadi
-mengedit file peluncuran atau node Python di host akan berlaku pada peluncuran berikutnya tanpa membangun kembali;
-hanya ketergantungan atau perubahan gambar dasar yang memerlukan `docker-manager.sh build`. Pada mesin Server (seperti ini
-host situs dokumentasi sendiri), `src/` secara sah tidak ada atau kosong kecuali Anda secara spesifik
-menguji setengah robot di sini. Server menjalankan `ros-web-ui` milik `docker-compose.yml` sebagai gantinya, yang mana
-tidak membutuhkan semua ini.
+This is what a Unit actually runs. `src/` is bind-mounted into the container (not baked in), so
+editing a launch file or a Python node on the host takes effect on the next launch with no rebuild;
+only dependency or base-image changes need `docker-manager.sh build`. On a Server machine (like this
+documentation site's own host), `src/` is legitimately absent or empty unless you're specifically
+testing the robot half here. The Server runs `ros-web-ui`'s own `docker-compose.yml` instead, which
+needs none of this.
 
-## `ROS-dashboard-next-ts`: dasbor operator
+## `ROS-dashboard-next-ts`: the operator dashboard
 
-Aplikasi Next.js miliknya sendiri, dibuat dua kali dari sumber yang sama dengan URL bawaan yang berbeda:
+Its own Next.js app, built twice from the same source with different baked-in URLs:
 
-- **Pembangunan server** (`frontend_prod`/`frontend_dev` di `ros-web-ui/docker-compose.yml`): pembicaraan dengan
-  Backend/rosbridge/media/sinyal milik server sendiri, melalui jalur HTTPS/WSS publik proksi Apache.
-- **Pembuatan unit** (di dalam wadah `msd700_noetic`, atau `docker-compose.yml` saat
-  menjalankan robot setengah mandiri): berbicara dengan layanan lokal unit yang sama, yang dimasukkan melalui
-  `NEXT_PUBLIC_*` argumen build menunjuk ke IP unit itu sendiri.
+- **Server build** (`frontend_prod`/`frontend_dev` in `ros-web-ui/docker-compose.yml`): talks to the
+  Server's own backend/rosbridge/media/signalling, over the public HTTPS/WSS paths Apache proxies.
+- **Unit build** (inside `msd700_noetic`'s container, or `ros-web-ui`'s `docker-compose.yml` when
+  running the robot half standalone): talks to that same unit's own local services, baked in via
+  `NEXT_PUBLIC_*` build args pointed at the unit's own IP.
 
-Karena URL tersebut dikompilasi **ke dalam** bundel JS, bukan dibaca saat runtime, sehingga mengubah URL mana
-server tempat build point selalu memerlukan pembangunan kembali image, tidak hanya sekedar restart.
+Because those URLs are compiled **into** the JS bundle rather than read at runtime, changing which
+server a build points at always requires a rebuild of the image, never just a restart.
 
-## Repositori ini (`msd700_documentation`)
+## This repository (`msd700_documentation`)
 
-Hanya situs dokumen VitePress, tanpa kode produk.
+Just the VitePress docs site, no product code.
 
 ```
 msd700_documentation/
@@ -141,9 +143,9 @@ msd700_documentation/
 └── package-lock.json
 ```
 
-### Diagram
+### Diagrams
 
-Diagram ditulis sebagai ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
+Diagrams are authored as ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
 browser. Two pieces make that work:
 
 | Piece | Job |
@@ -156,47 +158,47 @@ mermaid bakes its palette into the SVG at render time. If a diagram fails to par
 shown instead of an empty gap.
 
 ```bash
-npm jalankan docs:check-diagrams # parsing setiap diagram; keluar bukan nol karena kesalahan sintaksis
+npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
 ```
 
 ::: warning A broken diagram does not fail the build
-VitePress tidak pernah mem-parsing sumber diagram; itu hanya melewatinya. Kesalahan sintaksis muncul sebagai a
-blok sumber merah pada halaman yang diterbitkan. Jalankan pemeriksa setelah mengedit diagram.
+VitePress never parses the diagram source; it only passes it through. A syntax error surfaces as a
+red block of source on the published page. Run the checker after editing diagrams.
 :::
 
 ::: info Keep `<br/>` out of state-diagram transition labels
-Ia bekerja di label node `flowchart` dan dalam catatan diagram urutan, di mana situs ini menggunakannya.
-Label tepi diagram keadaan adalah teks biasa, jadi `<br/>` di sana ditampilkan secara harfiah.
+It works in `flowchart` node labels and in sequence-diagram notes, which is where this site uses it.
+State-diagram edge labels are plain text, so a `<br/>` there renders literally.
 :::
 
-### Bagaimana situs dokumen disebarkan
+### How the docs site is deployed
 
 ::: details Deployment pipeline (click to expand)
-1. Dorongan ke `main` memicu webhook GitHub.
-2. `scripts/webhook-listener.mjs` memverifikasi tanda tangan webhook (HMAC SHA-256) dan, pada acara `push` ke `refs/heads/main`, memunculkan `scripts/deploy.sh`.
-3.`deploy.sh`:
-   - menolak untuk dijalankan jika pohon kerja mempunyai perubahan lokal, atau jika penerapan sudah berlangsung (melalui `flock`)
-   - mengambil dan melakukan hard-reset ke `origin/main`
-   - menjalankan `npm ci`
-   - membangun situs menjadi direktori `docs/.vitepress/dist_new` yang baru
-   - menukarnya secara atom ke `docs/.vitepress/dist` (polos `mv`)
-4. Dalam produksi, Apache melayani `docs/.vitepress/dist` **langsung dari disk** melalui `Alias` (lihat
-   `000-default-le-ssl.conf` vhost); tidak ada proses `vitepress preview` yang berjalan dalam permintaan
-   jalur, dan tidak ada unit systemd untuk satu. `npm run docs:preview` hanya untuk pemeriksaan lokal saja.
-5. `webhook-listener.mjs` sendiri berjalan di bawah unit `msd700-docs-webhook` systemd di `127.0.0.1:4701`.
+1. A push to `main` triggers a GitHub webhook.
+2. `scripts/webhook-listener.mjs` verifies the webhook signature (HMAC SHA-256) and, on a `push` event to `refs/heads/main`, spawns `scripts/deploy.sh`.
+3. `deploy.sh`:
+   - refuses to run if the working tree has local changes, or if a deploy is already in progress (via `flock`)
+   - fetches and hard-resets to `origin/main`
+   - runs `npm ci`
+   - builds the site into a fresh `docs/.vitepress/dist_new` directory
+   - atomically swaps it into `docs/.vitepress/dist` (a plain `mv`)
+4. In production, Apache serves `docs/.vitepress/dist` **directly off disk** via an `Alias` (see the
+   `000-default-le-ssl.conf` vhost); there is no running `vitepress preview` process in the request
+   path, and no systemd unit for one. `npm run docs:preview` is for local spot-checks only.
+5. `webhook-listener.mjs` itself runs under the `msd700-docs-webhook` systemd unit on `127.0.0.1:4701`.
 :::
 
 ::: danger Never put `vitepress preview` behind Apache in production
-Ini dulunya adalah cara situs disajikan (`ProxyPass` ke proses `vitepress preview` yang berumur panjang di
-port 4700), dan diam-diam rusak setelah setiap penerapan: server statis `preview` (`sirv`, di
-mode produksi) memindai direktori keluaran satu kali saat startup dan menyimpan setiap nama dan ukuran file dalam cache. SEBUAH
-membangun kembali perubahan nama file aset yang di-hash meninggalkan cache yang menunjuk ke file yang tidak ada lagi
-jadi setiap CSS/JS 404, dan `index.html` disajikan terpotong hingga basi `Content-Length`. Melayani
-`dist/` langsung melalui `Alias` milik Apache (penyiapan saat ini, lihat di bawah) tidak memiliki cache seperti itu: Statistik Apache
-setiap file per permintaan, sehingga swap `dist/` diambil segera tanpa restart.
+This used to be how the site was served (`ProxyPass` to a long-lived `vitepress preview` process on
+port 4700), and it silently broke after every deploy: `preview`'s static server (`sirv`, in
+production mode) scans the output directory once at startup and caches each file's name and size. A
+rebuild that changes hashed asset filenames left that cache pointing at files that no longer existed
+so every CSS/JS 404'd, and `index.html` was served truncated to its stale `Content-Length`. Serving
+`dist/` directly via Apache's own `Alias` (current setup, see below) has no such cache: Apache stats
+each file per request, so a `dist/` swap is picked up immediately with no restart.
 :::
 
-## Terkait
+## Related
 
-- [Berkontribusi](/id/development/contributing) - alur kerja pengembang lokal
-- [Arsitektur](/id/development/architecture)
+- [Contributing](/id/development/contributing) - local dev workflow
+- [Architecture](/id/development/architecture)

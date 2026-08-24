@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# ROS パッケージレジストリ
+
+
+# ROS Package Registry
 
 <RoleBadge role="developer" />
 
-このドキュメントは、`msd700_robot` および `ros-web-ui/source` にわたる MSD700 ワークスペース内のすべての ROS 1 Noetic パッケージの包括的なレジストリを提供し、パッケージの役割、主要な起動ファイル、アクティブなノード、公開/サブスクライブされたトピック、パラメーターを詳しく説明します。
+This document provides a comprehensive registry of all ROS 1 Noetic packages within the MSD700 workspace across `msd700_robot` and `ros-web-ui/source`, detailing package roles, key launch files, active nodes, published/subscribed topics, and parameters.
 
-## ワークスペースパッケージのレイアウト
+## Workspace Package Layout
 
 ```mermaid
 flowchart TD
@@ -38,89 +40,89 @@ flowchart TD
   HW --> FIRM
 ```
 
-## パッケージ ディレクトリ: `msd700_robot`
+## Package Directory: `msd700_robot`
 
 ### 1. `msd700_navigation`
-コアとなる自律移動、SLAM マッピング、およびエリア カバレッジ パッケージ。
+The core autonomous movement, SLAM mapping, and area coverage package.
 
-- **プライマリ ノード**:
-  - `move_base`: グローバル パス プランニングに `navfn/NavfnROS` を、軌道最適化に `teb_local_planner/TebLocalPlannerROS` を利用する標準 ROS ナビゲーション アクション サーバー。
-  - `path_coverage_node.py`: `libs/coverage_geometry.py` を使用して曲がりくねった経路を計算し、リアルタイムの障害物の再計画を処理するブーストロフェドン スイープ プランナー。
-  - `slam_gmapping`: 占有グリッドを生成する 2D レーザーベースの SLAM マッピング ノード。
-  - `amcl`: 静的マップの位置特定のための適応型モンテカルロ位置特定粒子フィルター。
-- **主要な起動ファイル**:
-  - `msd700_navigation.launch`: マップ サーバー、AMCL、move_base を使用したフル ナビゲーションの起動。
-  - `msd700_boustrophedon.launch`: `path_coverage_node` によるエリア カバレッジ実行スタック。
-  - `msd700_slam.launch`: 遠隔操作による Gmapping SLAM の起動。
-  - `msd700_explore.launch`: 自律的な SLAM フロンティア探索 (`explore_lite`)。
+- **Primary Nodes**:
+  - `move_base`: Standard ROS navigation action server utilizing `navfn/NavfnROS` for global path planning and `teb_local_planner/TebLocalPlannerROS` for trajectory optimization.
+  - `path_coverage_node.py`: Boustrophedon sweep planner computing serpentine paths and handling real-time obstacle replanning using `libs/coverage_geometry.py`.
+  - `slam_gmapping`: 2D laser-based SLAM mapping node generating occupancy grids.
+  - `amcl`: Adaptive Monte Carlo Localization particle filter for static map localization.
+- **Key Launch Files**:
+  - `msd700_navigation.launch`: Full navigation bringup with map server, AMCL, and move_base.
+  - `msd700_boustrophedon.launch`: Area coverage execution stack with `path_coverage_node`.
+  - `msd700_slam.launch`: Gmapping SLAM launch with teleoperation.
+  - `msd700_explore.launch`: Autonomous SLAM frontier exploration (`explore_lite`).
 
 ### 2. `msd700_control`
-状態推定、座標変換階層、センサー フュージョンを管理します。
+Manages state estimation, coordinate transform hierarchies, and sensor fusion.
 
-- **プライマリ ノード**:
-  - `ekf_localization_node` (`robot_localization`): ホイール エンコーダー オドメトリ (`/wheel/odom`) と IMU センサー データ (`/imu/data`) を安定した `/odometry/filtered` トピックに融合した拡張カルマン フィルター。
-  - `imu_filter_node` (`imu_tools`): 生の角速度と加速度を方位四元数に変換する Madgwick AHRS センサー フィルター。
-- **主要な起動ファイル**:
-  - `robot_localization.launch`: `ekf_localization_config.yaml` からパラメータをロードして EKF fusion を設定および起動します。
-  - `imu_filter.launch`: Madgwick 方位推定を開始します。
+- **Primary Nodes**:
+  - `ekf_localization_node` (`robot_localization`): Extended Kalman Filter fusing wheel encoder odometry (`/wheel/odom`) and IMU sensor data (`/imu/data`) into a stable `/odometry/filtered` topic.
+  - `imu_filter_node` (`imu_tools`): Madgwick AHRS sensor filter converting raw angular rate and acceleration into orientation quaternions.
+- **Key Launch Files**:
+  - `robot_localization.launch`: Configures and launches EKF fusion with parameter loading from `ekf_localization_config.yaml`.
+  - `imu_filter.launch`: Launches Madgwick orientation estimation.
 
 ### 3. `msd700_description`
-URDF と Xacro を使用して、物理的な運動学的構造、衝突ジオメトリ、センサーの配置を定義します。
+Defines physical kinematic structures, collision geometries, and sensor placements using URDF and Xacro.
 
-- **主要な URDF モデル**:
-  - `urdf/msd700_field.urdf.xacro`: 実物大の生産ロボット モデル (0.90 x 0.70 m、4 つのキャスター、中心駆動軸、ベロダイン マスト)。
-  - `urdf/velodyne/VLP_16.urdf.xacro`: 高忠実度の 16 チャンネル 3D LiDAR モデルと Gazebo センサー プラグイン。
-  - `urdf/turtlebot3_waffle.urdf.xacro`: レガシーの小型試作モデル。
+- **Primary URDF Models**:
+  - `urdf/msd700_field.urdf.xacro`: True-scale production robot model (0.90 x 0.70 m, 4 casters, centered drive axle, Velodyne mast).
+  - `urdf/velodyne/VLP_16.urdf.xacro`: High-fidelity 16-channel 3D LiDAR model and Gazebo sensor plugins.
+  - `urdf/turtlebot3_waffle.urdf.xacro`: Legacy small-scale prototype model.
 
-### 4. `msd700_hardware` および `msd700_firmware`
-低レベルのハードウェア インターフェイス、モーターの作動、エンコーダーのパルスカウント、およびバッテリーの状態を処理します。
+### 4. `msd700_hardware` & `msd700_firmware`
+Handles low-level hardware interfaces, motor actuation, encoder pulse counting, and battery status.
 
-- **ハードウェア アーキテクチャ**:
-  - `serial_launch.launch`: ホストのシリアル ポートを、`/dev/ttyUSB*` を介して 115200 ボーで低レベルの Arduino/Teensy マイクロコントローラーに接続します。
-  - Arduino ファームウェアは、閉ループ PID 速度制御を実行し、`/cmd_vel` 速度コマンドをリッスンし、ホイール エンコーダーのティック カウントを発行します。
+- **Hardware Architecture**:
+  - `serial_launch.launch`: Connects host serial ports to the low-level Arduino/Teensy microcontroller over `/dev/ttyUSB*` at 115200 baud.
+  - Arduino firmware executes closed-loop PID velocity control, listens for `/cmd_vel` velocity commands, and publishes wheel encoder tick counts.
 
 ### 5. `msd700_simulation`
-ソフトウェアでナビゲーション アルゴリズムをテストするための Gazebo シミュレーション環境。
+Gazebo simulation environment for testing navigation algorithms in software.
 
-- **主要な環境**:
-  - `msd700_warehouse_nav.launch`: 実物大の `msd700_field` ロボット モデルを備えた 14 x 21 m の AWS RoboMaker Small Warehouse を発売します。
-  - `scripts/fetch_sim_worlds.sh`: GitHub `ros1` ブランチからの 3D シミュレーション メッシュ (12 MB) 用のオンデマンド ダウンローダー。
+- **Key Environments**:
+  - `msd700_warehouse_nav.launch`: Launches the 14 x 21 m AWS RoboMaker Small Warehouse with true-scale `msd700_field` robot model.
+  - `scripts/fetch_sim_worlds.sh`: On-demand downloader for 3D simulation meshes (12 MB) from GitHub `ros1` branch.
 
 ### 6. `third_party/ira_laser_tools`
-複数の 2D LiDAR スキャナを結合するか、3D 点群を仮想平面スキャンに変換します。
+Merges multiple 2D LiDAR scanners or converts 3D pointclouds into virtual planar scans.
 
-- **ノード**:
-  - `laserscan_multi_merger`: デュアル プラナー LiDAR を単一の 360 度 `/scan` トピックに結合します。
+- **Nodes**:
+  - `laserscan_multi_merger`: Merges dual planar LiDARs into a single 360-degree `/scan` topic.
 
-## パッケージ ディレクトリ: `ros-web-ui/source`
+## Package Directory: `ros-web-ui/source`
 
 ### 1. `msd700_webui_control`
-Web コマンドとダッシュボード テレメトリを物理的なロボット ハードウェアにブリッジします。
+Bridges web commands and dashboard telemetry to physical robot hardware.
 
-- **主要ノード**:
-  - `system_command.py`: MQTT `/system_command` をサブスクライブし、排他的オペレーティング リースを管理し、アクションをディスパッチし、`/system_feedback` を公開します。
-  - `operation_supervisor.py`: オートパイロットのウェイポイントの進行を管理し、`/string/operation_snapshot` をラッチする自律ミッション シーケンサー。
-  - `switch_mode.py`: ROS サービス オーケストレーターは、`idle`、`navigation`、および `mapping` モード起動スタックを動的に切り替えます。
-  - `hardware_monitor.py`: 重要なセンサー プロセスと USB デバイスが正常に維持されていることを確認するバックグラウンド ウォッチドッグ。
+- **Key Nodes**:
+  - `system_command.py`: Subscribes to MQTT `/system_command`, manages the exclusive operating lease, dispatches actions, and publishes `/system_feedback`.
+  - `operation_supervisor.py`: Autonomous mission sequencer managing Autopilot waypoint advancement and latching `/string/operation_snapshot`.
+  - `switch_mode.py`: ROS service orchestrator dynamically switching between `idle`, `navigation`, and `mapping` mode launch stacks.
+  - `hardware_monitor.py`: Background watchdog verifying that critical sensor processes and USB devices remain healthy.
 
 ### 2. `dependencies/topic2string`
-重い ROS メッセージ タイプを JSON 文字列に変換する高性能シリアル化レイヤー。
+High-performance serialization layer converting heavy ROS message types to JSON strings.
 
-- **主要ノード**:
-  - `robotpose_from_string.py` / `robotpose_to_string`: 25 Hz ポーズ テレメトリ シリアライザー。
-  - `laserscan_to_string.py`: 2 Hz 圧縮レーザー スキャン シリアライザー。
-  - `map_compression_node` / `map_decompression_node`: ライブ SLAM 占有グリッド用の Base64 zlib 圧縮。
+- **Key Nodes**:
+  - `robotpose_from_string.py` / `robotpose_to_string`: 25 Hz pose telemetry serializer.
+  - `laserscan_to_string.py`: 2 Hz compressed laser scan serializer.
+  - `map_compression_node` / `map_decompression_node`: Base64 zlib compression for live SLAM occupancy grids.
 
 ### 3. `dependencies/aws_mqtt`
-ローカル ROS トピックを中央の HiveMQ ブローカーにリンクする暗号化されたトランスポート ブリッジ。
+Encrypted transport bridge linking local ROS topics to the central HiveMQ broker.
 
-- **ファイルの起動**:
-  - `nakayama_msd.launch`: オンボード ROS トピックをポート 8883 (TLS) 上のクラウド HiveMQ に接続するロボット側のブリッジ。
-  - `nakayama_cloud.launch`: MQTT トピックをユニットごとのクラウド ROS トピックに変換するサーバー側ブリッジ。
-  - `local_msd.launch`: ローカル Mosquitto ブローカー (`127.0.0.1:1883`) に接続するユニット側ブリッジ。
+- **Launch Files**:
+  - `nakayama_msd.launch`: Robot-side bridge connecting onboard ROS topics to cloud HiveMQ on port 8883 (TLS).
+  - `nakayama_cloud.launch`: Server-side bridge translating MQTT topics into per-unit cloud ROS topics.
+  - `local_msd.launch`: Unit-side bridge connecting to local Mosquitto broker (`127.0.0.1:1883`).
 
-## 関連ドキュメント
+## Related Documentation
 
-- [アーキテクチャ](/ja/development/architecture): 高レベルのシステム構造と継ぎ目。
-- [センサー フュージョンとコントロール](/ja/development/sensor-fusion-and-control): EKF とセンサー パイプラインの詳細なセットアップ。
-- [状態と動作](/ja/development/state-and-behavior): すべての制御ノードの詳細なステート マシン。
+- [Architecture](/ja/development/architecture): High-level system structure and seams.
+- [Sensor Fusion and Control](/ja/development/sensor-fusion-and-control): Detailed EKF and sensor pipeline setup.
+- [State and Behavior](/ja/development/state-and-behavior): Detailed state machines for all control nodes.

@@ -1,19 +1,21 @@
 ---
 outline: deep
 ---
-# サーバーのセットアップ
+
+
+# Server Setup
 
 <RoleBadge role="technician" />
 
-このガイドでは、**MSD700 クラウド サーバーと Web ダッシュボード** を展開するための段階的な手順を説明します。
+This guide provides step-by-step instructions for deploying the **MSD700 Cloud Server and Web Dashboard**.
 
-続行する前に、[前提条件](/ja/setup/prerequisites) を完了してください。
+Complete [Prerequisites](/ja/setup/prerequisites) before proceeding.
 
 ::: info Production-First Architecture
-このガイドのデフォルトは、標準の **実稼働展開** です。開発モードの手順と高度なカスタム パラメーターは、下部の [高度な構成](#advanced-configurations) セクションにあります。
+This guide defaults to a standard **Production Deployment**. Development mode instructions and advanced custom parameters are located in the [Advanced Configurations](#advanced-configurations) section at the bottom.
 :::
 
-## システム トポロジ
+## System Topology
 
 ```mermaid
 flowchart TB
@@ -34,9 +36,9 @@ flowchart TB
   end
 ```
 
-## ディレクトリ構造の概要
+## Directory Structure Overview
 
-コマンドを実行する前に、ホスト ファイル システム上でリポジトリがどのように構成されているかを理解してください。
+Before running any commands, understand how the repositories are structured on the host filesystem:
 
 ```
 ~/ (e.g. /home/ubuntu)
@@ -57,32 +59,32 @@ flowchart TB
 
 ---
 
-## コアの段階的なセットアップ
+## Core Step-by-Step Setup
 
-完全な運用サーバーを立ち上げるには、次の 6 つの手順を順番に実行してください。
+Follow these 6 steps in sequence to stand up a complete production server.
 
-### ステップ 1: リポジトリのクローンを作成する
+### Step 1: Clone Repositories
 
-ブランチ `v2` で `ros-web-ui` のクローンを作成し、`ROS-dashboard-next-ts` フロントエンド リポジトリを `source/dependencies/` に直接クローン作成します。
+Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` frontend repository directly into `source/dependencies/`:
 
 ```bash
 # 1. Clone main server repository on branch v2
-git clone -b v2 https://github.com/itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
+git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
 
 # 2. Clone the frontend dashboard repository directly into dependencies on branch v2
-git clone -b v2 https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts.git \
+git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
 ::: tip Why is the frontend cloned inside dependencies?
-Dockerfile は、`ros-web-ui` の Docker ビルド コンテキスト内で直接 Next.js フロントエンドをビルドします。 `source/dependencies/ROS-dashboard-next-ts` パスは親リポジトリによって gitignor されます。
+The Dockerfile builds the Next.js frontend directly within the Docker build context of `ros-web-ui`. The `source/dependencies/ROS-dashboard-next-ts` path is gitignored by the parent repository.
 :::
 
 ---
 
-### ステップ 2: セキュリティ シークレットを初期化する
+### Step 2: Initialize Security Secrets
 
-シークレットは `/srv/msd/secrets/` の Docker コンテナの外に存在し、イメージの再構築後も保持されます。
+Secrets live outside Docker containers in `/srv/msd/secrets/` to persist across image rebuilds.
 
 ```bash
 # 1. Navigate to the ros-web-ui repository
@@ -98,9 +100,9 @@ sudo mkdir -p /srv/msd/secrets
 
 ---
 
-### ステップ 3: HiveMQ TLS キーストアを生成する
+### Step 3: Generate HiveMQ TLS Keystore
 
-HiveMQ MQTT ブローカーには、ドメインの Let's Encrypt SSL 証明書から生成された PKCS#12 キーストアが必要です。
+The HiveMQ MQTT broker requires a PKCS#12 keystore generated from your domain's Let's Encrypt SSL certificate.
 
 ```bash
 # 1. Obtain Let's Encrypt certificate for your server domain
@@ -111,20 +113,20 @@ cd ~/ros-web-ui
 sudo ./source/dependencies/ssl_update/update_ssl.sh
 ```
 
-このスクリプトは、UID `1001` 所有権と `0600` 権限を持つ `/srv/msd/secrets/hivemq/keystore.p12` を作成します。
+This script creates `/srv/msd/secrets/hivemq/keystore.p12` with UID `1001` ownership and `0600` permissions.
 
 ---
 
-### ステップ 4: 環境の構成 (`.env`)
+### Step 4: Configure Environment (`.env`)
 
-`~/ros-web-ui/.env` に `.env` を作成します。
+Create `.env` at `~/ros-web-ui/.env`:
 
 ```bash
 cd ~/ros-web-ui
 nano .env
 ```
 
-次の運用構成を貼り付けます。
+Paste the following production configuration:
 
 ```ini
 # Storage path for recorded map files on the host
@@ -168,9 +170,9 @@ TURN_PASSWORD=SetYourStrongTurnPasswordHere
 
 ---
 
-### ステップ 5: 実稼働 Docker コンテナーを開始する
+### Step 5: Start Production Docker Containers
 
-本番構成スタックを起動します。
+Launch the production compose stack:
 
 ```bash
 cd ~/ros-web-ui
@@ -184,9 +186,9 @@ docker compose --profile server_prod ps
 
 ---
 
-### ステップ 6: Apache リバース プロキシを構成する
+### Step 6: Configure Apache Reverse Proxy
 
-Apache はポート 443 で SSL を終了し、受信トラフィックを内部コンテナ ポートにルーティングします。
+Apache terminates SSL on port 443 and routes incoming traffic to internal container ports.
 
 ```bash
 # 1. Enable required Apache modules
@@ -194,7 +196,7 @@ sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias
 sudo systemctl restart apache2
 ```
 
-`/etc/apache2/sites-available/000-default-le-ssl.conf` を編集:
+Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 
 ```apache
 <IfModule mod_ssl.c>
@@ -258,7 +260,7 @@ sudo systemctl restart apache2
 </IfModule>
 ```
 
-Apacheをリロードします:
+Reload Apache:
 
 ```bash
 sudo apache2ctl configtest
@@ -267,9 +269,9 @@ sudo systemctl reload apache2
 
 ---
 
-## ユニット登録と登録の流れ
+## Unit Registration & Enrolment Flow
 
-サーバーが実行されたら、物理ロボットを登録できます。
+Once the server is running, physical robots can be registered:
 
 ```mermaid
 sequenceDiagram
@@ -294,44 +296,44 @@ sequenceDiagram
   Unit->>Unit: Saves Certificates/robot/device.json and connects to HiveMQ
 ```
 
-1. `https://msd.nglobal.jp/admin` で管理パネルにログインします。
-2. **保留中のユニット** で、技術者がロボットに表示した 6 文字の請求コードを見つけます。
-3. アクティブな **レンタル プロファイル**を選択し、ユニット表示ラベルを割り当てて、**承認** をクリックします。
-4. ロボットは登録を完了し、すぐにフリート ダッシュボードに表示されます。
+1. Log into the administration panel at `https://msd.nglobal.jp/admin`.
+2. Under **Pending Units**, locate the 6-character claim code displayed by the technician on the robot.
+3. Select an active **Rental Profile**, assign a unit display label, and click **Approve**.
+4. The robot completes enrolment and appears in the fleet dashboard immediately.
 
 ---
 
-## 高度な構成
+## Advanced Configurations
 
 <details>
-<summary><b>開発モード プロファイル (`server_dev`)</b></summary>
+<summary><b>Development Mode Profile (`server_dev`)</b></summary>
 
-分離された開発スタックを本番環境と並行して実行するには、次の手順を実行します。
+To run an isolated development stack alongside production:
 
-1. 開発キーリングを初期化します。
+1. Initialize dev keyring:
    ```bash
    cd ~/ros-web-ui
    ./scripts/secrets.sh init --dev
    ```
 
-2. 開発プロファイルを開始します。
+2. Start the dev profile:
    ```bash
    docker compose --profile server_dev up -d
    ```
 
-3. 開発ポートは衝突を防ぐためにオフセットされています。
-   - MySQL 開発者: `3308`
-   - 開発バックエンド: `5001`
-   - 開発者 HiveMQ: `8884`
-   - ロズブリッジ開発者: `9091`
-   - 開発フロントエンド: `3100`
+3. Dev ports are offset to prevent collisions:
+   - Dev MySQL: `3308`
+   - Dev Backend: `5001`
+   - Dev HiveMQ: `8884`
+   - Dev rosbridge: `9091`
+   - Dev Frontend: `3100`
 
 </details>
 
 <details>
-<summary><b>キーリングのローテーションと猶予期間</b></summary>
+<summary><b>Keyring Rotation & Grace Periods</b></summary>
 
-アクティブなユーザー セッションを終了せずに、アクティブな JWT 署名キーをローテーションします。
+Rotate the active JWT signing key without terminating active user sessions:
 
 ```bash
 cd ~/ros-web-ui
@@ -349,9 +351,9 @@ cd ~/ros-web-ui
 </details>
 
 <details>
-<summary><b>HiveMQ キーストアの手動作成</b></summary>
+<summary><b>Manual HiveMQ Keystore Creation</b></summary>
 
-`update_ssl.sh` を使用せずにキーストアを手動で生成する場合:
+If generating the keystore manually without `update_ssl.sh`:
 
 ```bash
 sudo mkdir -p /srv/msd/secrets/hivemq
@@ -371,9 +373,9 @@ sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
 
 ---
 
-## 検証とヘルスチェック
+## Verification & Health Checks
 
-次の診断コマンドを実行して、すべてのサーバー サブシステムが動作していることを確認します。
+Run these diagnostic commands to confirm all server subsystems are operational:
 
 ```bash
 # 1. Confirm all Docker containers are running
@@ -389,8 +391,8 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 sudo ss -lptn 'sport = :8883'
 ```
 
-## 関連ドキュメント
+## Related Documentation
 
-- [ユニットのセットアップ](/ja/setup/unit-setup): 物理的な Jetson SBC を構成します。
-- [システム セットアップ](/ja/setup/system-setup): エンドツーエンドの統合と調整。
-- [Docker リファレンス](/ja/setup/docker-reference): コンテナーのオプションとライフサイクルの詳細。
+- [Unit Setup](/ja/setup/unit-setup): Configure the physical Jetson SBC.
+- [System Setup](/ja/setup/system-setup): End-to-end integration and calibration.
+- [Docker Reference](/ja/setup/docker-reference): Container options and lifecycle details.

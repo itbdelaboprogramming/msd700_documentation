@@ -2,77 +2,79 @@
 outline: deep
 search: false
 ---
-# データベーススキーマ
+
+
+# Database Schema
 
 <RoleBadge role="developer" />
 
-`ROS_DB` の 18 個のテーブル。目的別にグループ化されており、間に外部キーが含まれています。の
-正規のソースは `ROS-dashboard-backend/sql/init.sql` で、空の MySQL に対してのみ実行されます。
-データディレクトリ。既存のデプロイメントでは、移行スクリプトを通じてスキーマの変更が取得されます。
-代わりに `ROS-dashboard-backend/scripts/` (`migrate_unit_id_refactor.js`、`migrate_enrolment.js`、
-`migrate_sync.js`、`migrate_backup_scope.js`)。 API が実際に返す行の形状については、
-[API リファレンス](/ja/development/api-reference) を参照してください。このページでは列と関係について説明します。
-応答 JSON ではありません。
+The 18 tables in `ROS_DB`, grouped by what they're for, with the foreign keys between them. The
+canonical source is `ROS-dashboard-backend/sql/init.sql`, which only runs against an empty MySQL
+data directory. An existing deployment picks up schema changes through the migration scripts in
+`ROS-dashboard-backend/scripts/` instead (`migrate_unit_id_refactor.js`, `migrate_enrolment.js`,
+`migrate_sync.js`, `migrate_backup_scope.js`). For the shape of a row as the API actually returns it,
+see [API Reference](/ja/development/api-reference); this page covers columns and relationships,
+not response JSON.
 
-## ID とアクセス
+## Identity and access
 
-|表 |目的 |キー列 |
+| Table | Purpose | Key columns |
 | --- | --- | --- |
-| `users` |オペレーターアカウント | `id` (ULID、PK)、`username`、`email`、`password` (bcrypt)、`status` (`active`/`suspended`) |
-| `admin_accounts` |バックオフィスアカウント、`users` から意図的に分離 | `id` (ULID、PK)、`role` (`superadmin`/`admin`)、`must_change_password` |
-| `rental_profiles` |レンタルごとに 1 列。一時停止すると、ユニットとそのデータの両方がメンバーから非表示になり、どちらにも触れなくなります。 `id` (ULID、PK)、`profile_name` (一意)、`tenant_name`、`status` |
-| `units` |フリート全体の物理ロボットごとに 1 行。 `unit_name` は名前変更可能な表示ラベルであり、ID ではありません | `id` (ULID、PK): これはロボットのアドレスです。`/unit_<id>/...` |
-| `profile_members` |どのアカウントがどのプロファイルに属するか | `UNIQUE(profile_id, user_id)`、両方 `ON DELETE CASCADE` |
-| `profile_units` |プロファイルがアクセスできるユニット | `UNIQUE(unit_id)`、**ではありません** `(profile_id, unit_id)` したがって、ユニットを二重に割り当てることはできません。
+| `users` | Operator accounts | `id` (ULID, PK), `username`, `email`, `password` (bcrypt), `status` (`active`/`suspended`) |
+| `admin_accounts` | Back-office accounts, deliberately separate from `users` | `id` (ULID, PK), `role` (`superadmin`/`admin`), `must_change_password` |
+| `rental_profiles` | One row per rental. Suspending it hides both the unit and its data from members, without touching either | `id` (ULID, PK), `profile_name` (unique), `tenant_name`, `status` |
+| `units` | One row per physical robot, fleet-wide. `unit_name` is a renameable display label, not an identity | `id` (ULID, PK): this is the robot's address, `/unit_<id>/...` |
+| `profile_members` | Which accounts belong to which profile | `UNIQUE(profile_id, user_id)`, both `ON DELETE CASCADE` |
+| `profile_units` | Which units a profile can access | `UNIQUE(unit_id)`, **not** `(profile_id, unit_id)`, so a unit can never be double-assigned |
 
 ::: info `users.status` is written, not yet enforced
-`PATCH /admin/api/users/:id/status` はこの列を書き込みますが、`/user/login` はそれを読み取りません。
-一時停止されたオペレータの既存のセッションは動作し続け、再度ログインできます。この 2 つは
-意図的に分離されているため、管理コンソールを立ち上げてもライブ デプロイメントがロックアウトされることはありません
-独自のロボットの。ログイン境界でこれを強制するのは、別個の作業です。これは
-*一時停止されたレンタル プロファイル*とは異なるメカニズムで、ユニットとそのユニットが直ちに削除されます。
-すべてのメンバーのビューからのデータ ([API リファレンス § レンタル プロファイル](/ja/development/api-reference#rental-profiles) を参照)。
+`PATCH /admin/api/users/:id/status` writes this column, but `/user/login` does not read it: a
+suspended operator's existing session keeps working and they can still log back in. The two were
+deliberately kept separate so standing up the admin console could never lock a live deployment out
+of its own robots; enforcing it at the login boundary is a distinct piece of work. This is a
+different mechanism from a *suspended rental profile*, which does immediately remove a unit and its
+data from every member's view (see [API Reference § Rental profiles](/ja/development/api-reference#rental-profiles)).
 :::
 
-## 運用データ (マップごと)
+## Operational data (per map)
 
-|表 |目的 |キー列 |
+| Table | Purpose | Key columns |
 | --- | --- | --- |
-| `maps_data` |記録された地図 | `unit_id` → `units` (`ON DELETE CASCADE`、どのロボットが録画したのか)、 `profile_id` → `rental_profiles` (`ON DELETE RESTRICT`、どのレンタルが所有しているのか)、 `UNIQUE(map_name, unit_id, profile_id)` |
-| `routes_data` |保存されたマルチピンポイントルート | `map_id` → `maps_data` (`ON DELETE CASCADE`)、`route_points` (JSON)、`UNIQUE(route_name, map_id)` |
-| `areas_data` |保存されたカバーエリア | `map_id` → `maps_data` (`ON DELETE CASCADE`)、 `area_type` (`cover`/`no_cover`)、 `polygon_points` (JSON)、 `UNIQUE(area_name, map_id)` |
-| `playlists_data` |順番にスイープするエリアの順序付きリスト | `map_id` → `maps_data` (`ON DELETE CASCADE`)、`items` (JSON、参照ではなく各領域のジオメトリの **スナップショット**)、`UNIQUE(playlist_name, map_id)` |
-| `unit_operation_state` |ユニット自体の現在のモード、バックエンド再起動後の回復用 | PK **は** `unit_id` そのものです。1 台のロボットは 1 つのことしか実行できないからです。
+| `maps_data` | A recorded map | `unit_id` → `units` (`ON DELETE CASCADE`, which robot recorded it), `profile_id` → `rental_profiles` (`ON DELETE RESTRICT`, which rental owns it), `UNIQUE(map_name, unit_id, profile_id)` |
+| `routes_data` | A saved multi-pinpoint route | `map_id` → `maps_data` (`ON DELETE CASCADE`), `route_points` (JSON), `UNIQUE(route_name, map_id)` |
+| `areas_data` | A saved coverage area | `map_id` → `maps_data` (`ON DELETE CASCADE`), `area_type` (`cover`/`no_cover`), `polygon_points` (JSON), `UNIQUE(area_name, map_id)` |
+| `playlists_data` | An ordered list of areas to sweep in sequence | `map_id` → `maps_data` (`ON DELETE CASCADE`), `items` (JSON, a **snapshot** of each area's geometry rather than a reference), `UNIQUE(playlist_name, map_id)` |
+| `unit_operation_state` | The unit's own current mode, for recovery after a backend restart | PK **is** `unit_id` itself, since one robot can only be doing one thing |
 
-`maps_data` は、ユニットではなく、それを録画したレンタルに意図的にロックされています: ユニット
-別のテナントに再レンタルしても、以前のテナントの地図は引き継がれません。
-レンタル側は、地図を記録したユニットを運転できなくなっても、地図を保持します。参照
-その仕組みについては、[API リファレンス § レンタル プロファイル](/ja/development/api-reference#rental-profiles) をご覧ください。
-アクセス層で。
+`maps_data` is deliberately locked to the rental that recorded it rather than to the unit: a unit
+re-rented to a different tenant does not hand over any previous tenant's maps, and a tenant whose
+rental ends keeps their maps even though they can no longer drive the unit that recorded them. See
+[API Reference § Rental profiles](/ja/development/api-reference#rental-profiles) for how that plays out
+at the access layer.
 
-## 登録
+## Enrolment
 
-|表 |目的 |キー列 |
+| Table | Purpose | Key columns |
 | --- | --- | --- |
-| `unit_devices` |ユニットにバインドされた 1 つのデバイス認証情報 | `UNIQUE(unit_id)`、`secret_hash` + `secret_prev_hash` (前の世代は次にトークン交換が成功するまで有効なままなので、シークレットをローテーションしてもローテーション中にロボットをブリックすることはできません)
-| `pending_units` |挨拶したもののまだ引き取られていないロボット | `fingerprint` (一意)、`claim_code`、`nonce_hash`、`status` (`pending`/`approved`/`claimed`/`rejected`)、`contact_count` (このエンドポイントは設計上認証されていないため、連絡先ごとのログではなくカウンター) |
-| `unit_enrollment_codes` |ロボットが存在する前に特定のユニットを請求するための使い捨てバウチャー | `unit_id`、`code_hash`、`expires_at`、`used_at` |
-| `unit_connection_log` |追加専用の接続履歴 | ULID ではなく、プレーンな `AUTO_INCREMENT` PK を持つ唯一のテーブル。過去 180 日間にパージされました |
+| `unit_devices` | The one device credential bound to a unit | `UNIQUE(unit_id)`, `secret_hash` + `secret_prev_hash` (the previous generation stays valid until the next successful token exchange, so rotating the secret can't brick a robot mid-rotation) |
+| `pending_units` | Robots that have said hello but are not yet claimed | `fingerprint` (unique), `claim_code`, `nonce_hash`, `status` (`pending`/`approved`/`claimed`/`rejected`), `contact_count` (a counter rather than a per-contact log, since this endpoint is unauthenticated by design) |
+| `unit_enrollment_codes` | Single-use vouchers to claim a specific unit before its robot exists | `unit_id`, `code_hash`, `expires_at`, `used_at` |
+| `unit_connection_log` | Append-only connection history | The only table with a plain `AUTO_INCREMENT` PK rather than a ULID; purged past 180 days |
 
-完全なやり取りについては、[メッセージ契約 § 登録](/ja/development/message-contracts#enrolment) を参照してください。
-これらのテーブルはサポートしています。
+See [Message Contracts § Enrolment](/ja/development/message-contracts#enrolment) for the full exchange
+these tables support.
 
-## バックアップと同期
+## Backup and sync
 
-|表 |目的 |キー列 |
+| Table | Purpose | Key columns |
 | --- | --- | --- |
-| `profile_backups` |アーカイブマニフェスト | `scope` (`profile` または `unit`: プロファイル スコープのアーカイブは、使用したすべてのロボットにわたる 1 つのテナントをカバーし、ユニット スコープのアーカイブは、それを使用したすべてのテナントにわたる 1 つのロボットをカバーします)、`profile_id`/`unit_id` 両方 `ON DELETE SET NULL` (アーカイブは、アーカイブされたものよりも存続する必要があります) |
-| `sync_tombstones` |クロスデバイス同期のレコードを削除する | `UNIQUE(table_name, row_id)`、外部キーはまったくありません。トゥームストーンは行、場合によってはユニットよりも存続する必要があるため、 | を参照します。
-| `sync_state` |同期ピアごとに 1 行 | PK `peer` (ユニット上の `'cloud'`、クラウド上のユニットの ULID)、`last_pull_watermark`、`last_push_watermark`、`last_pull_profile_id`、`clock_offset_ms` |
+| `profile_backups` | Archive manifests | `scope` (`profile` or `unit`: a profile-scoped archive covers one tenant across every robot it has used, a unit-scoped archive covers one robot across every tenant that has used it), `profile_id`/`unit_id` both `ON DELETE SET NULL` (an archive must outlive what it archived) |
+| `sync_tombstones` | Delete records for cross-device sync | `UNIQUE(table_name, row_id)`, no foreign keys at all, since a tombstone has to outlive the row, and possibly the unit, it refers to |
+| `sync_state` | One row per sync peer | PK `peer` (`'cloud'` on a unit; the unit's ULID, on the cloud), `last_pull_watermark`, `last_push_watermark`, `last_pull_profile_id`, `clock_offset_ms` |
 
-これら 2 つのテーブルが実際にどのように使用されるかについては、[データ同期](/ja/development/data-sync) を参照してください。
+See [Data Sync](/ja/development/data-sync) for how these two tables are actually used.
 
-## 外部キー、完全な
+## Foreign keys, in full
 
 ```mermaid
 flowchart TB
@@ -109,53 +111,53 @@ flowchart TB
 ```
 
 ::: info Attribution is never authorization
-`created_by` / `modified_by` 上の `maps_data`、`routes_data`、`areas_data` および `playlists_data` には、
-**ユーザー ULID**。決して名前ではなく、誰が行に触れたかを伝えるためにのみ使用され、誰が誰であるかを決定することはありません。
-それを表示または変更することができます。どちらも `NULL` であり、アカウントがすでに存在しないクリエイターであることは安全です。
-行を分割するのではなく、*unknown* としてレンダリングされます。アクセス自体は完全にレンタルで運営されています
-プロファイル ([API リファレンス § レンタル プロファイル](/ja/development/api-reference#rental-profiles) を参照)。
+`created_by` / `modified_by` on `maps_data`, `routes_data`, `areas_data` and `playlists_data` store a
+**user ULID**, never a name, and are used only to say who touched a row, never to decide who is
+allowed to see or change it. Both are safe to be `NULL`, and a creator whose account no longer exists
+renders as *unknown* rather than breaking the row. Access itself runs entirely through rental
+profiles (see [API Reference § Rental profiles](/ja/development/api-reference#rental-profiles)).
 :::
 
 ## `created_at` / `modified_at`
 
-2026-08-01 にスキーマ全体で統一されたタイムスタンプ規則
+The timestamp convention unified across the schema on 2026-08-01
 (`created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-`modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`) は 15 に適用されます
-18 テーブルのうち。 3 つは省略ではなく、意図的にそこから外れています。
+`modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`) applies to 15
+of the 18 tables. Three depart from it on purpose, not by omission:
 
-|表 |代わりに何があるか |なぜ |
+| Table | What it has instead | Why |
 | --- | --- | --- |
-| `pending_units` | `first_seen_at` / `last_seen_at` |このテーブルは、編集履歴のあるレコードではなく、*連絡先*を追跡します。
-| `unit_enrollment_codes` | `created_at` のみ |バウチャーは不変です。そのライフサイクルは `used_at` であり、更新タイムスタンプではありません。
-| `unit_connection_log` | `connected_at` のみ |追加専用のログ。行が書き込まれた後は更新されません。
+| `pending_units` | `first_seen_at` / `last_seen_at` | This table tracks *contact*, not a record with an edit history |
+| `unit_enrollment_codes` | `created_at` only | A voucher is immutable; its lifecycle is `used_at`, not an update timestamp |
+| `unit_connection_log` | `connected_at` only | Append-only log, never updated after the row is written |
 
-## デプロイメントプロファイルごとのデータベース
+## Database per deployment profile
 
-データベース名は常に `ROS_DB` です。異なるのはホストとポートです。
+The database name is always `ROS_DB`; what differs is host and port.
 
-|プロフィール |ホスト:ポート |
+| Profile | Host:port |
 | --- | --- |
-|ユニット (`local_dev`) | `127.0.0.1:3306` (`network_mode: host`)
-|クラウド`server_prod` |コンテナ ポート `3306`、ホスト上で `3307` として公開 |
-|クラウド`server_dev` |コンテナ ポート `3306`、ホスト上で `3308` として公開 |
+| Unit (`local_dev`) | `127.0.0.1:3306` (`network_mode: host`) |
+| Cloud `server_prod` | container port `3306`, published on the host as `3307` |
+| Cloud `server_dev` | container port `3306`, published on the host as `3308` |
 
-`migrate_backup_scope.js` はこのペアリングをハードコーディングしており、**明示的な指定がなければ実行を拒否します。
-`--profile`** フラグ。具体的には、フォールバックのデフォルトがメンテナンス スクリプトをポイントできないようにするためです。
-間違ったデータベース。 [Docker リファレンス § サービスとポート マップ](/ja/setup/docker-reference#service-and-port-map) を参照してください。
-これらのポートが構成プロファイルの残りの部分にどのように適合するかについて説明します。
+`migrate_backup_scope.js` hardcodes this pairing and **refuses to run without an explicit
+`--profile`** flag, specifically so a fallback default can never point a maintenance script at the
+wrong database. See [Docker Reference § Service and port map](/ja/setup/docker-reference#service-and-port-map)
+for how these ports fit into the rest of the compose profile.
 
-## 理由を知る価値のあるインデックス
+## Indexes worth knowing the reason for
 
-|インデックス |理由 |
+| Index | Reason |
 | --- | --- |
-| `maps_data.unique_map_unit (map_name, unit_id, profile_id)` | 2 つの異なるテナントは、他のテナントのテナントを確認せずに、同じロボット上のマップに同じ名前を付けることができます。
-| `profile_units.unique_rented_unit (unit_id)` |二重割り当ては、既存のものを静かに上書きするのではなく、大声で失敗します。
-| `unit_devices.unique_device_unit (unit_id)` | 2 つのロボットが同じトピック ルートに書き込むことは決してできません。
-| `unit_connection_log.idx_conn_unit_time (unit_id, connected_at)` | 1 つのインデックスでユニットごとの履歴クエリと 180 日のパージ ジョブの両方をサポートします。
+| `maps_data.unique_map_unit (map_name, unit_id, profile_id)` | Two different tenants are allowed to name a map the same thing on the same robot without either seeing the other's |
+| `profile_units.unique_rented_unit (unit_id)` | A double-assignment fails loudly instead of silently overwriting the existing one |
+| `unit_devices.unique_device_unit (unit_id)` | Two robots can never end up writing to the same topic root |
+| `unit_connection_log.idx_conn_unit_time (unit_id, connected_at)` | Supports both a per-unit history query and the 180-day purge job in one index |
 
-## 関連
+## Related
 
-- [API リファレンス](/ja/development/api-reference): このスキーマに基づいて構築された HTTP サーフェス
-- [データ同期](/ja/development/data-sync): `sync_tombstones` と `sync_state` の使用方法
-- [メッセージ契約 § 登録](/ja/development/message-contracts#enrolment)
-- [建築](/ja/development/architecture)
+- [API Reference](/ja/development/api-reference): the HTTP surface built on this schema
+- [Data Sync](/ja/development/data-sync): how `sync_tombstones` and `sync_state` get used
+- [Message Contracts § Enrolment](/ja/development/message-contracts#enrolment)
+- [Architecture](/ja/development/architecture)

@@ -2,21 +2,23 @@
 outline: deep
 search: false
 ---
-# Kontrak Pesan
+
+
+# Message Contracts
 
 <RoleBadge role="developer" />
 
-Dokumen ini memberikan spesifikasi lengkap dan resmi untuk semua muatan data mesin-ke-mesin dalam sistem MSD700. Ini mencakup saluran perintah dan umpan balik MQTT, topik streaming ROS berseri, protokol sinkronisasi pengawas operasi, pensinyalan WebRTC, dan pertukaran pendaftaran perangkat keras.
+This document provides the complete, authoritative specification for all machine-to-machine data payloads in the MSD700 system. It covers the MQTT command and feedback channels, serialized ROS streaming topics, the operation supervisor synchronization protocol, WebRTC signalling, and the hardware enrolment exchange.
 
-Untuk permukaan HTTP, lihat [Referensi API](/id/development/api-reference). Untuk mesin negara terbatas, lihat [Status dan Perilaku](/id/development/state-and-behavior). Untuk desain sistem secara keseluruhan, lihat [Arsitektur](/id/development/architecture).
+For the HTTP surface, see [API Reference](/id/development/api-reference). For finite state machines, see [State and Behavior](/id/development/state-and-behavior). For the overall system design, see [Architecture](/id/development/architecture).
 
 ::: info Contract Verification Notice
-Bentuk muatan diturunkan langsung dari kode sumber aktif (`backend_node`, `system_command.py`, `operation_supervisor.py`, `topic2string`, `enroll_api.js`). Setiap perubahan bidang dalam basis kode harus diperbarui di sini dalam penerapan yang sama.
+Payload shapes are derived directly from active source code (`backend_node`, `system_command.py`, `operation_supervisor.py`, `topic2string`, `enroll_api.js`). Any field changes in the codebase must be updated here in the same commit.
 :::
 
-## Skema Pengalamatan Armada
+## Fleet Addressing Scheme
 
-Setiap robot fisik dialamatkan dengan awalan unik: `/unit_<ULID>/...`. ULID (Universally Unique Lexicographically Sortable Identifier) ​​adalah kunci utama yang ditetapkan ke robot di tabel database pusat `units` pada saat registrasi.
+Every physical robot is addressed by a unique prefix: `/unit_<ULID>/...`. The ULID (Universally Unique Lexicographically Sortable Identifier) is the primary key assigned to the robot in the central `units` database table upon registration.
 
 ```mermaid
 flowchart LR
@@ -24,26 +26,26 @@ flowchart LR
   MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_<ULID>/string/robotpose"]
 ```
 
-| Lokasi Lompatan | Format Topik | Tujuan Rekayasa |
+| Hop Location | Topic Format | Engineering Purpose |
 | --- | --- | --- |
-| **Robot Master ROS Lokal** | `/string/robotpose` | Namespace lokal tanpa cakupan (satu robot per roscore onboard). |
-| **Broker MQTT Pusat** | `/unit_<ULID>/string/robotpose` | Namespace topik cakupan armada yang menggandakan semua robot melalui HiveMQ. |
-| **Master Cloud ROS** | `/unit_<ULID>/string/robotpose` | Topik dengan namespace digunakan oleh relay cloud per unit dan rosbridge. |
+| **Robot Local ROS Master** | `/string/robotpose` | Unscoped local namespace (one robot per onboard roscore). |
+| **Central MQTT Broker** | `/unit_<ULID>/string/robotpose` | Fleet-scoped topic namespace multiplexing all robots over HiveMQ. |
+| **Cloud ROS Master** | `/unit_<ULID>/string/robotpose` | Namespaced topic consumed by per-unit cloud relays and rosbridge. |
 
 ::: warning Mandatory `unit_` Prefix Rule
-Nama resource grafik ROS harus diawali dengan karakter alfabet, tanda gelombang, atau garis miring. Karena ULID dimulai dengan angka (misalnya `01JZ...`), `/01JZ.../string/map` sintaksnya tidak valid dan ditolak oleh ROS. Awalan `unit_` memastikan kepatuhan ROS yang ketat sambil mempertahankan pemetaan 1:1 dengan topik MQTT.
+ROS graph resource names must begin with an alphabetic character, a tilde, or a forward slash. Because ULIDs begin with numbers (e.g. `01JZ...`), `/01JZ.../string/map` is invalid syntax and rejected by ROS. The `unit_` prefix ensures strict ROS compliance while maintaining a 1:1 mapping with MQTT topics.
 :::
 
-## Saluran Perintah dan Kontrol
+## Command and Control Channel
 
-Dua topik MQTT khusus menangani semua permintaan dua arah dan interaksi respons antara server cloud dan unit fisik:
+Two dedicated MQTT topics handle all bidirectional request and response interactions between the cloud server and a physical unit:
 
-| Topik MQTT | Arah | Node Produser | Node Konsumen | Deskripsi |
+| MQTT Topic | Direction | Producer Node | Consumer Node | Description |
 | --- | --- | --- | --- | --- |
-| `/unit_<ULID>/system_command` | Awan ke Robot | `backend_node` (Ekspres) | `system_command.py` (ROS) | Mengirimkan perintah kontrol, tujuan navigasi, dan perubahan mode. |
-| `/unit_<ULID>/system_feedback` | Robot ke Awan | `system_command.py` (ROS) | `backend_node` (Ekspres) | Mengembalikan status eksekusi, pesan kesalahan, dan ping telemetri. |
+| `/unit_<ULID>/system_command` | Cloud to Robot | `backend_node` (Express) | `system_command.py` (ROS) | Dispatches control commands, navigation goals, and mode changes. |
+| `/unit_<ULID>/system_feedback` | Robot to Cloud | `system_command.py` (ROS) | `backend_node` (Express) | Returns execution status, error messages, and telemetry pings. |
 
-### Amplop Muatan Perintah
+### Command Payload Envelope
 
 ```json
 {
@@ -63,16 +65,16 @@ Dua topik MQTT khusus menangani semua permintaan dua arah dan interaksi respons 
 }
 ```
 
-| Nama Bidang | Ketik | Wajib | Deskripsi |
+| Field Name | Type | Mandatory | Description |
 | --- | --- | --- | --- |
-| `header` | tali | Ya | Penangan subsistem target: `hardware`, `navigation`, `mapping`, `boustrophedon`, `manual`, `autopilot`, `emergency_stop`, `autoalign`. |
-| `command` | tali | Ya | Kata kerja tindakan spesifik dalam pawang. Kata kerja yang tidak dikenal akan dicatat dan dihilangkan. |
-| `config` | objek | Bersyarat | Parameter perintah (biasanya di dalam `config.resource`). |
-| `data` | objek | Bersyarat | Blok parameter alternatif yang digunakan oleh `hardware.ping`. |
-| `metadata.request_id` | UUID v4 | Ya | Token korelasi unik dihasilkan per permintaan HTTP oleh `backend_node`. |
-| `metadata.timestamp` | ISO 8601 | Ya | String stempel waktu pengirim untuk pelacakan diagnostik. |
+| `header` | string | Yes | Target subsystem handler: `hardware`, `navigation`, `mapping`, `boustrophedon`, `manual`, `autopilot`, `emergency_stop`, `autoalign`. |
+| `command` | string | Yes | Specific action verb within the handler. Unrecognized verbs are logged and dropped. |
+| `config` | object | Conditional | Command parameters (typically inside `config.resource`). |
+| `data` | object | Conditional | Alternate parameter block used by `hardware.ping`. |
+| `metadata.request_id` | UUID v4 | Yes | Unique correlation token generated per HTTP request by `backend_node`. |
+| `metadata.timestamp` | ISO 8601 | Yes | Sender timestamp string for diagnostic tracing. |
 
-### Amplop Muatan Umpan Balik
+### Feedback Payload Envelope
 
 ```json
 {
@@ -89,14 +91,14 @@ Dua topik MQTT khusus menangani semua permintaan dua arah dan interaksi respons 
 }
 ```
 
-| Nama Bidang | Ketik | Deskripsi |
+| Field Name | Type | Description |
 | --- | --- | --- |
-| `data.status` | boolean | `true` menunjukkan perintah diterima/dieksekusi; `false` menunjukkan penolakan eksekusi. |
-| `data.message` | tali | Deskripsi diagnostik yang dapat dibaca manusia dari robot. |
-| `metadata.timestamp` | mengapung | Jam dinding detik-detik (`rospy.get_time()`) dari robot. |
-| `metadata.request_id` | UUID v4 | Cocok dengan `request_id` asli dari amplop perintah. |
+| `data.status` | boolean | `true` indicates command accepted/executed; `false` indicates execution rejection. |
+| `data.message` | string | Human-readable diagnostic description from the robot. |
+| `metadata.timestamp` | float | Wall-clock epoch seconds (`rospy.get_time()`) from the robot. |
+| `metadata.request_id` | UUID v4 | Matches the original `request_id` from the command envelope. |
 
-### Korelasi Perintah dan Coba Ulang Arsitektur
+### Command Correlation and Retry Architecture
 
 ```mermaid
 sequenceDiagram
@@ -117,18 +119,18 @@ sequenceDiagram
   Backend-->>Backend: Resolve HTTP request (200 OK)
 ```
 
-| Parameter | Nilai Bawaan | Lokasi Konfigurasi | Tujuan |
+| Parameter | Default Value | Config Location | Purpose |
 | --- | --- | --- | --- |
-| `DEFAULT_TIMEOUT` | `30000` ms (30 detik) | `backend_node` | Durasi maksimum permintaan HTTP menunggu umpan balik sebelum merespons dengan `504 Gateway Timeout`. |
-| `COMMAND_RETRY_INTERVAL` | `1500` ms (1,5 detik) | `backend_node` | Kirim ulang periode sementara perintah yang bermutasi tetap tidak diakui. |
+| `DEFAULT_TIMEOUT` | `30000` ms (30 s) | `backend_node` | Maximum duration an HTTP request waits for feedback before responding with `504 Gateway Timeout`. |
+| `COMMAND_RETRY_INTERVAL` | `1500` ms (1.5 s) | `backend_node` | Resend period while a mutating command remains unacknowledged. |
 
 ::: danger Ping Heartbeat Exclusion
-`header: "hardware", command: "ping"` ditransmisikan secara ketat **sekali** per interval dan tidak pernah dicoba ulang. Hilangnya detak jantung adalah pemicu utama pengawas keselamatan robot. Mencoba kembali ping yang hilang akan menutupi putusnya jaringan dan menggagalkan mekanisme penghentian darurat otomatis.
+`header: "hardware", command: "ping"` is transmitted strictly **once** per interval and is never retried. Heartbeat loss is the primary trigger for the robot safety watchdog. Retrying lost pings would mask network dropouts and defeat the automatic emergency stop mechanism.
 :::
 
-## Katalog Referensi Perintah
+## Command Reference Catalogue
 
-### 1. Subsistem Perangkat Keras (`header: "hardware"`)
+### 1. Hardware Subsystem (`header: "hardware"`)
 
 ```json
 // Command: "check"
@@ -138,16 +140,16 @@ sequenceDiagram
 { "header": "hardware", "command": "idle", "metadata": { ... } }
 ```
 
-| Kata Kerja Perintah | Konten Muatan | Tujuan |
+| Command Verb | Payload Content | Purpose |
 | --- | --- | --- |
-| `ping` | Lihat [Bagian Ping Detak Jantung](#heartbeat-ping-and-lease-contract) | Detak jantung, akuisisi sewa, pengambilan telemetri, dan penyegaran pengawas. |
-| `check` | Tidak ada | Kueri status driver motor tingkat rendah dan mikrokontroler. |
-| `init` | Tidak ada | Menginisialisasi antarmuka perangkat keras dan saluran listrik. |
-| `stop` | Tidak ada | Mematikan periferal perangkat keras dan tahapan daya. |
-| `idle` | Tidak ada | Meruntuhkan node navigasi/pemetaan yang berjalan sambil menjaga tenaga robot. |
-| `battery_update` | `{ "config": { ... } }` | Memperbarui tingkat telemetri daya secara manual. |
+| `ping` | See [Heartbeat Ping Section](#heartbeat-ping-and-lease-contract) | Heartbeat, lease acquisition, telemetry retrieval, and watchdog refresh. |
+| `check` | None | Queries status of low-level motor drivers and microcontrollers. |
+| `init` | None | Initialises hardware interfaces and power lines. |
+| `stop` | None | Shuts down hardware peripherals and power stages. |
+| `idle` | None | Tears down running navigation/mapping nodes while keeping robot powered. |
+| `battery_update` | `{ "config": { ... } }` | Manually updates power telemetry levels. |
 
-### 2. Subsistem Navigasi (`header: "navigation"`)
+### 2. Navigation Subsystem (`header: "navigation"`)
 
 ```json
 // Command: "init"
@@ -180,11 +182,11 @@ sequenceDiagram
 }
 ```
 
-- `map_name`: Pengidentifikasi ULID peta yang sesuai dengan `<ULID>.pgm` dan `<ULID>.yaml` pada disk.
-- `ensure_unpaused: true`: Memerintahkan robot untuk secara otomatis membersihkan semua kunci `/emergency_pause` saat meluncurkan navigasi.
-- `command: "deactivate"`: Menghentikan tumpukan navigasi aktif (tidak memerlukan muatan).
+- `map_name`: The map ULID identifier corresponding to `<ULID>.pgm` and `<ULID>.yaml` on disk.
+- `ensure_unpaused: true`: Instructs the robot to automatically clear any standing `/emergency_pause` lock when launching navigation.
+- `command: "deactivate"`: Terminates the active navigation stack (takes no payload).
 
-### 3. Subsistem Pemetaan (`header: "mapping"`)
+### 3. Mapping Subsystem (`header: "mapping"`)
 
 ```json
 // Command: "stop" (Save and Upload Map)
@@ -210,9 +212,9 @@ sequenceDiagram
 }
 ```
 
-Menyimpan peta SLAM membutuhkan waktu lebih lama daripada batas waktu HTTP standar 30 detik. Oleh karena itu, `mapping stop` segera mengembalikan HTTP 200 dengan `{ request_id, map_ulid }`. Frontend terhubung ke aliran SSE di `GET /api/mapping/progress/:request_id` untuk memantau kemajuan.
+Saving a SLAM map takes longer than the standard 30-second HTTP timeout. Therefore, `mapping stop` immediately returns an HTTP 200 with `{ request_id, map_ulid }`. The frontend connects to an SSE stream on `GET /api/mapping/progress/:request_id` to monitor progress.
 
-#### Umpan Balik Kemajuan Pemetaan (`header: "mapping_progress"`)
+#### Mapping Progress Feedback (`header: "mapping_progress"`)
 
 ```json
 {
@@ -233,13 +235,13 @@ Menyimpan peta SLAM membutuhkan waktu lebih lama daripada batas waktu HTTP stand
 }
 ```
 
-| Nilai Hasil | Deskripsi |
+| Outcome Value | Description |
 | --- | --- |
-| `completed` | Berhasil ditulis ke server media Unit lokal dan server cloud. |
-| `cloud_pending` | Ditulis hanya untuk server media Unit lokal. Replikasi cloud akan selesai pada interval sinkronisasi berikutnya. |
-| `failed` | Penyimpanan pemetaan gagal. Sesi tetap terbuka untuk dicoba lagi. |
+| `completed` | Successfully written to both the local Unit media-server and the cloud server. |
+| `cloud_pending` | Written to local Unit media-server only. Cloud replication will complete on the next sync interval. |
+| `failed` | Mapping save failed. Session remains open for retry. |
 
-### 4. Cakupan Area Boustrophedon (`header: "boustrophedon"`)
+### 4. Boustrophedon Area Coverage (`header: "boustrophedon"`)
 
 ```json
 // Command: "init"
@@ -263,16 +265,16 @@ Menyimpan peta SLAM membutuhkan waktu lebih lama daripada batas waktu HTTP stand
 }
 ```
 
-- `areas`: Susunan poligon yang diurutkan membentuk daftar putar operasi target.
-- `exclusions`: Zona penghalang yang dikurangi dari cakupan cakupan.
-- `command: "pause"`: Menerima `{ "pause": true }` atau `{ "pause": false }`.
-- `command: "deactivate"`: Menghentikan perencanaan cakupan.
+- `areas`: Ordered array of polygons forming the target operation playlist.
+- `exclusions`: Keep-out obstacle zones subtracted from coverage sweeps.
+- `command: "pause"`: Accepts `{ "pause": true }` or `{ "pause": false }`.
+- `command: "deactivate"`: Stops coverage planning.
 
-## Ping Detak Jantung dan Kontrak Sewa
+## Heartbeat Ping and Lease Contract
 
-Pesan ping detak jantung mengatur sewa pengoperasian robot, pengatur waktu pengawas keselamatan, dan telemetri status.
+The heartbeat ping message manages the robot operating lease, the safety watchdog timer, and status telemetry.
 
-### Permintaan Muatan (`data` blok)
+### Request Payload (`data` block)
 
 ```json
 {
@@ -286,17 +288,17 @@ Pesan ping detak jantung mengatur sewa pengoperasian robot, pengatur waktu penga
 }
 ```
 
-| Parameter | Sumber | Deskripsi |
+| Parameter | Source | Description |
 | --- | --- | --- |
-| `session_id` | tab peramban | UUID unik per tab browser. |
-| `user_id` | JWT bagian belakang | Diekstrak secara ketat dari token JWT yang diautentikasi oleh backend server. |
-| `claim` | Peramban | `true` dari halaman operasional (Navigasi, Pemetaan); `false` saat menelusuri daftar armada read-only. |
-| `release` | Peramban | Secara eksplisit melepaskan sewa operasi setelah halaman keluar. |
-| `page` | Peramban | Halaman asal: `dashboard`, `login`, `navigation`, `mapping`. |
-| `origin` | Lingkungan backend | `cloud` atau `local`, ditentukan oleh konfigurasi server. |
-| `force_takeover` | Peramban | `true` ketika operator mengonfirmasi pengambilalihan sewa yang ada. |
+| `session_id` | Browser tab | Unique UUID per browser tab. |
+| `user_id` | Backend JWT | Extracted strictly from the authenticated JWT token by the server backend. |
+| `claim` | Browser | `true` from operational pages (Navigation, Mapping); `false` when browsing the read-only fleet list. |
+| `release` | Browser | Explicitly relinquishes the operating lease upon page exit. |
+| `page` | Browser | Origin page: `dashboard`, `login`, `navigation`, `mapping`. |
+| `origin` | Backend env | `cloud` or `local`, determined by server configuration. |
+| `force_takeover` | Browser | `true` when operator confirms taking over an existing lease. |
 
-### Respon Payload (`data` blok)
+### Response Payload (`data` block)
 
 ```json
 {
@@ -316,21 +318,21 @@ Pesan ping detak jantung mengatur sewa pengoperasian robot, pengatur waktu penga
 }
 ```
 
-| Bidang Respon | Deskripsi |
+| Response Field | Description |
 | --- | --- |
-| `robot_activity` | Status aktivitas yang difilter (misalnya `idle`, `navigating`, `mapping`, `stuck`). |
-| `active_page` | Halaman aktif mentah sebelum evaluasi detektor macet, memastikan perutean yang benar. |
-| `battery` | Persentase status pengisian daya baterai (mengambang). |
-| `uptime` | Waktu aktif sistem dalam hitungan menit. |
-| `hw_status` | Status dilaporkan oleh subsistem pemantauan perangkat keras (`ready`, `fault`). |
-| `manual_override` | `true` ketika mode teleop manual diaktifkan. |
-| `autopilot` | `true` ketika sequencer autopilot otonom aktif. |
-| `in_use` | Kunci tingkat akun: menunjukkan akun pengguna lain memegang sewa. |
-| `origin_conflict` | Konflik tingkat sesi: menunjukkan tab lain dari akun yang sama sedang aktif. |
+| `robot_activity` | Filtered activity state (e.g. `idle`, `navigating`, `mapping`, `stuck`). |
+| `active_page` | Raw active page before stuck-detector evaluation, ensuring correct routing. |
+| `battery` | Battery state of charge percentage (float). |
+| `uptime` | System uptime in minutes. |
+| `hw_status` | Status reported by hardware monitoring subsystem (`ready`, `fault`). |
+| `manual_override` | `true` when manual teleop mode is engaged. |
+| `autopilot` | `true` when autonomous autopilot sequencer is active. |
+| `in_use` | Account-level lock: indicates another user account holds the lease. |
+| `origin_conflict` | Session-level conflict: indicates another tab of the same account is active. |
 
-## Topik Telemetri Streaming
+## Streaming Telemetry Topics
 
-Telemetri streaming diserialkan ke string JSON pada unit melalui `topic2string`, dirutekan melalui MQTT, dan dikonversi kembali ke pesan ROS yang diketik di server untuk `rosbridge`.
+Streaming telemetry is serialized to JSON strings on the unit via `topic2string`, routed over MQTT, and converted back to typed ROS messages on the server for `rosbridge`.
 
 ```mermaid
 flowchart LR
@@ -350,21 +352,21 @@ flowchart LR
   end
 ```
 
-### Definisi Aliran Telemetri
+### Telemetry Stream Definitions
 
-| Topik Robot | Topik Server Cloud | Tingkat Pembaruan | Deskripsi Konten |
+| Robot Topic | Cloud Server Topic | Update Rate | Content Description |
 | --- | --- | --- | --- |
-| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25Hz | Posisi dan orientasi robot dalam bingkai `map` (`geometry_msgs/PoseStamped`). |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | Sedang diperbarui | Jaringan hunian terkompresi (`base64(zlib(JSON))`). |
-| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2Hz | Data pemindaian laser 2D terkompresi (`sensor_msgs/LaserScan`). |
-| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | Sesuai rencana | Koordinat jalur global (`nav_msgs/Path`). |
-| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Terus menerus | Lintasan lintasan lokal (`nav_msgs/Path`). |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | Sesuai rencana | Koordinat garis sapuan cakupan (`nav_msgs/Path`). |
-| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Terkunci | Cuplikan misi aktif penuh untuk pemulihan koneksi kembali. |
+| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Robot position and orientation in `map` frame (`geometry_msgs/PoseStamped`). |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | On update | Compressed occupancy grid (`base64(zlib(JSON))`). |
+| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Compressed 2D laser scan data (`sensor_msgs/LaserScan`). |
+| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | On plan | Global path coordinates (`nav_msgs/Path`). |
+| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Continuous | Local trajectory trajectory (`nav_msgs/Path`). |
+| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | On plan | Coverage sweep line coordinates (`nav_msgs/Path`). |
+| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Full active mission snapshot for reconnect recovery. |
 
-## Sinkronisasi Pengawas Operasi
+## Operation Supervisor Synchronization
 
-`operation_supervisor.py` mengelola pelaksanaan misi otonom pada robot sehingga misi terus berlanjut tanpa gangguan jika tab browser ditutup.
+`operation_supervisor.py` manages autonomous mission execution on the robot so that missions continue uninterrupted if the browser tab is closed.
 
 ```mermaid
 sequenceDiagram
@@ -382,7 +384,7 @@ sequenceDiagram
   Supervisor->>MoveBase: Dispatch Waypoint 2
 ```
 
-### Muatan Sinkronisasi Operasi (`/string/operation_sync`)
+### Operation Sync Payload (`/string/operation_sync`)
 
 ```json
 {
@@ -406,19 +408,19 @@ sequenceDiagram
 }
 ```
 
-| Jenis Tindakan (`type`) | Tujuan |
+| Action Type (`type`) | Purpose |
 | --- | --- |
-| `batch` | Mengunggah urutan titik jalan lengkap saat misi dimulai. |
-| `progress` | Memperbarui indeks titik jalan saat ini selama pengoperasian yang dipandu operator. |
-| `takeover` | Mengaktifkan mode Autopilot, menyerahkan pengurutan titik jalan kepada supervisor. |
-| `release` | Menonaktifkan mode Autopilot, mengembalikan kontrol ke loop browser. |
-| `pause` | Menjeda eksekusi sambil mempertahankan antrian titik jalan. |
-| `stop` | Menghentikan misi dan menghapus kumpulan titik arah. |
-| `resync` | Meminta siaran ulang segera dari cuplikan misi. |
+| `batch` | Uploads full waypoint sequence when mission starts. |
+| `progress` | Updates current waypoint index during operator-guided runs. |
+| `takeover` | Engages Autopilot mode, handing waypoint sequencing to supervisor. |
+| `release` | Disengages Autopilot mode, returning control to browser loop. |
+| `pause` | Pauses execution while preserving the waypoint queue. |
+| `stop` | Stops mission and clears the waypoint batch. |
+| `resync` | Requests an immediate re-broadcast of the mission snapshot. |
 
-## Jabat Tangan Pendaftaran Robot
+## Robot Enrolment Handshake
 
-Robot yang belum terdaftar mendaftarkan dirinya ke server cloud melalui jabat tangan kriptografi tiga tahap yang aman.
+Unenrolled robots register themselves with the cloud server via a secure three-stage cryptographic handshake.
 
 ```mermaid
 sequenceDiagram
@@ -447,11 +449,11 @@ sequenceDiagram
 ```
 
 ::: tip Nonce Security Purpose
-Nonce rahasia 32-byte menjamin bahwa spoofing alamat MAC tidak dapat membajak registrasi robot yang disetujui saat robot fisik dimatikan. Rahasia perangkat ditransmisikan hanya ketika robot asli mengungkapkan nonce teks biasa asli yang cocok dengan hash yang telah didaftarkan sebelumnya.
+The 32-byte secret nonce guarantees that MAC address spoofing cannot hijack an approved robot registration while the physical robot is powered off. The device secret is transmitted only when the genuine robot reveals the original plaintext nonce matching the pre-registered hash.
 :::
 
-## Dokumentasi Terkait
+## Related Documentation
 
-- [Referensi API](/id/development/api-reference): Titik akhir REST API dan skema data.
-- [Status dan Perilaku](/id/development/state-and-behavior): Mesin status terperinci dan transisi kegagalan.
-- [Arsitektur](/id/development/architecture): Topologi sistem tingkat tinggi dan batasan kepercayaan.
+- [API Reference](/id/development/api-reference): REST API endpoints and data schemas.
+- [State and Behavior](/id/development/state-and-behavior): Detailed state machines and failure transitions.
+- [Architecture](/id/development/architecture): High-level system topology and trust boundaries.

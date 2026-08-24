@@ -1,52 +1,29 @@
 ---
 outline: deep
 ---
-# ユニットのセットアップ
+
+
+# Unit Setup
 
 <RoleBadge role="technician" />
 
-このガイドでは、**MSD700 ユニット** (NVIDIA Jetson シングルボード コンピューター上で実行される物理ロボット) のインストールと構成の手順を段階的に説明します。
+This guide provides step-by-step instructions for installing and configuring an **MSD700 Unit** (the physical robot running on an NVIDIA Jetson single-board computer).
 
-続行する前に、実行中の [MSD700 Server](/ja/setup/server-setup) が存在することを確認してください。
+Ensure that a running [MSD700 Server](/ja/setup/server-setup) exists before proceeding.
 
 ::: info Production-First Architecture
-このガイドのデフォルトでは、**Production Cloud** に接続する実際のハードウェア ロボットをデプロイします。シミュレーション オプション (`--simulator`) と開発クラウド ルーティング (`--dev`) は、[詳細構成](#advanced-configurations) セクションにあります。
+This guide defaults to deploying a real hardware robot connecting to the **Production Cloud**. Simulation options (`--simulator`) and development cloud routing (`--dev`) are in the [Advanced Configurations](#advanced-configurations) section.
 :::
 
-## システム トポロジ
+## System Topology
 
-```mermaid
-flowchart TD
-  subgraph JetsonHost["NVIDIA Jetson Host (JetPack Ubuntu)"]
-    DM["scripts/docker-manager.sh (CLI Orchestrator)"]
+![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
-    subgraph RobotContainer["msd700 Container (ROS Core)"]
-      TM["tmux Session: robot_services"]
-      TM --> W1["roscore (:11311)"]
-      TM --> W2["msd700_bringup / navigation / SLAM"]
-      TM --> W3["camera_client (WebRTC Video)"]
-      TM --> W4["system_command.py (Lease & Actions)"]
-      TM --> W5["aws_mqtt Bridge (TLS :8883)"]
-    end
 
-    subgraph LocalStack["Local Web UI Stack (Offline Operation)"]
-      L1["backend_local (:5002) + rosbridge (:9090)"]
-      L2["frontend_local (:3000)"]
-      L3["media_local (:3003)"]
-      L4["MySQL Local (:3306)"]
-      L5["Mosquitto Local (:1883)"]
-    end
-  end
 
-  W5 <-->|"TLS Port 8883 (Single Cloud Link)"| CLOUD["MSD700 Cloud Server"]
-  W2 <-->|"Loopback MQTT :1883"| L5
-  L1 --> L4
-  L1 -.->|"Bidirectional Sync"| CLOUD
-```
+## Directory Structure Overview
 
-## ディレクトリ構造の概要
-
-Jetson ワークスペースは、ロボット パッケージ、Web ブリッジ、オンボード Web UI をサブモジュールとして管理します。
+The Jetson workspace manages robot packages, web bridges, and onboard web UI as submodules:
 
 ```
 ~/msd700_noetic/                              # Main Jetson Orchestration Workspace
@@ -65,31 +42,34 @@ Jetson ワークスペースは、ロボット パッケージ、Web ブリッ�
 
 ---
 
-## コアの段階的なセットアップ
+## Core Step-by-Step Setup
 
-次の 5 つの手順を順番に実行して、物理ロボットをセットアップします。
+Follow these 5 steps in sequence to set up the physical robot.
 
-### ステップ 1: サブモジュールを含むワークスペースのクローンを作成する
+### Step 1: Clone Workspace and Source Repositories
 
-`msd700_noetic` を `--recursive` で複製し、`src/` のすべてのサブモジュールが自動的に設定されるようにします。
+Clone the `msd700_noetic` orchestration workspace, then clone the three required repositories into the `src/` directory:
 
 ```bash
-git clone --recursive https://github.com/itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
+# 1. Clone orchestration workspace
+git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
+
+# 2. Clone source packages into src/ on branch v2
+git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
+git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip Cloned without `--recursive`?
-すでにサブモジュールなしでクローンを作成している場合は、次を実行します。
-```bash
-git submodule update --init --recursive
-```
+::: tip Why Manual Clone into `src/`?
+`msd700_noetic` ignores `src/*/` in its `.gitignore` to avoid Git-in-Git conflicts and allow each sub-repository to be managed on its own independent branch.
 :::
 
 ---
 
-### ステップ 2: ワンタイムホストセットアップ
+### Step 2: One-Time Host Setup
 
-ホスト セットアップ スクリプトを実行して、Docker グループの権限とグラフィック転送を構成します。
+Run the host setup script to configure Docker group permissions and graphics forwarding:
 
 ```bash
 cd ~/msd700_noetic
@@ -97,7 +77,7 @@ cd ~/msd700_noetic
 ```
 
 ::: warning Apply Group Permissions
-スクリプトによってユーザーが `docker` グループに追加された場合は、ログアウトして再度ログインするか、次のコマンドを実行します。
+If the script added your user to the `docker` group, log out and back in, or run:
 ```bash
 newgrp docker
 ```
@@ -105,9 +85,11 @@ newgrp docker
 
 ---
 
-### ステップ 3: 環境の構成 (`docker/.env`)
+### Step 3: Review Environment Configuration (`docker/.env`)
 
-ローカル環境ファイルを生成して確認します。
+On first launch, `./scripts/docker-manager.sh` automatically creates `docker/.env` from `docker/.env.example` and generates secure, loopback-only local MySQL passwords (`ensure_local_secrets`).
+
+If you wish to pre-configure or review settings manually before launch:
 
 ```bash
 cd ~/msd700_noetic
@@ -115,83 +97,96 @@ cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-主要な環境設定:
+Key settings in `docker/.env`:
 
 ```ini
 # Storage path for map occupancy grids on the Jetson
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Cloud Server Hostname for MQTT and Sync
-NAKAYAMA_HOST=msd.nglobal.jp
-CLOUD_BASE_URL=https://msd.nglobal.jp/services
+# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+USER_UID=
+USER_GID=
 
-# Local Ports (Default settings)
-FRONTEND_PORT_LOCAL=3000
+# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+WITH_SIMULATOR=false
+
+# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+UNIT_ID=
+
+# Local Ports (Default settings for on-board local stack)
+MYSQL_PORT_LOCAL=3306
+MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
 ROSBRIDGE_PORT_LOCAL=9090
+FRONTEND_PORT_LOCAL=3000
 MEDIA_SERVER_PORT_LOCAL=3003
 SIGNALLING_PORT_WS_LOCAL=3001
-MYSQL_PORT_LOCAL=3306
+SIGNALLING_PORT_HTTP_LOCAL=3002
+NETWORK_AGENT_PORT_LOCAL=5011
 
-# Leave UNIT_ID empty; assigned automatically during enrolment
-UNIT_ID=
+# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+#LOCAL_IP=192.168.4.1
 ```
+
+::: info Cloud Connection Routing
+Cloud connection parameters (Production Cloud `https://msd.nglobal.jp/services` or Dev Cloud via `--dev`) are managed automatically by `docker-manager.sh` during launch and enrolment, and are not configured in `docker/.env`.
+:::
 
 ---
 
-### ステップ 4: ロボット Docker イメージを構築する
+### Step 4: Build Robot Docker Image
 
-ROS Noetic ロボット ランタイム コンテナーを構築します。
+Build the ROS Noetic robot runtime container:
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh build
 ```
 
-これにより、ROS Noetic、ナビゲーション スタック、センサー ドライバー、Web ブリッジを含む `msd700:latest` イメージが構築されます。
+This builds the `msd700:latest` image containing ROS Noetic, navigation stacks, sensor drivers, and web bridges.
 
 ---
 
-### ステップ 5: ロボットを起動して登録を完了する
+### Step 5: Start Robot and Complete Enrolment
 
-ロボット スタックをデタッチ モードで起動します。
+Launch the robot stack in detached mode:
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
-#### 自動登録フロー:
-1. ロボットは最初の起動時にクラウド サーバーに接続し、6 文字の **クレーム コード** (例: `K7M2QP`) を出力します。
-2. 管理者は `https://msd.nglobal.jp/admin` を開き、ログインします。
-3. **保留中のユニット**で一致する請求コードを見つけ、そのユニットをアクティブな**レンタル プロファイル**に割り当て、**承認**をクリックします。
-4. ロボットは、暗号化された署名付き資格情報 (`Certificates/robot/device.json`) を受け取り、TLS ポート 8883 経由で HiveMQ にバインドし、フリート マップ上にライブで表示されます。
+#### Automated Enrolment Flow:
+1. On its very first launch, the robot contacts the cloud server and outputs a 6-character **Claim Code** (e.g. `K7M2QP`).
+2. An administrator opens `https://msd.nglobal.jp/admin` and logs in.
+3. Under **Pending Units**, locate the matching claim code, assign the unit to an active **Rental Profile**, and click **Approve**.
+4. The robot receives its cryptographically signed credentials (`Certificates/robot/device.json`), binds to HiveMQ over TLS port 8883, and appears live on the fleet map.
 
 ---
 
-## ユニットをローカルで操作する (オフライン モード)
+## Operating the Unit Locally (Offline Mode)
 
-ロボットがインターネット接続のない場所で動作する場合は、ラップトップまたはタブレットをロボットのローカル ネットワーク (またはロボットの Wi-Fi ホットスポット) に直接接続します。
+When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network (or robot Wi-Fi hotspot):
 
-1. ブラウザを開いて、`http://<jetson-ip>:3000` に移動します。
-2. ローカル ダッシュボードでは、完全な遠隔操作、SLAM マッピング、ルート作成、エリア カバレッジ スイープが可能です。
-3. インターネット接続が回復すると、ローカルに記録されたすべてのマップが中央のクラウド サーバーに自動的に同期されます。
+1. Open your browser and navigate to: `http://<jetson-ip>:3000`.
+2. The local dashboard allows full teleoperation, SLAM mapping, route creation, and area coverage sweeps.
+3. When internet connectivity is restored, all locally recorded maps automatically synchronize back to the central cloud server.
 
 ---
 
-## 高度な構成
+## Advanced Configurations
 
 <details>
-<summary><b>シミュレーション モード (Gazebo 倉庫)</b></summary>
+<summary><b>Simulation Mode (Gazebo Warehouse)</b></summary>
 
-物理的なロボット ハードウェアを使用せずにラップトップでアルゴリズムをテストするには:
+To test algorithms on a laptop without physical robot hardware:
 
-1. シミュレータ対応イメージをビルドします。
+1. Build the simulator-enabled image:
    ```bash
    ./scripts/docker-manager.sh build --simulator
    ```
 
-2. シミュレーション スタックを開始します。
+2. Start the simulation stack:
    ```bash
    ./scripts/docker-manager.sh up --simulator -d
    ```
@@ -199,34 +194,34 @@ cd ~/msd700_noetic
 </details>
 
 <details>
-<summary><b>開発クラウド ルーティング (`--dev`)</b></summary>
+<summary><b>Development Cloud Routing (`--dev`)</b></summary>
 
-ユニットを運用環境ではなく開発クラウド サーバーに向けるには、次の手順を実行します。
+To point the unit at a development cloud server instead of production:
 
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-これにより、MQTT が開発ポート `8884` に接続され、開発データベースと同期されます。
+This connects MQTT to dev port `8884` and synchronizes with the development database.
 
 </details>
 
 <details>
-<summary><b>非 Ubuntu/Arch ラップトップのホスト ネットワークの修正</b></summary>
+<summary><b>Host Networking Fixes for Non-Ubuntu/Arch Laptops</b></summary>
 
-Arch Linux または非標準ディストリビューションで実行している場合:
+If running on Arch Linux or non-standard distributions:
 
-1. **ホスト名の解決**:
+1. **Hostname Resolution**:
    ```bash
    grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
    ```
 
-2. **IPv6 ループバック マッピングを無効にする**:
+2. **Disable IPv6 Loopback Mapping**:
    ```bash
    sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
    ```
 
-3. **共有マップ ディレクトリを作成**:
+3. **Create Shared Maps Directory**:
    ```bash
    sudo mkdir -p /home/ubuntu/ros_maps
    sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
@@ -236,9 +231,9 @@ Arch Linux または非標準ディストリビューションで実行してい
 
 ---
 
-## 検証と診断
+## Verification & Diagnostics
 
-次の診断コマンドを使用して、ロボットの状態を確認します。
+Use these diagnostic commands to verify robot health:
 
 ```bash
 # 1. View overall container and service status
@@ -252,8 +247,8 @@ tmux attach -t robot_services
 ./scripts/docker-manager.sh logs -f
 ```
 
-## 関連ドキュメント
+## Related Documentation
 
-- [サーバーセットアップ](/ja/setup/server-setup): クラウドバックエンドのインストール。
-- [システムセットアップ](/ja/setup/system-setup): センサーの校正と検証。
-- [Docker リファレンス](/ja/setup/docker-reference): 包括的な CLI 構文リファレンス。
+- [Server Setup](/ja/setup/server-setup): Cloud backend installation.
+- [System Setup](/ja/setup/system-setup): Sensor calibration and verification.
+- [Docker Reference](/ja/setup/docker-reference): Comprehensive CLI syntax reference.

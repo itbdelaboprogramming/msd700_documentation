@@ -2,70 +2,72 @@
 outline: deep
 search: false
 ---
-# よくある質問 (FAQ)
+
+
+# Frequently Asked Questions (FAQ)
 
 <RoleBadge role="user" />
 
-MSD700 ロボット プラットフォームに関する一般的な操作上の質問への回答。
+Answers to common operational questions regarding the MSD700 robotic platform.
 
 ---
 
 ::: details 1. What is the MSD700 robot designed to do?
-MSD700 は、環境マッピング (SLAM)、自律的なポイントツーポイント搬送、および倉庫、オフィス廊下、工業プラントなどの屋内施設の体系的なエリア カバレージ (床の清掃、消毒、表面スキャンなど) のために設計された自律移動ロボット プラットフォームです。
+The MSD700 is an autonomous mobile robot platform designed for environmental mapping (SLAM), autonomous point-to-point transport, and systematic area coverage (e.g. floor cleaning, disinfection, or surface scanning) in indoor facilities such as warehouses, office corridors, and industrial plants.
 :::
 
 ::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
-あなたのユーザー アカウントは存在しますが、管理者はそのアカウントをアクティブなロボットを含む**レンタル プロファイル**にまだ割り当てていません。施設管理者またはラボの監督者に連絡して、アカウントに組織のレンタル プロファイルへのアクセスを許可してください。
+Your user account exists, but an administrator has not yet assigned it to a **Rental Profile** containing active robots. Contact your facility administrator or lab supervisor to grant your account access to your organization's rental profile.
 :::
 
 ::: details 3. Can two operators control the same robot simultaneously?
-いいえ。安全性を確保するため、各ロボットは単一のアクティブなセッションによって保持される**排他的なオペレーティング リース**によって管理されます。
-- 同僚がロボットを操作している場合、ユニットには **使用中** バッジが表示され、コマンドはブロックされます。
-- 2 番目のタブを開いたり、自分のアカウントでデバイスを切り替えたりすると、ダッシュボードに [**制御の引き継ぎ**] ボタンが表示され、リースを新しいウィンドウに明示的に転送できるようになります。
+No. To ensure safety, each robot is governed by an **exclusive operating lease** held by a single active session:
+- If a colleague is operating the robot, the unit displays an **In Use** badge and commands are blocked.
+- If you open a second tab or switch devices under your own account, the dashboard displays a **Take Over Control** button, allowing you to explicitly transfer the lease to your new window.
 :::
 
 ::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
-システムは、アクティブな動作モードに基づいて応答します。
-- **標準マニュアル / ナビゲーション モード**: ロボットが **10 秒間**ブラウザとの接続を失った場合、ロボットは自動的に **セーフティ モーション一時停止**を実行し、ミッションをメモリに保持したまま停止します。ブラウザを再接続すると、ミッションが自動的に再開されます。
-- **オートパイロット モード オン**: オートパイロットが有効な場合、ロボットはブラウザーの切断を無視し、ホームベースに戻る前にウェイポイント シーケンス全体またはエリア カバレッジ プレイリストを自律的に完了します。
+The system responds based on the active operating mode:
+- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
+- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and autonomously completes its entire waypoint sequence or area coverage playlist before returning to its homebase.
 :::
 
 ::: details 5. What is the Homebase point and why is it important?
-SLAM セッション中にマップを作成するときに、[**ホームベースをここに設定**] をクリックすると、ロボットの物理ドッキング ステーションの座標 $(x=0, y=0, \theta=0)$ が記録されます。将来の自動プレイリストは、この座標を使用して、ミッション完了時にロボットを自動的に充電ステーションに戻します。
+When creating a map during a SLAM session, clicking **Set Homebase Here** records the robot's physical docking station coordinates $(x=0, y=0, \theta=0)$. Future automated playlists use this coordinate to automatically navigate the robot back to its charging station upon completing a mission.
 :::
 
 ::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?
-光学 2D/3D LiDAR ビームは、透明なガラスを透過したり、反射鏡で散乱したりする可能性があり、生の SLAM マップ上に目に見えない境界が生じる可能性があります。ロボットを保護するには:
-1. ダッシュボードでマップを開きます。
-2. **立ち入り禁止ゾーン** ツールを使用して、すべてのガラスのパーティションとドロップオフに沿って仮想の赤色除外境界を描画します。
-3. モーション プランナーは、これらの仮想線を堅固な侵入不可能な壁として扱います。
+Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mirrors, which may cause invisible boundaries on a raw SLAM map. To protect the robot:
+1. Open the map in the dashboard.
+2. Use the **Keep-Out Zone** tool to draw virtual red exclusion boundaries along all glass partitions and drop-offs.
+3. The motion planner treats these virtual lines as solid impenetrable walls.
 :::
 
 ::: details 7. How fast does the robot drive?
-最高速度制限は、職場の安全のためにソフトウェアで強制されます。
-- **デフォルトの速度**: `0.20 m/s` (約 0.72 km/h)。
-- **調整範囲**: 右下のコントロールパネルにある速度スライダーを使用して、`0.05 m/s` と `0.40 m/s` の間で線速度を調整できます。
-- **回転角速度**: `0.50 rad/s`まで設定可能。
+Maximum speed limits are enforced in software for workplace safety:
+- **Default Speed**: `0.20 m/s` (approx. 0.72 km/h).
+- **Adjustable Range**: You can adjust linear speed between `0.05 m/s` and `0.40 m/s` using the speed slider in the bottom-right control panel.
+- **Angular Turning Speed**: Configurable up to `0.50 rad/s`.
 :::
 
 ::: details 8. How long does the battery last and how is it monitored?
-このロボットは 24V LiFePO4 大容量バッテリー パックで駆動され、**4 ～ 6 時間**の連続自律動作を実現します。
-- ライブバッテリーの電圧とパーセンテージが上部のヘッダーバーに表示されます。
-- バッテリー残量が **20%** を下回ると、ダッシュボードにオレンジ色の警告が表示されます。
-- バッテリー残量が **15%** を下回ると、実行中のミッションは一時停止され、ロボットはホームベースの充電ステーションに戻ることを優先します。
+The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 to 6 hours** of continuous autonomous operation:
+- Live battery voltage and percentage are displayed in the top header bar.
+- If the battery falls below **20%**, the dashboard surfaces an amber warning.
+- If the battery falls below **15%**, running missions are paused and the robot prioritizes returning to its homebase charging station.
 :::
 
 ::: details 9. Can I operate the robot if there is no internet connection in the building?
-はい。すべての MSD700 ロボットはオンボード Web サーバーを実行します。ラップトップまたはタブレットをロボットの Wi-Fi ネットワーク (`MSD700_Unit_<ULID>`) に直接接続し、`http://<jetson-ip>:3000` を開きます。すべてのマッピング、遠隔操作、およびカバレッジ ルーチンを完全にオフラインで実行できます。
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop or tablet directly to the robot's Wi-Fi network (`MSD700_Unit_<ULID>`) and open `http://<jetson-ip>:3000`. You can perform all mapping, teleoperation, and coverage routines completely offline.
 :::
 
 ::: details 10. How does the Emergency Stop work?
-赤い **緊急停止** ボタンをクリックする (またはキーボードの `Escape` キーを押す) と、アクティブな自律計画がすべて即座に無効になり、ミリ秒以内にモーター速度がゼロになり、安全状態がラッチされます。動作を再開するには、安全状態を解決し、**緊急停止の解除** をクリックします。
+Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your keyboard) instantly overrides all active autonomous plans, brings motor velocity to zero within milliseconds, and latches the safety state. To resume operations, resolve the safety condition and click **Release Emergency Stop**.
 :::
 
 ---
 
-## まだ質問がありますか?
+## Still have questions?
 
-- [オペレータートラブルシューティングガイド](/ja/getting-started/troubleshooting)を参照してください。
-- ハードウェアのメンテナンスとインストールについては、[システム セットアップ](/ja/setup/system-setup)を参照してください。
+- Consult the [Operator Troubleshooting Guide](/ja/getting-started/troubleshooting).
+- For hardware maintenance and installation, see [System Setup](/ja/setup/system-setup).

@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# 開発者の診断とトラブルシューティング
+
+
+# Developer Diagnostics and Troubleshooting
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、MSD700 スタック全体にわたる一般的なエンジニアリング問題を解決するための、構造化された診断ワークフロー、症状と原因のマッピング、および回復手順を説明します。
+This document provides structured diagnostic workflows, symptom-to-cause mappings, and recovery procedures for resolving common engineering issues across the MSD700 stack.
 
-## 体系的な診断フローチャート
+## Systematic Diagnostic Flowchart
 
 ```mermaid
 flowchart TD
@@ -27,45 +29,45 @@ flowchart TD
   Q4 -->|Yes| APP_OK["All Core Subsystems Operational"]
 ```
 
-## 一般的な障害モードと解決策
+## Common Failure Modes and Solutions
 
-### 1. ユニットがオフラインであるように見える (MQTT ブローカー層)
-- **症状**: ダッシュボードのユニット ステータス バッジに `offline` が表示されます。
-- **根本原因**: 物理ロボットは、HiveMQ ポート 8883 への暗号化された TLS 接続を確立できません。
-- **診断手順**:
-  1. サーバー上の HiveMQ コンテナーのステータスを確認します: `docker ps | grep hivemq`。
-  2. TLS 証明書キーストア (`/srv/msd/secrets/hivemq/keystore.p12`) が有効であり、UID 1001 で読み取り可能であることを確認します。
-  3. ロボット上で、MQTT ブリッジ ログを検査します: `tmux attach -t robot_services` と、`aws_mqtt` ウィンドウを確認します。
+### 1. Unit Appears Offline (MQTT Broker Layer)
+- **Symptom**: The unit status badge in the dashboard displays `offline`.
+- **Root Cause**: The physical robot cannot establish an encrypted TLS connection to HiveMQ port 8883.
+- **Diagnostic Steps**:
+  1. Check HiveMQ container status on the server: `docker ps | grep hivemq`.
+  2. Verify that the TLS certificate keystore (`/srv/msd/secrets/hivemq/keystore.p12`) is valid and readable by UID 1001.
+  3. On the robot, inspect MQTT bridge logs: `tmux attach -t robot_services` and check the `aws_mqtt` window.
 
-### 2. ユニットはオンラインですが、マップ キャンバスは空白のままです (rosbridge / リレー コンテナー)
-- **症状**: コマンドは成功しますが、マップ、ロボット アイコン、またはレーザー スキャンが Web キャンバスに表示されません。
-- **根本原因**: オンデマンド リレー コンテナ `rosweb_unit_<ULID>` がアイドル リーパーによって停止されたか、Apache WebSocket プロキシがブロックされました。
-- **診断手順**:
-  1. ユニットごとのコンテナがサーバー上で実行されているかどうかを確認します: `docker ps | grep rosweb_unit`。
-  2. 存在しない場合は、ブラウザでユニット ページをリロードして、`unit_manager.js` の `touch` イベントをトリガーします。
-  3. ブラウザ開発者ツールを使用して、`/services/rosbridge` への WebSocket 接続をテストします。
+### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
+- **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
+- **Root Cause**: The on-demand relay container `rosweb_unit_<ULID>` was stopped by the idle reaper, or Apache WebSocket proxying is blocked.
+- **Diagnostic Steps**:
+  1. Verify if the per-unit container is running on the server: `docker ps | grep rosweb_unit`.
+  2. If absent, reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`.
+  3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
-### 3. TF エラーによりナビゲーションがフリーズする (`use_sim_time` の古さ)
-- **症状**: ロボットが移動を拒否し、コンソール ログに「シミュレートされた時間」または `TF_OLD_DATA` に関する TF 警告が繰り返し表示されます。
-- **根本原因**: `/use_sim_time` はシミュレーション実行によって ROS マスター上で `true` に設定されましたが、実際のロボット動作中に `/clock` パブリッシャーは存在しません。
-- **解決策**:
+### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
+- **Symptom**: The robot refuses to move, and console logs display repeated TF warnings mentioning "simulated time" or `TF_OLD_DATA`.
+- **Root Cause**: `/use_sim_time` was set to `true` on the ROS master by a simulation run, but no `/clock` publisher exists during real robot operation.
+- **Resolution**:
   ```bash
   rosparam set /use_sim_time false
   ```
-  ロボット起動スタックを再起動します。パラメータは `roscore` に直接存在するため、ノードだけを再起動してもパラメータはクリアされないことに注意してください。
+  Restart the robot bringup stack. Note that restarting nodes alone will not clear the parameter because it resides directly on `roscore`.
 
-### 4. ビデオ ストリームがローカル Wi-Fi で停止または失敗する (mDNS 候補エラー)
-- **症状**: WebRTC ビデオが `Errno 19: No such device` を使用してローカル ネットワークに接続できません。
-- **根本原因**: Chrome はプライバシーを保護する `.local` mDNS 候補名を発行します。ロボットにインターネット ゲートウェイがない場合、`aioice` はマルチキャスト DNS に参加しようとして失敗します。
-- **解決策**: `camera_client.py` に `_strip_mdns_candidates()` フィルタが含まれていること、およびローカル ICE 構成変数 (`LOCAL_STUN_URLS`、`LOCAL_TURN_URL`) が `none` に設定されていることを確認します。
+### 4. Video Stream Stalls or Fails on Local Wi-Fi (mDNS Candidate Error)
+- **Symptom**: WebRTC video fails to connect on a local network with `Errno 19: No such device`.
+- **Root Cause**: Chrome emits privacy-preserving `.local` mDNS candidate names. When the robot has no internet gateway, `aioice` fails attempting to join multicast DNS.
+- **Resolution**: Verify that `camera_client.py` contains the `_strip_mdns_candidates()` filter and that local ICE configuration variables (`LOCAL_STUN_URLS`, `LOCAL_TURN_URL`) are set to `none`.
 
-### 5. キープアウトコストマップのデッドロック
-- **症状**: 目標は `move_base` によって受け入れられますが、ロボットは前に進みません。
-- **根本原因**: `keepout_layer` は `costmap_common_params.yaml` で有効になっていますが、`/msd700/keepout_grid` を待機しています。キープアウト グリッドが公開されていない場合、コストマップは「現在」とマークされることはありません。
-- **解決策**: `path_coverage_node` または `system_command.py` が初期化時に空のキープアウト グリッドを発行していることを確認します。
+### 5. Keep-Out Costmap Deadlock
+- **Symptom**: Goals are accepted by `move_base`, but the robot never drives forward.
+- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
+- **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [アーキテクチャ](/ja/development/architecture): 2 チャネル通信モデル。
-- [メッセージ コントラクト](/ja/development/message-contracts): 予期されるトピックの形式とペイロード。
-- [セットアップ: トラブルシューティング](/ja/setup/troubleshooting): 技術者と展開のトラブルシューティング手順。
+- [Architecture](/ja/development/architecture): Two-channel communication models.
+- [Message Contracts](/ja/development/message-contracts): Expected topic formats and payloads.
+- [Setup: Troubleshooting](/ja/setup/troubleshooting): Technician and deployment troubleshooting steps.

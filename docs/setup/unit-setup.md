@@ -16,34 +16,9 @@ This guide defaults to deploying a real hardware robot connecting to the **Produ
 
 ## System Topology
 
-```mermaid
-flowchart TD
-  subgraph JetsonHost["NVIDIA Jetson Host (JetPack Ubuntu)"]
-    DM["scripts/docker-manager.sh (CLI Orchestrator)"]
+![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
-    subgraph RobotContainer["msd700 Container (ROS Core)"]
-      TM["tmux Session: robot_services"]
-      TM --> W1["roscore (:11311)"]
-      TM --> W2["msd700_bringup / navigation / SLAM"]
-      TM --> W3["camera_client (WebRTC Video)"]
-      TM --> W4["system_command.py (Lease & Actions)"]
-      TM --> W5["aws_mqtt Bridge (TLS :8883)"]
-    end
 
-    subgraph LocalStack["Local Web UI Stack (Offline Operation)"]
-      L1["backend_local (:5002) + rosbridge (:9090)"]
-      L2["frontend_local (:3000)"]
-      L3["media_local (:3003)"]
-      L4["MySQL Local (:3306)"]
-      L5["Mosquitto Local (:1883)"]
-    end
-  end
-
-  W5 <-->|"TLS Port 8883 (Single Cloud Link)"| CLOUD["MSD700 Cloud Server"]
-  W2 <-->|"Loopback MQTT :1883"| L5
-  L1 --> L4
-  L1 -.->|"Bidirectional Sync"| CLOUD
-```
 
 ## Directory Structure Overview
 
@@ -70,20 +45,23 @@ The Jetson workspace manages robot packages, web bridges, and onboard web UI as 
 
 Follow these 5 steps in sequence to set up the physical robot.
 
-### Step 1: Clone Workspace with Submodules
+### Step 1: Clone Workspace and Source Repositories
 
-Clone `msd700_noetic` with `--recursive` so all submodules in `src/` are populated automatically:
+Clone the `msd700_noetic` orchestration workspace, then clone the three required repositories into the `src/` directory:
 
 ```bash
-git clone --recursive https://github.com/itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
+# 1. Clone orchestration workspace
+git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
+
+# 2. Clone source packages into src/ on branch v2
+git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
+git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip Cloned without `--recursive`?
-If you already cloned without submodules, run:
-```bash
-git submodule update --init --recursive
-```
+::: tip Why Manual Clone into `src/`?
+`msd700_noetic` ignores `src/*/` in its `.gitignore` to avoid Git-in-Git conflicts and allow each sub-repository to be managed on its own independent branch.
 :::
 
 ---
@@ -106,9 +84,11 @@ newgrp docker
 
 ---
 
-### Step 3: Configure Environment (`docker/.env`)
+### Step 3: Review Environment Configuration (`docker/.env`)
 
-Generate and review the local environment file:
+On first launch, `./scripts/docker-manager.sh` automatically creates `docker/.env` from `docker/.env.example` and generates secure, loopback-only local MySQL passwords (`ensure_local_secrets`).
+
+If you wish to pre-configure or review settings manually before launch:
 
 ```bash
 cd ~/msd700_noetic
@@ -116,27 +96,40 @@ cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-Key environment settings:
+Key settings in `docker/.env`:
 
 ```ini
 # Storage path for map occupancy grids on the Jetson
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Cloud Server Hostname for MQTT and Sync
-NAKAYAMA_HOST=msd.nglobal.jp
-CLOUD_BASE_URL=https://msd.nglobal.jp/services
+# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+USER_UID=
+USER_GID=
 
-# Local Ports (Default settings)
-FRONTEND_PORT_LOCAL=3000
+# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+WITH_SIMULATOR=false
+
+# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+UNIT_ID=
+
+# Local Ports (Default settings for on-board local stack)
+MYSQL_PORT_LOCAL=3306
+MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
 ROSBRIDGE_PORT_LOCAL=9090
+FRONTEND_PORT_LOCAL=3000
 MEDIA_SERVER_PORT_LOCAL=3003
 SIGNALLING_PORT_WS_LOCAL=3001
-MYSQL_PORT_LOCAL=3306
+SIGNALLING_PORT_HTTP_LOCAL=3002
+NETWORK_AGENT_PORT_LOCAL=5011
 
-# Leave UNIT_ID empty; assigned automatically during enrolment
-UNIT_ID=
+# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+#LOCAL_IP=192.168.4.1
 ```
+
+::: info Cloud Connection Routing
+Cloud connection parameters (Production Cloud `https://msd.nglobal.jp/services` or Dev Cloud via `--dev`) are managed automatically by `docker-manager.sh` during launch and enrolment, and are not configured in `docker/.env`.
+:::
 
 ---
 

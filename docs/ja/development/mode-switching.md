@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# 動的ノードとモード切り替えアーキテクチャ
+
+
+# Dynamic Node and Mode Switching Architecture
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、MSD700 ロボットが実行時にプライマリ ROS コアを再起動せずに `switch_mode.py`、`system_command.py`、`operation_supervisor.py` を使用して動作モード (`idle`、`navigation`、`mapping`、`coverage`、および `exploration`) を動的に切り替える方法について詳しく説明します。
+This document details how the MSD700 robot dynamically switches between operational modes (`idle`, `navigation`, `mapping`, `coverage`, and `exploration`) at runtime using `switch_mode.py`, `system_command.py`, and `operation_supervisor.py` without restarting the primary ROS core.
 
-## モード オーケストレーション トポロジ
+## Mode Orchestration Topology
 
 ```mermaid
 flowchart TD
@@ -31,21 +33,21 @@ flowchart TD
 
 ---
 
-## 動作モードとアクティブなノード スタック
+## Operating Modes and Active Node Stacks
 
-|動作モード |アクティブな ROS ノード |非アクティブ/リープされたノード |メモリと CPU のフットプリント |
+| Operational Mode | Active ROS Nodes | Inactive / Reaped Nodes | Memory & CPU Footprint |
 | --- | --- | --- | --- |
-| **`idle`** | `roscore`、`serial_node`、`imu_filter`、`robot_state_publisher`、`aws_mqtt`、`camera_client`。 | `move_base`、`amcl`、`slam_gmapping`、`path_coverage_node`。 |最小 (約 5% CPU、200 MB RAM)。 |
-| **`navigation`** |すべての `idle` ノード + `map_server`、`amcl`、`move_base`、`costmap_2d`。 | `slam_gmapping`、`explore_lite`。 |標準ナビゲーション (CPU 約 25%)。 |
-| **`mapping`** |すべての `idle` ノード + `slam_gmapping`、`teleop`。 | `amcl`、`map_server` (代わりにライブマップを読み取ります)。 |中程度 (CPU の約 35%)。 |
-| **`coverage`** |すべての `navigation` ノード + `path_coverage_node`。 | `explore_lite`。 |ミッション全体の負荷 (CPU の約 40%)。 |
-| **`exploration`** |すべての `mapping` ノード + `explore_lite` フロンティア検索。 | `amcl`。 |高いアルゴリズム負荷 (CPU の約 45%)。 |
+| **`idle`** | `roscore`, `serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`. | `move_base`, `amcl`, `slam_gmapping`, `path_coverage_node`. | Minimal (approx. 5% CPU, 200 MB RAM). |
+| **`navigation`** | All `idle` nodes + `map_server`, `amcl`, `move_base`, `costmap_2d`. | `slam_gmapping`, `explore_lite`. | Standard Navigation (approx. 25% CPU). |
+| **`mapping`** | All `idle` nodes + `slam_gmapping`, `teleop`. | `amcl`, `map_server` (reads live map instead). | Moderate (approx. 35% CPU). |
+| **`coverage`** | All `navigation` nodes + `path_coverage_node`. | `explore_lite`. | Full Mission Load (approx. 40% CPU). |
+| **`exploration`** | All `mapping` nodes + `explore_lite` frontier search. | `amcl`. | High Algorithmic Load (approx. 45% CPU). |
 
 ---
 
-## `roslaunch` 親 API を介した動的プロセス ライフサイクル
+## Dynamic Process Lifecycle via `roslaunch` Parent API
 
-`system("roslaunch ...")` のような切り離されたゾンビ プロセスを残すシェル コマンドを実行するのではなく、`switch_mode.py` はネイティブ Python `roslaunch.parent.ROSLaunchParent` API を利用します。
+Rather than executing shell commands like `system("roslaunch ...")` which leave detached zombie processes, `switch_mode.py` utilizes the native Python `roslaunch.parent.ROSLaunchParent` API:
 
 ```python
 import roslaunch
@@ -76,16 +78,16 @@ class ModeSwitcher:
         rospy.loginfo(f"Successfully transitioned to mode: {target_mode}")
 ```
 
-### 適切な撤去とゾンビの防止:
-1. **SIGINT ディスパッチ**: `launch_parent.shutdown()` は、依存関係の逆順ですべての管理対象子プロセスに `SIGINT` を送信します。
-2. **5 秒の猶予期間**: ノードにはディスク バッファをフラッシュするために最大 5 秒の時間が与えられます (例: `map_saver` `.pgm` および `.yaml` イメージを書き込む)。
-3. **エスカレーション**: 猶予期間内にノードが正常に終了しない場合、親プロセスは `SIGTERM` および `SIGKILL` にエスカレートし、ROS マスター グラフにゾンビ ノードが残らないようにします。
+### Graceful Teardown and Zombie Prevention:
+1. **SIGINT Dispatch**: `launch_parent.shutdown()` sends `SIGINT` to all managed child processes in reverse dependency order.
+2. **5-Second Grace Window**: Nodes are granted up to 5 seconds to flush disk buffers (e.g. `map_saver` writing `.pgm` and `.yaml` images).
+3. **Escalation**: If a node fails to exit cleanly within the grace period, the parent process escalates to `SIGTERM` and `SIGKILL`, ensuring zero zombie nodes remain on the ROS master graph.
 
 ---
 
-## 自動操縦ミッション シーケンス (`operation_supervisor.py`)
+## Autopilot Mission Sequencing (`operation_supervisor.py`)
 
-`operation_supervisor.py` は、複数ステップのウェイポイント ルートとエリア カバレッジ プレイリストの自律実行を管理します。
+`operation_supervisor.py` manages autonomous execution of multi-step waypoint routes and area coverage playlists:
 
 ```mermaid
 stateDiagram-v2
@@ -100,12 +102,12 @@ stateDiagram-v2
   Completed --> SupervisorIdle: Return to Homebase and latch final snapshot
 ```
 
-### スーパーバイザーの主要な機能:
-- **ラッチされた動作スナップショット**: ラッチされた QoS を使用して `/string/operation_snapshot` を公開します。オペレーターがブラウザー タブを開くと、アクティブなミッションの完全な状態 (アクティブなウェイポイント インデックス、残りのルート ピン、滞留タイマー) がミリ秒単位で回復されます。
-- **オートパイロットの安全免除**: オートパイロットがオンに切り替わると、スーパーバイザーは 10 秒間のオペレーター切断一時停止を抑制し、長時間にわたる掃討ミッションを無人で続行できるようにします。
+### Key Supervisor Capabilities:
+- **Latched Operation Snapshot**: Publishes `/string/operation_snapshot` with latched QoS. When any operator opens a browser tab, the full state of the active mission (active waypoint index, remaining route pins, dwell timer) is recovered in milliseconds.
+- **Autopilot Safety Exemption**: When Autopilot is toggled ON, the supervisor suppresses the 10-second operator disconnect pause, allowing long-running sweeping missions to proceed unattended.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [ROS Package Registry](/ja/development/ros-packages): パッケージ構造と起動ファイル定義。
-- [状態と動作](/ja/development/state-and-behavior): 有限ステート マシンとウォッチドッグ層の詳細。
-- [メッセージ コントラクト](/ja/development/message-contracts): MQTT および操作同期メッセージ ペイロード。
+- [ROS Package Registry](/ja/development/ros-packages): Package structures and launch file definitions.
+- [State and Behavior](/ja/development/state-and-behavior): Detailed finite state machines and watchdog tiers.
+- [Message Contracts](/ja/development/message-contracts): MQTT and operation sync message payloads.

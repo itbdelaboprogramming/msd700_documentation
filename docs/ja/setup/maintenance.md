@@ -1,33 +1,35 @@
 ---
 outline: deep
 ---
-# メンテナンス
+
+
+# Maintenance
 
 <RoleBadge role="technician" />
 
-導入された MSD700 システムの定期的なメンテナンス タスク。適用するマシンによって分割されます。のために
-以下の Docker コマンドの動作については、[Docker リファレンス](/ja/setup/docker-reference) を参照してください。
+Routine maintenance tasks for a deployed MSD700 system, split by which machine they apply to. For
+what any of the Docker commands below are doing, see [Docker Reference](/ja/setup/docker-reference).
 
-## 定期的なチェックリスト
+## Routine checklist
 
-|タスク |周波数 |どこ |メモ |
+| Task | Frequency | Where | Notes |
 | --- | --- | --- | --- |
-| `~/.ros/log` ディスク使用量を確認する |受動的: 管理人がこれを自動的に行います。単位 | [ログハウスキーピング](#log-housekeeping) を参照してください。ユニットが他の理由でオフラインになっているかどうかを手動で確認する価値があるだけです。
-| JWT 署名キーリングをローテーションする |数か月ごと、または漏れの疑いがある直後 |サーバー | [秘密のローテーション](#rotating-secrets) を参照してください。
-| TLS 証明書を更新する |有効期限が切れる前 |サーバー | [証明書](#certificates) を参照してください。プレーン `certbot renew` は HiveMQ キーストアを**更新しません**。
-|取得されるはずだったユニットごとのアイドル状態のコンテナーを確認します。時々 |サーバー | `docker ps --filter name=rosweb_unit_`: ユニットがアイドル状態になった後も長時間実行されているものは、やみくもに再起動するのではなく、調査する価値があります。
-| JWT キーリングから期限切れのキーを削除する |ローテーションの猶予期間が経過した後 |サーバー | `./scripts/secrets.sh prune` |
-| Docker のディスク使用量を確認する |月刊 |両方 | `docker system df`、次に `docker image prune -a`、`docker builder prune` |
-| TURN リレーがまだ中継していることを確認します。ネットワークまたはルーターを変更した後 |サーバー | [TURN リレー](#the-turn-relay) を参照してください。
-|ソフトウェア スタックを更新する |リリースとして土地 |両方 | [更新中](#updating) | を参照してください。
+| Check `~/.ros/log` disk usage | Passive: a janitor does this automatically | Unit | See [Log housekeeping](#log-housekeeping); only worth checking by hand if a unit is offline for other reasons |
+| Rotate the JWT signing keyring | Every few months, or immediately after a suspected leak | Server | See [Rotating secrets](#rotating-secrets) |
+| Renew the TLS certificate | Before expiry | Server | See [Certificates](#certificates). A plain `certbot renew` does **not** update the HiveMQ keystore |
+| Check for idle per-unit containers that should have been reaped | Occasionally | Server | `docker ps --filter name=rosweb_unit_`: one still running long after its unit went idle is worth investigating, not restarting blindly |
+| Prune expired keys from the JWT keyring | After a rotation's grace window passes | Server | `./scripts/secrets.sh prune` |
+| Check Docker disk usage | Monthly | Both | `docker system df`, then `docker image prune -a` and `docker builder prune` |
+| Check the TURN relay is still relaying | After any network or router change | Server | See [The TURN relay](#the-turn-relay) |
+| Update the software stack | As releases land | Both | See [Updating](#updating) |
 
-## ログハウスキーピング
+## Log housekeeping
 
-ROS 1 は独自のログをローテーションせず (`~/.ros/log`)、放っておくとログは際限なく増大します: 1 単位
-到達不能なクラウド ブローカーを使用すると、1 日あたり約 860 MB と測定され、そのほとんどすべてが `rosout.log` に書き込まれました。
-Jetson のルート ファイル システムに直接コピーします。すべてのユニットは、そのユニットの 1 つとしてログ ジャニタを自動的に実行します。
-tmux ウィンドウ、そのツリーをキャップし (デフォルトでは 512 MB、60 秒ごとにスイープ)、以前のツリーをクリアします。
-起動時のセッションのログ。
+ROS 1 does not rotate its own logs (`~/.ros/log`), and left alone they grow without bound: one unit
+with an unreachable cloud broker measured about 860 MB/day, almost all of it in `rosout.log`, written
+straight onto the Jetson's root filesystem. Every unit runs a log janitor automatically as one of its
+tmux windows, capping that tree (512 MB by default, swept every 60 seconds) and clearing the previous
+session's logs at startup.
 
 ```bash
 # Watch what it's doing:
@@ -35,10 +37,10 @@ tmux attach -t robot_services   # window: log_janitor
 tail -f ros-web-ui/logs/log_janitor.log
 ```
 
-通常、これに触れる必要はありません。意図的に追いかけている場合にのみ `ROS_LOG_CAP_MB` を上げてください
-`rosout.log` に何かを保存し、そのためのディスク バジェットを確保してください。
+You generally don't need to touch this. Raise `ROS_LOG_CAP_MB` only if you're deliberately chasing
+something in `rosout.log` and have the disk budget for it.
 
-## シークレットのローテーション
+## Rotating secrets
 
 ```bash
 ./scripts/secrets.sh status          # see what's active, without printing secret values
@@ -48,22 +50,22 @@ tail -f ros-web-ui/logs/log_janitor.log
 ```
 
 ::: info Why rotate instead of just replacing the secret?
-単一の共有シークレットにより、ローテーションは鈍器になります。ローテーションは上書きされ、ログインしているすべてのオペレータが上書きされます。
-そして、接続されているすべてのロボットは一度に拒否されます。キーリング形式は、1 つのアクティブなトークンで新しいトークンに署名します。
-設定可能な猶予期間 (デフォルトでは 48 時間) の間、前のキーを *受け入れ* したまま、キーを押します。
-そのため、すでに接続している人には回転は見えません。
+A single shared secret makes rotation a blunt instrument: overwrite it, and every logged-in operator
+and every connected robot is rejected at once. The keyring format signs new tokens with one active
+key while still *accepting* the previous one for a configurable grace window (48 hours by default),
+so a rotation is invisible to anyone already connected.
 :::
 
-ローテーション後、キーリングを読み取るサービスを再起動して、新しいアクティブ キーを取得できるようにします。
+After rotating, restart the services that read the keyring so they pick up the new active key:
 
 ```bash
 docker compose --profile server_dev  restart nakayama_cloud_dev nakayama_media_dev nakayama_signalling_dev
 docker compose --profile server_prod restart nakayama_cloud nakayama_media nakayama_signalling
 ```
 
-## 証明書
+## Certificates
 
-Let's Encrypt 証明書は 2 つの異なるものによって消費されますが、そのうちの 1 つだけが自動的に更新されます。
+Two different things consume the Let's Encrypt certificate, and only one of them renews itself.
 
 ```mermaid
 flowchart TB
@@ -75,10 +77,10 @@ flowchart TB
   MQ -.->|"container restart"| DONE2["new cert live"]
 ```
 
-|消費者 | | による更新を選択します。自動？ |
+| Consumer | Picks up a renewal by | Automatic? |
 | --- | --- | --- |
-|アパッチ |リロード |はい、certbot 独自の更新フック |
-| HiveMQ | PKCS#12 キーストアを再構築し、コンテナーを再起動します。 **いいえ** |
+| Apache | reloading | Yes, certbot's own renewal hook |
+| HiveMQ | rebuilding the PKCS#12 keystore, then restarting the container | **No** |
 
 ```bash
 sudo ./source/dependencies/ssl_update/update_ssl.sh   # renew + rebuild the keystore
@@ -87,23 +89,23 @@ docker compose --profile server_prod restart hivemq   # maintenance window, see 
 ```
 
 ::: danger A prod broker restart trips the safety watchdog fleet-wide
-HiveMQ は復帰するまでに約 14 秒かかりますが、これは 10 秒の ping ウォッチドッグよりも長くなります。毎
-ロボットが動作中に`/emergency_pause`を上げて停止します。メンテナンス中に本番ブローカーが再起動されますか
-ご都合主義ではなく、窓。開発ブローカーにはそのような制約はありません。
+HiveMQ takes around 14 seconds to come back, which is longer than the 10 second ping watchdog. Every
+robot mid-operation raises `/emergency_pause` and stops. Do prod broker restarts in a maintenance
+window, not opportunistically. The dev broker has no such constraint.
 :::
 
 ::: warning The keystore has never renewed itself
-`update_ssl.sh` に接続された certbot デプロイ フックはありません。証明書の更新があるまで
-Apache は正しいままで、MQTT ブローカーは期限切れの証明書を提供します。目に見える症状は次のとおりです。
-ロボットのログに TLS エラーが記録され、フリート全体が一度にオフラインになります。有効期限を入れてください
-カレンダー。
+There is no certbot deploy hook wired to `update_ssl.sh`. Until there is, a certificate renewal
+leaves Apache correct and the MQTT broker serving an expired certificate, and the visible symptom is
+the whole fleet dropping offline at once with TLS errors in the robots' logs. Put the expiry date in
+a calendar.
 :::
 
-## ターンリレー
+## The TURN relay
 
-`coturn` は **本番環境のみ**です。参照
-[Docker リファレンス](/ja/setup/docker-reference#coturn-the-production-only-service) の詳細については、
-推論。
+`coturn` is **production only**. See
+[Docker Reference](/ja/setup/docker-reference#coturn-the-production-only-service) for the full
+reasoning.
 
 ```bash
 docker compose --profile turn up -d coturn      # start or restart just the relay
@@ -111,41 +113,41 @@ docker compose logs -f coturn                   # watch allocations
 docker compose --profile turn stop coturn       # stop just the relay
 ```
 
-そのログは 3 つの 20 MB ファイルに制限されているため、認証されていないスキャナーがポート 3478 を攻撃することはできません。
-ディスクをいっぱいにします。スタック内の他のものにはまだその上限はありません。
+Its logs are capped at three 20 MB files, so an unauthenticated scanner hammering port 3478 cannot
+fill the disk. Nothing else in the stack has that cap yet.
 
-|これが変更された後 |こうする |
+| After this changes | Do this |
 | --- | --- |
-|ホストの LAN アドレス | `TURN_LISTENING_IP` と `TURN_EXTERNAL_IP` を更新し、リレーを再起動し、ルーターの転送を再確認します。
-|パブリックIP | `TURN_EXTERNAL_IP` の公開部分を更新し、リレーを再開します。
-| `TURN_USER` / `TURN_PASSWORD` |資格情報がバンドルに組み込まれているため、リレーを再起動し**、両方のダッシュボード イメージを再構築します。
-|ルーターまたはファイアウォール | UDP+TCP 3478 と UDP リレー範囲が両方とも `TURN_LISTENING_IP` に達していることを再確認します。
+| The host's LAN address | Update `TURN_LISTENING_IP` and `TURN_EXTERNAL_IP`, restart the relay, re-check the router forward |
+| The public IP | Update the public half of `TURN_EXTERNAL_IP`, restart the relay |
+| `TURN_USER` / `TURN_PASSWORD` | Restart the relay **and** rebuild both dashboard images, since the credential is baked into the bundle |
+| The router or firewall | Re-confirm UDP+TCP 3478 and the UDP relay range both reach `TURN_LISTENING_IP` |
 
 ::: info Symptom to recognise
-カメラ フィードは、同じ LAN 上のオペレータに対しては機能しますが、LAN の外にいるオペレータには決して表示されません。つまり
-カメラではなくリレー: シグナリングは成功し (両方のピアがお互いを見つけました)、メディア パスは成功しました。
-そうではありません。
+The camera feed works for operators on the same LAN and never appears for anyone outside it. That is
+the relay, not the camera: signalling succeeded (both peers found each other) and the media path did
+not.
 :::
 
-## バックアップ
+## Backups
 
-バックアップが必要なものと、それがすでに存在する場所:
+What needs backing up, and where it already lives:
 
-|データ |場所 |どのように |
+| Data | Location | How |
 | --- | --- | --- |
-|マップ、ルート、カスタムエリア、プレイリスト | MySQL (`db`/`db_dev` コンテナ) + `/srv/msd/media/map` 下のマップ ファイル |管理コンソールの **プロファイル バックアップ** 機能を使用します。プロファイルごとに単一の `.tar.gz` が生成され、復元は追加的です。
-|ユニットごとのデータ (ハードウェア スワップまたはユニット固有のアーカイブ用) |同じソースを 1 つのユニットに限定 |バックアップ システムは、まさにこれのために `scope` 列をサポートしています。プロファイル全体を取り込まずに 1 つのユニットをアーカイブします。
-| JWT キーリング / TLS キーストア | `/srv/msd/secrets` |アプリレベルのバックアップの一部ではありません。このディレクトリをファイルシステム/インフラレベルでバックアップします。
+| Maps, routes, custom areas, playlists | MySQL (`db`/`db_dev` container) + map files under `/srv/msd/media/map` | Use the admin console's **profile backup** feature: it produces a single `.tar.gz` per profile, restore is additive |
+| Per-unit data (for a hardware swap or a unit-specific archive) | Same sources, scoped to one unit | The backup system supports a `scope` column for exactly this: archive one unit without pulling in the whole profile |
+| The JWT keyring / TLS keystore | `/srv/msd/secrets` | Not part of the app-level backup; back this directory up at the filesystem/infra level |
 
 ::: warning
-バックアップ アーカイブはバックエンドによって `/srv/msd/media/backup` (`/srv/msd/media/backup_dev`) に書き込まれます。
-開発スタック用)。そのディレクトリがまだ存在しないか、アプリのユーザーが書き込みできない場合は、バックアップが行われます。
-失敗する。 [トラブルシューティング](/ja/setup/troubleshooting) を参照してください。
+Backup archives are written by the backend into `/srv/msd/media/backup` (`/srv/msd/media/backup_dev`
+for the dev stack). If that directory doesn't exist yet or isn't writable by the app's user, backups
+fail; see [Troubleshooting](/ja/setup/troubleshooting).
 :::
 
-## 更新中
+## Updating
 
-### サーバー
+### Server
 
 ```bash
 git pull
@@ -154,16 +156,16 @@ docker compose --profile server_prod build && docker compose --profile server_pr
 ```
 
 ::: danger Recreating the backend orphans every per-unit container
-`rosweb_unit_*` コンテナは、前の `backend_node` プロセスによって開始されました。その後
-バックエンドが再作成されるか、バックエンドも再起動するか、新しいバックエンドがバックエンドを考慮しないまま実行されます。
-採用された:
+The `rosweb_unit_*` containers were started by the previous `backend_node` process. After the
+backend is recreated, restart them too, or they run while the new backend does not consider them
+adopted:
 
 ```bash
 docker ps --filter "name=rosweb_unit_" --format '{{.Names}}' | xargs -r docker restart
 ```
 :::
 
-### ユニット
+### Unit
 
 ```bash
 git pull --recurse-submodules
@@ -172,20 +174,20 @@ git pull --recurse-submodules
 ```
 
 ::: info When a rebuild is actually needed
-`src/` は **robot** コンテナにバインドマウントされているため、日常のスクリプト編集を再構築する必要はありません。
-all: コンテナは次回の起動時にそれらを取得します。完全な `build` は、依存関係がある場合にのみ必要です。
-またはベースイメージが変更されました。
+`src/` is bind-mounted into the **robot** container, so day-to-day script edits need no rebuild at
+all: the container picks them up on the next launch. A full `build` is only needed when a dependency
+or the base image changed.
 
-ユニット独自の **サーバー** スタックが異なります。 `Dockerfile.webui-local` はソースを
-イメージなので、これらのサービスは常に再構築する必要があります。 `docker-manager.sh` は画像のタイムスタンプを比較します
-ソース ツリーに対して再構築され、自動的に再構築されます。そのため、`up` で説明のない再構築が行われます。
-通常、誰かがバックエンドを編集したことを意味します。
+The unit's own **server** stack is different. `Dockerfile.webui-local` copies the source into the
+image, so those services always need a rebuild. `docker-manager.sh` compares image timestamps
+against the source tree and rebuilds automatically, which is why an unexplained rebuild on `up`
+usually just means somebody edited the backend.
 :::
 
-ここには、Arduino ベースのモーター コントローラー用の個別のファームウェア アップデート パスは記載されていません。
-これは手動の再フラッシュであり、この Docker ベースのスタックの一部ではありません。
+There is no separate firmware update path documented here for the Arduino-based motor controller;
+that is a manual re-flash, not part of this Docker-based stack.
 
-## ディスクのハウスキーピング
+## Disk housekeeping
 
 ```bash
 docker system df                 # what is using space
@@ -195,13 +197,13 @@ docker volume ls                 # inspect BEFORE removing anything
 ```
 
 ::: danger Never `docker compose down -v` on this project casually
-`-v` は、保持されたメッセージを保持する `ros_webui_hivemq_data_prod` を含む名前付きボリュームを削除します。
-クライアント セッションとキューに入れられた QoS>0 メッセージ。クリーンなブローカーが必要な場合は、次の方法でその 1 つのボリュームを削除します。
-意図的に名前を付けます。
+`-v` deletes named volumes, including `ros_webui_hivemq_data_prod`, which holds retained messages,
+client sessions and queued QoS>0 messages. If you want a clean broker, delete that one volume by
+name, deliberately.
 :::
 
-## 関連
+## Related
 
-- [Docker リファレンス](/ja/setup/docker-reference): 上記の各コマンドの動作
-- [トラブルシューティング](/ja/setup/troubleshooting): メンテナンスで問題が発見された場合
-- [システムセットアップ](/ja/setup/system-setup): システムトポロジーリファレンス
+- [Docker Reference](/ja/setup/docker-reference): what every command above is doing
+- [Troubleshooting](/ja/setup/troubleshooting): if maintenance uncovers a problem
+- [System Setup](/ja/setup/system-setup): system topology reference

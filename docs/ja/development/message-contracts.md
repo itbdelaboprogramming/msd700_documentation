@@ -2,21 +2,23 @@
 outline: deep
 search: false
 ---
-# メッセージコントラクト
+
+
+# Message Contracts
 
 <RoleBadge role="developer" />
 
-この文書は、MSD700 システムのすべてのマシン間データ ペイロードに対する完全かつ信頼できる仕様を提供します。 MQTT コマンドとフィードバック チャネル、シリアル化された ROS ストリーミング トピック、オペレーション スーパーバイザ同期プロトコル、WebRTC シグナリング、およびハードウェア登録交換について説明します。
+This document provides the complete, authoritative specification for all machine-to-machine data payloads in the MSD700 system. It covers the MQTT command and feedback channels, serialized ROS streaming topics, the operation supervisor synchronization protocol, WebRTC signalling, and the hardware enrolment exchange.
 
-HTTP サーフェスについては、[API リファレンス](/ja/development/api-reference) を参照してください。有限状態マシンについては、[状態と動作](/ja/development/state-and-behavior) を参照してください。システム全体の設計については、[アーキテクチャ](/ja/development/architecture)を参照してください。
+For the HTTP surface, see [API Reference](/ja/development/api-reference). For finite state machines, see [State and Behavior](/ja/development/state-and-behavior). For the overall system design, see [Architecture](/ja/development/architecture).
 
 ::: info Contract Verification Notice
-ペイロード形状は、アクティブなソース コード (`backend_node`、`system_command.py`、`operation_supervisor.py`、`topic2string`、`enroll_api.js`) から直接派生します。コードベース内のフィールドの変更はすべて、同じコミットで更新する必要があります。
+Payload shapes are derived directly from active source code (`backend_node`, `system_command.py`, `operation_supervisor.py`, `topic2string`, `enroll_api.js`). Any field changes in the codebase must be updated here in the same commit.
 :::
 
-## フリート アドレス指定スキーム
+## Fleet Addressing Scheme
 
-すべての物理ロボットは、固有のプレフィックス `/unit_<ULID>/...` によってアドレス指定されます。 ULID (Universally Unique Lexicographically Sortable Identifier) は、登録時に中央の `units` データベース テーブル内のロボットに割り当てられる主キーです。
+Every physical robot is addressed by a unique prefix: `/unit_<ULID>/...`. The ULID (Universally Unique Lexicographically Sortable Identifier) is the primary key assigned to the robot in the central `units` database table upon registration.
 
 ```mermaid
 flowchart LR
@@ -24,26 +26,26 @@ flowchart LR
   MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_<ULID>/string/robotpose"]
 ```
 
-|ホップの場所 |トピックの形式 |エンジニアリングの目的 |
+| Hop Location | Topic Format | Engineering Purpose |
 | --- | --- | --- |
-| **ロボット ローカル ROS マスター** | `/string/robotpose` |スコープのないローカル名前空間 (オンボード roscore ごとに 1 つのロボット)。 |
-| **中央 MQTT ブローカー** | `/unit_<ULID>/string/robotpose` |すべてのロボットを HiveMQ 上で多重化するフリート スコープのトピック名前空間。 |
-| **クラウド ROS マスター** | `/unit_<ULID>/string/robotpose` |ユニットごとのクラウドリレーとロスブリッジによって消費される名前空間付きトピック。 |
+| **Robot Local ROS Master** | `/string/robotpose` | Unscoped local namespace (one robot per onboard roscore). |
+| **Central MQTT Broker** | `/unit_<ULID>/string/robotpose` | Fleet-scoped topic namespace multiplexing all robots over HiveMQ. |
+| **Cloud ROS Master** | `/unit_<ULID>/string/robotpose` | Namespaced topic consumed by per-unit cloud relays and rosbridge. |
 
 ::: warning Mandatory `unit_` Prefix Rule
-ROS グラフのリソース名は、アルファベット、チルダ、またはスラッシュで始まる必要があります。 ULID は数字で始まるため (例: `01JZ...`)、`/01JZ.../string/map` は無効な構文であり、ROS によって拒否されます。 `unit_` プレフィックスは、MQTT トピックとの 1:1 マッピングを維持しながら、厳密な ROS 準拠を保証します。
+ROS graph resource names must begin with an alphabetic character, a tilde, or a forward slash. Because ULIDs begin with numbers (e.g. `01JZ...`), `/01JZ.../string/map` is invalid syntax and rejected by ROS. The `unit_` prefix ensures strict ROS compliance while maintaining a 1:1 mapping with MQTT topics.
 :::
 
-## コマンドおよび制御チャネル
+## Command and Control Channel
 
-2 つの専用 MQTT トピックは、クラウド サーバーと物理ユニット間のすべての双方向の要求と応答の対話を処理します。
+Two dedicated MQTT topics handle all bidirectional request and response interactions between the cloud server and a physical unit:
 
-| MQTT トピック |方向 |プロデューサーノード |コンシューマ ノード |説明 |
+| MQTT Topic | Direction | Producer Node | Consumer Node | Description |
 | --- | --- | --- | --- | --- |
-| `/unit_<ULID>/system_command` |クラウドからロボットへ | `backend_node` (特急) | `system_command.py` (ROS) |制御コマンド、ナビゲーション目標、およびモード変更をディスパッチします。 |
-| `/unit_<ULID>/system_feedback` |ロボットからクラウドへ | `system_command.py` (ROS) | `backend_node` (特急) |実行ステータス、エラー メッセージ、テレメトリ ping を返します。 |
+| `/unit_<ULID>/system_command` | Cloud to Robot | `backend_node` (Express) | `system_command.py` (ROS) | Dispatches control commands, navigation goals, and mode changes. |
+| `/unit_<ULID>/system_feedback` | Robot to Cloud | `system_command.py` (ROS) | `backend_node` (Express) | Returns execution status, error messages, and telemetry pings. |
 
-### コマンド ペイロード エンベロープ
+### Command Payload Envelope
 
 ```json
 {
@@ -63,16 +65,16 @@ ROS グラフのリソース名は、アルファベット、チルダ、また�
 }
 ```
 
-|フィールド名 |タイプ |必須 |説明 |
+| Field Name | Type | Mandatory | Description |
 | --- | --- | --- | --- |
-| `header` |文字列 |はい |ターゲットサブシステムハンドラ: `hardware`、`navigation`、`mapping`、`boustrophedon`、`manual`、`autopilot`、`emergency_stop`、`autoalign`。 |
-| `command` |文字列 |はい |ハンドラー内の特定のアクション動詞。認識されない動詞はログに記録され、削除されます。 |
-| `config` |オブジェクト |条件付き |コマンドパラメータ (通常は `config.resource` 内)。 |
-| `data` |オブジェクト |条件付き | `hardware.ping` によって使用される代替パラメータ ブロック。 |
-| `metadata.request_id` | UUID v4 |はい | `backend_node` によって HTTP リクエストごとに生成される一意の相関トークン。 |
-| `metadata.timestamp` | ISO8601 |はい |診断トレース用の送信者のタイムスタンプ文字列。 |
+| `header` | string | Yes | Target subsystem handler: `hardware`, `navigation`, `mapping`, `boustrophedon`, `manual`, `autopilot`, `emergency_stop`, `autoalign`. |
+| `command` | string | Yes | Specific action verb within the handler. Unrecognized verbs are logged and dropped. |
+| `config` | object | Conditional | Command parameters (typically inside `config.resource`). |
+| `data` | object | Conditional | Alternate parameter block used by `hardware.ping`. |
+| `metadata.request_id` | UUID v4 | Yes | Unique correlation token generated per HTTP request by `backend_node`. |
+| `metadata.timestamp` | ISO 8601 | Yes | Sender timestamp string for diagnostic tracing. |
 
-### フィードバック ペイロード エンベロープ
+### Feedback Payload Envelope
 
 ```json
 {
@@ -89,14 +91,14 @@ ROS グラフのリソース名は、アルファベット、チルダ、また�
 }
 ```
 
-|フィールド名 |タイプ |説明 |
+| Field Name | Type | Description |
 | --- | --- | --- |
-| `data.status` |ブール値 | `true` はコマンドが受け付けられた/実行されたことを示します。 `false` は実行拒否を示します。 |
-| `data.message` |文字列 |ロボットによる人間が読める診断の説明。 |
-| `metadata.timestamp` |フロート |ロボットからのウォールクロック エポック秒 (`rospy.get_time()`)。 |
-| `metadata.request_id` | UUID v4 |コマンド エンベロープの元の `request_id` と一致します。 |
+| `data.status` | boolean | `true` indicates command accepted/executed; `false` indicates execution rejection. |
+| `data.message` | string | Human-readable diagnostic description from the robot. |
+| `metadata.timestamp` | float | Wall-clock epoch seconds (`rospy.get_time()`) from the robot. |
+| `metadata.request_id` | UUID v4 | Matches the original `request_id` from the command envelope. |
 
-### コマンド相関および再試行アーキテクチャ
+### Command Correlation and Retry Architecture
 
 ```mermaid
 sequenceDiagram
@@ -117,18 +119,18 @@ sequenceDiagram
   Backend-->>Backend: Resolve HTTP request (200 OK)
 ```
 
-|パラメータ |デフォルト値 |構成の場所 |目的 |
+| Parameter | Default Value | Config Location | Purpose |
 | --- | --- | --- | --- |
-| `DEFAULT_TIMEOUT` | `30000` ミリ秒 (30 秒) | `backend_node` | HTTP リクエストが `504 Gateway Timeout` で応答するまでにフィードバックを待機する最大時間。 |
-| `COMMAND_RETRY_INTERVAL` | `1500` ミリ秒 (1.5 秒) | `backend_node` |変化するコマンドが未確認のままである間の再送信期間。 |
+| `DEFAULT_TIMEOUT` | `30000` ms (30 s) | `backend_node` | Maximum duration an HTTP request waits for feedback before responding with `504 Gateway Timeout`. |
+| `COMMAND_RETRY_INTERVAL` | `1500` ms (1.5 s) | `backend_node` | Resend period while a mutating command remains unacknowledged. |
 
 ::: danger Ping Heartbeat Exclusion
-`header: "hardware", command: "ping"` は間隔ごとに **1 回**厳密に送信され、再試行されることはありません。ハートビートの喪失は、ロボットの安全監視の主なトリガーです。失われた ping を再試行すると、ネットワークのドロップアウトが隠蔽され、自動緊急停止メカニズムが無効になります。
+`header: "hardware", command: "ping"` is transmitted strictly **once** per interval and is never retried. Heartbeat loss is the primary trigger for the robot safety watchdog. Retrying lost pings would mask network dropouts and defeat the automatic emergency stop mechanism.
 :::
 
-## コマンドリファレンスカタログ
+## Command Reference Catalogue
 
-### 1. ハードウェア サブシステム (`header: "hardware"`)
+### 1. Hardware Subsystem (`header: "hardware"`)
 
 ```json
 // Command: "check"
@@ -138,16 +140,16 @@ sequenceDiagram
 { "header": "hardware", "command": "idle", "metadata": { ... } }
 ```
 
-|コマンド動詞 |ペイロードの内容 |目的 |
+| Command Verb | Payload Content | Purpose |
 | --- | --- | --- |
-| `ping` | [ハートビート Ping セクション](#heartbeat-ping-and-lease-contract) を参照してください。ハートビート、リースの取得、テレメトリの取得、およびウォッチドッグの更新。 |
-| `check` |なし |低レベルのモータードライバーとマイクロコントローラーのステータスを問い合わせます。 |
-| `init` |なし |ハードウェア インターフェイスと電力線を初期化します。 |
-| `stop` |なし |ハードウェア周辺機器とパワーステージをシャットダウンします。 |
-| `idle` |なし |ロボットに電力を供給したまま、実行中のナビゲーション/マッピング ノードを破棄します。 |
-| `battery_update` | `{ "config": { ... } }` |電力テレメトリ レベルを手動で更新します。 |
+| `ping` | See [Heartbeat Ping Section](#heartbeat-ping-and-lease-contract) | Heartbeat, lease acquisition, telemetry retrieval, and watchdog refresh. |
+| `check` | None | Queries status of low-level motor drivers and microcontrollers. |
+| `init` | None | Initialises hardware interfaces and power lines. |
+| `stop` | None | Shuts down hardware peripherals and power stages. |
+| `idle` | None | Tears down running navigation/mapping nodes while keeping robot powered. |
+| `battery_update` | `{ "config": { ... } }` | Manually updates power telemetry levels. |
 
-### 2. ナビゲーション サブシステム (`header: "navigation"`)
+### 2. Navigation Subsystem (`header: "navigation"`)
 
 ```json
 // Command: "init"
@@ -180,11 +182,11 @@ sequenceDiagram
 }
 ```
 
-- `map_name`: ディスク上の `<ULID>.pgm` および `<ULID>.yaml` に対応するマップ ULID 識別子。
-- `ensure_unpaused: true`: ナビゲーションの起動時に、待機中の `/emergency_pause` ロックを自動的にクリアするようにロボットに指示します。
-- `command: "deactivate"`: アクティブなナビゲーション スタックを終了します (ペイロードを受け取りません)。
+- `map_name`: The map ULID identifier corresponding to `<ULID>.pgm` and `<ULID>.yaml` on disk.
+- `ensure_unpaused: true`: Instructs the robot to automatically clear any standing `/emergency_pause` lock when launching navigation.
+- `command: "deactivate"`: Terminates the active navigation stack (takes no payload).
 
-### 3. マッピング サブシステム (`header: "mapping"`)
+### 3. Mapping Subsystem (`header: "mapping"`)
 
 ```json
 // Command: "stop" (Save and Upload Map)
@@ -210,9 +212,9 @@ sequenceDiagram
 }
 ```
 
-SLAM マップの保存には、標準の 30 秒の HTTP タイムアウトよりも時間がかかります。したがって、`mapping stop` はすぐに `{ request_id, map_ulid }` を含む HTTP 200 を返します。フロントエンドは `GET /api/mapping/progress/:request_id` の SSE ストリームに接続して、進行状況を監視します。
+Saving a SLAM map takes longer than the standard 30-second HTTP timeout. Therefore, `mapping stop` immediately returns an HTTP 200 with `{ request_id, map_ulid }`. The frontend connects to an SSE stream on `GET /api/mapping/progress/:request_id` to monitor progress.
 
-#### マッピング進行状況のフィードバック (`header: "mapping_progress"`)
+#### Mapping Progress Feedback (`header: "mapping_progress"`)
 
 ```json
 {
@@ -233,13 +235,13 @@ SLAM マップの保存には、標準の 30 秒の HTTP タイムアウトよ�
 }
 ```
 
-|結果の価値 |説明 |
+| Outcome Value | Description |
 | --- | --- |
-| `completed` |ローカル ユニットのメディア サーバーとクラウド サーバーの両方に正常に書き込まれました。 |
-| `cloud_pending` |ローカルユニットのメディアサーバーのみに書き込まれます。クラウド レプリケーションは次の同期間隔で完了します。 |
-| `failed` |マッピングの保存に失敗しました。セッションは再試行のために開いたままになります。 |
+| `completed` | Successfully written to both the local Unit media-server and the cloud server. |
+| `cloud_pending` | Written to local Unit media-server only. Cloud replication will complete on the next sync interval. |
+| `failed` | Mapping save failed. Session remains open for retry. |
 
-### 4. ボストロフェドンのエリア範囲 (`header: "boustrophedon"`)
+### 4. Boustrophedon Area Coverage (`header: "boustrophedon"`)
 
 ```json
 // Command: "init"
@@ -263,16 +265,16 @@ SLAM マップの保存には、標準の 30 秒の HTTP タイムアウトよ�
 }
 ```
 
-- `areas`: ターゲット操作プレイリストを形成するポリゴンの順序付き配列。
-- `exclusions`: 立ち入り禁止障害物ゾーンがカバレッジ スイープから差し引かれます。
-- `command: "pause"`: `{ "pause": true }` または `{ "pause": false }` を受け入れます。
-- `command: "deactivate"`: カバレッジの計画を停止します。
+- `areas`: Ordered array of polygons forming the target operation playlist.
+- `exclusions`: Keep-out obstacle zones subtracted from coverage sweeps.
+- `command: "pause"`: Accepts `{ "pause": true }` or `{ "pause": false }`.
+- `command: "deactivate"`: Stops coverage planning.
 
-## ハートビート Ping とリース契約
+## Heartbeat Ping and Lease Contract
 
-ハートビート ping メッセージは、ロボットのオペレーティング リース、安全ウォッチドッグ タイマー、およびステータス テレメトリを管理します。
+The heartbeat ping message manages the robot operating lease, the safety watchdog timer, and status telemetry.
 
-### リクエストペイロード (`data` ブロック)
+### Request Payload (`data` block)
 
 ```json
 {
@@ -286,17 +288,17 @@ SLAM マップの保存には、標準の 30 秒の HTTP タイムアウトよ�
 }
 ```
 
-|パラメータ |出典 |説明 |
+| Parameter | Source | Description |
 | --- | --- | --- |
-| `session_id` |ブラウザタブ |ブラウザタブごとに一意の UUID。 |
-| `user_id` |バックエンド JWT |サーバー バックエンドによって認証された JWT トークンから厳密に抽出されます。 |
-| `claim` |ブラウザ | `true` 操作ページ (ナビゲーション、マッピング) から。 `false` 読み取り専用のフリート リストを参照する場合。 |
-| `release` |ブラウザ |ページ終了時にオペレーティング リースを明示的に放棄します。 |
-| `page` |ブラウザ |元のページ: `dashboard`、`login`、`navigation`、`mapping`。 |
-| `origin` |バックエンド環境 | `cloud` または `local`、サーバー構成によって決まります。 |
-| `force_takeover` |ブラウザ | `true` オペレーターが既存のリースの引き継ぎを確認したとき。 |
+| `session_id` | Browser tab | Unique UUID per browser tab. |
+| `user_id` | Backend JWT | Extracted strictly from the authenticated JWT token by the server backend. |
+| `claim` | Browser | `true` from operational pages (Navigation, Mapping); `false` when browsing the read-only fleet list. |
+| `release` | Browser | Explicitly relinquishes the operating lease upon page exit. |
+| `page` | Browser | Origin page: `dashboard`, `login`, `navigation`, `mapping`. |
+| `origin` | Backend env | `cloud` or `local`, determined by server configuration. |
+| `force_takeover` | Browser | `true` when operator confirms taking over an existing lease. |
 
-### 応答ペイロード (`data` ブロック)
+### Response Payload (`data` block)
 
 ```json
 {
@@ -316,21 +318,21 @@ SLAM マップの保存には、標準の 30 秒の HTTP タイムアウトよ�
 }
 ```
 
-|応答フィールド |説明 |
+| Response Field | Description |
 | --- | --- |
-| `robot_activity` |フィルタリングされたアクティビティ状態 (例: `idle`、`navigating`、`mapping`、`stuck`)。 |
-| `active_page` |スタック検出器の評価前の生のアクティブ ページ。正しいルーティングを保証します。 |
-| `battery` |バッテリーの充電状態のパーセンテージ (フロート)。 |
-| `uptime` |システムの稼働時間 (分単位)。 |
-| `hw_status` |ハードウェア監視サブシステム (`ready`、`fault`) によってステータスが報告されます。 |
-| `manual_override` | `true` マニュアル テレオペ モードが有効な場合。 |
-| `autopilot` | `true` 自律自動操縦シーケンサーがアクティブな場合。 |
-| `in_use` |アカウントレベルのロック: 別のユーザーアカウントがリースを保持していることを示します。 |
-| `origin_conflict` |セッションレベルの競合: 同じアカウントの別のタブがアクティブであることを示します。 |
+| `robot_activity` | Filtered activity state (e.g. `idle`, `navigating`, `mapping`, `stuck`). |
+| `active_page` | Raw active page before stuck-detector evaluation, ensuring correct routing. |
+| `battery` | Battery state of charge percentage (float). |
+| `uptime` | System uptime in minutes. |
+| `hw_status` | Status reported by hardware monitoring subsystem (`ready`, `fault`). |
+| `manual_override` | `true` when manual teleop mode is engaged. |
+| `autopilot` | `true` when autonomous autopilot sequencer is active. |
+| `in_use` | Account-level lock: indicates another user account holds the lease. |
+| `origin_conflict` | Session-level conflict: indicates another tab of the same account is active. |
 
-## ストリーミング テレメトリのトピック
+## Streaming Telemetry Topics
 
-ストリーミング テレメトリは、`topic2string` を介してユニット上で JSON 文字列にシリアル化され、MQTT 経由でルーティングされ、`rosbridge` のサーバー上で入力された ROS メッセージに変換されます。
+Streaming telemetry is serialized to JSON strings on the unit via `topic2string`, routed over MQTT, and converted back to typed ROS messages on the server for `rosbridge`.
 
 ```mermaid
 flowchart LR
@@ -350,21 +352,21 @@ flowchart LR
   end
 ```
 
-### テレメトリ ストリームの定義
+### Telemetry Stream Definitions
 
-|ロボットトピック |クラウドサーバーのトピック |更新レート |コンテンツの説明 |
+| Robot Topic | Cloud Server Topic | Update Rate | Content Description |
 | --- | --- | --- | --- |
-| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25Hz | `map` フレーム (`geometry_msgs/PoseStamped`) 内のロボットの位置と方向。 |
-| `/string/map` | `/unit_<ULID>/server/slam/map` |更新時 |圧縮された占有グリッド (`base64(zlib(JSON))`)。 |
-| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2Hz |圧縮 2D レーザー スキャン データ (`sensor_msgs/LaserScan`)。 |
-| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` |計画中 |グローバル パス座標 (`nav_msgs/Path`)。 |
-| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` |連続 |ローカル軌道軌道 (`nav_msgs/Path`)。 |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` |計画中 |カバレッジ スイープ ラインの座標 (`nav_msgs/Path`)。 |
-| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` |ラッチ付き |再接続回復のための完全なアクティブ ミッション スナップショット。 |
+| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Robot position and orientation in `map` frame (`geometry_msgs/PoseStamped`). |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | On update | Compressed occupancy grid (`base64(zlib(JSON))`). |
+| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Compressed 2D laser scan data (`sensor_msgs/LaserScan`). |
+| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | On plan | Global path coordinates (`nav_msgs/Path`). |
+| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Continuous | Local trajectory trajectory (`nav_msgs/Path`). |
+| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | On plan | Coverage sweep line coordinates (`nav_msgs/Path`). |
+| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Full active mission snapshot for reconnect recovery. |
 
-## 運用監視者の同期
+## Operation Supervisor Synchronization
 
-`operation_supervisor.py` はロボットでの自律的なミッションの実行を管理するため、ブラウザーのタブが閉じていてもミッションは中断されずに継続されます。
+`operation_supervisor.py` manages autonomous mission execution on the robot so that missions continue uninterrupted if the browser tab is closed.
 
 ```mermaid
 sequenceDiagram
@@ -382,7 +384,7 @@ sequenceDiagram
   Supervisor->>MoveBase: Dispatch Waypoint 2
 ```
 
-### オペレーション同期ペイロード (`/string/operation_sync`)
+### Operation Sync Payload (`/string/operation_sync`)
 
 ```json
 {
@@ -406,19 +408,19 @@ sequenceDiagram
 }
 ```
 
-|アクションの種類 (`type`) |目的 |
+| Action Type (`type`) | Purpose |
 | --- | --- |
-| `batch` |ミッション開始時に完全なウェイポイントシーケンスをアップロードします。 |
-| `progress` |オペレーターガイドによる実行中に現在のウェイポイントインデックスを更新します。 |
-| `takeover` |オートパイロット モードを開始し、ウェイポイントのシーケンスをスーパーバイザーに渡します。 |
-| `release` |オートパイロット モードを解除し、制御をブラウザ ループに戻します。 |
-| `pause` |ウェイポイント キューを保持しながら実行を一時停止します。 |
-| `stop` |ミッションを停止し、ウェイポイントのバッチをクリアします。 |
-| `resync` |ミッション スナップショットの即時再ブロードキャストを要求します。 |
+| `batch` | Uploads full waypoint sequence when mission starts. |
+| `progress` | Updates current waypoint index during operator-guided runs. |
+| `takeover` | Engages Autopilot mode, handing waypoint sequencing to supervisor. |
+| `release` | Disengages Autopilot mode, returning control to browser loop. |
+| `pause` | Pauses execution while preserving the waypoint queue. |
+| `stop` | Stops mission and clears the waypoint batch. |
+| `resync` | Requests an immediate re-broadcast of the mission snapshot. |
 
-## ロボット登録ハンドシェイク
+## Robot Enrolment Handshake
 
-未登録のロボットは、安全な 3 段階の暗号化ハンドシェイクを介してクラウド サーバーに自身を登録します。
+Unenrolled robots register themselves with the cloud server via a secure three-stage cryptographic handshake.
 
 ```mermaid
 sequenceDiagram
@@ -447,11 +449,11 @@ sequenceDiagram
 ```
 
 ::: tip Nonce Security Purpose
-32 バイトの秘密ノンスにより、物理ロボットの電源がオフになっている間、MAC アドレス スプーフィングが承認されたロボット登録をハイジャックできないことが保証されます。デバイスシークレットは、本物のロボットが事前に登録されたハッシュと一致する元の平文ノンスを明らかにした場合にのみ送信されます。
+The 32-byte secret nonce guarantees that MAC address spoofing cannot hijack an approved robot registration while the physical robot is powered off. The device secret is transmitted only when the genuine robot reveals the original plaintext nonce matching the pre-registered hash.
 :::
 
-## 関連ドキュメント
+## Related Documentation
 
-- [API リファレンス](/ja/development/api-reference): REST API エンドポイントとデータ スキーマ。
-- [状態と動作](/ja/development/state-and-behavior): 詳細なステート マシンと障害遷移。
-- [アーキテクチャ](/ja/development/architecture): 高レベルのシステム トポロジと信頼境界。
+- [API Reference](/ja/development/api-reference): REST API endpoints and data schemas.
+- [State and Behavior](/ja/development/state-and-behavior): Detailed state machines and failure transitions.
+- [Architecture](/ja/development/architecture): High-level system topology and trust boundaries.

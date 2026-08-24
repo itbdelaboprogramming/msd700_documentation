@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# セキュリティと認証
+
+
+# Security and Authentication
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、MSD700 ロボット プラットフォーム全体に実装されるセキュリティ モデル、暗号化認証メカニズム、信頼ドメインの分離、およびアクセス制御ポリシーについて詳しく説明します。
+This document details the security model, cryptographic authentication mechanisms, trust domain isolation, and access control policies implemented across the MSD700 robotics platform.
 
-## セキュリティ アーキテクチャの概要
+## Security Architecture Overview
 
-MSD700 は、Web フロントエンド、クラウド バックエンド、メッセージ ブローカー、および物理的な Jetson シングルボード コンピューター (SBC) 全体に多層防御を適用します。
+MSD700 enforces defense-in-depth across the web frontend, cloud backend, message broker, and physical Jetson single-board computers (SBCs).
 
 ```mermaid
 flowchart TB
@@ -42,19 +44,19 @@ flowchart TB
   LOCAL_KEYRING -.->|"Local Auth Only"| RobotDomain
 ```
 
-## 3 つの独立した信頼ドメイン
+## Three Independent Trust Domains
 
-セキュリティ境界は、交換不可能な 3 つの信頼ドメインに分割されます。
+Security boundaries are separated into three non-interchangeable trust domains:
 
-|信頼ドメイン |発行者当局 |トークンの目的 |検証エンドポイント |分離ルール |
+| Trust Domain | Issuer Authority | Token Purpose | Validation Endpoint | Isolation Rule |
 | --- | --- | --- | --- | --- |
-| **オペレーター ドメイン** |クラウド サーバー バックエンド (`backend_node`) | Web ダッシュボードにアクセスする人間のオペレーターを認証します。 | `verifyToken` すべての `/api/*` ルート |ロボットが直接使用することはできません。 `/local/*` ルートで拒否されました。 |
-| **ロボット クラウド ドメイン** |クラウド登録サービス (`/enroll/token`) | HiveMQ およびクラウド メディア サーバーに接続する物理ロボットを認証します。 | HiveMQ TLS + クラウド `media-server` |ロボットに割り当てられた ULID を厳密にスコープします。 12時間有効です。 |
-| **ユニットローカルドメイン** |オンボード ローカル バックエンド (`backend_local`) |ローカル LAN オペレーターとオンボード ビデオ ストリーミング クライアントを認証します。 | `/local/*` エンドポイント |ローカルのオフライン主権を確保するために、クラウド トークンは厳密に拒否されます。 |
+| **Operator Domain** | Cloud Server Backend (`backend_node`) | Authenticates human operators accessing the web dashboard. | `verifyToken` on all `/api/*` routes | Cannot be used directly by robots; rejected on `/local/*` routes. |
+| **Robot Cloud Domain** | Cloud Enrolment Service (`/enroll/token`) | Authenticates physical robots connecting to HiveMQ and cloud media servers. | HiveMQ TLS + cloud `media-server` | Scoped strictly to the robot's assigned ULID; valid for 12 hours. |
+| **Unit Local Domain** | Onboard Local Backend (`backend_local`) | Authenticates local LAN operators and onboard video streaming clients. | `/local/*` endpoints | Cloud tokens are strictly rejected to ensure local offline sovereignty. |
 
-## 暗号化ハードウェア登録 (Nonce プロトコル)
+## Cryptographic Hardware Enrolment (The Nonce Protocol)
 
-未登録のロボットは、3 段階の暗号化ハンドシェイクを通じてクラウド サーバーに自身を登録します。
+Unenrolled robots register themselves with the cloud server through a three-stage cryptographic handshake.
 
 ```mermaid
 sequenceDiagram
@@ -85,14 +87,14 @@ sequenceDiagram
   Robot->>Robot: Write Certificates/robot/device.json (mode 0600)
 ```
 
-### 32 バイトの Nonce プロトコルが重要な理由:
-- **MAC / 指紋スプーフィング保護**: ハードウェアの MAC アドレスとシリアル番号がローカル ネットワーク上にブロードキャストされ、管理コンソールに表示されます。秘密のノンスがないと、物理ロボットの電源がオフのときに、攻撃者が MAC アドレスをスプーフィングして資格情報を要求する可能性があります。
-- **シングルユース検証**: 平文の nonce は、最終的な資格情報のハンドオーバー中に TLS 経由で 1 回だけ送信されます。検証されると、サーバーは保留中の nonce をクリアします。
-- **生の秘密ストレージがゼロ**: クラウド データベースには、`device_secret` の `bcrypt` ハッシュのみが保存されます。データベースが完全に漏洩しても、アクティブなロボット デバイスの秘密は侵害されません。
+### Why the 32-Byte Nonce Protocol Is Critical:
+- **MAC / Fingerprint Spoofing Protection**: Hardware MAC addresses and serial numbers are broadcast on local networks and visible in the admin console. Without the secret nonce, an attacker spoofing a MAC address could claim credentials while the physical robot is powered off.
+- **Single-Use Verification**: The plaintext nonce is transmitted exactly once over TLS during final credential handover. Once verified, the server clears the pending nonce.
+- **Zero Raw Secret Storage**: The cloud database stores only the `bcrypt` hash of `device_secret`. Even a complete database leak does not compromise active robot device secrets.
 
-## JWT キーリングとダウンタイムゼロのシークレットローテーション
+## JWT Keyring and Zero-Downtime Secret Rotation
 
-認証トークンは、単一の静的環境変数ではなく、`/srv/msd/secrets/jwt_keyring` に保存されている **JWT キーリング** に対して検証されます。
+Authentication tokens are verified against a **JWT Keyring** stored in `/srv/msd/secrets/jwt_keyring` rather than a single static environment variable.
 
 ```json
 {
@@ -110,14 +112,14 @@ sequenceDiagram
 }
 ```
 
-### キーリングのローテーション ルール:
-1. **アクティブな署名キー**: 新しく作成されたすべてのアクセス トークンとリフレッシュ トークンは、`active_kid` で識別されるキーで署名されます。
-2. **猶予期間の検証**: 受信トークンが到着すると、`verifyToken` はその署名を `active_kid` と照合してチェックします。検証が失敗した場合は、HTTP 401 で拒否する前に、キーリング内の以前のキーをテストします。
-3. **セッション中断ゼロ**: 運用環境でシークレットをローテーションしても、すべてのアクティブなオペレーターが同時に再ログインする必要はありません。
+### Keyring Rotation Rules:
+1. **Active Signing Key**: All newly minted access and refresh tokens are signed with the key identified by `active_kid`.
+2. **Grace Window Verification**: When an incoming token arrives, `verifyToken` checks its signature against `active_kid`. If verification fails, it tests previous keys in the keyring before rejecting with HTTP 401.
+3. **Zero Session Disruption**: Rotating secrets in production does not force all active operators to re-login simultaneously.
 
-## オペレーティング リースのセキュリティ: 複数のオペレーターによる乗っ取りの防止
+## Operating Lease Security: Preventing Multi-Operator Takeover
 
-同時ユーザーまたはブラウザ タブからのコマンドの競合を防ぐために、モーターの作動へのアクセスは、物理ロボットのメモリに保持されている**排他的オペレーティング リース**によって管理されます。
+To prevent conflicting commands from simultaneous users or browser tabs, access to motor actuation is governed by an **exclusive operating lease** held in memory on the physical robot.
 
 ```mermaid
 flowchart LR
@@ -126,19 +128,19 @@ flowchart LR
   OP1_TAB2["Operator 1 (Second Tab)"] -.->|"Origin Conflict (Prompt Takeover)"| ROBOT
 ```
 
-- **ハートビートの有効期限**: リースは 15 秒間有効であり、定期的な ping によって更新する必要があります。
-- **アカウントとセッションの分離**:
-  - `in_use`: 別のユーザー アカウントがリースを保持している場合、コマンドの実行はブロックされます。
-  - `origin_conflict`: 同じユーザー アカウントが 2 番目のタブを開いたり、クラウドからローカル ネットワークに切り替えたりすると、UI はアクティブなタブをサイレントに中断するのではなく、明示的な引き継ぎを要求します。
+- **Heartbeat Expiry**: The lease is valid for 15 seconds and must be renewed by periodic pings.
+- **Account vs Session Separation**:
+  - `in_use`: If another user account holds the lease, command execution is blocked.
+  - `origin_conflict`: If the same user account opens a second tab or switches from cloud to local network, the UI prompts for explicit takeover rather than silently interrupting the active tab.
 
-## ネットワーク セキュリティと TLS 終端
+## Network Security and TLS Termination
 
-1. **Apache リバース プロキシ**: すべての外部 HTTP、SSE、および WebSocket トラフィックは、Let's Encrypt (`/etc/letsencrypt/live/`) からの証明書を使用して、Apache ポート 443 で TLS を終了します。
-2. **HiveMQ 相互トランスポート セキュリティ**: ロボットは TLS 経由でポート 8883 の HiveMQ に接続します。キーストア PKCS#12 証明書は `/srv/msd/secrets/hivemq/keystore.p12` にあります。
-3. **コンテナの分離**: バックエンド コンテナは内部 Docker ブリッジ ネットワーク (`ros_backend_net`) を介して通信し、内部データベースやロスブリッジ ポートをパブリック インターネットに直接公開しません。
+1. **Apache Reverse Proxy**: All external HTTP, SSE, and WebSocket traffic terminates TLS at Apache port 443 using certificates from Let's Encrypt (`/etc/letsencrypt/live/`).
+2. **HiveMQ Mutual Transport Security**: Robots connect to HiveMQ on port 8883 over TLS. Keystore PKCS#12 certificates reside in `/srv/msd/secrets/hivemq/keystore.p12`.
+3. **Container Isolation**: Backend containers communicate across internal Docker bridge networks (`ros_backend_net`), exposing no internal database or rosbridge ports directly to the public internet.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [アーキテクチャ](/ja/development/architecture): 完全なプラットフォーム トポロジと信頼ドメイン。
-- [メッセージ コントラクト](/ja/development/message-contracts): ハードウェア登録ペイロード定義。
-- [API リファレンス](/ja/development/api-reference): ユーザー認証とセッション更新のエンドポイント。
+- [Architecture](/ja/development/architecture): Full platform topology and trust domains.
+- [Message Contracts](/ja/development/message-contracts): Hardware enrolment payload definitions.
+- [API Reference](/ja/development/api-reference): User authentication and session refresh endpoints.

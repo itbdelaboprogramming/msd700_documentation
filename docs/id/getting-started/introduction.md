@@ -2,15 +2,17 @@
 outline: deep
 search: false
 ---
-# Pengantar MSD700
+
+
+# Introduction to MSD700
 
 <RoleBadge role="user" />
 
-## Apa itu MSD700?
+## What is MSD700?
 
-**MSD700** adalah robot bergerak otonom tingkat industri yang dikembangkan oleh **ITB de Labo Research Lab**. Ini dirancang khusus untuk melakukan pemetaan lingkungan otonom, navigasi titik-ke-titik, dan cakupan area sistematis di lingkungan dalam ruangan yang kompleks seperti gudang, koridor kantor, terowongan, dan lantai industri terbuka.
+The **MSD700** is an industrial-grade autonomous mobile robot developed by **ITB de Labo Research Lab**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
 
-Dilengkapi dengan sensor LiDAR 3D 360 derajat, unit pengukuran inersia (IMU), dan kamera optik resolusi tinggi, robot ini membuat peta grid hunian dengan akurasi sentimeter secara real-time menggunakan Simultaneous Localization and Mapping (SLAM).
+Equipped with 360-degree 3D LiDAR sensors, inertial measurement units (IMUs), and high-resolution optical cameras, the robot builds centimeter-accurate occupancy grid maps in real time using Simultaneous Localization and Mapping (SLAM).
 
 ```mermaid
 flowchart LR
@@ -28,34 +30,34 @@ flowchart LR
   PhysicalRobot <-->|"Encrypted TLS Link"| CloudPlatform
 ```
 
-## Kemampuan Operator Utama
+## Key Operator Capabilities
 
-1. **Lokalisasi dan Pemetaan Simultan (SLAM)**: Mengendarai robot melalui lingkungan baru untuk membuat denah lantai 2D.
-2. **Navigasi Titik-ke-Titik**: Klik di mana saja pada peta untuk mengirim robot ke lokasi tersebut dengan penghindaran rintangan secara otonom.
-3. **Penyapuan Area Boustrophedon**: Gambarlah poligon di sekitar ruangan atau koridor dan perintahkan robot untuk menyapu seluruh area lantai secara sistematis dalam jalur paralel.
-4. **Daftar Putar Misi Otomatis**: Merangkai beberapa rute titik arah dan area pembersihan ke dalam daftar putar berurutan tanpa pengawasan.
-5. **Penyelarasan Pos Putar Nol (Penyelarasan Otomatis)**: Tempatkan robot di ruangan yang dipetakan dan sejajarkan posisinya secara instan tanpa mengganggu rotasi 360 derajat.
-6. **Streaming Video HD Langsung**: Pantau sudut pandang robot secara real-time melalui streaming WebRTC dengan latensi sangat rendah.
-7. **Operasi Mandiri Offline**: Saat bekerja di fasilitas jarak jauh tanpa akses internet, sambungkan langsung ke Wi-Fi lokal robot untuk menggunakan dasbor penuh secara offline.
+1. **Simultaneous Localization and Mapping (SLAM)**: Drive the robot through a new environment to create a 2D floorplan.
+2. **Point-to-Point Navigation**: Click anywhere on the map to dispatch the robot to that location with autonomous obstacle avoidance.
+3. **Boustrophedon Area Sweeps**: Draw polygons around rooms or corridors and command the robot to sweep the entire floor area systematically in parallel lanes.
+4. **Automated Mission Playlists**: Chain multiple waypoint routes and cleaning areas into unattended sequence playlists.
+5. **Zero-Spin Heading Alignment (Auto-Align)**: Place the robot in a mapped room and align its position instantly without disruptive 360-degree rotations.
+6. **Live HD Video Streaming**: Monitor the robot's point-of-view in real time through ultra-low latency WebRTC streaming.
+7. **Offline Standalone Operation**: When working in remote facilities without internet access, connect directly to the robot's local Wi-Fi to use the full dashboard offline.
 
-## Arsitektur Sistem untuk Pengguna
+## System Architecture for Users
 
-Sistem ini terdiri dari dua lapisan utama:
+The system is composed of two primary layers:
 
-| Lapisan | Komponen | Interaksi Pengguna |
+| Layer | Component | User Interaction |
 | --- | --- | --- |
-| **Dasbor Cloud** | Server Pusat (`https://msd.nglobal.jp`) | Aplikasi web pusat tempat Anda masuk, mengelola peta, menetapkan rute, dan memantau status armada di semua robot yang disewa. |
-| **Robot Fisik (Unit)** | Komputer Jetson Onboard | Mesin fisik yang menjalankan tujuan navigasi Anda. Setiap unit memiliki pengidentifikasi unik (ULID) dan terhubung dengan aman ke cloud. |
+| **Cloud Dashboard** | Central Server (`https://msd.nglobal.jp`) | The central web application where you log in, manage maps, assign routes, and monitor fleet status across all rented robots. |
+| **Physical Robot (Unit)** | Onboard Jetson Computer | The physical machine executing your navigation goals. Each unit has a unique identifier (ULID) and connects securely to the cloud. |
 
-## Peran dan Akses Pengguna
+## User Roles and Access
 
-Akses ke robot diatur oleh **Profil Penyewaan**:
+Access to robots is governed by **Rental Profiles**:
 
-- **Operator Armada**: Akun pengguna standar yang ditetapkan ke satu atau lebih profil persewaan. Anda dapat mengemudikan robot yang ditugaskan, mencatat peta, membuat rute, dan memantau telemetri.
-- **Administrator Lab**: Kelola profil penyewaan penyewa, sediakan akun operator, dan setujui pendaftaran robot perangkat keras baru.
+- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and monitor telemetry.
+- **Lab Administrators**: Manage tenant rental profiles, provision operator accounts, and approve new hardware robot registrations.
 
-## Langkah Selanjutnya
+## Next Steps
 
-- Lanjutkan ke [Panduan Memulai Cepat](/id/getting-started/quick-start) untuk login dan mengontrol robot pertama Anda.
-- Baca [Fitur Sistem](/id/getting-started/features) untuk rincian lengkap kemampuan pemetaan dan navigasi.
-- Tinjau [Bagaimana Robot Berperilaku](/id/getting-started/behavior) untuk memahami pengawas keselamatan dan kegigihan Autopilot.
+- Proceed to the [Quick Start Guide](/id/getting-started/quick-start) to log in and control your first robot.
+- Read [System Features](/id/getting-started/features) for a full breakdown of mapping and navigation capabilities.
+- Review [How the Robot Behaves](/id/getting-started/behavior) to understand safety watchdogs and Autopilot persistence.

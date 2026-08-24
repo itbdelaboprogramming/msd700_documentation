@@ -2,13 +2,15 @@
 outline: deep
 search: false
 ---
-# フロントエンド キャンバス & React 可視化パイプライン
+
+
+# Frontend Canvas & React Visualization Pipeline
 
 <RoleBadge role="developer" />
 
-このドキュメントでは、HTML5 Canvas、EaselJS、`ROS2D.js` を使用して `ROS-dashboard-next-ts` に実装された 2D レンダリング パイプライン、座標空間変換、レイヤー スタッキング アーキテクチャ、および React ライフサイクル統合について詳しく説明します。
+This document details the 2D rendering pipeline, coordinate space conversions, layer stacking architecture, and React lifecycle integration implemented in `ROS-dashboard-next-ts` using HTML5 Canvas, EaselJS, and `ROS2D.js`.
 
-## キャンバス レンダリング パイプライン アーキテクチャ
+## Canvas Rendering Pipeline Architecture
 
 ```mermaid
 flowchart TD
@@ -36,31 +38,31 @@ flowchart TD
 
 ---
 
-## 座標変換: メートル空間からスクリーン ピクセルへ
+## Coordinate Transformations: Metric Space to Screen Pixels
 
-ROS の座標フレームはメートル法 (マップ原点が $(0, 0)$ のメートル) ですが、HTML5 Canvas は左上の原点ピクセル座標 $(p_x, p_y)$ を使用します。
+The ROS coordinate frame is metric (meters, with $(0, 0)$ at map origin), while HTML5 Canvas uses top-left origin pixel coordinates $(p_x, p_y)$.
 
-マップの解像度 $r$ (ピクセルあたりのメートル)、画像の高さ $H$ (ピクセル)、およびマップの原点 $\mathbf{o} = [x_0, y_0]^T$ を指定すると、次のようになります。
+Given map resolution $r$ (meters per pixel), image height $H$ (pixels), and map origin $\mathbf{o} = [x_0, y_0]^T$:
 
-### 1. メトリックからキャンバス ピクセルへの変換:
+### 1. Metric to Canvas Pixel Conversion:
 $$p_x = \frac{x - x_0}{r}$$
 
 $$p_y = H - \frac{y - y_0}{r}$$
 
-*(ROS $Y$ は上向きに増加し、Canvas $Y$ は下向きに増加するため、$y$ 軸は反転しています。)*
+*(The $y$-axis is inverted because ROS $Y$ increases upward while Canvas $Y$ increases downward).*
 
-### 2. キャンバスのピクセルからメトリックへの変換 (ゴールのディスパッチング用):
+### 2. Canvas Pixel to Metric Conversion (For Goal Dispatching):
 $$x = x_0 + (p_x \cdot r)$$
 
 $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ---
 
-## `createjs.Stage.prototype` パッチ (`rosScriptLoader.ts`)
+## The `createjs.Stage.prototype` Patch (`rosScriptLoader.ts`)
 
-最新の React SPA フレームワーク (Next.js 14 以降など) では、ページ遷移中にコンポーネントが急速にマウントおよびアンマウントされます。標準の `ROS2D.js` は、作成時に座標変換関数をステージング インスタンスにバインドします。これは React DOM の再レンダリング時に失われる可能性があり、致命的な `TypeError: this.stage.globalToRos is not a function` エラーを引き起こします。
+In modern React SPA frameworks (such as Next.js 14+), components mount and unmount rapidly during page transitions. Standard `ROS2D.js` binds coordinate conversion functions to stage instances on creation, which can be lost upon React DOM re-renders, causing fatal `TypeError: this.stage.globalToRos is not a function` errors.
 
-ゼロクラッシュ視覚化の回復力を保証するために、`rosScriptLoader.ts` はキャンバスのインスタンス化の前に `createjs.Stage.prototype` に動的にパッチを適用します。
+To guarantee zero-crash visualization resilience, `rosScriptLoader.ts` dynamically patches `createjs.Stage.prototype` prior to canvas instantiation:
 
 ```typescript
 // scripts/rosScriptLoader.ts
@@ -89,15 +91,15 @@ export function patchEaselJSStage(): void {
 
 ---
 
-## インタラクティブなポリゴン描画エンジン
+## Interactive Polygon Drawing Engine
 
-オペレータがエリア カバレッジ スイープ ポリゴンまたは立ち入り禁止ゾーンを定義する場合:
-1. **頂点の配置**: キャンバスをクリックすると、メートル座標 $(x_i, y_i)$ が記録されます。
-2. **動的ラバーバンディング**: マウスが移動すると、動的一時的なエッジ ラインがカーソル位置にレンダリングされます。
-3. **閉じるスナップ**: カーソルが最初の頂点の $15\text{ ピクセル}$ 以内に入ると、ポリゴンは閉じてスナップされ、`/msd700/keepout_grid` またはカバレッジ境界にラスタライズされます。
+When an operator defines area coverage sweep polygons or keep-out zones:
+1. **Vertex Placement**: Clicking the canvas records metric coordinates $(x_i, y_i)$.
+2. **Dynamic Rubberbanding**: As the mouse moves, a dynamic temporary edge line renders to the cursor position.
+3. **Closing Snapping**: If the cursor enters within $15\text{ pixels}$ of the initial vertex, the polygon snaps closed and rasterizes into the `/msd700/keepout_grid` or coverage boundary.
 
-## 関連ドキュメント
+## Related Documentation
 
-- [rosbridge プロトコル](/ja/development/rosbridge-protocol): WebSocket JSON 操作とストリーミング トピック。
-- [Boustrophedon Coverage](/ja/development/boustrophedon-and-alignment): デュアル ジオメトリ スイープ計算。
-- [API リファレンス](/ja/development/api-reference): REST エンドポイントをマップしてルーティングします。
+- [rosbridge Protocol](/ja/development/rosbridge-protocol): WebSocket JSON operations and streaming topics.
+- [Boustrophedon Coverage](/ja/development/boustrophedon-and-alignment): Dual-geometry sweep calculations.
+- [API Reference](/ja/development/api-reference): Map and route REST endpoints.
