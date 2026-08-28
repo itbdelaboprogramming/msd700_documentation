@@ -65,6 +65,14 @@ flowchart TD
 - **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
 - **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
 
+### 6. Local Sync Reports "Access Denied" (Local Database Credential Drift)
+- **Symptom**: The Local Mode sync log shows `Access denied for user '<MYSQL_USER>'@'127.0.0.1' (using password: YES)`, historically mislabeled as failing during the `handshake` phase even though the cloud is reachable.
+- **Root Cause**: `docker/.env` on the unit is git-tracked and per-host. If `MYSQL_USER`/`MYSQL_PASSWORD` changes there (a `git pull`, or a manual edit) after the unit's `mysql_data_local` volume has already been initialized, MySQL keeps the old password baked into the data directory — it does not retroactively adopt the new one. `sync_agent.js` then fails its own first local `sync_state` read with `ER_ACCESS_DENIED_ERROR`, not a cloud connectivity error. See [Data Sync: Failure Classification](/development/data-sync#failure-classification) for how this is now distinguished from a real cloud outage.
+- **Diagnostic Steps**:
+  1. On the unit: `cat docker/.env | grep MYSQL_` and check whether the values look recently changed (e.g. right after a `git pull`).
+  2. Confirm the mismatch directly: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — a manual `Access denied` confirms drift rather than a transient blip.
+- **Resolution**: Either revert `docker/.env` to the password the volume was initialized with, or, if the rotation was intentional, run `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` against the local MySQL as root so the database matches the new `.env` value. Do not wipe `mysql_data_local` to "fix" this — it is the unit's only local copy of maps/routes not yet synced to the cloud, and this failure mode means sync itself is not currently working.
+
 ## Related Documentation
 
 - [Architecture](/development/architecture): Two-channel communication models.
