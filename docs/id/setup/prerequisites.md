@@ -100,6 +100,66 @@ flowchart TD
 
 ---
 
+## Installing Docker Engine on Ubuntu
+
+Both the Cloud Server and the Jetson Unit need Docker CE with the Compose plugin (`docker compose` v2). Install it from Docker's official `apt` repository rather than the `docker.io` package in Ubuntu's default repos, which lags behind and often ships without the Compose plugin.
+
+```bash
+# 1. Remove any old or conflicting packages
+for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
+  sudo apt-get remove -y $pkg
+done
+
+# 2. Install prerequisites and add Docker's official GPG key
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# 3. Add the Docker apt repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+
+# 4. Install Docker Engine, the CLI, containerd, and the Compose plugin
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# 5. Verify the installation
+sudo docker run hello-world
+```
+
+::: info Works on both `amd64` and `arm64`
+The steps above are architecture-agnostic: `dpkg --print-architecture` resolves to `amd64` on the Cloud Server and `arm64` on the Jetson Unit, and Docker's repository serves the matching package for each. No separate procedure is needed for JetPack.
+:::
+
+### Post-install: run Docker without `sudo`
+
+`docker-manager.sh` and `run_msd.sh` (see [Docker Reference](/id/setup/docker-reference)) assume the invoking user can run `docker` without `sudo`. Add the user to the `docker` group and start a new shell session for it to take effect:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Confirm access without sudo
+docker run hello-world
+```
+
+::: warning Log out and back in if it still asks for `sudo`
+`newgrp docker` only applies the new group to the current shell. If another shell, an SSH session, or a systemd unit still fails with a permission error on `/var/run/docker.sock`, fully log out and back in (or reboot) so group membership is picked up everywhere.
+:::
+
+### Enable Docker on boot
+
+```bash
+sudo systemctl enable docker.service
+sudo systemctl enable containerd.service
+```
+
+---
+
 ## Safety Checklist
 
 ::: danger Safety First

@@ -44,7 +44,8 @@ The Jetson workspace manages robot packages, web bridges, and onboard web UI as 
 
 ## Core Step-by-Step Setup
 
-Follow these 5 steps in sequence to set up the physical robot.
+Follow these 5 steps in sequence to set up the physical robot, plus an optional 6th step if this
+unit needs to broadcast its own WiFi hotspot.
 
 ### Step 1: Clone Workspace and Source Repositories
 
@@ -164,9 +165,41 @@ cd ~/msd700_noetic
 
 ---
 
+### Step 6 (Optional): Provision the WiFi Hotspot
+
+If this unit needs to broadcast its own WiFi hotspot for an operator to connect to directly (instead
+of, or alongside, the onboard radio staying a normal WiFi client), plug in a validated USB WiFi
+dongle and run two commands:
+
+```bash
+cd ~/msd700_noetic
+
+# 1. Install the dongle's driver (one-time, builds via DKMS so it survives kernel upgrades)
+./scripts/install-wifi-dongle-driver.sh
+
+# 2. Provision the hotspot, passing the password inline rather than writing it to docker/.env
+AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
+```
+
+Interface names are auto-detected, nothing else has to be looked up by hand. The hotspot comes up on
+its own on every boot afterward, independent of Docker or `docker-manager.sh`.
+
+::: warning Don't write the password into `docker/.env`
+`docker/.env` is tracked by git in this repository, a password committed there is published to the
+repository. Pass `AP_PASSWORD_LOCAL` inline as shown above instead. See
+[WiFi Hotspot + Client](/id/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit) for the full
+provisioning walkthrough, the validated dongle hardware, and troubleshooting.
+:::
+
+Entirely optional, skip this step if the unit only ever needs the onboard radio as a normal WiFi
+client. See [WiFi Hotspot + Client](/id/setup/wifi-hotspot) for the full architecture and why a second
+radio is required at all.
+
+---
+
 ## Operating the Unit Locally (Offline Mode)
 
-When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network (or robot Wi-Fi hotspot):
+When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network (or the [robot's WiFi hotspot](/id/setup/wifi-hotspot), if Step 6 above was run):
 
 1. Open your browser and navigate to: `http://<jetson-ip>:3000`.
 2. The local dashboard allows full teleoperation, SLAM mapping, route creation, and area coverage sweeps.
@@ -252,3 +285,4 @@ tmux attach -t robot_services
 - [Server Setup](/id/setup/server-setup): Cloud backend installation.
 - [System Setup](/id/setup/system-setup): Sensor calibration and verification.
 - [Docker Reference](/id/setup/docker-reference): Comprehensive CLI syntax reference.
+- [WiFi Hotspot + Client](/id/setup/wifi-hotspot): Full hotspot architecture, dongle hardware, and troubleshooting.
