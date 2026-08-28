@@ -161,37 +161,30 @@ Everything below lives **outside Docker** on purpose: it has to survive `local_d
 it has to come up the instant a dongle is plugged into a unit that has never run
 `docker-manager.sh` at all.
 
-### 1. Plug in the dongle, set a password
-
-`docker/.env` (created from `docker/.env.example` on first run if it doesn't exist yet) needs a
-hotspot password before anything is provisioned:
-
-```bash
-# msd700_noetic/docker/.env
-AP_PASSWORD_LOCAL=your-hotspot-password   # 8+ characters, required
-```
-
-::: warning Do not commit a real password to `docker/.env`
-That file is **tracked by git**. Passing the password inline on the provisioning command below (step
-2) avoids ever writing it to disk on this repository checkout, `setup.sh` sources `docker/.env`
-without overriding variables already present in the environment, so an inline value wins, and
-nothing needs the password afterwards: NetworkManager stores the STA key itself, hostapd's own
-config file (`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one, and later hotspot
-changes go through [the dashboard's badge menu](#changing-the-unit-s-own-hotspot).
-:::
-
-Everything else, `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL`, `AP_SSID_LOCAL`, is auto-detected or
-defaulted, see [Configuration reference](#configuration-reference-docker-env) below if a value needs
-to be overridden by hand.
-
-### 2. Provision
+### Provision with interactive prompts
 
 ```bash
 sudo apt install network-manager     # if nmcli is not already on the host
-AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
+./setup.sh --provision-network
 ```
 
-No need to look up interface names by hand first. This one command:
+When run on a TTY (an interactive terminal), `./setup.sh --provision-network` prompts for each WiFi configuration setting, one by one. Each prompt shows a `[current value]` in brackets; press **Enter to keep it**, or type a new value. The fields in order are:
+
+1. **LOCAL_IP** — IPv4 address for the dashboard (default: `192.168.4.1`) — validates as a valid IPv4 before accepting.
+2. **NETWORK_AGENT_PORT_LOCAL** — Port for the internal network agent (default: `5011`) — 1–65535.
+3. **AP_INTERFACE_LOCAL** — Dongle's interface name (auto-detected if blank and a known RTL8188EUS is plugged in).
+4. **STA_INTERFACE_LOCAL** — Onboard radio's interface name (auto-detected if blank).
+5. **AP_CONNECTION_NAME_LOCAL** — Legacy NetworkManager profile name to clean up (default: `msd700-hotspot`).
+6. **AP_SSID_LOCAL** — Hotspot's broadcast name (default: `MSD700-<hostname suffix>`).
+7. **AP_PASSWORD_LOCAL** — Hotspot's WPA2 password (8–63 characters, entered twice to confirm, minimum 8 characters). **Never shown on screen**, not even as dots. Defaults to the value in `/etc/hostapd/hostapd-msd700.conf` if already provisioned.
+8. **STA_SSID_LOCAL** (optional) — Upstream WiFi network to auto-join as a client (leave blank to skip, set later from the dashboard instead).
+9. **STA_PASSWORD_LOCAL** (optional) — Password for the upstream network, if `STA_SSID_LOCAL` was set.
+
+The password is confirmed by asking you to enter it twice; if they don't match, you get up to 8 tries before the script exits and you can re-run it. **Passwords are not written to `docker/.env`**: the AP password goes to `/etc/hostapd/hostapd-msd700.conf` (chmod 0600), and the STA password to NetworkManager's own profile store. Everything else (interface names, port, SSID) is saved to `docker/.env`.
+
+**Non-interactive mode**: If there is no TTY (e.g. running in a container or with `MSD700_NONINTERACTIVE=1`), all prompts are skipped and `docker/.env` is used as-is. This is identical to the old behaviour.
+
+This one command:
 
 1. **Installs udev rules.** Every `*.rules` file in `scripts/udev/`, not just the WiFi one, the
    STM32 and RealSense rules already in the repo had no install path of their own until this
@@ -395,13 +388,12 @@ anyone reaching the dashboard from the *client-side* network, who does not know 
 for a new password and treats blank as "keep the current one".
 
 ::: warning `docker/.env` is a seed, not the source of truth
-`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` are read **only** by `setup.sh --provision-network`, and only
-when `/etc/hostapd/hostapd-msd700.conf` does not already exist (in effect: only on the first
-provisioning run). After that, `/etc/hostapd/hostapd-msd700.conf` is authoritative and those two keys
-are stale, re-running `--provision-network` re-renders the same file from `docker/.env` again, so
-edit `docker/.env` and re-run provisioning to change the hotspot from the CLI, or wait for the
-dashboard path above to be fixed. The honest live answer for the broadcast SSID is
-`iw dev <ap-interface> info`.
+After provisioning, `docker/.env` holds interface names and port settings, but:
+- The AP **SSID** is read from `docker/.env` only on first provisioning run; after that, `/etc/hostapd/hostapd-msd700.conf` is authoritative.
+- The AP **password** is **never** stored in `docker/.env` — it lives in `/etc/hostapd/hostapd-msd700.conf` (chmod 0600).
+- The STA **password** is **never** stored in `docker/.env` — it lives in NetworkManager's own profile store.
+
+To change the hotspot from the CLI, edit `/etc/hostapd/hostapd-msd700.conf` directly and restart the service, or use the dashboard's WiFi badge menu (see [Changing the unit's own hotspot](#changing-the-units-own-hotspot) below). The honest live answer for the broadcast SSID is `iw dev <ap-interface> info`.
 :::
 
 Client-side internet reachability (`full` / `limited` / `portal` / `none`) is read straight from
@@ -410,16 +402,17 @@ implements a second one.
 
 ## Configuration reference (`docker/.env`)
 
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `AP_INTERFACE_LOCAL` | Dongle's interface name | auto-detected during `--provision-network` |
-| `STA_INTERFACE_LOCAL` | Onboard radio's interface name | auto-detected during `--provision-network` |
-| `AP_SSID_LOCAL` | Hotspot's broadcast name | `MSD700-<hostname suffix>` if left blank |
-| `AP_PASSWORD_LOCAL` | Hotspot's WPA2 password (8+ chars, required for provisioning to create the AP) | blank in `docker/.env.example` on purpose |
-| `AP_CONNECTION_NAME_LOCAL` | Legacy, only used to clean up a leftover pre-hostapd NetworkManager profile of this name during provisioning | `msd700-hotspot` |
-| `NETWORK_AGENT_PORT_LOCAL` | Port `network_local`'s loopback API listens on | `5011` |
-| `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: an upstream network to auto-join as a client on first provisioning | empty (add later from the dashboard's WiFi dropdown instead) |
-| `LOCAL_IP` | IP the dashboard's frontend build points at | `192.168.4.1` (matches the hotspot's static IP) |
+| Variable | Meaning | Saved to `docker/.env` | Default |
+| --- | --- | --- | --- |
+| `AP_INTERFACE_LOCAL` | Dongle's interface name | ✓ Yes | auto-detected during `--provision-network` |
+| `STA_INTERFACE_LOCAL` | Onboard radio's interface name | ✓ Yes | auto-detected during `--provision-network` |
+| `AP_SSID_LOCAL` | Hotspot's broadcast name | ✓ Yes | `MSD700-<hostname suffix>` if left blank |
+| `AP_PASSWORD_LOCAL` | Hotspot's WPA2 password (8+ chars, required for provisioning) | ✗ No — stored in `/etc/hostapd/hostapd-msd700.conf` (chmod 0600) | (prompted during interactive provisioning) |
+| `AP_CONNECTION_NAME_LOCAL` | Legacy, only used to clean up a leftover pre-hostapd NetworkManager profile of this name during provisioning | ✓ Yes | `msd700-hotspot` |
+| `NETWORK_AGENT_PORT_LOCAL` | Port `network_local`'s loopback API listens on | ✓ Yes | `5011` |
+| `STA_SSID_LOCAL` | Optional: an upstream network to auto-join as a client on first provisioning | ✓ Yes | empty (add later from the dashboard's WiFi dropdown instead) |
+| `STA_PASSWORD_LOCAL` | Password for the upstream network | ✗ No — stored in NetworkManager's profile store | (prompted during interactive provisioning if `STA_SSID_LOCAL` is set) |
+| `LOCAL_IP` | IP the dashboard's frontend build points at | ✓ Yes | `192.168.4.1` (matches the hotspot's static IP) |
 
 ## Verifying it works
 

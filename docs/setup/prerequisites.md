@@ -95,7 +95,8 @@ flowchart TD
 1. **Operating System**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x on ARM64).
 2. **Docker Engine**: Docker CE with `network_mode: host` support.
 3. **USB Device Rules**: `udev` rules granting non-root access to `/dev/ttyUSB*` (motor controller).
-4. **Static IP Configuration**: Static IP `192.168.103.100` configured on the dedicated LiDAR Ethernet port (`end0`).
+4. **Static IP Configuration**: Static IP `192.168.103.100/24` configured on the dedicated LiDAR Ethernet port (`end0`, auto-configured via NetworkManager during `./setup.sh`).
+5. **X11 Display** (optional): Only required if running graphical tools like RViz or Gazebo. Missing during setup is harmless and only triggers a warning.
 
 ---
 

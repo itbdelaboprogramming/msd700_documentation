@@ -176,23 +176,71 @@ cd ~/msd700_noetic
 # 1. Install the dongle's driver (one-time, builds via DKMS so it survives kernel upgrades)
 ./scripts/install-wifi-dongle-driver.sh
 
-# 2. Provision the hotspot, passing the password inline rather than writing it to docker/.env
-AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
+# 2. Provision the hotspot with interactive prompts
+./setup.sh --provision-network
 ```
 
-Interface names are auto-detected, nothing else has to be looked up by hand. The hotspot comes up on
-its own on every boot afterward, independent of Docker or `docker-manager.sh`.
+The script will prompt you interactively for each setting (SSID, password, interface names, etc.).
+Interface names are auto-detected if a known RTL8188EUS dongle is plugged in. Passwords are never
+saved to `docker/.env`; instead, the AP password goes to `/etc/hostapd/hostapd-msd700.conf` and the
+client password (if any) to NetworkManager's own profile store. The hotspot comes up on its own on
+every boot afterward, independent of Docker or `docker-manager.sh`.
 
-::: warning Don't write the password into `docker/.env`
-`docker/.env` is tracked by git in this repository, a password committed there is published to the
-repository. Pass `AP_PASSWORD_LOCAL` inline as shown above instead. See
-[WiFi Hotspot + Client](/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit) for the full
+See [WiFi Hotspot + Client](/setup/wifi-hotspot#provision-with-interactive-prompts) for the full
 provisioning walkthrough, the validated dongle hardware, and troubleshooting.
-:::
 
 Entirely optional, skip this step if the unit only ever needs the onboard radio as a normal WiFi
 client. See [WiFi Hotspot + Client](/setup/wifi-hotspot) for the full architecture and why a second
 radio is required at all.
+
+---
+
+### Step 7: Configure Velodyne VLP-16 LiDAR Wired Link
+
+**Only if this unit has a Velodyne VLP-16 LiDAR.** The wired Ethernet interface must have a static IP on the same subnet as the sensor. The VLP-16 is an Ethernet/UDP device that streams to a fixed host IP on port 2368 with no DHCP negotiation — if the host IP is not configured, the ROS driver will time out silently with no point cloud data.
+
+Run:
+
+```bash
+cd ~/msd700_noetic
+./setup.sh --configure-lidar
+```
+
+Or, as part of a full setup run:
+
+```bash
+./setup.sh
+```
+
+This automatically creates a NetworkManager profile named `msd700-velodyne` with:
+- **Static IP**: `192.168.103.100/24` (on the wired interface, e.g., `end0`)
+- **IPv6**: Disabled
+- **Auto-connect Priority**: 100 (comes up on every boot)
+- **Never Default**: Yes (does not steal the system's default route)
+
+The wired interface is auto-detected (the single interface with a carrier, no IP yet, not carrying the default route). If there is ambiguity (0 or ≥2 candidates), it's skipped with a warning and never guessed on dev laptops.
+
+**Customization** (if needed, in `docker/.env`):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `VELODYNE_IFACE` | auto-detect | Wired NIC facing the sensor (e.g., `end0`) |
+| `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Static IP for the host |
+| `VELODYNE_SENSOR_IP` | `192.168.103.231` | The sensor's own IP (for validation) |
+| `VELODYNE_CONNECTION_NAME` | `msd700-velodyne` | NetworkManager profile name |
+
+**Critical coupling**: The `VELODYNE_SENSOR_IP` must be inside the subnet of `VELODYNE_HOST_CIDR`, and it must match the `device_ip` in `src/msd700_robot/msd700_hardware/launch/velodyne_scanner.launch`. On this unit, both are `192.168.103.231`.
+
+**Verify** it's working:
+
+```bash
+./setup.sh --configure-lidar
+ping 192.168.103.231
+```
+
+The `ping` should succeed once the interface is configured. Inside the running Docker container, `rostopic list | grep velodyne` should show the LiDAR point cloud topics.
+
+**Skip this step only if** this unit does **not** have a Velodyne VLP-16 (e.g., uses USB-only LiDAR, a different sensor model, or no LiDAR at all).
 
 ---
 
