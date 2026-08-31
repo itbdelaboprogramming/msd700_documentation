@@ -6,14 +6,15 @@ outline: deep
 
 <RoleBadge role="technician" />
 
-An optional local-mode feature: the Unit runs its own WiFi hotspot for an operator to join, gets
-automatically captured into its dashboard the moment they open any HTTP page (a captive portal, the
-same mechanism airports and cafes use), and, if a second radio is available, stays connected as a
-WiFi **client** to another network for internet/cloud-sync fallback. Both radios' state is shown on
-the [Local Mode badge](/development/data-sync#the-local-mode-badge), the same badge, the same
-dropdown, and an operator can connect to a different network from there.
+A standard part of every unit's local-mode setup ([Unit Setup](/setup/unit-setup) Step 6): the Unit
+runs its own WiFi hotspot for an operator to join, gets automatically captured into its dashboard
+the moment they open any HTTP page (a captive portal, the same mechanism airports and cafes use),
+and, if a second radio is available, stays connected as a WiFi **client** to another network for
+internet/cloud-sync fallback. Both radios' state is shown on the
+[Local Mode badge](/development/data-sync#the-local-mode-badge), the same badge, the same dropdown,
+and an operator can connect to a different network from there.
 
-Entirely optional. A unit that never runs the provisioning step below still works exactly as
+A unit that never runs the provisioning step below still works otherwise exactly as
 [Unit Setup](/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
 else is affected.
 
@@ -161,37 +162,50 @@ Everything below lives **outside Docker** on purpose: it has to survive `local_d
 it has to come up the instant a dongle is plugged into a unit that has never run
 `docker-manager.sh` at all.
 
-### 1. Plug in the dongle, set a password
+### 1. Plug in the dongle
 
-`docker/.env` (created from `docker/.env.example` on first run if it doesn't exist yet) needs a
-hotspot password before anything is provisioned:
+Nothing needs to be set in `docker/.env` by hand first, plug in the validated USB WiFi dongle and
+move on to provisioning below; the password and every other setting are asked for interactively at
+that point.
+
+If `nmcli` is not already on the host:
 
 ```bash
-# msd700_noetic/docker/.env
-AP_PASSWORD_LOCAL=your-hotspot-password   # 8+ characters, required
+sudo apt install network-manager
 ```
-
-::: warning Do not commit a real password to `docker/.env`
-That file is **tracked by git**. Passing the password inline on the provisioning command below (step
-2) avoids ever writing it to disk on this repository checkout, `setup.sh` sources `docker/.env`
-without overriding variables already present in the environment, so an inline value wins, and
-nothing needs the password afterwards: NetworkManager stores the STA key itself, hostapd's own
-config file (`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one, and later hotspot
-changes go through [the dashboard's badge menu](#changing-the-unit-s-own-hotspot).
-:::
-
-Everything else, `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL`, `AP_SSID_LOCAL`, is auto-detected or
-defaulted, see [Configuration reference](#configuration-reference-docker-env) below if a value needs
-to be overridden by hand.
 
 ### 2. Provision
 
+Run from an interactive terminal (a human at the keyboard, not a piped or non-TTY session):
+
 ```bash
-sudo apt install network-manager     # if nmcli is not already on the host
+./setup.sh --provision-network
+```
+
+create-next-app style, it walks through every setting, interface names, SSID, and hotspot password,
+showing the auto-detected or current value as a `[default]`, press Enter to accept it or type a new
+one. The hotspot password is typed twice to confirm and, along with any upstream WiFi password
+entered for the STA side, is deliberately **never** written to `docker/.env` or any other file on
+disk, NetworkManager stores the STA key itself and hostapd's own config file
+(`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one. Every other answer (interface
+names, SSID) is saved back to `docker/.env` so a re-run, or a human skimming the file, sees the real
+values, see [Configuration reference](#configuration-reference-docker-env) below.
+
+::: info Unattended / scripted provisioning
+Without a TTY, or with `MSD700_NONINTERACTIVE=1`, the prompts above are skipped entirely and
+`docker/.env` (created from `docker/.env.example` on first run if it doesn't exist yet) plus the
+environment are taken as-is instead, so automation still works:
+
+```bash
 AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
 ```
 
-No need to look up interface names by hand first. This one command:
+`docker/.env` is **tracked by git**, so a real password belongs on the command line as shown, never
+committed to the file, `setup.sh` sources `docker/.env` without overriding variables already present
+in the environment, so an inline value wins.
+:::
+
+No need to look up interface names by hand first either way. This one command:
 
 1. **Installs udev rules.** Every `*.rules` file in `scripts/udev/`, not just the WiFi one, the
    STM32 and RealSense rules already in the repo had no install path of their own until this
@@ -470,8 +484,10 @@ pointing at the wrong interface name is the usual cause after swapping to a diff
 NetworkManager is not installed on the host. `sudo apt install network-manager`.
 
 **`--provision-network` fails, "AP_PASSWORD_LOCAL is not set"**
-Password missing or under 8 characters. Set an 8+ character password in `docker/.env` or pass it
-inline, then re-run.
+Only happens on a non-interactive run (no TTY, or `MSD700_NONINTERACTIVE=1`): password missing or
+under 8 characters. Set an 8+ character password in `docker/.env` or pass `AP_PASSWORD_LOCAL`
+inline, then re-run. An interactive run instead prompts for the password directly and re-prompts on
+a short or mismatched entry.
 
 **Clients connect to the hotspot but get no IP**
 Check `systemctl status msd700-hotspot-dhcp.service` and `journalctl -u msd700-hotspot-dhcp.service`.
