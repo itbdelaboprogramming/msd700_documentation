@@ -472,6 +472,14 @@ automatically on every later run.
 container **and** to compose. They used to be derived independently on both sides, which is exactly
 how `--dev` broke on a unit: `run_msd.sh` moved the master to 11312 while `backend_local` kept
 asking 11311, so the master existed and nothing could find it.
+
+The same rule now applies **inside** `run_msd.sh` to the enrolment backend. `resolve_enroll_base_url()`
+derives one `ENROLL_BASE_URL` (`ENROLL_SERVER_URL`, then the `--dev` dev backend, then production) and
+both consumers use it: the boot-time "which unit am I" resolution **and** the token refresher that
+renews `token.cred` every 6 hours. They used to diverge, because the refresher hardcoded the
+production `CLOUD_BASE_URL`, so `run_msd.sh --dev` enrolled on the dev backend but refreshed against
+production, which rejected the dev-minted `device_secret` with `401 reenroll` on every refresh
+(2026-09-01 incident).
 :::
 
 ### What `up` does, in order
@@ -509,6 +517,12 @@ Two more of those steps exist because of failures that looked like nothing at al
   of them up on a robot that has never enrolled and Docker, finding no such host file, creates a
   root-owned empty **directory** there. `enroll.py` then cannot write the token it just earned, and
   the robot re-enrols from scratch on every boot.
+- **The token refresher never deletes `device.json`.** `run_msd.sh` runs `enroll.py --refresh`
+  every 6 hours to keep `token.cred` fresh. On a `401 reenroll` it now logs and stops, leaving
+  `device.json` in place; only a real boot may clear it. Before this, a refresh against the wrong
+  backend (or a brief server fault) deleted the identity file, and the next restart forced a full
+  admin re-approval, on nearly every restart once the refresher and the boot resolver had drifted
+  onto different backends.
 - **The staleness check itself.** `Dockerfile.webui-local` **COPY**s the source into the image; there
   is no bind mount for those services. Without comparing source-file mtimes against the image build
   time (plus the port and deployment-mode labels), a unit would have no way to notice it is serving

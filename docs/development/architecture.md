@@ -254,7 +254,7 @@ flowchart TB
 ```
 
 1. **Operator Tokens**: Standard HS256 JWTs verified against the `/srv/msd/secrets/` keyring. Tokens include user IDs and account scope. Admin tokens (`typ=admin`) are rejected by standard robot operation routes.
-2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours and refreshed on every system boot.
+2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours, refreshed on every system boot and again every 6 hours while the robot is up. The refresher and the boot-time identity resolver target the **same** backend (`ENROLL_BASE_URL` in `run_msd.sh`); a `401 reenroll` during a background refresh is logged and never touches `device.json`.
 3. **Unit Local Tokens**: Issued locally by `backend_local` on the Jetson computer. Cloud-signed tokens are intentionally rejected by local endpoints to ensure complete local autonomy during network partitions.
 
 ## Operating Lease: Preventing Multi-Operator Conflicts
