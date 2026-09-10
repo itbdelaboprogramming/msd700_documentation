@@ -119,6 +119,51 @@ $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta
 
 When the match score confidence exceeds $65\%$, the estimated pose is published to `/initialpose`, localizing the robot in less than $50\text{ ms}$ with zero rotational motion.
 
+---
+
+## In-Place Rotation Is Denied By Default
+
+Zero-spin alignment removed the *reason* to rotate. The rotation guard removes the *ability*, because several parts of the stack still reached for a spin on their own.
+
+`rotation_guard` (`msd700_control`) sits between `twist_mux` and the base, on the shared `cmd_vel` path, so it covers every rotation source at once rather than one plugin at a time. A command counts as in-place rotation when `|angular.z| > 0.05` and `|linear.x| <= 0.05`; arcs and straight-line motion pass through untouched, because they translate the footprint as well as turning it and the local planner already owns that case.
+
+An in-place rotation reaches the wheels only if **both** gates agree:
+
+```mermaid
+flowchart TD
+  CMD["Twist from twist_mux"] --> INPLACE{"Pure in-place rotation?"}
+  INPLACE -->|"No, it is an arc"| PASS["Pass through unchanged"]
+  INPLACE -->|Yes| CONSENT{"Live matching command on<br/>/mux/allign or /mux/key_vel?"}
+  CONSENT -->|"No, it is autonomous"| ZERO["angular.z = 0<br/>linear.x preserved"]
+  CONSENT -->|Yes| SWEEP{"Swept footprint clear<br/>on the live scan?"}
+  SWEEP -->|No| ZERO
+  SWEEP -->|Yes| PASS
+```
+
+**Gate 1, consent.** The only rotations honoured are the ones a person asked for: Map Sync's **Auto Align** (`/mux/allign`, published by `align_checker` after the operator presses the button) and **manual WASD** (`/mux/key_vel`, typed locally or relayed from the dashboard). The outgoing twist must turn the same way and no faster than what that source asked for, within a 5% tolerance, and the consent expires 1 second after the source stops publishing. `/mux/nav_vel` is deliberately absent: everything autonomous arrives there.
+
+**Gate 2, geometry.** The swept footprint is tested against the live scan rather than the costmap. This gate is documented in full in `rotation_guard.py`; the short version is that the costmap is the wrong oracle for rotation, because the swept band sits inside the LiDAR's minimum range and the obstacle layer raytraces the mark away as the robot closes on it.
+
+### What this turned off
+
+| Source | Was | Now |
+| --- | --- | --- |
+| `rotate_recovery` | Last rung of move_base's recovery ladder | Not loaded. `recovery_behaviors` lists only the two costmap resets, neither of which commands motion |
+| TEB terminal pivot | Turned to face the goal heading at every waypoint | Gone. `yaw_goal_tolerance: 3.15` accepts any final heading |
+| TEB initial pivot | Turned on the spot when the path led off behind the robot | Reverses instead. `allow_init_with_backwards_motion: true` |
+| `SYNC` command (`nav_controller`) | 10 s of open-loop `0.5 rad/s`, no obstacle check | No-op. Use Auto Align, which scan-matches first |
+
+::: warning Waypoint headings
+`yaw_goal_tolerance: 3.15` is correct only because no waypoint in this system carries a heading anyone chose. The dashboard builds every pin from a map click and fills the quaternion with the identity, so a tight tolerance was buying a pivot at every pin to satisfy an unset struct field. If waypoints ever gain a real heading, this has to be reconsidered, and a pivot at each one comes back with it.
+:::
+
+### Escape hatches
+
+- `rotation_guard/allow_in_place: true` reverts to the geometry gate alone, so any source may spin as long as the sweep is clear.
+- `twist_mux.launch guard_rotation:=false` removes the node entirely and restores the pre-guard wiring, with no checks of any kind.
+
+Neither is appropriate for the field robot. A local planner that decides it must pivot before it can proceed will now sit still and eventually abort its goal, and that trade is deliberate: an aborted goal is visible and recoverable, a blind spin into a shelf is neither.
+
 ## Related Documentation
 
 - [Simulation](/ja/development/simulation): Warehouse testing environment and scale models.

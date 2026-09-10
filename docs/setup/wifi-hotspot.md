@@ -334,7 +334,7 @@ never open it.
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
 | `GET /local/wifi/status` | none | Hotspot state (up? SSID? client count, read via `iw dev <ap-iface> info` / `station dump`), client state (connected? SSID? IP? internet reachable, via `nmcli networking connectivity`?) |
-| `GET /local/wifi/scan` | none | Nearby SSIDs and security type, for the dropdown |
+| `GET /local/wifi/scan` | none | Nearby SSIDs and security type, for the dropdown. **Excludes this unit's own hotspot**, see below |
 | `GET /local/wifi/saved` | none | Known client profiles |
 | `GET /local/wifi/hotspot` | none | This unit's own hotspot SSID and the outcome of the last change. **Never returns the password** |
 | `POST /local/wifi/connect` | operator session | Connect the client radio to a chosen network |
@@ -346,6 +346,25 @@ The mutating routes require the same operator session every other `/api/*` route
 accounts yet has nobody who could log in. Connecting to a network (and handing over a password) is
 a meaningfully more sensitive action than reading a sync timestamp, so it does not get the same
 pre-login exception.
+
+### The unit's own hotspot never appears in the scan
+
+A unit with two radios scans on the client one while the other broadcasts the hotspot, so its own
+hotspot is a perfectly strong network in its own results, usually the strongest and therefore first
+in the list. The operator is almost always reading that list **through** that hotspot, so picking it
+tells the unit to join itself: the client radio associates with the AP a few centimetres away, the
+hotspot drops the operator while it reconfigures, the page reloads onto a network that leads
+nowhere, and the obvious thing to do on screen is to pick the same entry again. Since 2026-09-10
+`scan()` drops it, and `connect()` refuses it outright with `own_hotspot` (rendered in the panel as
+a sentence explaining why the strongest network is the one to avoid). Filtering the list alone would
+only make the loop unlikely, a stale dropdown held across a hotspot rename, or a hand-typed SSID,
+still reaches `connect()`.
+
+The SSID to exclude is read from two places, because either can be the only one available.
+`iw dev <ap-iface> info` reports what is actually on the air right now, whoever put it there
+(`hostapd` or NetworkManager), and the NM profile's `802-11-wireless.ssid` reports what is
+configured even while the AP is momentarily down mid-restart. Both lookups fail soft: not knowing
+our own SSID costs a filtered entry, never the whole scan.
 
 ## Changing the unit's own hotspot
 

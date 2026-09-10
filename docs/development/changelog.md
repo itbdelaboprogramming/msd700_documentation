@@ -10,6 +10,12 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 
 ## Architectural Milestones
 
+### September 2026: Bandwidth Optimisation & Per-Unit Data Scope
+- **Presence-Gated Egress**: Robot-to-cloud telemetry now reads `/msd700/viewers` and sends at a rate matched to whether anyone is watching. Overlays and the occupancy grid are sent on change rather than on a timer, and the four overlay topics are latched on the cloud bridge so a reconnecting tab still gets its drawing.
+- **Per-Unit Map Scope**: Map listings, single-map reads and `POST /api/navigation/init` are scoped to the unit being driven as well as the rental. A rental holding several robots no longer lists every robot's maps together, and a sibling's map is refused at the API instead of failing on the robot.
+- **Recovery Reach over Message Count**: Snapshot rebuild now also triggers on an `Idle` tab with no mode selected (the state left by re-opening a map from the Database page), and the resync prompt reaches 9.4 s instead of 3.4 s. Neither the Navigation page nor the map component overwrites its persisted status or mode on mount.
+- **Self-Join Prevention**: The unit's own hotspot is excluded from its WiFi scan and refused by `connect()`, so an operator reading the list through that hotspot cannot tell the unit to join itself.
+
 ### August 2026: Documentation Overhaul & Precision Kinematics
 - **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.
 - **True-Scale Gazebo Simulation**: Upgraded simulator model to `msd700_field` ($0.90 \times 0.70\text{ m}$ body footprint with 4 casters) operating in the AWS RoboMaker Small Warehouse.

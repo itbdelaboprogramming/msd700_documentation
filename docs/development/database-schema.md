@@ -51,6 +51,14 @@ rental ends keeps their maps even though they can no longer drive the unit that 
 [API Reference § Rental profiles](/development/api-reference#rental-profiles) for how that plays out
 at the access layer.
 
+That rule answers "may I see this row at all". It is not the same question as "which maps belong on
+screen while I am driving THIS robot", and the two were conflated until 2026-09-10. A rental holding
+several robots listed every robot's maps together in the Database page, with nothing on screen
+saying which was which; picking a sibling's map handed the robot a map ULID whose files it had never
+recorded, so navigation init went out, the unit could not resolve the map and the run died there
+while the dashboard reported a successful start. `unit_id` now narrows the operating views on top of
+the rental scope: both are required, neither replaces the other.
+
 ## Enrolment
 
 | Table | Purpose | Key columns |

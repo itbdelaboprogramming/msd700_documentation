@@ -166,6 +166,35 @@ sequenceDiagram
 2. **Latched Snapshot Rebuild**: The entire mission state (active waypoints, current index, travel direction, and coverage polygons) is restored from the latched `/string/operation_snapshot` ROS topic.
 3. **Ghost State Validation**: If the browser cache indicates a mission in progress but the robot reports `idle` across 8 consecutive telemetry samples, the frontend automatically resets to `idle` to prevent phantom execution displays.
 
+### What triggers a snapshot rebuild
+
+The rebuild is not limited to a brand-new tab. It runs whenever the tab has no local session worth
+keeping, which is any of:
+
+- the login router set `nav_recovery_pending` (it routed the operator here to resume), or
+- the page auto-resolved the operating map for a tab that had nothing cached, or
+- `navStatus` is absent **or `Idle`** and no mode is selected.
+
+That third condition reads "or Idle" for a reason. Re-opening a map from the Database page throws
+the tab's whole navigation state away on purpose (`flushNavigationRecoveryState`), and the
+Navigation page then seeds `navStatus` from its own initial `Idle` state a tick later. While the
+condition required the key to be **absent**, the one entry point that deliberately discarded its
+local state was also the only one that could not rebuild it: an operator who left the map and came
+back mid-run found the coverage-area overlay gone, no pins, and no way to get them back short of a
+new login. Neither the page nor the map component now writes its persisted status or mode on mount;
+only the restore path seeds those keys.
+
+A snapshot naming a **different** map than the one the tab has open is ignored rather than applied.
+The rebuild re-selects the map the run belongs to, which is correct for a tab that arrived with no
+map and wrong for an operator who just picked one by hand.
+
+Because the latched value cannot be relied on to reach a brand-new MQTT subscriber, the dashboard
+also prompts the supervisor to republish, at 0, 0.9, 3.4 and 9.4 s. The count is kept small since an
+idle robot answers none of them, but the **reach** matters more than the count: this is a
+browser to rosbridge to MQTT to unit round trip, and a schedule that gave up after a few seconds
+abandoned live runs on exactly the weak links the rest of the bandwidth work exists to survive. The
+subscription outlives the schedule, so a later snapshot is still applied.
+
 ## Related Documentation
 
 - [Message Contracts](/development/message-contracts): Serialized topic schemas and heartbeat ping envelopes.

@@ -250,9 +250,15 @@ Launches the navigation stack on the robot with a specified map.
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "map_name": "01JZ8QK2H0000000000000MAP"
+  "map_id": "01JZ8QK2H0000000000000MAP"
 }
 ```
+
+The map must be one this unit recorded, inside a rental the caller is on. A map that is visible to
+the caller but belongs to a **different** robot is refused here with `404` and
+`"That map does not belong to this unit"`. Before 2026-09-10 it was forwarded: the robot then tried
+to fetch map files it had never uploaded, navigation never came up, and the failure surfaced only in
+the unit's logs while the dashboard had already shown a successful start.
 
 ### 2. Dispatch Waypoint Goal
 `POST /api/navigation/pointstamped`
@@ -334,7 +340,14 @@ Saves the active occupancy grid, generates thumbnail metadata, and uploads asset
 ## Map and Route Data Management
 
 ### 1. List Maps
-`GET /api/maps?profile_id=4`
+`GET /api/maps_data?unit_id=<unit ULID>`
+
+`unit_id` is optional on the wire and mandatory in practice for anything an operator sees. Without
+it the response is every map in the caller's rental scope, which is what the archive and admin
+views want. With it the list is narrowed to the maps that robot recorded, which is what the
+Database page needs: a rental can hold several robots, and a map recorded by a sibling cannot be
+navigated on this one. Passing a unit the caller has no active rental on is a `403`, not an empty
+list. `GET /api/maps/:mapId` takes the same parameter and applies the same scope.
 
 - **Response (200 OK)**:
 ```json
@@ -342,16 +355,27 @@ Saves the active occupancy grid, generates thumbnail metadata, and uploads asset
   "success": true,
   "data": [
     {
-      "id": 12,
-      "ulid": "01JZ8QK2H0000000000000MAP",
-      "display_name": "Warehouse Ground Floor",
-      "thumbnail_url": "/services/media/thumbnails/01JZ8QK2H0000000000000MAP.png",
+      "id": "01JZ8QK2H0000000000000MAP",
+      "map_name": "Warehouse Ground Floor",
+      "unit_id": "01JZ7K3M9QA0B1C2D3E4F5G6H7",
+      "unit_name": "unit1",
+      "created_by_username": "operator1",
+      "modified_by_username": "operator1",
       "created_at": "2026-08-10T14:20:00Z",
-      "modified_at": "2026-08-10T14:20:00Z"
+      "modified_at": "2026-08-10T14:20:00Z",
+      "homebase_x": 0.0,
+      "homebase_y": 0.0
     }
   ]
 }
 ```
+
+::: warning Map names are only unique per (unit, rental)
+Two robots on one rental may each hold a map called `hazard test`, and they are different maps with
+different ULIDs. Do not deduplicate a map list by name: dropping the second entry drops a real map
+and keeps a neighbouring robot's, and opening that name then resolves to a ULID the robot cannot
+load. Deduplicate by `id`, and scope by `unit_id`.
+:::
 
 ### 2. Save Custom Waypoint Route
 `POST /api/routes`
