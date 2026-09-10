@@ -15,6 +15,7 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 - **Per-Unit Map Scope**: Map listings, single-map reads and `POST /api/navigation/init` are scoped to the unit being driven as well as the rental. A rental holding several robots no longer lists every robot's maps together, and a sibling's map is refused at the API instead of failing on the robot.
 - **Recovery Reach over Message Count**: Snapshot rebuild now also triggers on an `Idle` tab with no mode selected (the state left by re-opening a map from the Database page), and the resync prompt reaches 9.4 s instead of 3.4 s. Neither the Navigation page nor the map component overwrites its persisted status or mode on mount.
 - **Self-Join Prevention**: The unit's own hotspot is excluded from its WiFi scan and refused by `connect()`, so an operator reading the list through that hotspot cannot tell the unit to join itself.
+- **Mode-Preserving Boot Autostart**: `msd700.service` now carries the `--dev` and `--simulator` flags of the `up` that armed it. The boot unit previously re-ran a bare `up`, so a robot started against the dev cloud, or as a simulator, silently returned after a reboot as hardware against production.
 
 ### August 2026: Documentation Overhaul & Precision Kinematics
 - **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.

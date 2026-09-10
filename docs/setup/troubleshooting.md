@@ -76,6 +76,15 @@ at their cause:
   does not fix it, because the stale value lives on the ROS master, not in any one node. This is a
   code-level bug, not a deployment mistake; escalate it rather than trying to work around it locally.
 
+- **A unit brought up with `--dev` logs its broker as `msd.nglobal.jp`.** That hostname is shared:
+  dev and production run on the same machine, separated only by the published MQTT port, and the
+  broker's TLS certificate is issued for that name. `msd.nglobal.jp:8884` is the dev broker;
+  `:8883` is production. Read the port before assuming the peer is wrong.
+- **A unit started with `--dev` or `--simulator` comes back after a reboot as hardware on
+  production.** `msd700.service` used to re-run a bare `up`, dropping the mode flags of the `up`
+  that armed it. Fixed in September 2026 by baking those flags into `ExecStart`; on a unit that
+  has not taken the fix, check with `grep ExecStart /etc/systemd/system/msd700.service` and re-run
+  `up` with the flags you want, which rewrites the unit.
 - **A robot that is plainly driving shows a "Robot Stuck" banner.** That has always turned out to be
   `idle_detector`'s own logic (a sticky anchor point, or a displacement threshold too large for slow
   motion), never the frontend. See

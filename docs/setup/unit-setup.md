@@ -237,6 +237,30 @@ To point the unit at a development cloud server instead of production:
 
 This connects MQTT to dev port `8884` and synchronizes with the development database.
 
+**The broker hostname stays `msd.nglobal.jp` on the dev cloud too.** Dev and production are the
+same machine, separated only by the published port, and the broker's TLS certificate is issued for
+that name, so pointing MQTT at a bare IP would fail verification. A log line reading
+`mqtts://msd.nglobal.jp:8884` is therefore the **dev** broker. Read the port, not the hostname:
+
+| Peer | Broker | Backend | ROS master |
+| --- | --- | --- | --- |
+| Production (no flag) | `msd.nglobal.jp:8883` | `https://msd.nglobal.jp/services/rosbackend` | `11311` |
+| Dev (`--dev`) | `msd.nglobal.jp:8884` | `http://118.22.31.252:5001` | `11312` |
+
+**The mode is remembered across reboots.** `up` arms `msd700.service`, and since the
+September 2026 fix the `--dev` and `--simulator` flags of that `up` are written into the unit's
+`ExecStart`. Before it, the boot unit re-ran a bare `up`, so a robot started with
+`up --simulator --dev` came back after a reboot as **hardware, against production**. Confirm what
+is armed with:
+
+```bash
+./scripts/docker-manager.sh print-autostart-unit --simulator --dev   # what would be written
+grep ExecStart /etc/systemd/system/msd700.service                    # what is armed now
+```
+
+`up` also prints it: `Boot autostart armed (DEV cloud, simulator)`. Re-running `up` with different
+flags rewrites the unit; `down` disarms it entirely.
+
 </details>
 
 <details>
