@@ -237,6 +237,31 @@ To point the unit at a development cloud server instead of production:
 
 This connects MQTT to dev port `8884` and synchronizes with the development database.
 
+::: danger Never let this unit reach the cloud's ROS master
+This robot's roscore is on `11321`/`11322`, deliberately clear of the cloud server's
+`11311`/`11312`. They used to share those numbers, so `localhost:11312` meant a different master
+depending on the machine. A VS Code Remote session or `ssh -L` forwarding the server's port was
+enough: `roscore` could not bind and quit, the readiness probe still passed because the tunnel
+answered, and the whole unit stack registered on the **cloud** master. ROS kills the older node
+whenever a name is claimed twice, so it evicted the server's own `/rosbridge_websocket` and
+`/backend_node`; live topics vanished from the cloud dashboard (the mapping map first) while the
+local dashboard looked perfectly fine. That was 2026-09-10.
+
+Two guards now. The ports no longer overlap, and `run_msd.sh` refuses to start unless a `rosmaster`
+of its own runs on that port and the master's `/msd700/stack_role` is not `cloud` (every roscore
+stamps that param; `run_msd.sh` adds `/msd700/stack_host`). Cloud node names carry a `_cloud`
+suffix as a last resort, so a stack that does end up on the wrong master no longer evicts anything.
+
+```bash
+ss -ltnp | grep :11322                     # who owns the port
+rosparam get /msd700/stack_role            # whose master answers
+src/ros-web-ui/scripts/ros_doctor.sh       # owner, foreign nodes, rosbridge, in one verdict
+```
+
+Close the forward (VS Code: PORTS panel), or move this robot with
+`ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d`.
+:::
+
 </details>
 
 <details>

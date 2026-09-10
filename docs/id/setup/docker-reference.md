@@ -429,7 +429,7 @@ unit's own server stack) so they cannot disagree.
 | Flag | Applies to | Effect |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Use the Gazebo image (`msd700-simulator:latest`) and container. Forwarded to `run_msd.sh` too, because that is what actually sets `use_simulator_val:=true` |
-| `--dev` | `up` | Which **cloud** is this unit's peer: the dev stack instead of production. Changes MQTT to 8884, the ROS master to 11312, and enrolment to the dev backend |
+| `--dev` | `up` | Which **cloud** is this unit's peer: the dev stack instead of production. Changes MQTT to 8884, this robot's own ROS master to 11322, and enrolment to the dev backend |
 | `--build` | `up` | Rebuild the image before starting |
 | `-d`, `--detach` | `up` only | Hand the terminal back once everything is running |
 | `--debug` | forwarded | `run_msd.sh` verbose mode. **Type it in full**: `-d` is this script's detach flag |
@@ -465,14 +465,14 @@ automatically on every later run.
 | `DEV_SERVER_HOST` | `118.22.31.252` | Where `--dev` points. Set to `localhost` when running on that host |
 | `DEV_BACKEND_PORT` | `5001` | Backend port for `--dev` |
 | `CLOUD_BASE_URL` | derived | Points a whole fleet at a different cloud without a code change |
-| `ROS_MASTER_PORT` | `11312` with `--dev`, else `11311` | Handed to **both** the container and `backend_local`, so they cannot disagree |
+| `ROS_MASTER_PORT` | `11322` with `--dev`, else `11321` | Handed to **both** the container and `backend_local`, so they cannot disagree. Never the cloud's `11311`/`11312` |
 | `BACKEND_PORT_LOCAL` | `5002` | What the local dashboard's browser talks to, and where `camera_client` fetches a unit-local token |
 
 ::: warning One decision, handed to both halves
 `CLOUD_BASE_URL` and `ROS_MASTER_PORT` are resolved once in `docker-manager.sh` and passed to the
 container **and** to compose. They used to be derived independently on both sides, which is exactly
-how `--dev` broke on a unit: `run_msd.sh` moved the master to 11312 while `backend_local` kept
-asking 11311, so the master existed and nothing could find it.
+how `--dev` broke on a unit: `run_msd.sh` moved the master while `backend_local` kept asking for
+the old port, so the master existed and nothing could find it.
 :::
 
 ### What `up` does, in order
@@ -525,7 +525,7 @@ Runs **inside** the robot container and launches every ROS service in a tmux ses
 | Flag | Effect |
 | --- | --- |
 | `-s`, `--simulator` | Data source is Gazebo instead of the robot's hardware |
-| `--dev` | Everything dev: MQTT 8884, ROS master 11312, dev signalling, dev enrolment. The unit's **own** service ports do not shift |
+| `--dev` | Everything dev: MQTT 8884, this robot's ROS master 11322, dev signalling, dev enrolment. The unit's **own** service ports do not shift |
 | `-d`, `--debug` | Verbose output |
 | `-n`, `--dry-run` | Print the commands without running them |
 | `-k`, `--kill` | Kill the tmux session and exit |

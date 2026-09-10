@@ -73,6 +73,15 @@ flowchart TD
   2. Confirm the mismatch directly: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — a manual `Access denied` confirms drift rather than a transient blip.
 - **Resolution**: Either revert `docker/.env` to the password the volume was initialized with, or, if the rotation was intentional, run `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` against the local MySQL as root so the database matches the new `.env` value. Do not wipe `mysql_data_local` to "fix" this — it is the unit's only local copy of maps/routes not yet synced to the cloud, and this failure mode means sync itself is not currently working.
 
+### 7. Cloud Dashboard Has No Live Topics (ROS Master Hijacked by a Forwarded Port)
+- **Symptom**: The cloud dashboard shows status, activity and saved maps normally, but nothing live: no map while mapping, no lidar, no robot pose. The unit's own local dashboard works perfectly. The backend container still reports `Up`.
+- **Root Cause**: A unit stack registered on the **cloud** ROS master instead of its own, and ROS shuts down the older node whenever a name is claimed twice, so the server lost its `/rosbridge_websocket` (and `/backend_node`). The usual route in is a VS Code Remote or `ssh -L` session forwarding the server's master port to a laptop, which makes a remote master answer on `localhost`. Units now use `11321`/`11322` and `run_msd.sh` refuses a master it does not own, but an override or a pre-fix checkout can still get there.
+- **Diagnostic Steps**:
+  1. Run `scripts/ros_doctor.sh` in the backend container. It names the master's owner, lists nodes registered from hosts this machine cannot reach, and says whether anything is listening on the rosbridge port.
+  2. The signature is a rosbridge node that IS registered but from a foreign hostname, next to nothing listening on 9090/9091.
+  3. `docker ps` shows the backend container `unhealthy` once its rosbridge healthcheck has had time to fail.
+- **Resolution**: Fix `ROS_MASTER_URI` on the machine that wandered in (close the port forward), then `rosnode cleanup` on the server and restart the backend container. Restarting first only starts a fight over the name.
+
 ## Related Documentation
 
 - [Architecture](/development/architecture): Two-channel communication models.
