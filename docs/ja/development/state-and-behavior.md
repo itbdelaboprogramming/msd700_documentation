@@ -167,6 +167,22 @@ sequenceDiagram
 2. **Latched Snapshot Rebuild**: The entire mission state (active waypoints, current index, travel direction, and coverage polygons) is restored from the latched `/string/operation_snapshot` ROS topic.
 3. **Ghost State Validation**: If the browser cache indicates a mission in progress but the robot reports `idle` across 8 consecutive telemetry samples, the frontend automatically resets to `idle` to prevent phantom execution displays.
 
+### What the rebuild paints first
+
+Order matters as much as content. The rebuild used to draw the coverage overlay only after it had
+fetched the map list and waited (up to 8 s) for the live grid to scale the stage, so an operator
+signing back into a running sweep watched a bare map for seconds before the areas appeared. The
+overlay needs neither: it is drawn in metres straight into the scene, and the snapshot already
+carries the plan. It now goes up first, and the stage-scale wait is skipped entirely for a coverage
+run, which has no pins to size. Pin restoration still waits for it, because a marker added to an
+unscaled stage renders at an invisible 0.01 scale.
+
+The same rule applies when a run **starts**: the areas are painted as the plan is dispatched, not
+when the robot acknowledges it. `POST /api/boustrophedon/init` answers only once `switch_mode` has
+brought the coverage stack up on the robot, which is seconds of the operator watching a map with
+nothing on it. A refused run clears the overlay again, and a refused single custom area redraws the
+cyan drawer polygon so the operator still has an area to retry with.
+
 ## Related Documentation
 
 - [Message Contracts](/ja/development/message-contracts): Serialized topic schemas and heartbeat ping envelopes.

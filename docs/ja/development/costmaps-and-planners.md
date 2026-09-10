@@ -42,13 +42,23 @@ $$\text{Cost}(d) = \begin{cases}
 \end{cases}$$
 
 ### Configured Inflation Parameters:
-- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0.425\text{ m}$ (half the width of the safety envelope).
-- **Inflation Radius ($r_{\text{inflation}}$)**: $0.575\text{ m}$ ($r_{\text{inscribed}} + 0.150\text{ m}$ safety margin).
-- **Cost Scaling Factor ($\alpha$)**: $5.0$.
+- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0.35\text{ m}$ (half the width of the planning footprint, `0.90 x 0.70 m`).
+- **Inflation Radius ($r_{\text{inflation}}$)**: $0.25\text{ m}$ (lowered from $0.70\text{ m}$ on 2026-09-11).
+- **Cost Scaling Factor ($\alpha$)**: $4.0$.
+
+::: warning The gradient band is currently empty
+$r_{\text{inflation}} < r_{\text{inscribed}}$, so the middle case of the piecewise cost above never
+applies: every inflated cell is inside the inscribed radius and takes the flat $253$, and nothing is
+inflated past $0.25\text{ m}$. The result is a hard $0.25\text{ m}$ collar with no decay tail, and
+that collar is narrower than the half-width the robot actually occupies, so navfn will route a
+centre-line a wall cannot accommodate and TEB has to deviate from it (`inflation_dist` $0.75$,
+`weight_inflation` $5.0$, plus the footprint check, are what hold the body off the wall).
+Restoring a real gradient means a value above $0.35\text{ m}$.
+:::
 
 ```yaml
 # config/costmap/costmap_common_params.yaml
-footprint: [[-0.60, -0.425], [-0.60, 0.425], [0.60, 0.425], [0.60, -0.425]]
+footprint: [[-0.45, -0.35], [0.45, -0.35], [0.45, 0.35], [-0.45, 0.35]]
 footprint_padding: 0.01
 
 obstacle_layer:
@@ -67,8 +77,8 @@ obstacle_layer:
 
 inflation_layer:
   enabled: true
-  inflation_radius: 0.575
-  cost_scaling_factor: 5.0
+  inflation_radius: 0.25
+  cost_scaling_factor: 4.0
 ```
 
 ---
