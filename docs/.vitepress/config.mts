@@ -54,55 +54,70 @@ const enSidebar = {
   ],
   '/development/': [
     {
-      text: 'System & Architecture',
+      text: 'Start Here',
       items: [
         { text: 'Overview', link: '/development/' },
         { text: 'System Architecture', link: '/development/architecture' },
         { text: 'Security & Auth', link: '/development/security-and-auth' },
-        { text: 'State & Behavior', link: '/development/state-and-behavior' },
         { text: 'Repository Structure', link: '/development/repository-structure' },
-      ]
-    },
-    {
-      text: 'Core Robotics & ROS',
-      items: [
         { text: 'ROS Package Registry', link: '/development/ros-packages' },
-        { text: 'Coordinate Transforms (TF)', link: '/development/tf-transforms' },
-        { text: 'Sensor Fusion & Control', link: '/development/sensor-fusion-and-control' },
-        { text: 'Firmware & Hardware', link: '/development/firmware-and-hardware' },
-        { text: 'Costmaps & Planners', link: '/development/costmaps-and-planners' },
-        { text: 'Dynamic Mode Switching', link: '/development/mode-switching' },
       ]
     },
     {
-      text: 'Algorithms & Simulation',
+      text: 'Boustrophedon Coverage Cleaning',
       items: [
         { text: 'Boustrophedon Coverage', link: '/development/boustrophedon-and-alignment' },
-        { text: 'Simulation (Gazebo)', link: '/development/simulation' },
       ]
     },
     {
-      text: 'Communication & Protocols',
+      text: 'Navigation & Path Planning',
       items: [
-        { text: 'Message Contracts (MQTT)', link: '/development/message-contracts' },
-        { text: 'REST API Reference', link: '/development/api-reference' },
-        { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
+        { text: 'Coordinate Transforms (TF)', link: '/development/tf-transforms' },
+        { text: 'Costmaps & Planners', link: '/development/costmaps-and-planners' },
+      ]
+    },
+    {
+      text: 'Robot Control, Sensing & Hardware',
+      items: [
+        { text: 'State & Behavior', link: '/development/state-and-behavior' },
+        { text: 'Dynamic Mode Switching', link: '/development/mode-switching' },
+        { text: 'Sensor Fusion & Control', link: '/development/sensor-fusion-and-control' },
+        { text: 'Firmware & Hardware', link: '/development/firmware-and-hardware' },
+      ]
+    },
+    {
+      text: 'Web Dashboard & Live Media',
+      items: [
         { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
+        { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
         { text: 'Camera Streaming (WebRTC)', link: '/development/camera-streaming' },
       ]
     },
     {
-      text: 'Data & Backend Infrastructure',
+      text: 'Cloud-Robot Messaging & API',
       items: [
+        { text: 'Message Contracts (MQTT)', link: '/development/message-contracts' },
+        { text: 'REST API Reference', link: '/development/api-reference' },
+      ]
+    },
+    {
+      text: 'Fleet, Data & Backup',
+      items: [
+        { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
         { text: 'Database Schema', link: '/development/database-schema' },
         { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
         { text: 'Backup & Restore', link: '/development/backup-and-restore' },
       ]
     },
     {
-      text: 'Lifecycle & Operations',
+      text: 'Simulation & Testing',
       items: [
-        { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
+        { text: 'Simulation (Gazebo)', link: '/development/simulation' },
+      ]
+    },
+    {
+      text: 'Reference & Process',
+      items: [
         { text: 'Diagnostics & Troubleshooting', link: '/development/troubleshooting-guide' },
         { text: 'Contributing Guide', link: '/development/contributing' },
         { text: 'Changelog', link: '/development/changelog' },
@@ -165,55 +180,70 @@ const idSidebar = {
   ],
   '/id/development/': [
     {
-      text: 'Sistem & Arsitektur',
+      text: 'Mulai Dari Sini',
       items: [
         { text: 'Ikhtisar', link: '/id/development/' },
         { text: 'Arsitektur Sistem', link: '/id/development/architecture' },
         { text: 'Keamanan & Autentikasi', link: '/id/development/security-and-auth' },
-        { text: 'State & Perilaku', link: '/id/development/state-and-behavior' },
         { text: 'Struktur Repositori', link: '/id/development/repository-structure' },
-      ]
-    },
-    {
-      text: 'Robotika Inti & ROS',
-      items: [
         { text: 'Daftar Paket ROS', link: '/id/development/ros-packages' },
-        { text: 'Transformasi Koordinat (TF)', link: '/id/development/tf-transforms' },
-        { text: 'Sensor Fusion & Kontrol', link: '/id/development/sensor-fusion-and-control' },
-        { text: 'Firmware & Perangkat Keras', link: '/id/development/firmware-and-hardware' },
-        { text: 'Costmap & Planner', link: '/id/development/costmaps-and-planners' },
-        { text: 'Pergantian Mode Dinamis', link: '/id/development/mode-switching' },
       ]
     },
     {
-      text: 'Algoritma & Simulasi',
+      text: 'Pembersihan Cakupan Boustrophedon',
       items: [
         { text: 'Cakupan Boustrophedon', link: '/id/development/boustrophedon-and-alignment' },
-        { text: 'Simulasi (Gazebo)', link: '/id/development/simulation' },
       ]
     },
     {
-      text: 'Komunikasi & Protokol',
+      text: 'Navigasi & Perencanaan Jalur',
       items: [
-        { text: 'Kontrak Pesan (MQTT)', link: '/id/development/message-contracts' },
-        { text: 'Referensi REST API', link: '/id/development/api-reference' },
-        { text: 'Protokol rosbridge (WS)', link: '/id/development/rosbridge-protocol' },
+        { text: 'Transformasi Koordinat (TF)', link: '/id/development/tf-transforms' },
+        { text: 'Costmap & Planner', link: '/id/development/costmaps-and-planners' },
+      ]
+    },
+    {
+      text: 'Kontrol Robot, Sensor & Perangkat Keras',
+      items: [
+        { text: 'State & Perilaku', link: '/id/development/state-and-behavior' },
+        { text: 'Pergantian Mode Dinamis', link: '/id/development/mode-switching' },
+        { text: 'Sensor Fusion & Kontrol', link: '/id/development/sensor-fusion-and-control' },
+        { text: 'Firmware & Perangkat Keras', link: '/id/development/firmware-and-hardware' },
+      ]
+    },
+    {
+      text: 'Dashboard Web & Media Langsung',
+      items: [
         { text: 'Canvas Frontend & Web UI', link: '/id/development/frontend-canvas' },
+        { text: 'Protokol rosbridge (WS)', link: '/id/development/rosbridge-protocol' },
         { text: 'Streaming Kamera (WebRTC)', link: '/id/development/camera-streaming' },
       ]
     },
     {
-      text: 'Data & Infrastruktur Backend',
+      text: 'Pesan Cloud-Robot & API',
       items: [
+        { text: 'Kontrak Pesan (MQTT)', link: '/id/development/message-contracts' },
+        { text: 'Referensi REST API', link: '/id/development/api-reference' },
+      ]
+    },
+    {
+      text: 'Armada, Data & Cadangan',
+      items: [
+        { text: 'Siklus Hidup Kontainer Unit', link: '/id/development/unit-container-lifecycle' },
         { text: 'Skema Database', link: '/id/development/database-schema' },
         { text: 'Sinkronisasi Data (Offline First)', link: '/id/development/data-sync' },
         { text: 'Cadangan & Pemulihan', link: '/id/development/backup-and-restore' },
       ]
     },
     {
-      text: 'Siklus Hidup & Operasional',
+      text: 'Simulasi & Pengujian',
       items: [
-        { text: 'Siklus Hidup Kontainer Unit', link: '/id/development/unit-container-lifecycle' },
+        { text: 'Simulasi (Gazebo)', link: '/id/development/simulation' },
+      ]
+    },
+    {
+      text: 'Referensi & Proses',
+      items: [
         { text: 'Diagnostik & Troubleshooting', link: '/id/development/troubleshooting-guide' },
         { text: 'Panduan Kontribusi', link: '/id/development/contributing' },
         { text: 'Catatan Rilis (Changelog)', link: '/id/development/changelog' },
@@ -276,55 +306,70 @@ const jaSidebar = {
   ],
   '/ja/development/': [
     {
-      text: 'システム & アーキテクチャ',
+      text: 'はじめに',
       items: [
         { text: '開発概要', link: '/ja/development/' },
         { text: 'システムアーキテクチャ', link: '/ja/development/architecture' },
         { text: 'セキュリティ & 認証', link: '/ja/development/security-and-auth' },
-        { text: '状態管理 & 動作制御', link: '/ja/development/state-and-behavior' },
         { text: 'リポジトリ構成', link: '/ja/development/repository-structure' },
-      ]
-    },
-    {
-      text: 'コアロボティクス & ROS',
-      items: [
         { text: 'ROSパッケージ一覧', link: '/ja/development/ros-packages' },
-        { text: '座標系変換 (TF)', link: '/ja/development/tf-transforms' },
-        { text: 'センサーフュージョン & 制御', link: '/ja/development/sensor-fusion-and-control' },
-        { text: 'ファームウェア & ハードウェア', link: '/ja/development/firmware-and-hardware' },
-        { text: 'コストマップ & プランナー', link: '/ja/development/costmaps-and-planners' },
-        { text: '動的モード切り替え', link: '/ja/development/mode-switching' },
       ]
     },
     {
-      text: 'アルゴリズム & シミュレーション',
+      text: 'ブストロフェドン清掃機能',
       items: [
         { text: 'ブストロフェドン網羅走行', link: '/ja/development/boustrophedon-and-alignment' },
-        { text: 'シミュレーション (Gazebo)', link: '/ja/development/simulation' },
       ]
     },
     {
-      text: '通信 & プロトコル',
+      text: 'ナビゲーション & 経路計画',
       items: [
-        { text: 'メッセージ仕様 (MQTT)', link: '/ja/development/message-contracts' },
-        { text: 'REST API リファレンス', link: '/ja/development/api-reference' },
-        { text: 'rosbridge プロトコル (WS)', link: '/ja/development/rosbridge-protocol' },
+        { text: '座標系変換 (TF)', link: '/ja/development/tf-transforms' },
+        { text: 'コストマップ & プランナー', link: '/ja/development/costmaps-and-planners' },
+      ]
+    },
+    {
+      text: 'ロボット制御・センシング & ハードウェア',
+      items: [
+        { text: '状態管理 & 動作制御', link: '/ja/development/state-and-behavior' },
+        { text: '動的モード切り替え', link: '/ja/development/mode-switching' },
+        { text: 'センサーフュージョン & 制御', link: '/ja/development/sensor-fusion-and-control' },
+        { text: 'ファームウェア & ハードウェア', link: '/ja/development/firmware-and-hardware' },
+      ]
+    },
+    {
+      text: 'Web ダッシュボード & ライブメディア',
+      items: [
         { text: 'フロントエンド Canvas & Web UI', link: '/ja/development/frontend-canvas' },
+        { text: 'rosbridge プロトコル (WS)', link: '/ja/development/rosbridge-protocol' },
         { text: 'カメラストリーミング (WebRTC)', link: '/ja/development/camera-streaming' },
       ]
     },
     {
-      text: 'データ & バックエンド基盤',
+      text: 'クラウド-ロボット通信 & API',
       items: [
+        { text: 'メッセージ仕様 (MQTT)', link: '/ja/development/message-contracts' },
+        { text: 'REST API リファレンス', link: '/ja/development/api-reference' },
+      ]
+    },
+    {
+      text: 'フリート・データ & バックアップ',
+      items: [
+        { text: 'ユニットコンテナライフサイクル', link: '/ja/development/unit-container-lifecycle' },
         { text: 'データベース設計', link: '/ja/development/database-schema' },
         { text: 'データ同期 (オフラインファースト)', link: '/ja/development/data-sync' },
         { text: 'バックアップ & リストア', link: '/ja/development/backup-and-restore' },
       ]
     },
     {
-      text: 'ライフサイクル & 運用',
+      text: 'シミュレーション & テスト',
       items: [
-        { text: 'ユニットコンテナライフサイクル', link: '/ja/development/unit-container-lifecycle' },
+        { text: 'シミュレーション (Gazebo)', link: '/ja/development/simulation' },
+      ]
+    },
+    {
+      text: 'リファレンス & プロセス',
+      items: [
         { text: '診断 & トラブルシューティング', link: '/ja/development/troubleshooting-guide' },
         { text: 'コントリビューションガイド', link: '/ja/development/contributing' },
         { text: '変更履歴 (Changelog)', link: '/ja/development/changelog' },
