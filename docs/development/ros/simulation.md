@@ -9,7 +9,7 @@ search: false
 
 This document describes how the MSD700 robot is simulated in Gazebo at true physical scale, the AWS RoboMaker Small Warehouse environment, sensor configurations, and what the simulator can and cannot validate.
 
-For coverage planning geometry derived from physical robot dimensions, see [Boustrophedon Coverage](/development/boustrophedon-and-alignment).
+For coverage planning geometry derived from physical robot dimensions, see [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment).
 
 ## Background: The True-Scale Dimension Model
 
@@ -107,6 +107,6 @@ Launch files accept `sim_body:=field` (default for warehouse launch) to configur
 
 ## Related Documentation
 
-- [Boustrophedon Coverage](/development/boustrophedon-and-alignment): Geometric path calculations and clearance tolerances.
+- [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment): Geometric path calculations and clearance tolerances.
 - [Repository Structure](/development/repository-structure): Directory layout of simulation packages.
 - [Architecture](/development/architecture): Full system communication topology.

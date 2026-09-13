@@ -94,6 +94,6 @@ sequenceDiagram
 
 ## Related Documentation
 
-- [Sensor Fusion and Control](/development/sensor-fusion-and-control): Kinematic state estimation and EKF.
-- [Costmaps and Planners](/development/costmaps-and-planners): Navigation costmap coordinate frames.
+- [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control): Kinematic state estimation and EKF.
+- [Costmaps and Planners](/development/ros/costmaps-and-planners): Navigation costmap coordinate frames.
 - [rosbridge Protocol](/development/rosbridge-protocol): WebSocket topic serialization.

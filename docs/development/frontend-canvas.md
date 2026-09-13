@@ -100,5 +100,5 @@ When an operator defines area coverage sweep polygons or keep-out zones:
 ## Related Documentation
 
 - [rosbridge Protocol](/development/rosbridge-protocol): WebSocket JSON operations and streaming topics.
-- [Boustrophedon Coverage](/development/boustrophedon-and-alignment): Dual-geometry sweep calculations.
+- [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment): Dual-geometry sweep calculations.
 - [API Reference](/development/api-reference): Map and route REST endpoints.

@@ -133,6 +133,6 @@ This ensures that obstacles (such as table legs, low pallets, and standing perso
 
 ## Related Documentation
 
-- [Costmaps and Planners](/development/costmaps-and-planners): Navigation layers and obstacle inflation.
-- [Firmware and Hardware](/development/firmware-and-hardware): Microcontroller pulse counting and PID loops.
-- [Simulation](/development/simulation): True-scale Gazebo sensor verification.
+- [Costmaps and Planners](/development/ros/costmaps-and-planners): Navigation layers and obstacle inflation.
+- [Firmware and Hardware](/development/ros/firmware-and-hardware): Microcontroller pulse counting and PID loops.
+- [Simulation](/development/ros/simulation): True-scale Gazebo sensor verification.

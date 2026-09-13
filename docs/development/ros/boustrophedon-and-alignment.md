@@ -165,6 +165,6 @@ Neither is appropriate for the field robot. A local planner that decides it must
 
 ## Related Documentation
 
-- [Simulation](/development/simulation): Warehouse testing environment and scale models.
+- [Simulation](/development/ros/simulation): Warehouse testing environment and scale models.
 - [Message Contracts](/development/message-contracts): Coverage command envelopes and ACK protocols.
 - [State and Behavior](/development/state-and-behavior): Navigation and coverage finite state machines.

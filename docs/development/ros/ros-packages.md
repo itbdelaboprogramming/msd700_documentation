@@ -123,5 +123,5 @@ Encrypted transport bridge linking local ROS topics to the central HiveMQ broker
 ## Related Documentation
 
 - [Architecture](/development/architecture): High-level system structure and seams.
-- [Sensor Fusion and Control](/development/sensor-fusion-and-control): Detailed EKF and sensor pipeline setup.
+- [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control): Detailed EKF and sensor pipeline setup.
 - [State and Behavior](/development/state-and-behavior): Detailed state machines for all control nodes.

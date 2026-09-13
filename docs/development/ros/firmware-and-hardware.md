@@ -124,6 +124,6 @@ To prevent runaway robot conditions caused by host OS lockups or severed serial 
 
 ## Related Documentation
 
-- [Sensor Fusion and Control](/development/sensor-fusion-and-control): Odometry integration and EKF.
-- [Costmaps and Planners](/development/costmaps-and-planners): Velocity limit parameters.
+- [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control): Odometry integration and EKF.
+- [Costmaps and Planners](/development/ros/costmaps-and-planners): Velocity limit parameters.
 - [State and Behavior](/development/state-and-behavior): Emergency stop state machines.

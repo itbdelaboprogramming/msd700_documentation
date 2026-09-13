@@ -118,6 +118,6 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 
 ## Related Documentation
 
-- [Boustrophedon Coverage](/development/boustrophedon-and-alignment): Coverage geometry and cell decomposition.
-- [Sensor Fusion and Control](/development/sensor-fusion-and-control): Kinematic state estimation and EKF.
-- [Simulation](/development/simulation): Warehouse testing environment.
+- [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment): Coverage geometry and cell decomposition.
+- [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control): Kinematic state estimation and EKF.
+- [Simulation](/development/ros/simulation): Warehouse testing environment.

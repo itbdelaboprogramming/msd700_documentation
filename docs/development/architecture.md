@@ -280,11 +280,29 @@ flowchart LR
 - When an operator opens a robot dashboard, the client acquires a 15-second lease renewed continuously by heartbeat pings.
 - If a second operator attempts to send commands, the robot returns an `In Use` status. Takeover requires explicit confirmation from the original operator or lease expiration.
 
+## State Ownership and Persistence Matrix
+
+The core architectural principle of MSD700: **the physical robot is the ultimate source of truth**. Toggles, leases, and operational progress reside on the robot computer (`system_command.py` and `operation_supervisor.py`), surviving browser tab closures, server reboots, and network disconnects.
+
+| State Domain | Primary Owner | Persistence Scope | Reader Consumer |
+| --- | --- | --- | --- |
+| **Robot Activity** | `system_command.py` (`RobotStateTracker`) | Persists through browser closures and backend restarts. | Telemetry ping response |
+| **Operating Lease** | `system_command.py` | Persists through server restarts; expires in 15 seconds if unrefreshed. | Ping feedback (`in_use`, `origin_conflict`) |
+| **Autopilot / Manual Mode** | `system_command.py` | Persists across browser tab closures. | Telemetry ping response |
+| **Active Mission Batch** | `operation_supervisor.py` | Persists across browser closures; stored in RAM. | Latched `/string/operation_snapshot` |
+| **Container Lifecycle** | `unit_manager.js` (Server RAM) | Server runtime only; reconstructed by `adoptExisting()` on boot. | Admin web console and reaper |
+| **UI Drafts & Selections** | Browser `sessionStorage` | Session lifetime; cleared on tab close. | Dashboard React components |
+| **Fleet Records & Maps** | Central MySQL (`db`) | Permanent storage. | Backend REST API |
+
+::: warning Browser Storage Limitation
+Closing a browser tab clears `sessionStorage`. To ensure seamless mission resumption, active waypoints and coverage boundaries are latched on `/string/operation_snapshot`. When an operator re-opens the dashboard in a new tab, the UI subscribes to this latched topic and fully reconstructs the active run. See [Navigation: Manual Override & Autopilot](/development/webui/navigation/manual-and-autopilot) for the full session-recovery mechanics, and [Safety Watchdog](/development/ros/safety-watchdog) for the robot-side timing tiers this table's "Operating Lease" and "Autopilot" rows depend on.
+:::
+
 ## Related Documentation
 
 - [Message Contracts](/development/message-contracts): Full specification of MQTT, ROS, and WebSocket payloads.
 - [State and Behavior](/development/state-and-behavior): Detailed state machines for navigation, boustrophedon sweep, and E-Stop.
 - [API Reference](/development/api-reference): REST API endpoints and authentication contracts.
 - [Database Schema](/development/database-schema): MySQL schema, tables, foreign keys, and migration scripts.
-- [Camera Streaming](/development/camera-streaming): WebRTC video pipeline and ICE candidate negotiation.
+- [Camera Streaming](/development/webui/camera/overview): WebRTC video pipeline and ICE candidate negotiation.
 - [Data Sync](/development/data-sync): Synchronization mechanics between unit cache and central server.

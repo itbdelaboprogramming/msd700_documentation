@@ -58,61 +58,8 @@ const enSidebar = {
       items: [
         { text: 'Overview', link: '/development/' },
         { text: 'System Architecture', link: '/development/architecture' },
-        { text: 'Security & Auth', link: '/development/security-and-auth' },
         { text: 'Repository Structure', link: '/development/repository-structure' },
-        { text: 'ROS Package Registry', link: '/development/ros-packages' },
-      ]
-    },
-    {
-      text: 'Boustrophedon Coverage Cleaning',
-      items: [
-        { text: 'Boustrophedon Coverage', link: '/development/boustrophedon-and-alignment' },
-      ]
-    },
-    {
-      text: 'Navigation & Path Planning',
-      items: [
-        { text: 'Coordinate Transforms (TF)', link: '/development/tf-transforms' },
-        { text: 'Costmaps & Planners', link: '/development/costmaps-and-planners' },
-      ]
-    },
-    {
-      text: 'Robot Control, Sensing & Hardware',
-      items: [
-        { text: 'State & Behavior', link: '/development/state-and-behavior' },
-        { text: 'Dynamic Mode Switching', link: '/development/mode-switching' },
-        { text: 'Sensor Fusion & Control', link: '/development/sensor-fusion-and-control' },
-        { text: 'Firmware & Hardware', link: '/development/firmware-and-hardware' },
-      ]
-    },
-    {
-      text: 'Web Dashboard & Live Media',
-      items: [
-        { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
-        { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
-        { text: 'Camera Streaming (WebRTC)', link: '/development/camera-streaming' },
-      ]
-    },
-    {
-      text: 'Cloud-Robot Messaging & API',
-      items: [
         { text: 'Message Contracts (MQTT)', link: '/development/message-contracts' },
-        { text: 'REST API Reference', link: '/development/api-reference' },
-      ]
-    },
-    {
-      text: 'Fleet, Data & Backup',
-      items: [
-        { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
-        { text: 'Database Schema', link: '/development/database-schema' },
-        { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
-        { text: 'Backup & Restore', link: '/development/backup-and-restore' },
-      ]
-    },
-    {
-      text: 'Simulation & Testing',
-      items: [
-        { text: 'Simulation (Gazebo)', link: '/development/simulation' },
       ]
     },
     {
@@ -121,6 +68,122 @@ const enSidebar = {
         { text: 'Diagnostics & Troubleshooting', link: '/development/troubleshooting-guide' },
         { text: 'Contributing Guide', link: '/development/contributing' },
         { text: 'Changelog', link: '/development/changelog' },
+      ]
+    },
+    {
+      text: 'Full Reference Docs',
+      items: [
+        { text: 'REST API Reference', link: '/development/api-reference' },
+        { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
+        { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
+        { text: 'Database Schema', link: '/development/database-schema' },
+        { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
+        { text: 'Backup & Restore', link: '/development/backup-and-restore' },
+        { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
+      ]
+    }
+  ],
+  '/development/ros/': [
+    {
+      text: 'ROS (Robot Software)',
+      items: [
+        { text: 'Overview', link: '/development/ros/' },
+        { text: 'ROS Package Registry', link: '/development/ros/ros-packages' },
+      ]
+    },
+    {
+      text: 'Perception & Localization',
+      items: [
+        { text: 'Sensor Fusion & Control', link: '/development/ros/sensor-fusion-and-control' },
+        { text: 'Coordinate Transforms (TF)', link: '/development/ros/tf-transforms' },
+      ]
+    },
+    {
+      text: 'Navigation & Planning',
+      items: [
+        { text: 'Costmaps & Planners', link: '/development/ros/costmaps-and-planners' },
+        { text: 'Dynamic Mode Switching', link: '/development/ros/mode-switching' },
+        { text: 'Safety Watchdog', link: '/development/ros/safety-watchdog' },
+      ]
+    },
+    {
+      text: 'Coverage Cleaning Algorithm',
+      items: [
+        { text: 'Boustrophedon Coverage', link: '/development/ros/boustrophedon-and-alignment' },
+      ]
+    },
+    {
+      text: 'Hardware & Firmware',
+      items: [
+        { text: 'Firmware & Hardware', link: '/development/ros/firmware-and-hardware' },
+      ]
+    },
+    {
+      text: 'Simulation & Testing',
+      items: [
+        { text: 'Simulation (Gazebo)', link: '/development/ros/simulation' },
+      ]
+    }
+  ],
+  '/development/webui/': [
+    {
+      text: 'ROS Web UI (Platform)',
+      items: [
+        { text: 'Overview', link: '/development/webui/' },
+      ]
+    },
+    {
+      text: 'Navigation',
+      items: [
+        { text: 'Overview', link: '/development/webui/navigation/overview' },
+        { text: 'Pinpoint & Routes', link: '/development/webui/navigation/pinpoint-and-routes' },
+        { text: 'Manual Override & Autopilot', link: '/development/webui/navigation/manual-and-autopilot' },
+        { text: 'Map Sync & Alignment', link: '/development/webui/navigation/map-sync-and-alignment' },
+        { text: 'Coverage Cleaning', link: '/development/webui/navigation/coverage-cleaning' },
+        { text: 'ROS Integration', link: '/development/webui/navigation/ros-integration' },
+      ]
+    },
+    {
+      text: 'Mapping',
+      items: [
+        { text: 'Overview', link: '/development/webui/mapping/overview' },
+        { text: 'Manual Override & Autonomous', link: '/development/webui/mapping/manual-and-autonomous' },
+        { text: 'ROS Integration', link: '/development/webui/mapping/ros-integration' },
+      ]
+    },
+    {
+      text: 'Database',
+      items: [
+        { text: 'Overview', link: '/development/webui/database/overview' },
+        { text: 'Rename & Delete', link: '/development/webui/database/rename-and-delete' },
+        { text: 'ROS Integration', link: '/development/webui/database/ros-integration' },
+      ]
+    },
+    {
+      text: 'Admin Console',
+      items: [
+        { text: 'Overview', link: '/development/webui/admin-console/overview' },
+        { text: 'Operators', link: '/development/webui/admin-console/operators' },
+        { text: 'Units & Fleet', link: '/development/webui/admin-console/units-and-fleet' },
+        { text: 'Rentals', link: '/development/webui/admin-console/rentals' },
+        { text: 'Backups', link: '/development/webui/admin-console/backups' },
+        { text: 'ROS Integration', link: '/development/webui/admin-console/ros-integration' },
+      ]
+    },
+    {
+      text: 'Accounts & Access',
+      items: [
+        { text: 'Overview', link: '/development/webui/accounts/overview' },
+        { text: 'Security & Tokens', link: '/development/webui/accounts/security-and-tokens' },
+        { text: 'Hardware Enrolment', link: '/development/webui/accounts/enrolment' },
+        { text: 'ROS Integration', link: '/development/webui/accounts/ros-integration' },
+      ]
+    },
+    {
+      text: 'Camera & Live View',
+      items: [
+        { text: 'Overview', link: '/development/webui/camera/overview' },
+        { text: 'ROS Integration', link: '/development/webui/camera/ros-integration' },
       ]
     }
   ]
