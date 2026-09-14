@@ -2,47 +2,46 @@
 search: false
 ---
 
-
-# Contributing Guide
+# Panduan Kontribusi
 
 <RoleBadge role="developer" />
 
-This guide covers developer workflows for contributing to the **MSD700 Core Product** (`ros-web-ui`, `msd700_robot`, `msd700_noetic`, `ROS-dashboard-next-ts`) and this **documentation site**.
+Panduan ini mencakup alur kerja pengembang untuk berkontribusi pada **Produk Inti MSD700** (`ros-web-ui`, `msd700_robot`, `msd700_noetic`, `ROS-dashboard-next-ts`) dan **situs dokumentasi** ini.
 
-## Product Development Workflow
+## Alur Kerja Pengembangan Produk
 
-To test server-side modifications safely without impacting production operators, use the isolated `server_dev` Docker Compose profile:
+Untuk menguji modifikasi sisi server dengan aman tanpa mengganggu operator produksi, gunakan profil Docker Compose `server_dev` yang terisolasi:
 
 ```bash
 cd ~/ros-web-ui
 docker compose --profile server_dev up -d --build
 ```
 
-### Dev Stack Port Offsets:
-The development stack uses dedicated port offsets to allow concurrent operation alongside production:
+### Offset Port Dev Stack:
+Stack pengembangan menggunakan offset port khusus untuk memungkinkan operasi bersamaan dengan produksi:
 
-| Service | Production Port | Development Port | Protocol |
+| Layanan | Port Produksi | Port Pengembangan | Protokol |
 | --- | --- | --- | --- |
 | **ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
 | **rosbridge** | `9090` | `9091` | WebSocket |
 | **HiveMQ MQTT** | `8883` | `8884` | TLS Encrypted MQTTS |
-| **MySQL Database** | `3307` | `3308` | TCP |
+| **Database MySQL** | `3307` | `3308` | TCP |
 | **Backend REST API** | `5000` | `5001` | HTTP |
-| **Next.js Dashboard**| `3000` | `3100` | HTTP |
+| **Dashboard Next.js**| `3000` | `3100` | HTTP |
 
-A physical or simulated robot connects to the dev cloud peer by passing `--dev`:
+Robot fisik atau simulasi terhubung ke peer cloud dev dengan meneruskan `--dev`:
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-### Robot-Side Development Workflow:
-In `msd700_noetic`, the `src/` directory is bind-mounted directly into the robot runtime container. Changes to launch files, Python nodes, or URDF models take effect on the next launch without requiring an image rebuild. Image rebuilds (`docker-manager.sh build`) are only necessary when C++ catkin packages or base system dependencies are modified.
+### Alur Kerja Pengembangan Sisi Robot:
+Di `msd700_noetic`, direktori `src/` di-bind-mount langsung ke dalam kontainer runtime robot. Perubahan pada launch file, node Python, atau model URDF berlaku pada launch berikutnya tanpa memerlukan rebuild image. Rebuild image (`docker-manager.sh build`) hanya diperlukan ketika paket catkin C++ atau dependensi sistem dasar dimodifikasi.
 
 ---
 
-## Working on this Documentation Site
+## Mengerjakan Situs Dokumentasi Ini
 
-### Local Development Server:
+### Server Pengembangan Lokal:
 
 ```bash
 cd ~/msd700_documentation
@@ -52,8 +51,8 @@ npm run docs:build     # Validates production build -> docs/.vitepress/dist
 npm run docs:preview   # Serves production build preview
 ```
 
-### Automated Validation Scripts:
-Before committing documentation changes, run:
+### Skrip Validasi Otomatis:
+Sebelum melakukan commit perubahan dokumentasi, jalankan:
 
 ```bash
 # 1. Validate all Mermaid diagrams syntax
@@ -66,17 +65,17 @@ npm run docs:build
 grep -rn $'\xe2\x80\x94' docs/ scripts/
 ```
 
-### Custom Global Components:
-This documentation theme extends VitePress with custom global components:
-- `<RoleBadge role="user | technician | developer" />`: Displays target audience badge at the top of pages.
-- `<LinkCards>` / `<LinkCard icon="..." title="..." details="..." link="..." />`: Interactive card grid used on section landing pages.
-- `<Mermaid code="..." />`: Client-side SVG renderer for responsive architecture flowcharts and sequence diagrams.
+### Komponen Global Kustom:
+Tema dokumentasi ini memperluas VitePress dengan komponen global kustom:
+- `<RoleBadge role="user | technician | developer" />`: Menampilkan badge audiens target di bagian atas halaman.
+- `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Grid kartu interaktif yang digunakan pada halaman landing bagian.
+- `<Mermaid code="..." />`: Perender SVG sisi klien untuk flowchart dan sequence diagram arsitektur yang responsif.
 
-### Commit and Pull Request Conventions:
-Commits follow standard conventional commit formats (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).
+### Konvensi Commit dan Pull Request:
+Commit mengikuti format conventional commit standar (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).
 
-## Related Documentation
+## Dokumentasi Terkait
 
-- [Repository Structure](/id/development/repository-structure): Full multi-repository layout.
-- [Architecture](/id/development/architecture): Two-machine system topology.
-- [Changelog](/id/development/changelog): Platform release history.
+- [Struktur Repositori](/id/development/repository-structure): Tata letak multi-repositori lengkap.
+- [Arsitektur](/id/development/architecture): Topologi sistem dua mesin.
+- [Changelog](/id/development/changelog): Riwayat rilis platform.

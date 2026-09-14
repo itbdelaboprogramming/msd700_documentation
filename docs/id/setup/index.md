@@ -2,29 +2,28 @@
 search: false
 ---
 
-
-# Setup and Deployment Guide
+# Panduan Penyiapan dan Deployment
 
 <RoleBadge role="technician" />
 
-This section contains technical documentation for **technicians, system engineers, and field installers** configuring MSD700 hardware and software.
+Bagian ini berisi dokumentasi teknis untuk **teknisi, insinyur sistem, dan installer lapangan** yang mengonfigurasi perangkat keras dan perangkat lunak MSD700.
 
-Every procedure includes step-by-step shell commands, expected outputs, configuration templates, and architectural explanations.
+Setiap prosedur menyertakan perintah shell langkah demi langkah, output yang diharapkan, template konfigurasi, dan penjelasan arsitektur.
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/id/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/id/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/id/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/id/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/id/setup/docker-reference" />
-  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/id/setup/wifi-hotspot" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/id/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/id/setup/troubleshooting" />
+  <LinkCard icon="✅" title="Prasyarat" details="Ukuran perangkat keras, kebutuhan komputasi, versi OS, dan aturan firewall port jaringan." link="/id/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="Penyiapan Server" details="Deployment cloud produksi langkah demi langkah: Docker Compose, reverse proxy Apache, dan SSL." link="/id/setup/server-setup" />
+  <LinkCard icon="📡" title="Penyiapan Unit" details="Instal dan konfigurasi robot fisik pada SBC NVIDIA Jetson, build runtime, dan enrolment." link="/id/setup/unit-setup" />
+  <LinkCard icon="🔗" title="Penyiapan Sistem" details="Checklist integrasi menyeluruh, verifikasi jaringan, dan serah terima ke operator." link="/id/setup/system-setup" />
+  <LinkCard icon="🐳" title="Referensi Docker" details="Referensi lengkap untuk profil Docker Compose, variabel lingkungan, dan volume mount." link="/id/setup/docker-reference" />
+  <LinkCard icon="📶" title="Hotspot Wi-Fi + Klien" details="Konfigurasi hotspot Wi-Fi onboard, mode Access Point, dan jembatan klien jaringan lokal." link="/id/setup/wifi-hotspot" />
+  <LinkCard icon="🧰" title="Pemeliharaan" details="Rotasi log rutin, rotasi keyring JWT, pembaruan Certbot Let's Encrypt, dan backup." link="/id/setup/maintenance" />
+  <LinkCard icon="🛠️" title="Pemecahan Masalah Teknisi" details="Diagnosis dan penyelesaian masalah perangkat keras, container, broker MQTT, dan sensor." link="/id/setup/troubleshooting" />
 </LinkCards>
 
-## Recommended Deployment Progression
+## Urutan Deployment yang Disarankan
 
-The MSD700 platform uses a two-machine model (Server + Physical Units). Follow this sequence for new installations:
+Platform MSD700 menggunakan model dua mesin (Server + Unit Fisik). Ikuti urutan berikut untuk instalasi baru:
 
 ```mermaid
 flowchart LR
@@ -33,9 +32,9 @@ flowchart LR
   U --> SYS["4. System Setup<br/>End-to-end communication test"]
 ```
 
-1. [Prerequisites](/id/setup/prerequisites): Verify compute sizing, Jetson hardware peripherals, and network firewall rules.
-2. [Server Setup](/id/setup/server-setup): Bring up the cloud server stack first so physical units have a central endpoint to enrol against.
-3. [Unit Setup](/id/setup/unit-setup): Build the robot container on the Jetson SBC and complete the automated cryptographic enrolment handshake.
-4. [System Setup](/id/setup/system-setup): Execute the 10-point end-to-end operational verification checklist.
+1. [Prasyarat](/id/setup/prerequisites): Verifikasi ukuran komputasi, perangkat periferal Jetson, dan aturan firewall jaringan.
+2. [Penyiapan Server](/id/setup/server-setup): Aktifkan tumpukan (stack) server cloud terlebih dahulu agar unit fisik memiliki endpoint pusat untuk melakukan enrolment.
+3. [Penyiapan Unit](/id/setup/unit-setup): Build container robot pada SBC Jetson dan selesaikan handshake enrolment kriptografis otomatis.
+4. [Penyiapan Sistem](/id/setup/system-setup): Jalankan checklist verifikasi operasional menyeluruh dengan 10 poin.
 
-After initial installation, refer to [Maintenance](/id/setup/maintenance) and [Troubleshooting](/id/setup/troubleshooting) for ongoing fleet upkeep.
+Setelah instalasi awal, lihat [Pemeliharaan](/id/setup/maintenance) dan [Pemecahan Masalah](/id/setup/troubleshooting) untuk perawatan armada berkelanjutan.

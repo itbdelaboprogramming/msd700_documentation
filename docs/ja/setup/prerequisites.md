@@ -2,14 +2,13 @@
 outline: deep
 ---
 
-
-# Prerequisites
+# 前提条件
 
 <RoleBadge role="technician" />
 
-This document details the hardware specifications, operating system requirements, networking rules, and software dependencies needed before deploying the **MSD700 Server** or **MSD700 Physical Robot Units**.
+このドキュメントでは、**MSD700 サーバー**または **MSD700 物理ロボットユニット**をデプロイする前に必要となるハードウェア仕様、オペレーティングシステム要件、ネットワークルール、およびソフトウェア依存関係について詳しく説明します。
 
-## System Sizing and Hardware Specifications
+## システム構成規模とハードウェア仕様
 
 ```mermaid
 flowchart LR
@@ -29,31 +28,31 @@ flowchart LR
   end
 ```
 
-### 1. Server Hardware Specifications (Cloud Host)
+### 1. サーバーハードウェア仕様(クラウドホスト)
 
-| Component | Minimum Specification | Recommended Production |
+| コンポーネント | 最小仕様 | 推奨本番仕様 |
 | --- | --- | --- |
-| **Processor** | 2 vCPUs (x86_64 / amd64) | 4 to 8 vCPUs |
-| **System Memory** | 4 GB RAM | 8 to 16 GB RAM |
-| **Disk Storage** | 30 GB SSD | 100 GB NVMe (for map archives and media logs) |
-| **Network Ingress** | Static Public IPv4 with Port 443, 8883 forwarded | 100 Mbps+ Full Duplex link |
+| **プロセッサ** | 2 vCPU(x86_64 / amd64) | 4〜8 vCPU |
+| **システムメモリ** | RAM 4 GB | RAM 8〜16 GB |
+| **ディスクストレージ** | SSD 30 GB | NVMe 100 GB(地図アーカイブとメディアログ用) |
+| **ネットワークイングレス** | ポート 443、8883 をフォワードした静的パブリック IPv4 | 100 Mbps 以上の全二重リンク |
 
-### 2. Physical Robot Unit Specifications (Jetson SBC)
+### 2. 物理ロボットユニット仕様(Jetson SBC)
 
-| Component | Hardware Specification | Purpose |
+| コンポーネント | ハードウェア仕様 | 用途 |
 | --- | --- | --- |
-| **Single-Board Computer** | NVIDIA Jetson (JetPack 5.x / 6.x) | Runs ROS Noetic runtime in Docker, sensor fusion, and local web stack. |
-| **Primary 3D LiDAR** | Velodyne VLP-16 (16 Channels, Ethernet) | 360-degree environmental mapping and 100 m range obstacle detection. |
-| **State IMU** | 9-DOF MEMS Sensor (I2C/UART) | Fused with wheel odometry via Madgwick filter for high-rate orientation. |
-| **Motor Microcontroller** | Arduino / Teensy Embedded Controller | Executes closed-loop PID velocity control and encoder tick interrupts. |
-| **Chassis & Drive** | Differential Drive with 4 Swivel Casters | 0.90 x 0.70 m physical chassis footprint; 2.5 m/s maximum design speed. |
-| **Power Stage** | 24V LiFePO4 Battery Pack | 4 to 6 hours continuous autonomous operation; hardware E-Stop relay. |
+| **シングルボードコンピュータ** | NVIDIA Jetson(JetPack 5.x / 6.x) | Docker 上で ROS Noetic ランタイム、センサーフュージョン、ローカル Web スタックを実行。 |
+| **メイン 3D LiDAR** | Velodyne VLP-16(16 チャンネル、Ethernet) | 360 度の環境マッピングと 100 m 範囲の障害物検知。 |
+| **状態推定用 IMU** | 9 軸 MEMS センサー(I2C/UART) | Madgwick フィルタでホイールオドメトリと融合し高レートな姿勢推定を実現。 |
+| **モーター用マイクロコントローラ** | Arduino / Teensy 組み込みコントローラ | 閉ループ PID 速度制御とエンコーダのティック割り込みを実行。 |
+| **シャーシ & 駆動方式** | 4 個の自在キャスターを備えた差動駆動 | 物理シャーシフットプリント 0.90 x 0.70 m、設計最大速度 2.5 m/s。 |
+| **電源段** | 24V LiFePO4 バッテリーパック | 4〜6 時間の連続自律稼働、ハードウェア E-Stop リレー。 |
 
 ---
 
-## Network Firewall and Port Matrix
+## ネットワークファイアウォールとポート一覧
 
-Ensure network routers and security groups allow the following traffic:
+ネットワークルーターとセキュリティグループで、以下のトラフィックを許可してください。
 
 ```mermaid
 flowchart TD
@@ -72,37 +71,37 @@ flowchart TD
   end
 ```
 
-| Port | Protocol | Scope | Service | Required For |
+| ポート | プロトコル | 範囲 | サービス | 用途 |
 | --- | --- | --- | --- | --- |
-| **`443`** | TCP | Public | Apache2 Reverse Proxy | Web dashboard HTTPS, REST API, and rosbridge WebSocket streams. |
-| **`8883`** | TCP | Public | HiveMQ TLS Broker | Encrypted MQTT command and telemetry bridge connecting robots to the cloud. |
-| **`3478`** | UDP + TCP | Public | coturn TURN Server | WebRTC camera video traversal when peer-to-peer NAT punch is blocked. |
-| **`49152 - 65535`** | UDP | Public | coturn Dynamic Media Range | WebRTC video payload relaying across symmetric NATs. |
-| **`3307`** | TCP | Localhost | MySQL Production DB | Central relational store for accounts, maps, routes, and rental profiles. |
-| **`5000`** | TCP | Localhost | Express Backend API | Internal REST API and Docker container orchestrator. |
-| **`9090`** | TCP | Localhost | rosbridge WebSocket | High-frequency ROS topic deserializer feeding web canvases. |
+| **`443`** | TCP | パブリック | Apache2 リバースプロキシ | Web ダッシュボードの HTTPS、REST API、rosbridge WebSocket ストリーム。 |
+| **`8883`** | TCP | パブリック | HiveMQ TLS ブローカー | ロボットとクラウドを接続する暗号化 MQTT コマンド・テレメトリブリッジ。 |
+| **`3478`** | UDP + TCP | パブリック | coturn TURN サーバー | ピアツーピアの NAT パンチが遮断された場合の WebRTC カメラ映像のトラバーサル。 |
+| **`49152 - 65535`** | UDP | パブリック | coturn 動的メディア範囲 | シンメトリック NAT を越えた WebRTC 映像ペイロードのリレー。 |
+| **`3307`** | TCP | Localhost | MySQL 本番 DB | アカウント、地図、ルート、レンタルプロファイルの中央リレーショナルストア。 |
+| **`5000`** | TCP | Localhost | Express バックエンド API | 内部 REST API と Docker コンテナオーケストレーター。 |
+| **`9090`** | TCP | Localhost | rosbridge WebSocket | Web キャンバスに供給する高頻度 ROS トピックのデシリアライザ。 |
 
 ---
 
-## Host Operating System & Dependencies
+## ホスト OS と依存関係
 
-### For the Cloud Server:
-1. **Operating System**: Ubuntu 22.04 LTS or Ubuntu 24.04 LTS (x86_64).
-2. **Docker Engine**: Docker CE 20.10+ with Compose Plugin (`docker compose` v2).
-3. **Web Server**: Apache 2.4+ (`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`).
-4. **SSL Certificates**: Certbot installed for automatic Let's Encrypt renewal.
+### クラウドサーバー向け:
+1. **オペレーティングシステム**: Ubuntu 22.04 LTS または Ubuntu 24.04 LTS(x86_64)。
+2. **Docker Engine**: Compose プラグイン(`docker compose` v2)付き Docker CE 20.10 以降。
+3. **Web サーバー**: Apache 2.4 以降(`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`)。
+4. **SSL 証明書**: Let's Encrypt の自動更新のために Certbot をインストール。
 
-### For the Physical Jetson Unit:
-1. **Operating System**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x on ARM64).
-2. **Docker Engine**: Docker CE with `network_mode: host` support.
-3. **USB Device Rules**: `udev` rules granting non-root access to `/dev/ttyUSB*` (motor controller).
-4. **Static IP Configuration**: Static IP `192.168.103.100` configured on the dedicated LiDAR Ethernet port (`end0`).
+### 物理 Jetson ユニット向け:
+1. **オペレーティングシステム**: Ubuntu 20.04 / 22.04 LTS(ARM64 上の JetPack 5.x / 6.x)。
+2. **Docker Engine**: `network_mode: host` をサポートする Docker CE。
+3. **USB デバイスルール**: `/dev/ttyUSB*`(モーターコントローラ)への非 root アクセスを許可する `udev` ルール。
+4. **静的 IP 設定**: 専用 LiDAR Ethernet ポート(`end0`)に静的 IP `192.168.103.100` を設定。
 
 ---
 
-## Installing Docker Engine on Ubuntu
+## Ubuntu への Docker Engine のインストール
 
-Both the Cloud Server and the Jetson Unit need Docker CE with the Compose plugin (`docker compose` v2). Install it from Docker's official `apt` repository rather than the `docker.io` package in Ubuntu's default repos, which lags behind and often ships without the Compose plugin.
+クラウドサーバーと Jetson ユニットの両方で、Compose プラグイン(`docker compose` v2)付きの Docker CE が必要です。Ubuntu のデフォルトリポジトリにある `docker.io` パッケージ(バージョンが古く、Compose プラグインが同梱されないことが多い)ではなく、Docker 公式の `apt` リポジトリからインストールしてください。
 
 ```bash
 # 1. Remove any old or conflicting packages
@@ -131,13 +130,13 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo docker run hello-world
 ```
 
-::: info Works on both `amd64` and `arm64`
-The steps above are architecture-agnostic: `dpkg --print-architecture` resolves to `amd64` on the Cloud Server and `arm64` on the Jetson Unit, and Docker's repository serves the matching package for each. No separate procedure is needed for JetPack.
+::: info `amd64` と `arm64` の両方で動作
+上記の手順はアーキテクチャに依存しません。`dpkg --print-architecture` はクラウドサーバーでは `amd64`、Jetson ユニットでは `arm64` に解決され、Docker のリポジトリはそれぞれに対応するパッケージを提供します。JetPack 用に別手順は不要です。
 :::
 
-### Post-install: run Docker without `sudo`
+### インストール後: `sudo` なしで Docker を実行する
 
-`docker-manager.sh` and `run_msd.sh` (see [Docker Reference](/ja/setup/docker-reference)) assume the invoking user can run `docker` without `sudo`. Add the user to the `docker` group and start a new shell session for it to take effect:
+`docker-manager.sh` と `run_msd.sh`([Docker コマンドリファレンス](/ja/setup/docker-reference)を参照)は、実行ユーザーが `sudo` なしで `docker` を実行できることを前提としています。ユーザーを `docker` グループに追加し、新しいシェルセッションを開始して反映させてください。
 
 ```bash
 sudo usermod -aG docker $USER
@@ -147,11 +146,11 @@ newgrp docker
 docker run hello-world
 ```
 
-::: warning Log out and back in if it still asks for `sudo`
-`newgrp docker` only applies the new group to the current shell. If another shell, an SSH session, or a systemd unit still fails with a permission error on `/var/run/docker.sock`, fully log out and back in (or reboot) so group membership is picked up everywhere.
+::: warning それでも `sudo` を要求される場合はログアウトして再ログイン
+`newgrp docker` は現在のシェルにのみ新しいグループを適用します。他のシェル、SSH セッション、または systemd ユニットが `/var/run/docker.sock` への権限エラーで失敗し続ける場合は、完全にログアウトして再ログイン(またはリブート)し、グループメンバーシップがどこでも反映されるようにしてください。
 :::
 
-### Enable Docker on boot
+### 起動時に Docker を有効化
 
 ```bash
 sudo systemctl enable docker.service
@@ -160,15 +159,15 @@ sudo systemctl enable containerd.service
 
 ---
 
-## Safety Checklist
+## 安全チェックリスト
 
-::: danger Safety First
-1. **Keep E-Stop Reachable**: Before running motor tests, verify that the physical Emergency Stop mushroom button is within immediate physical reach.
-2. **Elevate Chassis for First Power-Up**: During initial firmware bringup and motor direction tests, place the robot chassis on wooden blocks so drive wheels spin freely without touching the floor.
-3. **LiDAR Eye Safety**: The Velodyne VLP-16 is a Class 1 eye-safe laser device ($905\text{ nm}$ wavelength); avoid placing optical magnifying lenses directly in front of active optics.
+::: danger 安全第一
+1. **E-Stop を手の届く範囲に**: モーターテストを実行する前に、物理的な Emergency Stop のマッシュルームボタンがすぐ手の届く場所にあることを確認してください。
+2. **初回電源投入時はシャーシを持ち上げる**: 初期ファームウェアの立ち上げとモーター回転方向テストの際は、駆動輪が床に触れずに自由に回転するよう、ロボットシャーシを木製ブロックの上に置いてください。
+3. **LiDAR の目に対する安全性**: Velodyne VLP-16 はクラス 1 のアイセーフレーザー機器(波長 $905\text{ nm}$)です。稼働中の光学系の正面に光学拡大レンズを置かないでください。
 :::
 
-## Next Step
+## 次のステップ
 
-- Proceed to [Server Setup](/ja/setup/server-setup) to deploy the cloud backend.
-- Or proceed directly to [Unit Setup](/ja/setup/unit-setup) if the server is already active.
+- クラウドバックエンドをデプロイするには [サーバーセットアップ](/ja/setup/server-setup) に進みます。
+- サーバーが既に稼働している場合は、直接 [ユニットセットアップ](/ja/setup/unit-setup) に進んでください。

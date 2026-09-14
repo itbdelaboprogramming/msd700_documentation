@@ -3,16 +3,15 @@ outline: deep
 search: false
 ---
 
-
-# Introduction to MSD700
+# MSD700 概要
 
 <RoleBadge role="user" />
 
-## What is MSD700?
+## MSD700とは
 
-The **MSD700** is an industrial-grade autonomous mobile robot developed by **ITB de Labo Research Lab**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
+**MSD700**は、**ITB de Labo Research Lab**が開発した産業グレードの自律移動ロボットです。倉庫、オフィス廊下、トンネル、開放的な工業フロアといった複雑な屋内環境において、自律的な環境マッピング、地点間ナビゲーション、体系的なエリアカバレッジを行うために設計されています。
 
-Equipped with 360-degree 3D LiDAR sensors, inertial measurement units (IMUs), and high-resolution optical cameras, the robot builds centimeter-accurate occupancy grid maps in real time using Simultaneous Localization and Mapping (SLAM).
+360度3D LiDARセンサー、慣性計測装置(IMU)、高解像度光学カメラを搭載し、Simultaneous Localization and Mapping(SLAM)を用いてセンチメートル単位の精度を持つオキュパンシーグリッドマップをリアルタイムに構築します。
 
 ```mermaid
 flowchart LR
@@ -30,34 +29,34 @@ flowchart LR
   PhysicalRobot <-->|"Encrypted TLS Link"| CloudPlatform
 ```
 
-## Key Operator Capabilities
+## オペレーターが利用できる主な機能
 
-1. **Simultaneous Localization and Mapping (SLAM)**: Drive the robot through a new environment to create a 2D floorplan.
-2. **Point-to-Point Navigation**: Click anywhere on the map to dispatch the robot to that location with autonomous obstacle avoidance.
-3. **Boustrophedon Area Sweeps**: Draw polygons around rooms or corridors and command the robot to sweep the entire floor area systematically in parallel lanes.
-4. **Automated Mission Playlists**: Chain multiple waypoint routes and cleaning areas into unattended sequence playlists.
-5. **Zero-Spin Heading Alignment (Auto-Align)**: Place the robot in a mapped room and align its position instantly without disruptive 360-degree rotations.
-6. **Live HD Video Streaming**: Monitor the robot's point-of-view in real time through ultra-low latency WebRTC streaming.
-7. **Offline Standalone Operation**: When working in remote facilities without internet access, connect directly to the robot's local Wi-Fi to use the full dashboard offline.
+1. **Simultaneous Localization and Mapping(SLAM)**: 新しい環境でロボットを走行させて2D床図を作成します。
+2. **地点間ナビゲーション**: マップ上の任意の場所をクリックすると、自律的な障害物回避を伴ってロボットがその位置へ移動します。
+3. **ボウストロフェドン(往復走査)エリア清掃**: 部屋や廊下の周囲にポリゴンを描画し、床全体を並行レーンで体系的に清掃するようロボットに指示します。
+4. **自動ミッションプレイリスト**: 複数のウェイポイントルートと清掃エリアを、無人で実行できる連続プレイリストとして連結します。
+5. **回転レスな向き合わせ(オートアライン)**: マッピング済みの部屋にロボットを配置すると、360度回転による中断なしに即座に位置を合わせます。
+6. **ライブHD映像ストリーミング**: 超低遅延のWebRTCストリーミングにより、ロボット視点の映像をリアルタイムで監視できます。
+7. **オフラインスタンドアロン運用**: インターネットに接続できない遠隔施設で作業する場合、ロボットのローカルWi-Fiに直接接続することで、ダッシュボードをオフラインでフル活用できます。
 
-## System Architecture for Users
+## ユーザー向けシステムアーキテクチャ
 
-The system is composed of two primary layers:
+本システムは2つの主要レイヤーで構成されています。
 
-| Layer | Component | User Interaction |
+| レイヤー | コンポーネント | ユーザーとの関わり |
 | --- | --- | --- |
-| **Cloud Dashboard** | Central Server (`https://msd.nglobal.jp`) | The central web application where you log in, manage maps, assign routes, and monitor fleet status across all rented robots. |
-| **Physical Robot (Unit)** | Onboard Jetson Computer | The physical machine executing your navigation goals. Each unit has a unique identifier (ULID) and connects securely to the cloud. |
+| **クラウドダッシュボード** | 中央サーバー(`https://msd.nglobal.jp`) | ログイン、マップ管理、ルート割り当て、レンタル中の全ロボットのフリートステータス監視を行う中央Webアプリケーションです。 |
+| **物理ロボット(ユニット)** | 搭載Jetsonコンピュータ | ナビゲーションゴールを実行する物理マシンです。各ユニットは一意の識別子(ULID)を持ち、クラウドに安全に接続されます。 |
 
-## User Roles and Access
+## ユーザーの役割とアクセス権
 
-Access to robots is governed by **Rental Profiles**:
+ロボットへのアクセスは**レンタルプロファイル**によって管理されます。
 
-- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and monitor telemetry.
-- **Lab Administrators**: Manage tenant rental profiles, provision operator accounts, and approve new hardware robot registrations.
+- **フリートオペレーター**: 1つ以上のレンタルプロファイルに割り当てられた標準ユーザーアカウントです。割り当てられたロボットの操作、マップの記録、ルートの作成、テレメトリの監視が可能です。
+- **ラボ管理者**: テナントのレンタルプロファイルを管理し、オペレーターアカウントをプロビジョニングし、新しいハードウェアロボットの登録を承認します。
 
-## Next Steps
+## 次のステップ
 
-- Proceed to the [Quick Start Guide](/ja/getting-started/quick-start) to log in and control your first robot.
-- Read [System Features](/ja/getting-started/features) for a full breakdown of mapping and navigation capabilities.
-- Review [How the Robot Behaves](/ja/getting-started/behavior) to understand safety watchdogs and Autopilot persistence.
+- [クイックスタートガイド](/ja/getting-started/quick-start)に進み、最初のロボットにログインして操作してみましょう。
+- マッピングとナビゲーション機能の全体像については[システム機能](/ja/getting-started/features)を参照してください。
+- セーフティウォッチドッグとオートパイロットの持続性については[ロボットの動作仕様](/ja/getting-started/behavior)を確認してください。

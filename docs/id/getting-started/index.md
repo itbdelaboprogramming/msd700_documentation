@@ -2,25 +2,24 @@
 search: false
 ---
 
-
-# Getting Started
+# Panduan Memulai
 
 <RoleBadge role="user" />
 
-Welcome to the **MSD700 Operator User Guide**. This documentation is designed for fleet operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots.
+Selamat datang di **Panduan Pengguna Operator MSD700**. Dokumentasi ini dirancang untuk operator armada, peneliti, dan teknisi lapangan yang menggunakan dashboard web untuk mengendalikan, memetakan, dan mengawasi robot otonom MSD700.
 
-No programming or robotics experience is required to operate the robot via the web interface.
+Tidak diperlukan pengalaman pemrograman atau robotika untuk mengoperasikan robot melalui antarmuka web.
 
 <LinkCards>
-  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/id/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/id/getting-started/quick-start" />
-  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/id/getting-started/features" />
-  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/id/getting-started/behavior" />
-  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/id/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/id/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="Pendahuluan" details="Pelajari tentang platform MSD700, kemampuan perangkat keras, dan arsitektur cloud." link="/id/getting-started/introduction" />
+  <LinkCard icon="🚀" title="Panduan Cepat" details="Instruksi langkah demi langkah untuk masuk, memilih robot, dan menjalankan misi pertama Anda." link="/id/getting-started/quick-start" />
+  <LinkCard icon="✨" title="Fitur Sistem" details="Panduan lengkap untuk teleoperasi, pemetaan SLAM, penyapuan area, dan streaming kamera." link="/id/getting-started/features" />
+  <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami watchdog keselamatan, lease operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/getting-started/behavior" />
+  <LinkCard icon="❓" title="Tanya Jawab (FAQ)" details="Jawaban untuk pertanyaan operasional umum mengenai baterai, peta, dan konektivitas." link="/id/getting-started/faq" />
+  <LinkCard icon="🛠️" title="Pemecahan Masalah Operator" details="Solusi cepat untuk gejala umum operator seperti video macet dan goal dibatalkan." link="/id/getting-started/troubleshooting" />
 </LinkCards>
 
-## Recommended Reading Path for Operators
+## Alur Bacaan yang Disarankan untuk Operator
 
 ```mermaid
 flowchart LR
@@ -30,8 +29,8 @@ flowchart LR
   D --> E["5. FAQ & Help<br/>Troubleshooting"]
 ```
 
-## System Requirements
+## Persyaratan Sistem
 
-- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
-- **Display Resolution**: Optimized for desktop and laptop displays (1366 x 768 or higher) to display map canvases, live camera feeds, and telemetry side-by-side.
-- **Network**: Internet access for cloud dashboard (`msd.nglobal.jp`), or local Wi-Fi connection when operating robots offline in the field.
+- **Peramban yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge (peramban modern berbasis Chromium dengan dukungan WebRTC).
+- **Resolusi Layar**: Dioptimalkan untuk layar desktop dan laptop (1366 x 768 atau lebih tinggi) agar kanvas peta, feed kamera langsung, dan telemetri dapat ditampilkan berdampingan.
+- **Jaringan**: Akses internet untuk dashboard cloud (`msd.nglobal.jp`), atau koneksi Wi-Fi lokal saat mengoperasikan robot secara offline di lapangan.

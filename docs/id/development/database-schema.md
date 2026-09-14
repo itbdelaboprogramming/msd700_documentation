@@ -3,78 +3,89 @@ outline: deep
 search: false
 ---
 
-
-# Database Schema
+# Skema Database
 
 <RoleBadge role="developer" />
 
-The 18 tables in `ROS_DB`, grouped by what they're for, with the foreign keys between them. The
-canonical source is `ROS-dashboard-backend/sql/init.sql`, which only runs against an empty MySQL
-data directory. An existing deployment picks up schema changes through the migration scripts in
-`ROS-dashboard-backend/scripts/` instead (`migrate_unit_id_refactor.js`, `migrate_enrolment.js`,
-`migrate_sync.js`, `migrate_backup_scope.js`). For the shape of a row as the API actually returns it,
-see [API Reference](/id/development/api-reference); this page covers columns and relationships,
-not response JSON.
+18 tabel di `ROS_DB`, dikelompokkan menurut fungsinya, beserta foreign key di antaranya. Sumber
+kanonisnya adalah `ROS-dashboard-backend/sql/init.sql`, yang hanya berjalan terhadap data directory
+MySQL yang kosong. Sebuah deployment yang sudah ada mengambil perubahan skema lewat script migrasi
+di `ROS-dashboard-backend/scripts/` (`migrate_unit_id_refactor.js`, `migrate_enrolment.js`,
+`migrate_sync.js`, `migrate_backup_scope.js`). Untuk bentuk sebuah baris sebagaimana yang
+sesungguhnya dikembalikan API, lihat [Referensi API](/id/development/api-reference); halaman ini
+mencakup kolom dan relasi, bukan JSON respons.
 
-## Identity and access
+## Identitas dan akses
 
-| Table | Purpose | Key columns |
+| Tabel | Tujuan | Kolom kunci |
 | --- | --- | --- |
-| `users` | Operator accounts | `id` (ULID, PK), `username`, `email`, `password` (bcrypt), `status` (`active`/`suspended`) |
-| `admin_accounts` | Back-office accounts, deliberately separate from `users` | `id` (ULID, PK), `role` (`superadmin`/`admin`), `must_change_password` |
-| `rental_profiles` | One row per rental. Suspending it hides both the unit and its data from members, without touching either | `id` (ULID, PK), `profile_name` (unique), `tenant_name`, `status` |
-| `units` | One row per physical robot, fleet-wide. `unit_name` is a renameable display label, not an identity | `id` (ULID, PK): this is the robot's address, `/unit_<id>/...` |
-| `profile_members` | Which accounts belong to which profile | `UNIQUE(profile_id, user_id)`, both `ON DELETE CASCADE` |
-| `profile_units` | Which units a profile can access | `UNIQUE(unit_id)`, **not** `(profile_id, unit_id)`, so a unit can never be double-assigned |
+| `users` | Akun operator | `id` (ULID, PK), `username`, `email`, `password` (bcrypt), `status` (`active`/`suspended`) |
+| `admin_accounts` | Akun back-office, sengaja dipisahkan dari `users` | `id` (ULID, PK), `role` (`superadmin`/`admin`), `must_change_password` |
+| `rental_profiles` | Satu baris per rental. Menangguhkannya menyembunyikan baik unit maupun datanya dari anggota, tanpa menyentuh keduanya | `id` (ULID, PK), `profile_name` (unik), `tenant_name`, `status` |
+| `units` | Satu baris per robot fisik, fleet-wide. `unit_name` adalah label tampilan yang bisa diganti nama, bukan identitas | `id` (ULID, PK): ini adalah alamat robot, `/unit_<id>/...` |
+| `profile_members` | Akun mana yang termasuk dalam profil mana | `UNIQUE(profile_id, user_id)`, keduanya `ON DELETE CASCADE` |
+| `profile_units` | Unit mana yang dapat diakses oleh sebuah profil | `UNIQUE(unit_id)`, **bukan** `(profile_id, unit_id)`, sehingga sebuah unit tidak pernah bisa di-assign ganda |
 
-::: info `users.status` is written, not yet enforced
-`PATCH /admin/api/users/:id/status` writes this column, but `/user/login` does not read it: a
-suspended operator's existing session keeps working and they can still log back in. The two were
-deliberately kept separate so standing up the admin console could never lock a live deployment out
-of its own robots; enforcing it at the login boundary is a distinct piece of work. This is a
-different mechanism from a *suspended rental profile*, which does immediately remove a unit and its
-data from every member's view (see [API Reference § Rental profiles](/id/development/api-reference#rental-profiles)).
+::: info `users.status` ditulis, belum ditegakkan
+`PATCH /admin/api/users/:id/status` menulis kolom ini, tetapi `/user/login` tidak membacanya: sesi
+operator yang ditangguhkan yang sudah ada tetap berfungsi dan mereka masih bisa login kembali.
+Keduanya sengaja dipisahkan agar berdirinya konsol admin tidak pernah bisa mengunci sebuah
+deployment live dari robot miliknya sendiri; menegakkannya di batas login adalah pekerjaan
+tersendiri. Ini adalah mekanisme berbeda dari *rental profile yang ditangguhkan*, yang memang
+langsung menghapus sebuah unit dan datanya dari tampilan setiap anggota (lihat
+[Referensi API § Profil rental](/id/development/api-reference#rental-profiles)).
 :::
 
-## Operational data (per map)
+## Data operasional (per peta)
 
-| Table | Purpose | Key columns |
+| Tabel | Tujuan | Kolom kunci |
 | --- | --- | --- |
-| `maps_data` | A recorded map | `unit_id` → `units` (`ON DELETE CASCADE`, which robot recorded it), `profile_id` → `rental_profiles` (`ON DELETE RESTRICT`, which rental owns it), `UNIQUE(map_name, unit_id, profile_id)` |
-| `routes_data` | A saved multi-pinpoint route | `map_id` → `maps_data` (`ON DELETE CASCADE`), `route_points` (JSON), `UNIQUE(route_name, map_id)` |
-| `areas_data` | A saved coverage area | `map_id` → `maps_data` (`ON DELETE CASCADE`), `area_type` (`cover`/`no_cover`), `polygon_points` (JSON), `UNIQUE(area_name, map_id)` |
-| `playlists_data` | An ordered list of areas to sweep in sequence | `map_id` → `maps_data` (`ON DELETE CASCADE`), `items` (JSON, a **snapshot** of each area's geometry rather than a reference), `UNIQUE(playlist_name, map_id)` |
-| `unit_operation_state` | The unit's own current mode, for recovery after a backend restart | PK **is** `unit_id` itself, since one robot can only be doing one thing |
+| `maps_data` | Sebuah peta yang direkam | `unit_id` → `units` (`ON DELETE CASCADE`, robot mana yang merekamnya), `profile_id` → `rental_profiles` (`ON DELETE RESTRICT`, rental mana yang memilikinya), `UNIQUE(map_name, unit_id, profile_id)` |
+| `routes_data` | Sebuah rute multi-pinpoint tersimpan | `map_id` → `maps_data` (`ON DELETE CASCADE`), `route_points` (JSON), `UNIQUE(route_name, map_id)` |
+| `areas_data` | Sebuah area coverage tersimpan | `map_id` → `maps_data` (`ON DELETE CASCADE`), `area_type` (`cover`/`no_cover`), `polygon_points` (JSON), `UNIQUE(area_name, map_id)` |
+| `playlists_data` | Daftar area terurut untuk disapu secara berurutan | `map_id` → `maps_data` (`ON DELETE CASCADE`), `items` (JSON, sebuah **snapshot** dari geometri setiap area alih-alih sebuah referensi), `UNIQUE(playlist_name, map_id)` |
+| `unit_operation_state` | Mode saat ini milik unit itu sendiri, untuk pemulihan setelah restart backend | PK-nya **adalah** `unit_id` itu sendiri, karena satu robot hanya bisa melakukan satu hal |
 
-`maps_data` is deliberately locked to the rental that recorded it rather than to the unit: a unit
-re-rented to a different tenant does not hand over any previous tenant's maps, and a tenant whose
-rental ends keeps their maps even though they can no longer drive the unit that recorded them. See
-[API Reference § Rental profiles](/id/development/api-reference#rental-profiles) for how that plays out
-at the access layer.
+`maps_data` sengaja dikunci ke rental yang merekamnya, bukan ke unit: sebuah unit yang disewakan
+ulang ke tenant berbeda tidak menyerahkan peta tenant sebelumnya, dan tenant yang masa rentalnya
+berakhir tetap menyimpan peta miliknya meskipun mereka tidak lagi bisa mengendarai unit yang
+merekamnya. Lihat [Referensi API § Profil rental](/id/development/api-reference#rental-profiles)
+untuk bagaimana ini berlaku di lapisan akses.
 
-## Enrolment
+Aturan itu menjawab "apakah saya boleh melihat baris ini sama sekali". Itu bukan pertanyaan yang
+sama dengan "peta mana yang seharusnya tampil di layar saat saya mengendarai robot INI", dan
+keduanya dicampuradukkan hingga 2026-09-10. Sebuah rental yang memegang beberapa robot mendaftarkan
+peta semua robot bersamaan di halaman Database, tanpa apa pun di layar yang menyatakan mana yang
+mana; memilih peta milik robot sibling menyerahkan ke robot sebuah ULID peta yang file-nya tidak
+pernah ia rekam, sehingga navigation init dikirim, unit tersebut tidak bisa me-resolve peta, dan
+run tersebut mati di sana sementara dashboard melaporkan permulaan yang berhasil. `unit_id`
+sekarang mempersempit tampilan operasi di atas lingkup rental: keduanya wajib, tidak ada yang
+menggantikan yang lain.
 
-| Table | Purpose | Key columns |
+## Pendaftaran
+
+| Tabel | Tujuan | Kolom kunci |
 | --- | --- | --- |
-| `unit_devices` | The one device credential bound to a unit | `UNIQUE(unit_id)`, `secret_hash` + `secret_prev_hash` (the previous generation stays valid until the next successful token exchange, so rotating the secret can't brick a robot mid-rotation) |
-| `pending_units` | Robots that have said hello but are not yet claimed | `fingerprint` (unique), `claim_code`, `nonce_hash`, `status` (`pending`/`approved`/`claimed`/`rejected`), `contact_count` (a counter rather than a per-contact log, since this endpoint is unauthenticated by design) |
-| `unit_enrollment_codes` | Single-use vouchers to claim a specific unit before its robot exists | `unit_id`, `code_hash`, `expires_at`, `used_at` |
-| `unit_connection_log` | Append-only connection history | The only table with a plain `AUTO_INCREMENT` PK rather than a ULID; purged past 180 days |
+| `unit_devices` | Satu kredensial perangkat yang terikat pada sebuah unit | `UNIQUE(unit_id)`, `secret_hash` + `secret_prev_hash` (generasi sebelumnya tetap valid hingga pertukaran token berhasil berikutnya, sehingga merotasi secret tidak bisa mem-brick robot di tengah rotasi) |
+| `pending_units` | Robot yang sudah menyapa tetapi belum diklaim | `fingerprint` (unik), `claim_code`, `nonce_hash`, `status` (`pending`/`approved`/`claimed`/`rejected`), `contact_count` (sebuah counter alih-alih log per-kontak, karena endpoint ini sengaja tanpa autentikasi) |
+| `unit_enrollment_codes` | Voucher sekali pakai untuk mengklaim sebuah unit spesifik sebelum robotnya ada | `unit_id`, `code_hash`, `expires_at`, `used_at` |
+| `unit_connection_log` | Riwayat koneksi append-only | Satu-satunya tabel dengan PK `AUTO_INCREMENT` biasa alih-alih ULID; dibersihkan setelah 180 hari |
 
-See [Message Contracts § Enrolment](/id/development/message-contracts#enrolment) for the full exchange
-these tables support.
+Lihat [Kontrak Pesan § Pendaftaran](/id/development/message-contracts#enrolment) untuk pertukaran
+lengkap yang didukung tabel-tabel ini.
 
-## Backup and sync
+## Cadangan dan sinkronisasi
 
-| Table | Purpose | Key columns |
+| Tabel | Tujuan | Kolom kunci |
 | --- | --- | --- |
-| `profile_backups` | Archive manifests | `scope` (`profile` or `unit`: a profile-scoped archive covers one tenant across every robot it has used, a unit-scoped archive covers one robot across every tenant that has used it), `profile_id`/`unit_id` both `ON DELETE SET NULL` (an archive must outlive what it archived) |
-| `sync_tombstones` | Delete records for cross-device sync | `UNIQUE(table_name, row_id)`, no foreign keys at all, since a tombstone has to outlive the row, and possibly the unit, it refers to |
-| `sync_state` | One row per sync peer | PK `peer` (`'cloud'` on a unit; the unit's ULID, on the cloud), `last_pull_watermark`, `last_push_watermark`, `last_pull_profile_id`, `clock_offset_ms` |
+| `profile_backups` | Manifest arsip | `scope` (`profile` atau `unit`: arsip berlingkup profil mencakup satu tenant di seluruh robot yang pernah digunakannya, arsip berlingkup unit mencakup satu robot di seluruh tenant yang pernah menggunakannya), `profile_id`/`unit_id` keduanya `ON DELETE SET NULL` (sebuah arsip harus bertahan lebih lama dari apa yang diarsipkannya) |
+| `sync_tombstones` | Catatan hapus untuk sinkronisasi lintas perangkat | `UNIQUE(table_name, row_id)`, tanpa foreign key sama sekali, karena sebuah tombstone harus bertahan lebih lama dari baris, dan mungkin unit, yang dirujuknya |
+| `sync_state` | Satu baris per peer sinkronisasi | PK `peer` (`'cloud'` pada sebuah unit; ULID unit tersebut, pada cloud), `last_pull_watermark`, `last_push_watermark`, `last_pull_profile_id`, `clock_offset_ms` |
 
-See [Data Sync](/id/development/data-sync) for how these two tables are actually used.
+Lihat [Sinkronisasi Data](/id/development/data-sync) untuk bagaimana kedua tabel ini sebenarnya
+digunakan.
 
-## Foreign keys, in full
+## Foreign key, secara lengkap
 
 ```mermaid
 flowchart TB
@@ -110,54 +121,57 @@ flowchart TB
   maps_data -->|map_id SET NULL| unit_operation_state
 ```
 
-::: info Attribution is never authorization
-`created_by` / `modified_by` on `maps_data`, `routes_data`, `areas_data` and `playlists_data` store a
-**user ULID**, never a name, and are used only to say who touched a row, never to decide who is
-allowed to see or change it. Both are safe to be `NULL`, and a creator whose account no longer exists
-renders as *unknown* rather than breaking the row. Access itself runs entirely through rental
-profiles (see [API Reference § Rental profiles](/id/development/api-reference#rental-profiles)).
+::: info Atribusi bukanlah otorisasi
+`created_by` / `modified_by` pada `maps_data`, `routes_data`, `areas_data` dan `playlists_data`
+menyimpan sebuah **ULID pengguna**, tidak pernah sebuah nama, dan hanya digunakan untuk menyatakan
+siapa yang menyentuh sebuah baris, tidak pernah untuk memutuskan siapa yang boleh melihat atau
+mengubahnya. Keduanya aman untuk bernilai `NULL`, dan seorang pembuat yang akunnya sudah tidak ada
+lagi dirender sebagai *tidak diketahui* alih-alih merusak baris tersebut. Akses itu sendiri
+sepenuhnya berjalan lewat rental profile (lihat
+[Referensi API § Profil rental](/id/development/api-reference#rental-profiles)).
 :::
 
 ## `created_at` / `modified_at`
 
-The timestamp convention unified across the schema on 2026-08-01
+Konvensi timestamp yang diseragamkan di seluruh skema pada 2026-08-01
 (`created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`,
-`modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`) applies to 15
-of the 18 tables. Three depart from it on purpose, not by omission:
+`modified_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`) berlaku
+untuk 15 dari 18 tabel. Tiga menyimpang dari itu dengan sengaja, bukan karena kelalaian:
 
-| Table | What it has instead | Why |
+| Tabel | Yang dimilikinya sebagai gantinya | Alasan |
 | --- | --- | --- |
-| `pending_units` | `first_seen_at` / `last_seen_at` | This table tracks *contact*, not a record with an edit history |
-| `unit_enrollment_codes` | `created_at` only | A voucher is immutable; its lifecycle is `used_at`, not an update timestamp |
-| `unit_connection_log` | `connected_at` only | Append-only log, never updated after the row is written |
+| `pending_units` | `first_seen_at` / `last_seen_at` | Tabel ini melacak *kontak*, bukan sebuah catatan dengan riwayat edit |
+| `unit_enrollment_codes` | `created_at` saja | Sebuah voucher bersifat immutable; siklus hidupnya adalah `used_at`, bukan timestamp update |
+| `unit_connection_log` | `connected_at` saja | Log append-only, tidak pernah diperbarui setelah baris ditulis |
 
-## Database per deployment profile
+## Database per profil deployment
 
-The database name is always `ROS_DB`; what differs is host and port.
+Nama database selalu `ROS_DB`; yang berbeda adalah host dan port.
 
-| Profile | Host:port |
+| Profil | Host:port |
 | --- | --- |
 | Unit (`local_dev`) | `127.0.0.1:3306` (`network_mode: host`) |
-| Cloud `server_prod` | container port `3306`, published on the host as `3307` |
-| Cloud `server_dev` | container port `3306`, published on the host as `3308` |
+| Cloud `server_prod` | port kontainer `3306`, dipublikasikan di host sebagai `3307` |
+| Cloud `server_dev` | port kontainer `3306`, dipublikasikan di host sebagai `3308` |
 
-`migrate_backup_scope.js` hardcodes this pairing and **refuses to run without an explicit
-`--profile`** flag, specifically so a fallback default can never point a maintenance script at the
-wrong database. See [Docker Reference § Service and port map](/id/setup/docker-reference#service-and-port-map)
-for how these ports fit into the rest of the compose profile.
+`migrate_backup_scope.js` meng-hardcode pasangan ini dan **menolak berjalan tanpa flag `--profile`
+eksplisit**, khusus agar sebuah default fallback tidak pernah bisa mengarahkan script maintenance
+ke database yang salah. Lihat
+[Referensi Docker § Pemetaan layanan dan port](/id/setup/docker-reference#service-and-port-map)
+untuk bagaimana port-port ini cocok dengan sisa profil compose.
 
-## Indexes worth knowing the reason for
+## Indeks yang perlu diketahui alasannya
 
-| Index | Reason |
+| Indeks | Alasan |
 | --- | --- |
-| `maps_data.unique_map_unit (map_name, unit_id, profile_id)` | Two different tenants are allowed to name a map the same thing on the same robot without either seeing the other's |
-| `profile_units.unique_rented_unit (unit_id)` | A double-assignment fails loudly instead of silently overwriting the existing one |
-| `unit_devices.unique_device_unit (unit_id)` | Two robots can never end up writing to the same topic root |
-| `unit_connection_log.idx_conn_unit_time (unit_id, connected_at)` | Supports both a per-unit history query and the 180-day purge job in one index |
+| `maps_data.unique_map_unit (map_name, unit_id, profile_id)` | Dua tenant berbeda diperbolehkan menamai sebuah peta dengan nama yang sama pada robot yang sama tanpa salah satu melihat milik yang lain |
+| `profile_units.unique_rented_unit (unit_id)` | Sebuah double-assignment gagal dengan keras alih-alih diam-diam menimpa yang sudah ada |
+| `unit_devices.unique_device_unit (unit_id)` | Dua robot tidak akan pernah bisa berakhir menulis ke root topik yang sama |
+| `unit_connection_log.idx_conn_unit_time (unit_id, connected_at)` | Mendukung baik query riwayat per-unit maupun job pembersihan 180-hari dalam satu indeks |
 
-## Related
+## Terkait
 
-- [API Reference](/id/development/api-reference): the HTTP surface built on this schema
-- [Data Sync](/id/development/data-sync): how `sync_tombstones` and `sync_state` get used
-- [Message Contracts § Enrolment](/id/development/message-contracts#enrolment)
-- [Architecture](/id/development/architecture)
+- [Referensi API](/id/development/api-reference): permukaan HTTP yang dibangun di atas skema ini
+- [Sinkronisasi Data](/id/development/data-sync): bagaimana `sync_tombstones` dan `sync_state` digunakan
+- [Kontrak Pesan § Pendaftaran](/id/development/message-contracts#enrolment)
+- [Arsitektur](/id/development/architecture)

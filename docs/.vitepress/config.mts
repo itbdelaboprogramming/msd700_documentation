@@ -63,127 +63,127 @@ const enSidebar = {
       ]
     },
     {
+      text: 'ROS (Robot Software)',
+      link: '/development/ros/',
+      collapsed: true,
+      items: [
+        { text: 'Overview', link: '/development/ros/' },
+        { text: 'ROS Package Registry', link: '/development/ros/ros-packages' },
+        {
+          text: 'Perception & Localization',
+          items: [
+            { text: 'Sensor Fusion & Control', link: '/development/ros/sensor-fusion-and-control' },
+            { text: 'Coordinate Transforms (TF)', link: '/development/ros/tf-transforms' },
+          ]
+        },
+        {
+          text: 'Navigation & Planning',
+          items: [
+            { text: 'Costmaps & Planners', link: '/development/ros/costmaps-and-planners' },
+            { text: 'Dynamic Mode Switching', link: '/development/ros/mode-switching' },
+            { text: 'Safety Watchdog', link: '/development/ros/safety-watchdog' },
+          ]
+        },
+        {
+          text: 'Coverage Cleaning Algorithm',
+          items: [
+            { text: 'Boustrophedon Coverage', link: '/development/ros/boustrophedon-and-alignment' },
+          ]
+        },
+        {
+          text: 'Hardware & Firmware',
+          items: [
+            { text: 'Firmware & Hardware', link: '/development/ros/firmware-and-hardware' },
+          ]
+        },
+        {
+          text: 'Simulation & Testing',
+          items: [
+            { text: 'Simulation (Gazebo)', link: '/development/ros/simulation' },
+          ]
+        }
+      ]
+    },
+    {
+      text: 'ROS Web UI (Platform)',
+      link: '/development/webui/',
+      collapsed: true,
+      items: [
+        { text: 'Overview', link: '/development/webui/' },
+        {
+          text: 'Navigation',
+          items: [
+            { text: 'Overview', link: '/development/webui/navigation/overview' },
+            { text: 'Pinpoint & Routes', link: '/development/webui/navigation/pinpoint-and-routes' },
+            { text: 'Manual Override & Autopilot', link: '/development/webui/navigation/manual-and-autopilot' },
+            { text: 'Map Sync & Alignment', link: '/development/webui/navigation/map-sync-and-alignment' },
+            { text: 'Coverage Cleaning', link: '/development/webui/navigation/coverage-cleaning' },
+            { text: 'ROS Integration', link: '/development/webui/navigation/ros-integration' },
+          ]
+        },
+        {
+          text: 'Mapping',
+          items: [
+            { text: 'Overview', link: '/development/webui/mapping/overview' },
+            { text: 'Manual Override & Autonomous', link: '/development/webui/mapping/manual-and-autonomous' },
+            { text: 'ROS Integration', link: '/development/webui/mapping/ros-integration' },
+          ]
+        },
+        {
+          text: 'Database',
+          items: [
+            { text: 'Overview', link: '/development/webui/database/overview' },
+            { text: 'Rename & Delete', link: '/development/webui/database/rename-and-delete' },
+            { text: 'ROS Integration', link: '/development/webui/database/ros-integration' },
+          ]
+        },
+        {
+          text: 'Admin Console',
+          items: [
+            { text: 'Overview', link: '/development/webui/admin-console/overview' },
+            { text: 'Operators', link: '/development/webui/admin-console/operators' },
+            { text: 'Units & Fleet', link: '/development/webui/admin-console/units-and-fleet' },
+            { text: 'Rentals', link: '/development/webui/admin-console/rentals' },
+            { text: 'Backups', link: '/development/webui/admin-console/backups' },
+            { text: 'ROS Integration', link: '/development/webui/admin-console/ros-integration' },
+          ]
+        },
+        {
+          text: 'Accounts & Access',
+          items: [
+            { text: 'Overview', link: '/development/webui/accounts/overview' },
+            { text: 'Security & Tokens', link: '/development/webui/accounts/security-and-tokens' },
+            { text: 'Hardware Enrolment', link: '/development/webui/accounts/enrolment' },
+            { text: 'ROS Integration', link: '/development/webui/accounts/ros-integration' },
+          ]
+        },
+        {
+          text: 'Camera & Live View',
+          items: [
+            { text: 'Overview', link: '/development/webui/camera/overview' },
+            { text: 'ROS Integration', link: '/development/webui/camera/ros-integration' },
+          ]
+        },
+        {
+          text: 'Platform Reference',
+          items: [
+            { text: 'REST API Reference', link: '/development/api-reference' },
+            { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
+            { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
+            { text: 'Database Schema', link: '/development/database-schema' },
+            { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
+            { text: 'Backup & Restore', link: '/development/backup-and-restore' },
+            { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
+          ]
+        }
+      ]
+    },
+    {
       text: 'Reference & Process',
       items: [
         { text: 'Diagnostics & Troubleshooting', link: '/development/troubleshooting-guide' },
         { text: 'Contributing Guide', link: '/development/contributing' },
         { text: 'Changelog', link: '/development/changelog' },
-      ]
-    },
-    {
-      text: 'Full Reference Docs',
-      items: [
-        { text: 'REST API Reference', link: '/development/api-reference' },
-        { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
-        { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
-        { text: 'Database Schema', link: '/development/database-schema' },
-        { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
-        { text: 'Backup & Restore', link: '/development/backup-and-restore' },
-        { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
-      ]
-    }
-  ],
-  '/development/ros/': [
-    {
-      text: 'ROS (Robot Software)',
-      items: [
-        { text: 'Overview', link: '/development/ros/' },
-        { text: 'ROS Package Registry', link: '/development/ros/ros-packages' },
-      ]
-    },
-    {
-      text: 'Perception & Localization',
-      items: [
-        { text: 'Sensor Fusion & Control', link: '/development/ros/sensor-fusion-and-control' },
-        { text: 'Coordinate Transforms (TF)', link: '/development/ros/tf-transforms' },
-      ]
-    },
-    {
-      text: 'Navigation & Planning',
-      items: [
-        { text: 'Costmaps & Planners', link: '/development/ros/costmaps-and-planners' },
-        { text: 'Dynamic Mode Switching', link: '/development/ros/mode-switching' },
-        { text: 'Safety Watchdog', link: '/development/ros/safety-watchdog' },
-      ]
-    },
-    {
-      text: 'Coverage Cleaning Algorithm',
-      items: [
-        { text: 'Boustrophedon Coverage', link: '/development/ros/boustrophedon-and-alignment' },
-      ]
-    },
-    {
-      text: 'Hardware & Firmware',
-      items: [
-        { text: 'Firmware & Hardware', link: '/development/ros/firmware-and-hardware' },
-      ]
-    },
-    {
-      text: 'Simulation & Testing',
-      items: [
-        { text: 'Simulation (Gazebo)', link: '/development/ros/simulation' },
-      ]
-    }
-  ],
-  '/development/webui/': [
-    {
-      text: 'ROS Web UI (Platform)',
-      items: [
-        { text: 'Overview', link: '/development/webui/' },
-      ]
-    },
-    {
-      text: 'Navigation',
-      items: [
-        { text: 'Overview', link: '/development/webui/navigation/overview' },
-        { text: 'Pinpoint & Routes', link: '/development/webui/navigation/pinpoint-and-routes' },
-        { text: 'Manual Override & Autopilot', link: '/development/webui/navigation/manual-and-autopilot' },
-        { text: 'Map Sync & Alignment', link: '/development/webui/navigation/map-sync-and-alignment' },
-        { text: 'Coverage Cleaning', link: '/development/webui/navigation/coverage-cleaning' },
-        { text: 'ROS Integration', link: '/development/webui/navigation/ros-integration' },
-      ]
-    },
-    {
-      text: 'Mapping',
-      items: [
-        { text: 'Overview', link: '/development/webui/mapping/overview' },
-        { text: 'Manual Override & Autonomous', link: '/development/webui/mapping/manual-and-autonomous' },
-        { text: 'ROS Integration', link: '/development/webui/mapping/ros-integration' },
-      ]
-    },
-    {
-      text: 'Database',
-      items: [
-        { text: 'Overview', link: '/development/webui/database/overview' },
-        { text: 'Rename & Delete', link: '/development/webui/database/rename-and-delete' },
-        { text: 'ROS Integration', link: '/development/webui/database/ros-integration' },
-      ]
-    },
-    {
-      text: 'Admin Console',
-      items: [
-        { text: 'Overview', link: '/development/webui/admin-console/overview' },
-        { text: 'Operators', link: '/development/webui/admin-console/operators' },
-        { text: 'Units & Fleet', link: '/development/webui/admin-console/units-and-fleet' },
-        { text: 'Rentals', link: '/development/webui/admin-console/rentals' },
-        { text: 'Backups', link: '/development/webui/admin-console/backups' },
-        { text: 'ROS Integration', link: '/development/webui/admin-console/ros-integration' },
-      ]
-    },
-    {
-      text: 'Accounts & Access',
-      items: [
-        { text: 'Overview', link: '/development/webui/accounts/overview' },
-        { text: 'Security & Tokens', link: '/development/webui/accounts/security-and-tokens' },
-        { text: 'Hardware Enrolment', link: '/development/webui/accounts/enrolment' },
-        { text: 'ROS Integration', link: '/development/webui/accounts/ros-integration' },
-      ]
-    },
-    {
-      text: 'Camera & Live View',
-      items: [
-        { text: 'Overview', link: '/development/webui/camera/overview' },
-        { text: 'ROS Integration', link: '/development/webui/camera/ros-integration' },
       ]
     }
   ]
@@ -247,61 +247,124 @@ const idSidebar = {
       items: [
         { text: 'Ikhtisar', link: '/id/development/' },
         { text: 'Arsitektur Sistem', link: '/id/development/architecture' },
-        { text: 'Keamanan & Autentikasi', link: '/id/development/security-and-auth' },
         { text: 'Struktur Repositori', link: '/id/development/repository-structure' },
-        { text: 'Daftar Paket ROS', link: '/id/development/ros-packages' },
-      ]
-    },
-    {
-      text: 'Pembersihan Cakupan Boustrophedon',
-      items: [
-        { text: 'Cakupan Boustrophedon', link: '/id/development/boustrophedon-and-alignment' },
-      ]
-    },
-    {
-      text: 'Navigasi & Perencanaan Jalur',
-      items: [
-        { text: 'Transformasi Koordinat (TF)', link: '/id/development/tf-transforms' },
-        { text: 'Costmap & Planner', link: '/id/development/costmaps-and-planners' },
-      ]
-    },
-    {
-      text: 'Kontrol Robot, Sensor & Perangkat Keras',
-      items: [
-        { text: 'State & Perilaku', link: '/id/development/state-and-behavior' },
-        { text: 'Pergantian Mode Dinamis', link: '/id/development/mode-switching' },
-        { text: 'Sensor Fusion & Kontrol', link: '/id/development/sensor-fusion-and-control' },
-        { text: 'Firmware & Perangkat Keras', link: '/id/development/firmware-and-hardware' },
-      ]
-    },
-    {
-      text: 'Dashboard Web & Media Langsung',
-      items: [
-        { text: 'Canvas Frontend & Web UI', link: '/id/development/frontend-canvas' },
-        { text: 'Protokol rosbridge (WS)', link: '/id/development/rosbridge-protocol' },
-        { text: 'Streaming Kamera (WebRTC)', link: '/id/development/camera-streaming' },
-      ]
-    },
-    {
-      text: 'Pesan Cloud-Robot & API',
-      items: [
         { text: 'Kontrak Pesan (MQTT)', link: '/id/development/message-contracts' },
-        { text: 'Referensi REST API', link: '/id/development/api-reference' },
       ]
     },
     {
-      text: 'Armada, Data & Cadangan',
+      text: 'ROS (Perangkat Lunak Robot)',
+      link: '/id/development/ros/',
+      collapsed: true,
       items: [
-        { text: 'Siklus Hidup Kontainer Unit', link: '/id/development/unit-container-lifecycle' },
-        { text: 'Skema Database', link: '/id/development/database-schema' },
-        { text: 'Sinkronisasi Data (Offline First)', link: '/id/development/data-sync' },
-        { text: 'Cadangan & Pemulihan', link: '/id/development/backup-and-restore' },
+        { text: 'Ikhtisar', link: '/id/development/ros/' },
+        { text: 'Daftar Paket ROS', link: '/id/development/ros/ros-packages' },
+        {
+          text: 'Persepsi & Lokalisasi',
+          items: [
+            { text: 'Sensor Fusion & Kontrol', link: '/id/development/ros/sensor-fusion-and-control' },
+            { text: 'Transformasi Koordinat (TF)', link: '/id/development/ros/tf-transforms' },
+          ]
+        },
+        {
+          text: 'Navigasi & Perencanaan',
+          items: [
+            { text: 'Costmap & Planner', link: '/id/development/ros/costmaps-and-planners' },
+            { text: 'Pergantian Mode Dinamis', link: '/id/development/ros/mode-switching' },
+            { text: 'Pengawas Keselamatan', link: '/id/development/ros/safety-watchdog' },
+          ]
+        },
+        {
+          text: 'Algoritma Pembersihan Cakupan',
+          items: [
+            { text: 'Cakupan Boustrophedon', link: '/id/development/ros/boustrophedon-and-alignment' },
+          ]
+        },
+        {
+          text: 'Perangkat Keras & Firmware',
+          items: [
+            { text: 'Firmware & Perangkat Keras', link: '/id/development/ros/firmware-and-hardware' },
+          ]
+        },
+        {
+          text: 'Simulasi & Pengujian',
+          items: [
+            { text: 'Simulasi (Gazebo)', link: '/id/development/ros/simulation' },
+          ]
+        }
       ]
     },
     {
-      text: 'Simulasi & Pengujian',
+      text: 'ROS Web UI (Platform)',
+      link: '/id/development/webui/',
+      collapsed: true,
       items: [
-        { text: 'Simulasi (Gazebo)', link: '/id/development/simulation' },
+        { text: 'Ikhtisar', link: '/id/development/webui/' },
+        {
+          text: 'Navigasi',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/navigation/overview' },
+            { text: 'Pinpoint & Rute', link: '/id/development/webui/navigation/pinpoint-and-routes' },
+            { text: 'Override Manual & Autopilot', link: '/id/development/webui/navigation/manual-and-autopilot' },
+            { text: 'Sinkronisasi & Penyelarasan Peta', link: '/id/development/webui/navigation/map-sync-and-alignment' },
+            { text: 'Pembersihan Cakupan', link: '/id/development/webui/navigation/coverage-cleaning' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/navigation/ros-integration' },
+          ]
+        },
+        {
+          text: 'Pemetaan',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/mapping/overview' },
+            { text: 'Override Manual & Otonom', link: '/id/development/webui/mapping/manual-and-autonomous' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/mapping/ros-integration' },
+          ]
+        },
+        {
+          text: 'Basis Data',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/database/overview' },
+            { text: 'Ganti Nama & Hapus', link: '/id/development/webui/database/rename-and-delete' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/database/ros-integration' },
+          ]
+        },
+        {
+          text: 'Konsol Admin',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/admin-console/overview' },
+            { text: 'Operator', link: '/id/development/webui/admin-console/operators' },
+            { text: 'Unit & Armada', link: '/id/development/webui/admin-console/units-and-fleet' },
+            { text: 'Penyewaan', link: '/id/development/webui/admin-console/rentals' },
+            { text: 'Cadangan', link: '/id/development/webui/admin-console/backups' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/admin-console/ros-integration' },
+          ]
+        },
+        {
+          text: 'Akun & Akses',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/accounts/overview' },
+            { text: 'Keamanan & Token', link: '/id/development/webui/accounts/security-and-tokens' },
+            { text: 'Pendaftaran Perangkat Keras', link: '/id/development/webui/accounts/enrolment' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/accounts/ros-integration' },
+          ]
+        },
+        {
+          text: 'Kamera & Tampilan Langsung',
+          items: [
+            { text: 'Ikhtisar', link: '/id/development/webui/camera/overview' },
+            { text: 'Integrasi ROS', link: '/id/development/webui/camera/ros-integration' },
+          ]
+        },
+        {
+          text: 'Referensi Platform',
+          items: [
+            { text: 'Referensi REST API', link: '/id/development/api-reference' },
+            { text: 'Protokol rosbridge (WS)', link: '/id/development/rosbridge-protocol' },
+            { text: 'Canvas Frontend & Web UI', link: '/id/development/frontend-canvas' },
+            { text: 'Skema Database', link: '/id/development/database-schema' },
+            { text: 'Sinkronisasi Data (Offline First)', link: '/id/development/data-sync' },
+            { text: 'Cadangan & Pemulihan', link: '/id/development/backup-and-restore' },
+            { text: 'Siklus Hidup Kontainer Unit', link: '/id/development/unit-container-lifecycle' },
+          ]
+        }
       ]
     },
     {
@@ -373,61 +436,124 @@ const jaSidebar = {
       items: [
         { text: '開発概要', link: '/ja/development/' },
         { text: 'システムアーキテクチャ', link: '/ja/development/architecture' },
-        { text: 'セキュリティ & 認証', link: '/ja/development/security-and-auth' },
         { text: 'リポジトリ構成', link: '/ja/development/repository-structure' },
-        { text: 'ROSパッケージ一覧', link: '/ja/development/ros-packages' },
-      ]
-    },
-    {
-      text: 'ブストロフェドン清掃機能',
-      items: [
-        { text: 'ブストロフェドン網羅走行', link: '/ja/development/boustrophedon-and-alignment' },
-      ]
-    },
-    {
-      text: 'ナビゲーション & 経路計画',
-      items: [
-        { text: '座標系変換 (TF)', link: '/ja/development/tf-transforms' },
-        { text: 'コストマップ & プランナー', link: '/ja/development/costmaps-and-planners' },
-      ]
-    },
-    {
-      text: 'ロボット制御・センシング & ハードウェア',
-      items: [
-        { text: '状態管理 & 動作制御', link: '/ja/development/state-and-behavior' },
-        { text: '動的モード切り替え', link: '/ja/development/mode-switching' },
-        { text: 'センサーフュージョン & 制御', link: '/ja/development/sensor-fusion-and-control' },
-        { text: 'ファームウェア & ハードウェア', link: '/ja/development/firmware-and-hardware' },
-      ]
-    },
-    {
-      text: 'Web ダッシュボード & ライブメディア',
-      items: [
-        { text: 'フロントエンド Canvas & Web UI', link: '/ja/development/frontend-canvas' },
-        { text: 'rosbridge プロトコル (WS)', link: '/ja/development/rosbridge-protocol' },
-        { text: 'カメラストリーミング (WebRTC)', link: '/ja/development/camera-streaming' },
-      ]
-    },
-    {
-      text: 'クラウド-ロボット通信 & API',
-      items: [
         { text: 'メッセージ仕様 (MQTT)', link: '/ja/development/message-contracts' },
-        { text: 'REST API リファレンス', link: '/ja/development/api-reference' },
       ]
     },
     {
-      text: 'フリート・データ & バックアップ',
+      text: 'ROS (ロボットソフトウェア)',
+      link: '/ja/development/ros/',
+      collapsed: true,
       items: [
-        { text: 'ユニットコンテナライフサイクル', link: '/ja/development/unit-container-lifecycle' },
-        { text: 'データベース設計', link: '/ja/development/database-schema' },
-        { text: 'データ同期 (オフラインファースト)', link: '/ja/development/data-sync' },
-        { text: 'バックアップ & リストア', link: '/ja/development/backup-and-restore' },
+        { text: '概要', link: '/ja/development/ros/' },
+        { text: 'ROSパッケージ一覧', link: '/ja/development/ros/ros-packages' },
+        {
+          text: '知覚 & 自己位置推定',
+          items: [
+            { text: 'センサーフュージョン & 制御', link: '/ja/development/ros/sensor-fusion-and-control' },
+            { text: '座標系変換 (TF)', link: '/ja/development/ros/tf-transforms' },
+          ]
+        },
+        {
+          text: 'ナビゲーション & 経路計画',
+          items: [
+            { text: 'コストマップ & プランナー', link: '/ja/development/ros/costmaps-and-planners' },
+            { text: '動的モード切り替え', link: '/ja/development/ros/mode-switching' },
+            { text: 'セーフティウォッチドッグ', link: '/ja/development/ros/safety-watchdog' },
+          ]
+        },
+        {
+          text: 'カバレッジ清掃アルゴリズム',
+          items: [
+            { text: 'ブストロフェドン網羅走行', link: '/ja/development/ros/boustrophedon-and-alignment' },
+          ]
+        },
+        {
+          text: 'ハードウェア & ファームウェア',
+          items: [
+            { text: 'ファームウェア & ハードウェア', link: '/ja/development/ros/firmware-and-hardware' },
+          ]
+        },
+        {
+          text: 'シミュレーション & テスト',
+          items: [
+            { text: 'シミュレーション (Gazebo)', link: '/ja/development/ros/simulation' },
+          ]
+        }
       ]
     },
     {
-      text: 'シミュレーション & テスト',
+      text: 'ROS Web UI (Platform)',
+      link: '/ja/development/webui/',
+      collapsed: true,
       items: [
-        { text: 'シミュレーション (Gazebo)', link: '/ja/development/simulation' },
+        { text: '概要', link: '/ja/development/webui/' },
+        {
+          text: 'ナビゲーション',
+          items: [
+            { text: '概要', link: '/ja/development/webui/navigation/overview' },
+            { text: 'ピンポイント & ルート', link: '/ja/development/webui/navigation/pinpoint-and-routes' },
+            { text: '手動操作 & オートパイロット', link: '/ja/development/webui/navigation/manual-and-autopilot' },
+            { text: 'マップ同期 & アラインメント', link: '/ja/development/webui/navigation/map-sync-and-alignment' },
+            { text: 'カバレッジ清掃', link: '/ja/development/webui/navigation/coverage-cleaning' },
+            { text: 'ROS連携', link: '/ja/development/webui/navigation/ros-integration' },
+          ]
+        },
+        {
+          text: 'マッピング',
+          items: [
+            { text: '概要', link: '/ja/development/webui/mapping/overview' },
+            { text: '手動操作 & 自律動作', link: '/ja/development/webui/mapping/manual-and-autonomous' },
+            { text: 'ROS連携', link: '/ja/development/webui/mapping/ros-integration' },
+          ]
+        },
+        {
+          text: 'データベース',
+          items: [
+            { text: '概要', link: '/ja/development/webui/database/overview' },
+            { text: '名前変更 & 削除', link: '/ja/development/webui/database/rename-and-delete' },
+            { text: 'ROS連携', link: '/ja/development/webui/database/ros-integration' },
+          ]
+        },
+        {
+          text: '管理コンソール',
+          items: [
+            { text: '概要', link: '/ja/development/webui/admin-console/overview' },
+            { text: 'オペレーター', link: '/ja/development/webui/admin-console/operators' },
+            { text: 'ユニット & フリート', link: '/ja/development/webui/admin-console/units-and-fleet' },
+            { text: 'レンタル', link: '/ja/development/webui/admin-console/rentals' },
+            { text: 'バックアップ', link: '/ja/development/webui/admin-console/backups' },
+            { text: 'ROS連携', link: '/ja/development/webui/admin-console/ros-integration' },
+          ]
+        },
+        {
+          text: 'アカウント & アクセス',
+          items: [
+            { text: '概要', link: '/ja/development/webui/accounts/overview' },
+            { text: 'セキュリティ & トークン', link: '/ja/development/webui/accounts/security-and-tokens' },
+            { text: 'ハードウェア登録', link: '/ja/development/webui/accounts/enrolment' },
+            { text: 'ROS連携', link: '/ja/development/webui/accounts/ros-integration' },
+          ]
+        },
+        {
+          text: 'カメラ & ライブビュー',
+          items: [
+            { text: '概要', link: '/ja/development/webui/camera/overview' },
+            { text: 'ROS連携', link: '/ja/development/webui/camera/ros-integration' },
+          ]
+        },
+        {
+          text: 'プラットフォームリファレンス',
+          items: [
+            { text: 'REST API リファレンス', link: '/ja/development/api-reference' },
+            { text: 'rosbridge プロトコル (WS)', link: '/ja/development/rosbridge-protocol' },
+            { text: 'フロントエンド Canvas & Web UI', link: '/ja/development/frontend-canvas' },
+            { text: 'データベース設計', link: '/ja/development/database-schema' },
+            { text: 'データ同期 (オフラインファースト)', link: '/ja/development/data-sync' },
+            { text: 'バックアップ & リストア', link: '/ja/development/backup-and-restore' },
+            { text: 'ユニットコンテナライフサイクル', link: '/ja/development/unit-container-lifecycle' },
+          ]
+        }
       ]
     },
     {

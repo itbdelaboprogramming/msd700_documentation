@@ -3,16 +3,15 @@ outline: deep
 search: false
 ---
 
-
-# Backup, Restore, and Data Migration
+# Cadangan, Pemulihan, dan Migrasi Data
 
 <RoleBadge role="developer" />
 
-This document details the database backup architecture, export/import archive structures, rental profile transfer mechanics, and migration scripts in MSD700.
+Dokumen ini merinci arsitektur backup database, struktur arsip export/import, mekanika transfer rental profile, dan script migrasi di MSD700.
 
-## Dual-Scope Backup Architecture
+## Arsitektur Backup Dua-Lingkup
 
-The platform supports two independent backup scopes:
+Platform ini mendukung dua lingkup backup yang independen:
 
 ```mermaid
 flowchart TD
@@ -29,16 +28,16 @@ flowchart TD
   end
 ```
 
-| Dimension | Profile-Scoped Backup | Unit-Scoped Backup |
+| Dimensi | Backup Berlingkup Profil | Backup Berlingkup Unit |
 | --- | --- | --- |
-| **Primary Scope Key** | `profile_id` (Rental Profile) | `unit_id` (Physical Robot ULID) |
-| **Typical Use Case** | Migrating a customer's maps and routes to a replacement robot. | Archiving a robot before factory hardware servicing or refurbishment. |
-| **Data Included** | Maps, waypoints, playlists, and user metadata for that profile. | All maps and sensor records originating from that specific hardware unit. |
-| **Restore Strategy** | Additive (upsert without overwriting unrelated tenant data). | Direct restoration to the hardware unit. |
+| **Kunci Lingkup Utama** | `profile_id` (Rental Profile) | `unit_id` (ULID Robot Fisik) |
+| **Kasus Penggunaan Tipikal** | Memigrasikan peta dan rute pelanggan ke robot pengganti. | Mengarsipkan sebuah robot sebelum servis hardware pabrik atau refurbishment. |
+| **Data yang Disertakan** | Peta, waypoint, playlist, dan metadata pengguna untuk profil tersebut. | Semua peta dan record sensor yang berasal dari unit hardware spesifik itu. |
+| **Strategi Restore** | Aditif (upsert tanpa menimpa data tenant yang tidak terkait). | Restorasi langsung ke unit hardware. |
 
-## Archive Structure (`.tar.gz`)
+## Struktur Arsip (`.tar.gz`)
 
-Backups are exported as compressed `.tar.gz` archives containing structured metadata and binary map files:
+Backup diekspor sebagai arsip `.tar.gz` terkompresi yang berisi metadata terstruktur dan file peta biner:
 
 ```
 msd700_backup_01JZ8QK2H.tar.gz
@@ -50,7 +49,7 @@ msd700_backup_01JZ8QK2H.tar.gz
     └── 01JZ8QK2H0001_thumb.png
 ```
 
-### Manifest Format (`manifest.json`)
+### Format Manifest (`manifest.json`)
 
 ```json
 {
@@ -69,12 +68,12 @@ msd700_backup_01JZ8QK2H.tar.gz
 }
 ```
 
-## REST API Backup Operations
+## Operasi Backup REST API
 
-### 1. Export Archive
+### 1. Ekspor Arsip
 `POST /api/backup/export`
 
-Generates and downloads a `.tar.gz` archive.
+Menghasilkan dan mengunduh sebuah arsip `.tar.gz`.
 
 - **Request Body**:
 ```json
@@ -84,30 +83,30 @@ Generates and downloads a `.tar.gz` archive.
 }
 ```
 
-### 2. Import and Restore Archive
+### 2. Impor dan Restore Arsip
 `POST /api/backup/import`
 
-Uploads an archive and applies it additively.
+Mengunggah sebuah arsip dan menerapkannya secara aditif.
 
-- **Request Payload**: Multipart form-data with `file: <archive.tar.gz>` and target `profile_id`.
+- **Request Payload**: Multipart form-data dengan `file: <archive.tar.gz>` dan `profile_id` target.
 
-## Schema Migration Scripts
+## Script Migrasi Skema
 
-Database schema evolutions are managed by automated scripts in `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:
+Evolusi skema database dikelola oleh script otomatis di `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:
 
-| Script Name | Purpose | Execution Command |
+| Nama Script | Tujuan | Perintah Eksekusi |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` | Migrates legacy username/unitname paths to ULID addressing. | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | Creates `pending_units` and `unit_devices` tables for 32-byte nonce auth. | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` | Installs `sync_state` and `sync_tombstones` tables for offline data sync. | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | Upgrades `profile_backups` table with `scope` column. | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | Memigrasikan path username/unitname lama ke pengalamatan ULID. | `node migrate_unit_id_refactor.js --apply` |
+| `migrate_enrolment.js` | Membuat tabel `pending_units` dan `unit_devices` untuk autentikasi nonce 32-byte. | `node migrate_enrolment.js --apply` |
+| `migrate_sync.js` | Memasang tabel `sync_state` dan `sync_tombstones` untuk sinkronisasi data offline. | `node migrate_sync.js --profile dev --apply` |
+| `migrate_backup_scope.js` | Meningkatkan tabel `profile_backups` dengan kolom `scope`. | `node migrate_backup_scope.js --profile dev --apply` |
 
-::: danger Migration Testing Rule
-Always test migration scripts against the development database on **port 3308** before applying them to production on port 3307. Migration scripts require an explicit `--profile` argument to prevent accidental target mismatch.
+::: danger Aturan Pengujian Migrasi
+Selalu uji script migrasi terhadap database pengembangan pada **port 3308** sebelum menerapkannya ke produksi pada port 3307. Script migrasi membutuhkan argumen `--profile` eksplisit untuk mencegah ketidakcocokan target yang tidak disengaja.
 :::
 
-## Related Documentation
+## Dokumentasi Terkait
 
-- [Database Schema](/id/development/database-schema): Full MySQL table definitions and foreign keys.
-- [Data Sync](/id/development/data-sync): Offline data replication and conflict resolution.
-- [API Reference](/id/development/api-reference): REST API endpoints for fleet management.
+- [Skema Database](/id/development/database-schema): Definisi tabel MySQL lengkap dan foreign key.
+- [Sinkronisasi Data](/id/development/data-sync): Replikasi data offline dan resolusi konflik.
+- [Referensi API](/id/development/api-reference): Endpoint REST API untuk manajemen fleet.

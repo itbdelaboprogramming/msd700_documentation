@@ -2,49 +2,53 @@
 outline: deep
 ---
 
-# WiFi Hotspot + Client
+# Wi-Fi ホットスポット + クライアント
 
 <RoleBadge role="technician" />
 
-An optional local-mode feature: the Unit runs its own WiFi hotspot for an operator to join, gets
-automatically captured into its dashboard the moment they open any HTTP page (a captive portal, the
-same mechanism airports and cafes use), and, if a second radio is available, stays connected as a
-WiFi **client** to another network for internet/cloud-sync fallback. Both radios' state is shown on
-the [Local Mode badge](/ja/development/data-sync#the-local-mode-badge), the same badge, the same
-dropdown, and an operator can connect to a different network from there.
+すべてのユニットのローカルモードセットアップ([ユニットセットアップ](/ja/setup/unit-setup) ステップ 6)
+の標準的な一部です。ユニットは、オペレーターが参加できるよう独自の WiFi ホットスポットを実行し、
+オペレーターが何らかの HTTP ページを開いた瞬間に自動的にそのダッシュボードへ捕捉され(キャプティブ
+ポータル。空港やカフェが使うのと同じ仕組みです)、また、2 つ目の無線機が利用可能であれば、
+インターネット/クラウド同期のフォールバックとして別のネットワークに WiFi **クライアント**として接続
+し続けます。両方の無線機の状態は [ローカルモードバッジ](/ja/development/data-sync#the-local-mode-badge)
+の同じバッジ、同じドロップダウンに表示され、オペレーターはそこから別のネットワークに接続できます。
 
-Entirely optional. A unit that never runs the provisioning step below still works exactly as
-[Unit Setup](/ja/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
-else is affected.
+以下のプロビジョニング手順を一度も実行していないユニットも、それ以外の点では
+[ユニットセットアップ](/ja/setup/unit-setup) が説明するとおりに動作します。バッジは単に「ホットスポット
+無線機なし」と報告するだけで、他には何も影響しません。
 
-## Why two radios, not one
+## なぜ無線機が 1 つではなく 2 つ必要なのか
 
-The Jetson's onboard WiFi (a Realtek RTL8822CE on this project's hardware) is **one physical
-radio**. It can join a network as a client (STA) *or* broadcast a hotspot (AP), never both at the
-same time, this is not a driver limitation, it is the hardware: `iw phy` shows exactly one `phy` for
-the onboard card, and one radio can only be tuned to one channel at a time.
+Jetson のオンボード WiFi(このプロジェクトのハードウェアでは Realtek RTL8822CE)は**1 つの物理
+無線機**です。これはネットワークにクライアント(STA)として参加する*か*、ホットスポット(AP)を
+ブロードキャストする*か*のどちらかしかできず、同時に両方はできません。これはドライバの制限ではなく
+ハードウェア自体の制約です。`iw phy` はオンボードカードについて正確に 1 つの `phy` を示し、1 つの
+無線機は一度に 1 つのチャンネルにしか同調できません。
 
-| Topology | Feasibility |
+| トポロジー | 実現可能性 |
 | --- | --- |
-| A dongle runs the hotspot, the built-in radio stays a WiFi client | High confidence, no chipset risk. AP and client live on two physically separate radios, so there is no "concurrent mode" question at all: two independent processes (hostapd on the dongle, NetworkManager on the onboard radio), each bound to its own interface. |
-| One radio does both AP and client at once (no dongle) | Conditional on the chipset. Only works if the driver reports a valid `iw list` interface combination including `{ AP, managed } <= 2` on one wiphy. Not guaranteed, and not something this project can assert in general, check it on the actual hardware. |
+| ドングルがホットスポットを実行し、内蔵無線機は WiFi クライアントのまま | 信頼度が高く、チップセットのリスクなし。AP とクライアントは物理的に分離した 2 つの無線機に存在するため、「同時モード」の問題はそもそも発生しない。独立した 2 つのプロセス(ドングル上の hostapd、オンボード無線機上の NetworkManager)がそれぞれ自身のインターフェースに紐づく。 |
+| 1 つの無線機が AP とクライアントの両方を同時に処理する(ドングルなし) | チップセット次第。ドライバが 1 つの wiphy 上で `{ AP, managed } <= 2` を含む有効な `iw list` インターフェース組み合わせを報告する場合にのみ機能する。保証はなく、このプロジェクトが一般論として断言できるものでもない。実機で確認すること。 |
 
-::: info Windows doing both at once is not proof Linux will
-A laptop running Microsoft's Mobile Hotspot feature alongside a normal WiFi connection uses a
-completely different driver stack (a virtual WiFi adapter Windows manages itself) from Linux's
-`mac80211`/`nl80211` concurrent-AP-and-managed combination. It is a reasonable hint the *hardware*
-is not fundamentally incapable of it, but it says nothing about whether the Linux driver for that
-same chip reports a supporting interface combination. Verify with `iw list` on the actual host.
+::: info Windows が両方同時に行えることは Linux もそうできる証拠にはならない
+Microsoft の Mobile Hotspot 機能を通常の WiFi 接続と並行して実行しているラップトップは、Linux の
+`mac80211`/`nl80211` の AP と managed の同時実行構成とはまったく異なるドライバスタック(Windows 自身
+が管理する仮想 WiFi アダプタ)を使用しています。これは*ハードウェア*が根本的に不可能というわけでは
+ないという合理的なヒントではありますが、同じチップ向けの Linux ドライバがそれをサポートするインター
+フェース組み合わせを報告するかどうかについては何も語っていません。実機の `iw list` で確認してくだ
+さい。
 :::
 
-**Hardware validated on this project**: TP-Link TL-WN722N v2/v3, Realtek **RTL8188EUS** chipset
-(USB ID `2357:010c`). Any RTL8188EUS-based dongle should work with the same driver, see
-`KNOWN_IDS` in `scripts/install-wifi-dongle-driver.sh` for other USB IDs of the same chipset. No
-driver for this chipset ships with the Jetson's kernel out of the box (neither the in-tree
-`rtl8xxxu` nor an out-of-tree module), it has to be built from source via DKMS, see
-[Installing the dongle driver](#installing-the-dongle-driver) below.
+**このプロジェクトで検証済みのハードウェア**: TP-Link TL-WN722N v2/v3、Realtek **RTL8188EUS** チッ
+プセット(USB ID `2357:010c`)。同じチップセットの RTL8188EUS ベースのドングルであれば同じドライバ
+で動作するはずです。同一チップセットの他の USB ID については `scripts/install-wifi-dongle-driver.sh`
+内の `KNOWN_IDS` を参照してください。このチップセット用のドライバは Jetson のカーネルに標準では
+一切同梱されていません(ツリー内の `rtl8xxxu` も、ツリー外モジュールも)。DKMS 経由でソースから
+ビルドする必要があります。詳しくは下記の[ドングルドライバのインストール](#installing-the-dongle-driver)
+を参照してください。
 
-## How it is wired together
+## どのように結線されているか
 
 ```mermaid
 flowchart TB
@@ -76,352 +80,403 @@ flowchart TB
   FW -->|"MASQUERADE, only if STA_INTERFACE_LOCAL set"| STA["onboard radio's own uplink"]
 ```
 
-The hotspot's existence does **not** depend on Docker. `hostapd` and `dnsmasq` run as their own
-systemd services, brought up at boot and independent of `docker-manager.sh` ever having run, the
-same way a wired Ethernet cable "just works". `network_local` only serves live status/scan for the
-badge and carries out an operator's explicit "connect to a different network" request (client side
-only); provisioning the hotspot itself is a separate, one-time step (below).
+ホットスポットの存在は Docker に**依存しません**。`hostapd` と `dnsmasq` は、それ自身の systemd
+サービスとして動作し、ブート時に起動され、`docker-manager.sh` が一度でも実行されたかどうかとは無関係
+です。有線 Ethernet ケーブルが「ただ動く」のと同じ感覚です。`network_local` はバッジ向けのライブ状態
+/スキャンを提供し、オペレーターの明示的な「別のネットワークに接続する」というリクエスト(クライアント
+側のみ)を実行するだけです。ホットスポット自体のプロビジョニングは、別個の、一度限りのステップです
+(以下)。
 
-### Why hostapd, not NetworkManager's own AP mode
+### なぜ NetworkManager 自体の AP モードではなく hostapd なのか
 
-NetworkManager can create AP-mode connections itself (`nmcli connection add ... 802-11-wireless.mode
-ap`), driven internally by `wpa_supplicant`. That was the original design here, but on the
-RTL8188EUS dongle it **hangs every time**: NM's activation always failed after roughly 25 seconds
-with `"Hotspot network creation took too long"` / `reason 'supplicant-timeout'`.
+NetworkManager は自身で AP モードの接続を作成できます(`nmcli connection add ...
+802-11-wireless.mode ap`)。これは内部的には `wpa_supplicant` によって駆動されます。それがこのプロ
+ジェクトの当初の設計でしたが、RTL8188EUS ドングルでは**毎回ハングします**。NM のアクティベーション
+は約 25 秒後に必ず `"Hotspot network creation took too long"` / `reason 'supplicant-timeout'` で失敗
+していました。
 
-Diagnosed by running `hostapd -dd` directly against the same interface: the AP came up in under a
-second (`AP-ENABLED`), fully functional. The driver does support AP mode, but its
-`NL80211_CMD_START_AP` completion event arrives out of the order `wpa_supplicant`'s internal AP code
-expects (visible in the hostapd debug log as `Ignored unknown event (cmd=15)`, logged *after* the AP
-had already started through other means). `wpa_supplicant`'s softAP path apparently waits on that
-event; `hostapd` doesn't block on it and just proceeds.
+同じインターフェースに対して `hostapd -dd` を直接実行して診断したところ、AP は 1 秒未満で立ち上が
+り(`AP-ENABLED`)、完全に機能しました。ドライバは確かに AP モードをサポートしていますが、その
+`NL80211_CMD_START_AP` の完了イベントは、`wpa_supplicant` の内部 AP コードが期待する順序とは異なる
+順序で到着します(hostapd のデバッグログに `Ignored unknown event (cmd=15)` として現れ、これは AP が
+他の手段で既に起動した*後に*記録されています)。`wpa_supplicant` の softAP パスはそのイベントを待って
+いるように見えますが、`hostapd` はそれをブロックせず、そのまま進みます。
 
-The fix: run `hostapd` directly as its own systemd service, and tell NetworkManager to leave the
-interface alone entirely (`unmanaged-devices` in a `conf.d` drop-in) so the two never fight over it.
-The STA side (an upstream network to join as a client) has no such problem and still goes through a
-normal NM connection profile.
+修正方法: `hostapd` を独自の systemd サービスとして直接実行し、NetworkManager にはそのインターフェ
+ースに一切触れないよう指示する(`conf.d` の drop-in での `unmanaged-devices`)ことで、両者が決して
+奪い合わないようにします。STA 側(クライアントとして参加するアップストリームネットワーク)にはこの
+ような問題はなく、通常の NM 接続プロファイルをそのまま利用します。
 
-### Components
+### コンポーネント
 
-| Component | What it does | Lifecycle |
+| コンポーネント | 動作内容 | ライフサイクル |
 | --- | --- | --- |
-| `msd700-hotspot.service` | Assigns the static IP `192.168.4.1/24`, runs `hostapd -i <ap-iface> /etc/hostapd/hostapd-msd700.conf`, calls `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, enabled at boot, `Restart=on-failure` |
-| `msd700-hotspot-firewall.sh` | Captive-portal HTTP redirect (port 80 on the AP interface, always) plus internet-relay NAT (`DOCKER-USER` chain, only when `STA_INTERFACE_LOCAL` is set) | Called from the service above's `ExecStartPost`/`ExecStopPost`, idempotent (check-then-act) |
-| `msd700-hotspot-dhcp.service` | Runs a dedicated `dnsmasq` instance: DHCP server (`192.168.4.10`-`192.168.4.200`) + selective captive-portal DNS | systemd, `BindsTo=msd700-hotspot.service` |
-| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Tells NM to never touch the dongle's interface | Read by NetworkManager on restart |
-| `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Grants `org.freedesktop.NetworkManager.*` actions unconditionally, so `network_local`'s `nmcli` calls (scan, connect, forget) work without an interactive polkit prompt the container can never answer | Read by `polkit` on restart |
-| NM connection profile (onboard radio only) | Normal client connection to the operator's WiFi | Managed by NetworkManager as usual, `autoconnect: yes` |
+| `msd700-hotspot.service` | 静的 IP `192.168.4.1/24` を割り当て、`hostapd -i <ap-iface> /etc/hostapd/hostapd-msd700.conf` を実行し、`msd700-hotspot-firewall.sh apply`/`teardown` を呼び出す | systemd、ブート時に有効化、`Restart=on-failure` |
+| `msd700-hotspot-firewall.sh` | キャプティブポータルの HTTP リダイレクト(AP インターフェースのポート 80、常時)に加え、インターネットリレー用の NAT(`DOCKER-USER` チェーン、`STA_INTERFACE_LOCAL` が設定されている場合のみ) | 上記サービスの `ExecStartPost`/`ExecStopPost` から呼ばれる、冪等(チェックしてから実行) |
+| `msd700-hotspot-dhcp.service` | 専用の `dnsmasq` インスタンスを実行: DHCP サーバー(`192.168.4.10`-`192.168.4.200`)+ 選択的なキャプティブポータル DNS | systemd、`BindsTo=msd700-hotspot.service` |
+| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | ドングルのインターフェースに決して触れないよう NM に指示する | 再起動時に NetworkManager が読み込む |
+| `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | `org.freedesktop.NetworkManager.*` アクションを無条件に許可し、`network_local` の `nmcli` 呼び出し(スキャン、接続、削除)がコンテナには決して応答できない対話的な polkit プロンプトなしに動作するようにする | 再起動時に `polkit` が読み込む |
+| NM 接続プロファイル(オンボード無線機のみ) | オペレーターの WiFi への通常のクライアント接続 | 通常どおり NetworkManager が管理、`autoconnect: yes` |
 
-Both hotspot-side systemd services `Restart=on-failure`, so unplugging and replugging the *same*
-dongle while the unit is running recovers on its own (the interface name is MAC-derived and stable
-per physical dongle).
+ホットスポット側の両方の systemd サービスは `Restart=on-failure` であるため、ユニットが稼働中に*
+同じ*ドングルを抜き差ししても自動的に復旧します(インターフェース名は物理ドングルごとに MAC アドレス
+から導出され安定しています)。
 
-::: info Why `network_local` is not `privileged: true`
-`network_local` needs a few distinct things, none of them the broad grant `msd700` already uses
-(`privileged: true` + host network, see [Docker Reference](/ja/setup/docker-reference#network-mode-host)).
-A bind-mounted D-Bus socket is what lets `nmcli` control the **host's own** NetworkManager daemon for
-the STA side; the client itself never touches a network interface directly. `cap_add: [NET_ADMIN]`
-plus `network_mode: host` is what the AP-status read (`iw dev <iface> info`) needs, since the AP
-interface lives in the host's network namespace. `security_opt: apparmor:unconfined` is the
-non-obvious one: Docker's default apparmor profile denies D-Bus method calls from inside the
-container even with the socket bind-mounted and `NET_ADMIN` granted, `nmcli`'s initial `Hello()` to
-the bus gets an `AccessDenied` before NetworkManager's own D-Bus policy is ever consulted. The
-container's only job is talking to the host's NetworkManager over that bus, so it runs unconfined
-rather than fighting the default profile rule by rule.
+::: info なぜ `network_local` は `privileged: true` ではないのか
+`network_local` が必要とするのはいくつかの明確な事柄だけで、そのいずれも `msd700` が既に使っている
+広範な許可(`privileged: true` + host network、[Docker コマンドリファレンス](/ja/setup/docker-reference#network-mode-host)
+を参照)ではありません。バインドマウントされた D-Bus ソケットにより、`nmcli` は STA 側について**ホスト
+自身**の NetworkManager デーモンを制御できます。クライアント自体がネットワークインターフェースに
+直接触れることはありません。`cap_add: [NET_ADMIN]` に `network_mode: host` を加えたものは、AP のステ
+ータス読み取り(`iw dev <iface> info`)に必要です。AP インターフェースはホストのネットワーク名前空間
+に存在するためです。`security_opt: apparmor:unconfined` は分かりにくい部分です。Docker のデフォルト
+apparmor プロファイルは、ソケットがバインドマウントされ `NET_ADMIN` が付与されていても、コンテナ内
+部からの D-Bus メソッド呼び出しを拒否します。`nmcli` の最初の `Hello()` 呼び出しは、NetworkManager
+自身の D-Bus ポリシーが参照される前に `AccessDenied` になってしまいます。このコンテナの唯一の仕事は
+そのバス経由でホストの NetworkManager と話すことなので、デフォルトプロファイルのルールと一つ一つ
+戦うのではなく、unconfined で実行しています。
 :::
 
-## Installing the dongle driver
+## ドングルドライバのインストール
 
-One-time, per unit, before provisioning:
+ユニットごとに一度、プロビジョニングの前に実行します。
 
 ```bash
 ./scripts/install-wifi-dongle-driver.sh
 ```
 
-- Installs `dkms`, kernel headers, and a C toolchain if missing.
-- Clones the driver source ([aircrack-ng/rtl8188eus](https://github.com/aircrack-ng/rtl8188eus)) to
-  `/usr/src/`.
-- Builds and installs it via **DKMS**, not a one-off `insmod`. This matters: DKMS automatically
-  rebuilds the module against every future kernel this Jetson boots, so an `apt` kernel upgrade
-  doesn't silently kill the dongle the way a manual build would.
-- Loads the module and waits for the second WiFi interface to appear.
+- `dkms`、カーネルヘッダー、C ツールチェーンが不足していればインストールします。
+- ドライバのソース([aircrack-ng/rtl8188eus](https://github.com/aircrack-ng/rtl8188eus))を
+  `/usr/src/` にクローンします。
+- 一度限りの `insmod` ではなく、**DKMS** 経由でビルド・インストールします。これは重要です。DKMS は、
+  この Jetson が今後起動するあらゆるカーネルに対してモジュールを自動的に再ビルドするため、`apt` に
+  よるカーネルアップグレードが、手動ビルドの場合のようにドングルを黙って壊してしまうことがありませ
+  ん。
+- モジュールをロードし、2 つ目の WiFi インターフェースが現れるのを待ちます。
 
-Flags: `--check` (verify status only, no changes), `--remove` (uninstall).
+フラグ: `--check`(状態確認のみ、変更なし)、`--remove`(アンインストール)。
 
-::: info This step can also run itself
-`setup.sh --provision-network` (below) detects a known RTL8188EUS dongle (`lsusb` against the same
-`KNOWN_IDS` list) and, if its driver isn't loaded yet, runs this script automatically before
-continuing. Running it by hand first is still useful to see the build output, or to `--check`
-status without changing anything.
+::: info このステップは自動的に実行されることもある
+`setup.sh --provision-network`(下記)は、既知の RTL8188EUS ドングルを検出し(同じ `KNOWN_IDS`
+リストに対する `lsusb`)、そのドライバがまだロードされていなければ、続行前にこのスクリプトを自動的
+に実行します。ビルド出力を確認したい場合や、何も変更せずに `--check` で状態だけ見たい場合は、事前に
+手動で実行しておくのも依然として有用です。
 :::
 
-## Provisioning the hotspot (once per unit)
+## ホットスポットのプロビジョニング(ユニットごとに一度)
 
-Everything below lives **outside Docker** on purpose: it has to survive `local_dev` being down, and
-it has to come up the instant a dongle is plugged into a unit that has never run
-`docker-manager.sh` at all.
+以下のすべては、意図的に**Docker の外**に存在します。これは `local_dev` が停止していても存続する
+必要があり、また `docker-manager.sh` を一度も実行したことがないユニットにドングルを挿した瞬間に
+立ち上がる必要があるためです。
 
-### 1. Plug in the dongle, set a password
+### 1. ドングルを挿す
 
-`docker/.env` (created from `docker/.env.example` on first run if it doesn't exist yet) needs a
-hotspot password before anything is provisioned:
+事前に `docker/.env` に手動で設定する必要のあるものはありません。検証済みの USB WiFi ドングルを挿し
+て、以下のプロビジョニングに進んでください。パスワードやその他すべての設定は、その時点で対話的に
+尋ねられます。
+
+`nmcli` がまだホストにない場合:
 
 ```bash
-# msd700_noetic/docker/.env
-AP_PASSWORD_LOCAL=your-hotspot-password   # 8+ characters, required
+sudo apt install network-manager
 ```
 
-::: warning Do not commit a real password to `docker/.env`
-That file is **tracked by git**. Passing the password inline on the provisioning command below (step
-2) avoids ever writing it to disk on this repository checkout, `setup.sh` sources `docker/.env`
-without overriding variables already present in the environment, so an inline value wins, and
-nothing needs the password afterwards: NetworkManager stores the STA key itself, hostapd's own
-config file (`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one, and later hotspot
-changes go through [the dashboard's badge menu](#changing-the-unit-s-own-hotspot).
-:::
+### 2. プロビジョニングする
 
-Everything else, `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL`, `AP_SSID_LOCAL`, is auto-detected or
-defaulted, see [Configuration reference](#configuration-reference-docker-env) below if a value needs
-to be overridden by hand.
-
-### 2. Provision
+対話型ターミナル(キーボードの前にいる人間、パイプや非 TTY セッションではない)から実行します。
 
 ```bash
-sudo apt install network-manager     # if nmcli is not already on the host
+./setup.sh --provision-network
+```
+
+create-next-app スタイルで、すべての設定項目(インターフェース名、SSID、ホットスポットのパスワード)
+を順に案内し、自動検出済みまたは現在の値を `[default]` として表示します。Enter を押せば受け入れ、
+新しい値を入力することもできます。ホットスポットのパスワードは確認のため 2 回入力し、STA 側で入力
+した上流 WiFi のパスワードとともに、意図的に `docker/.env` やディスク上の他のいかなるファイルにも
+**決して**書き込まれません。NetworkManager は STA キー自体を保存し、hostapd 自身の設定ファイル
+(`/etc/hostapd/hostapd-msd700.conf`、`chmod 0600`)が AP のキーを保存します。それ以外のすべての回答
+(インターフェース名、SSID)は `docker/.env` に書き戻されるため、再実行時や、ファイルをざっと見た人間
+にも実際の値が見えます。詳しくは下記の[設定リファレンス](#configuration-reference-docker-env)を参照
+してください。
+
+::: info 無人・スクリプトによるプロビジョニング
+TTY がない場合、または `MSD700_NONINTERACTIVE=1` の場合、上記のプロンプトは完全にスキップされ、
+`docker/.env`(存在しない場合は初回実行時に `docker/.env.example` から作成される)と環境変数がその
+まま使用されるため、自動化も引き続き機能します。
+
+```bash
 AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
 ```
 
-No need to look up interface names by hand first. This one command:
+`docker/.env` は**git で追跡されている**ため、実際のパスワードは示したとおりコマンドラインに置く
+べきであり、決してこのファイルにコミットしてはいけません。`setup.sh` は `docker/.env` を、環境に
+既に存在する変数を上書きせずに source するため、インラインの値が優先されます。
+:::
 
-1. **Installs udev rules.** Every `*.rules` file in `scripts/udev/`, not just the WiFi one, the
-   STM32 and RealSense rules already in the repo had no install path of their own until this
-   existed.
-2. **Installs a PolicyKit rule** (`/etc/polkit-1/rules.d/50-msd700-network-manager.rules`) so
-   `network_local`'s `nmcli` calls do not hang on an interactive auth prompt.
-3. **Auto-detects the AP interface**: if a known RTL8188EUS dongle is plugged in but
-   `AP_INTERFACE_LOCAL` is empty, installs its driver first (see above) if needed, then finds the
-   interface by walking `/sys/class/net/*/device/driver` for whichever one is owned by the `8188eu`
-   kernel driver, deterministic, independent of MAC address or plug order.
-4. **Auto-detects the STA interface**: whichever *other* WiFi device exists, if there's exactly one.
-   Both detected values are written back into `docker/.env` so future runs, and a human skimming the
-   file, see the real values. Ambiguous cases (e.g. two onboard radios) are left for a human to set
-   explicitly.
-5. **Installs `hostapd`** if missing, deletes any leftover `msd700-hotspot` NetworkManager
-   connection profile from before this project switched off NM's own AP mode, and writes
-   `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` (restarting NetworkManager *before* hostapd
-   claims the interface, so NM isn't still holding it).
-6. **Renders and installs** `/etc/hostapd/hostapd-msd700.conf`, `/etc/dnsmasq-msd700-hotspot.conf`,
-   `/usr/local/sbin/msd700-hotspot-firewall.sh`, and the two systemd unit files, then enables and
-   **restarts** (not `enable --now`, which is a no-op on an already-running service and would leave
-   a changed config never actually re-applied) `msd700-hotspot.service` and
-   `msd700-hotspot-dhcp.service`.
-7. **Creates the STA client profile**, if `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` are filled in,
-   left alone if a profile of that name already exists.
+いずれにせよ、事前に手動でインターフェース名を調べる必要はありません。この 1 つのコマンドは:
 
-Re-running this command is always safe: every step is idempotent and only touches what actually
-needs to change. To add or change a client network afterward, use the WiFi section of the dashboard
-badge's dropdown instead of re-running this step, provisioning intentionally never touches an
-existing STA profile.
+1. **udev ルールをインストールします。** `scripts/udev/` 内のすべての `*.rules` ファイル(WiFi 用
+   だけでなく)。リポジトリに既にあった STM32 と RealSense のルールも、これができるまでは独自の
+   インストール経路を持っていませんでした。
+2. **PolicyKit ルール**(`/etc/polkit-1/rules.d/50-msd700-network-manager.rules`)をインストール
+   し、`network_local` の `nmcli` 呼び出しが対話的な認証プロンプトでハングしないようにします。
+3. **AP インターフェースを自動検出します**: 既知の RTL8188EUS ドングルが挿されているが
+   `AP_INTERFACE_LOCAL` が空の場合、必要であればまずそのドライバをインストールし(上記参照)、次に
+   `8188eu` カーネルドライバに所有されているものを `/sys/class/net/*/device/driver` を辿って探しま
+   す。これは決定論的で、MAC アドレスや挿入順序に依存しません。
+4. **STA インターフェースを自動検出します**: 他に存在する WiFi デバイスが正確に 1 つだけあれば、
+   それを使用します。検出された両方の値は `docker/.env` に書き戻されるため、以降の実行や、ファイル
+   をざっと見た人間にも実際の値が見えます。曖昧なケース(例えばオンボード無線機が 2 つある場合)は
+   人間が明示的に設定するよう残されます。
+5. **`hostapd` をインストールします**(未インストールの場合)。このプロジェクトが NM 自身の AP モード
+   をやめる前から残っていた `msd700-hotspot` という名前の NetworkManager 接続プロファイルを削除し、
+   `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` を書き込みます(hostapd がそのインターフェ
+   ースを取得する*前に* NetworkManager を再起動し、NM がまだそれを保持したままにならないようにしま
+   す)。
+6. **レンダリングしてインストールします**: `/etc/hostapd/hostapd-msd700.conf`、
+   `/etc/dnsmasq-msd700-hotspot.conf`、`/usr/local/sbin/msd700-hotspot-firewall.sh`、および 2 つの
+   systemd ユニットファイルを配置し、`msd700-hotspot.service` と `msd700-hotspot-dhcp.service` を
+   有効化して**再起動**します(既に稼働中のサービスに対しては no-op になり、変更された設定が実際
+   には再適用されないまま残ってしまう `enable --now` ではありません)。
+7. **STA クライアントプロファイルを作成します**。`STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` が入力され
+   ている場合に行われ、その名前のプロファイルが既に存在する場合はそのままにされます。
 
-### Why this isn't folded into `docker-manager.sh build`/`up`
+このコマンドの再実行は常に安全です。すべてのステップは冪等であり、実際に変更が必要なものにのみ
+触れます。後でクライアントネットワークを追加・変更するには、このステップを再実行するのではなく、
+ダッシュボードバッジのドロップダウンの WiFi セクションを使用してください。プロビジョニングは既存の
+STA プロファイルには意図的に一切触れません。
 
-Considered and rejected on purpose. `docker-manager.sh` today never needs `sudo` at all (building
-and running the containers only needs `docker` group membership). Provisioning the hotspot does,
-`apt install`, `systemctl`, writing to `/etc/`. Folding it in would mean every `docker-manager.sh
-build`, including on a dev laptop running `--simulator` with no hotspot hardware at all, could start
-prompting for a `sudo` password it never needed before. Keeping the two commands separate keeps that
-surprise out of the common case.
+### なぜこれは `docker-manager.sh build`/`up` に組み込まれていないのか
 
-## The captive portal
+検討した上で意図的に却下されました。`docker-manager.sh` は現在、`sudo` をまったく必要としません
+(コンテナのビルドと実行に必要なのは `docker` グループのメンバーシップだけです)。ホットスポットの
+プロビジョニングには `apt install`、`systemctl`、`/etc/` への書き込みが必要です。これを組み込んで
+しまうと、ホットスポット用ハードウェアが一切ない開発用ラップトップで `--simulator` を実行している
+場合を含め、あらゆる `docker-manager.sh build` が、これまで一度も必要としなかった `sudo` パスワード
+を突然要求し始める可能性があります。2 つのコマンドを分離しておくことで、その驚きを通常のケースから
+遠ざけています。
 
-**DNS is selective, not a wildcard.** `/etc/dnsmasq-msd700-hotspot.conf` (rendered from
-`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) only resolves the specific hostnames
-iOS/macOS, Android, Windows, Ubuntu/GNOME, and Firefox each query to detect "is this network behind
-a captive portal" (`captive.apple.com`, `connectivitycheck.gstatic.com`,
-`www.msftconnecttest.com`, `detectportal.firefox.com`, `nmcheck.gnome.org`, and a few more, see the
-template for the full list) to `192.168.4.1`. Every other hostname falls through to this dnsmasq's
-own upstream resolver (`/etc/resolv.conf`, normally systemd-resolved, which asks whatever DNS the
-onboard radio's own upstream network handed out). This replaced an earlier version of this feature
-that wildcarded *every* hostname to the unit's own address, wildcarding is still effectively what
-happens on an **AP-only unit** with no `STA_INTERFACE_LOCAL` configured (nothing to relay through
-regardless of what DNS says), but once an onboard uplink exists, resolving real domains to their
-real addresses is what lets HTTPS (port 443) traffic pass straight through the NAT relay below
-untouched.
+## キャプティブポータル
 
-**The redirect is interface-scoped, not hostname-scoped.** `msd700-hotspot-firewall.sh` installs one
-iptables rule:
+**DNS は選択的であり、ワイルドカードではありません。** `/etc/dnsmasq-msd700-hotspot.conf`
+(`docker/networkmanager/dnsmasq-hotspot.conf.tmpl` からレンダリングされる)は、iOS/macOS、Android、
+Windows、Ubuntu/GNOME、Firefox がそれぞれ「このネットワークはキャプティブポータルの背後にあるか」を
+検出するために問い合わせる特定のホスト名(`captive.apple.com`、`connectivitycheck.gstatic.com`、
+`www.msftconnecttest.com`、`detectportal.firefox.com`、`nmcheck.gnome.org`、その他多数。完全な一覧
+はテンプレートを参照)だけを `192.168.4.1` に解決します。それ以外のすべてのホスト名は、この dnsmasq
+自身の上流リゾルバ(`/etc/resolv.conf`、通常は systemd-resolved で、オンボード無線機自身の上流ネッ
+トワークが渡してきた DNS を問い合わせます)にフォールスルーします。これは、*すべての*ホスト名を
+ユニット自身のアドレスにワイルドカードしていたこの機能の以前のバージョンを置き換えたものです。
+ワイルドカードは、`STA_INTERFACE_LOCAL` が設定されていない**AP 専用ユニット**では今も実質的に同じ
+挙動になります(DNS が何を言おうと、どのみちリレーする先がないため)。しかし、オンボードのアップ
+リンクが存在すれば、実際のドメインを実際のアドレスに解決することが、以下の NAT リレーを通じて HTTPS
+(ポート 443)トラフィックをそのまま素通りさせることを可能にします。
+
+**リダイレクトはホスト名単位ではなく、インターフェース単位です。** `msd700-hotspot-firewall.sh` は
+1 つの iptables ルールをインストールします。
 
 ```
 iptables -t nat -A PREROUTING -i <ap-interface> -p tcp --dport 80 -j REDIRECT --to-port <captive-port>
 ```
 
-This redirects **every** plain-HTTP (port 80) request arriving on the AP interface to the dashboard,
-regardless of which hostname it was headed for, iptables acts on interface and port, not on the DNS
-answer a client already resolved. That's deliberate for the captive-portal probes themselves (their
-DNS was already steered to `192.168.4.1` above, so they'd land here either way), but it also means a
-client's plain-HTTP request to some unrelated site (resolved to that site's real IP) still gets
-redirected here rather than actually reaching that site.
-`ROS-dashboard-next-ts/middleware.ts` handles that case explicitly: it answers each OS's specific
-probe host+path with something that *isn't* what the OS expects (a 302 for Apple, a plain 200 page
-for the rest, only when `NEXT_PUBLIC_DEPLOYMENT_MODE=local`), and for a foreign hostname that isn't
-one of those probes, 302-redirects back to the dashboard's own canonical address instead of trying
-to proxy it. HTTPS traffic never hits this rule at all (only `--dport 80` is redirected), so ordinary
-browsing over HTTPS is unaffected once an onboard uplink is relaying it.
+これは、AP インターフェースに到着した**すべて**の平文 HTTP(ポート 80)リクエストを、宛先ホスト名
+に関係なくダッシュボードへリダイレクトします。iptables はインターフェースとポートに基づいて動作し、
+クライアントが既に解決した DNS の回答には基づきません。これは、キャプティブポータルのプローブ自体
+にとっては意図的な動作です(それらの DNS は既に上記で `192.168.4.1` に誘導されているため、いずれに
+せよここに着地します)が、同時に、無関係な何らかのサイトへのクライアントの平文 HTTP リクエスト(その
+サイトの実際の IP に解決されたもの)も、実際にそのサイトに到達する代わりにここへリダイレクトされて
+しまうことを意味します。`ROS-dashboard-next-ts/middleware.ts` はこのケースを明示的に処理していま
+す。各 OS の特定のプローブ用のホスト+パスには、その OS が期待するものとは*異なる*応答を返し(Apple
+には 302、それ以外には平文の 200 ページ。ただし `NEXT_PUBLIC_DEPLOYMENT_MODE=local` のときのみ)、
+それらのプローブのいずれでもない外部ホスト名に対しては、プロキシしようとするのではなく、ダッシュ
+ボード自身の正規アドレスへ 302 リダイレクトします。HTTPS トラフィックはこのルールにまったく触れま
+せん(`--dport 80` だけがリダイレクトされます)。そのため、オンボードのアップリンクがそれをリレー
+している限り、通常の HTTPS 経由のブラウジングは影響を受けません。
 
-Applied and removed automatically via `msd700-hotspot.service`'s `ExecStartPost`/`ExecStopPost`, tied
-to hostapd's own up/down, not to any container's lifecycle or a NetworkManager dispatcher script.
+`msd700-hotspot.service` の `ExecStartPost`/`ExecStopPost` によって自動的に適用・削除され、
+コンテナのライフサイクルや NetworkManager のディスパッチャスクリプトではなく、hostapd 自身の起動/
+停止に紐づいています。
 
-::: danger HTTPS is never intercepted, and that is not a bug
-Redirecting TLS traffic breaks certificate validation outright: the client gets a hard security
-error, not a sign-in prompt. This is a protocol constraint, the same one every real captive portal
-runs into. What actually triggers the "Sign in to network" prompt is each OS's own plain-HTTP probe:
+::: danger HTTPS は決してインターセプトされません。これはバグではありません
+TLS トラフィックをリダイレクトすると、証明書の検証が完全に壊れてしまいます。クライアントはサイン
+インのプロンプトではなく、深刻なセキュリティエラーを受け取ります。これはプロトコル上の制約であり、
+実在するすべてのキャプティブポータルが直面するのと同じものです。実際に「Sign in to network」プロ
+ンプトを引き起こすのは、各 OS 自身の平文 HTTP プローブです。
 
-| OS | Probe URL | Expects |
+| OS | プローブ URL | 期待する応答 |
 | --- | --- | --- |
-| Apple (iOS/macOS) | `http://captive.apple.com/hotspot-detect.html` | the literal string "Success" |
+| Apple (iOS/macOS) | `http://captive.apple.com/hotspot-detect.html` | 文字列 "Success" そのもの |
 | Android | `http://connectivitycheck.gstatic.com/generate_204` | HTTP 204 |
 | Windows (NCSI) | `http://www.msftconnecttest.com/connecttest.txt` | "Microsoft Connect Test" |
 | Windows (legacy) | `http://www.msftncsi.com/ncsi.txt` | "Microsoft NCSI" |
 | Firefox | `http://detectportal.firefox.com/success.txt` | "success\n" |
-| Ubuntu/GNOME (NetworkManager) | `http://connectivity-check.ubuntu.com/` , `http://nmcheck.gnome.org/` | a non-empty 200 body |
+| Ubuntu/GNOME (NetworkManager) | `http://connectivity-check.ubuntu.com/` , `http://nmcheck.gnome.org/` | 空でない 200 ボディ |
 :::
 
-**Internet relay.** Only when `STA_INTERFACE_LOCAL` is set, `msd700-hotspot-firewall.sh` also adds:
+**インターネットリレー。** `STA_INTERFACE_LOCAL` が設定されている場合のみ、
+`msd700-hotspot-firewall.sh` は以下も追加します。
 
-- A `MASQUERADE` rule (`192.168.4.0/24` out the onboard radio) so return traffic has a route back to
-  a client's private hotspot address.
-- Two `ACCEPT` rules in Docker's **`DOCKER-USER`** chain, not `FORWARD` directly, because Docker sets
-  `FORWARD`'s default policy to `DROP` and owns its own chains there, but its own documentation names
-  `DOCKER-USER` as the one chain it guarantees never to insert into, flush, or otherwise touch, so
-  these rules survive `docker-manager.sh` restarting Docker or the containers, which rules added
-  straight to `FORWARD` would not.
+- `MASQUERADE` ルール(`192.168.4.0/24` をオンボード無線機経由で外に出す)で、戻りトラフィックが
+  クライアントのプライベートなホットスポットアドレスへ戻る経路を持てるようにします。
+- Docker の **`DOCKER-USER`** チェーンに対する 2 つの `ACCEPT` ルール(`FORWARD` に直接ではなく)。
+  これは、Docker が `FORWARD` のデフォルトポリシーを `DROP` に設定し、そこに自身のチェーンを所有し
+  ているためですが、Docker 自身のドキュメントは `DOCKER-USER` を、挿入・フラッシュ・その他の変更を
+  決して行わないと保証している唯一のチェーンとして挙げています。そのため、これらのルールは
+  `docker-manager.sh` が Docker やコンテナを再起動しても存続しますが、`FORWARD` に直接追加された
+  ルールはそうはなりません。
 
-**Security note:** anyone who connects to the hotspot rides the unit's own internet connection.
-Worth considering if a unit is deployed somewhere the hotspot password might reach people beyond the
-intended operator.
+**セキュリティに関する注記:** ホットスポットに接続した人は誰でも、そのユニット自身のインターネット
+接続に相乗りします。ホットスポットのパスワードが意図したオペレーター以外の人々にまで届く可能性が
+ある場所にユニットを配備する場合は考慮する価値があります。
 
-## The dashboard badge
+## ダッシュボードのバッジ
 
-There is no separate WiFi badge. This is a **section inside** the
-[Local Mode badge](/ja/development/data-sync#the-local-mode-badge)'s dropdown, under the sync state.
-On the badge line itself there is only a WiFi **glyph**, coloured by state and carrying the summary
-(an SSID, `hotspot only`, `no network`, `wifi unreachable`) as its hover tooltip and its
-screen-reader label rather than as printed text, an SSID is up to 32 bytes of arbitrary characters
-and the badge sits over the navbar, so the words belong one click away instead. The agent being
-unreachable is also stated in words at the top of the section, since a red glyph on its own is not
-something an operator can act on.
+独立した WiFi バッジはありません。これは[ローカルモードバッジ](/ja/development/data-sync#the-local-mode-badge)
+のドロップダウンの**内部にあるセクション**で、同期状態の下に位置します。バッジ自体の行には WiFi の
+**グリフ**だけがあり、状態によって色分けされ、サマリー(SSID、`hotspot only`、`no network`、
+`wifi unreachable`)は印字されたテキストではなく、ホバーツールチップとスクリーンリーダー用のラベル
+として持たされています。SSID は最大 32 バイトの任意の文字列であり、バッジはナビバー上に乗っている
+ため、その言葉はクリック 1 回先に置くのがふさわしいのです。エージェントが到達不能であることも、
+セクションの上部に言葉で明示されています。赤いグリフだけでは、オペレーターが何をすべきか分からない
+ためです。
 
-It polls `GET /local/wifi/status` every 30 seconds, faster for a short window
-after an action, from the always-mounted badge rather than from the section, so the summary is
-current whether or not the dropdown has ever been opened. The network scan is the opposite: it runs
-when the dropdown opens and not before, because `nmcli`'s rescan is not free and most page-views
-never open it.
+これはセクションからではなく、常にマウントされているバッジから、30 秒ごとに `GET /local/wifi/status`
+をポーリングします(アクション後の短い期間はより高頻度になります)。これにより、ドロップダウンが一度
+も開かれていなくてもサマリーは最新の状態を保ちます。ネットワークスキャンはその逆です。ドロップダウン
+が開かれたときにのみ実行され、それより前には行われません。`nmcli` の再スキャンは無料ではなく、ほとん
+どのページ表示ではドロップダウンが一度も開かれないためです。
 
-| Endpoint | Auth | Purpose |
+| エンドポイント | 認証 | 目的 |
 | --- | --- | --- |
-| `GET /local/wifi/status` | none | Hotspot state (up? SSID? client count, read via `iw dev <ap-iface> info` / `station dump`), client state (connected? SSID? IP? internet reachable, via `nmcli networking connectivity`?) |
-| `GET /local/wifi/scan` | none | Nearby SSIDs and security type, for the dropdown |
-| `GET /local/wifi/saved` | none | Known client profiles |
-| `GET /local/wifi/hotspot` | none | This unit's own hotspot SSID and the outcome of the last change. **Never returns the password** |
-| `POST /local/wifi/connect` | operator session | Connect the client radio to a chosen network |
-| `POST /local/wifi/forget` | operator session | Remove a saved client profile |
-| `POST /local/wifi/hotspot` | operator session | Change this unit's own hotspot SSID and/or password |
+| `GET /local/wifi/status` | なし | ホットスポットの状態(稼働中か? SSID は? クライアント数、`iw dev <ap-iface> info` / `station dump` で読み取り)、クライアントの状態(接続中か? SSID は? IP は? `nmcli networking connectivity` によるインターネット到達可否) |
+| `GET /local/wifi/scan` | なし | 周辺の SSID とセキュリティ種別。ドロップダウン用。**このユニット自身のホットスポットは除外される**(下記参照) |
+| `GET /local/wifi/saved` | なし | 既知のクライアントプロファイル |
+| `GET /local/wifi/hotspot` | なし | このユニット自身のホットスポットの SSID と、直近の変更の結果。**パスワードは決して返さない** |
+| `POST /local/wifi/connect` | オペレーターセッション | クライアント無線機を選択したネットワークに接続する |
+| `POST /local/wifi/forget` | オペレーターセッション | 保存済みのクライアントプロファイルを削除する |
+| `POST /local/wifi/hotspot` | オペレーターセッション | このユニット自身のホットスポットの SSID やパスワードを変更する |
 
-The mutating routes require the same operator session every other `/api/*` route does, unlike
-`/local/status`/`/local/sync`, which stay unauthenticated because a unit with no synced-down
-accounts yet has nobody who could log in. Connecting to a network (and handing over a password) is
-a meaningfully more sensitive action than reading a sync timestamp, so it does not get the same
-pre-login exception.
+状態を変更するルートは、`/local/status`/`/local/sync` とは異なり、他のすべての `/api/*` ルートと
+同じオペレーターセッションを要求します。`/local/status`/`/local/sync` が未認証のままなのは、まだ
+アカウントが同期されていないユニットにはログインできる相手が誰もいないためです。ネットワークに接続
+すること(そしてパスワードを渡すこと)は、同期タイムスタンプを読み取るよりも意味的にはるかに機微な
+操作であるため、同じログイン前の例外は適用されません。
 
-## Changing the unit's own hotspot
+### ユニット自身のホットスポットはスキャン結果に決して現れない
 
-The WiFi section of the badge's dropdown is meant to rename the hotspot and set a new password.
+2 つの無線機を持つユニットは、一方がホットスポットをブロードキャストしている間、もう一方の無線機
+でスキャンを行うため、自身のホットスポットはその結果の中でも十分に強い電波を持つネットワークとして
+現れ、多くの場合最強、したがってリストの先頭に現れます。オペレーターはほぼ常にそのホットスポットを
+**経由して**そのリストを読んでいるため、それを選ぶことはユニットに自分自身へ参加するよう指示するこ
+とになります。クライアント無線機はわずか数センチ先の AP に関連付けられ、ホットスポットは再設定中に
+オペレーターを切断し、ページはどこにも通じないネットワーク上で再読み込みされ、画面上で見るからに
+とるべき行動は同じ項目をもう一度選ぶことになってしまいます。2026-09-10 以降、`scan()` はそれを除外
+し、`connect()` は `own_hotspot` として即座に拒否します(パネルでは、なぜ最強のネットワークが避ける
+べきものなのかを説明する文として表示されます)。リストをフィルタリングするだけでは、このループを
+起こりにくくするだけです。ホットスポットの名前変更をまたいで保持された古いドロップダウンや、手入力
+された SSID は、依然として `connect()` に到達してしまいます。
 
-::: danger Currently broken after the hostapd migration
-`network-agent`'s `setHotspot()` (`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-still reads and writes the AP side as an `nmcli connection modify msd700-hotspot ...` /
-`nmcli connection down`/`up msd700-hotspot` NetworkManager profile. Provisioning (above) explicitly
-**deletes** that exact profile if one exists, the AP interface is NM-*unmanaged* now, `hostapd` owns
-it directly via `msd700-hotspot.service`. On any unit provisioned under the current architecture
-there is no `msd700-hotspot` connection for `setHotspot()` to read, so it fails immediately with
-`not_provisioned` before attempting any change. Reading status (`GET /local/wifi/hotspot`,
-`GET /local/wifi/status`) is unaffected, `getApInfo()` was updated to read the interface directly
-via `iw`, only the *write* path was not carried over. Fixing this means rewriting `setHotspot()` to
-edit `/etc/hostapd/hostapd-msd700.conf` (SSID/`wpa_passphrase`) and `systemctl restart
-msd700-hotspot.service` instead of touching a NetworkManager profile that no longer exists. Not yet
-done.
+除外すべき SSID は 2 箇所から読み取られます。どちらか一方しか利用できない場合があるためです。
+`iw dev <ap-iface> info` は、実際に今電波として出ているものを、それを設置したのが `hostapd` であれ
+NetworkManager であれ報告します。そして NM プロファイルの `802-11-wireless.ssid` は、AP が再起動の
+途中で一時的にダウンしている間でも、設定されている内容を報告します。どちらの照会もソフトに失敗しま
+す。自分自身の SSID が分からないことのコストは 1 つのエントリがフィルタされないだけで、スキャン全体
+に影響することは決してありません。
+
+## ユニット自身のホットスポットを変更する
+
+バッジのドロップダウンの WiFi セクションは、ホットスポットの名前変更と新しいパスワードの設定を意図
+したものです。
+
+::: danger hostapd への移行後、現在は壊れています
+`network-agent` の `setHotspot()`(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
+は依然として、AP 側を `nmcli connection modify msd700-hotspot ...` / `nmcli connection down`/`up
+msd700-hotspot` という NetworkManager プロファイルとして読み書きしています。上記のプロビジョニン
+グは、その名前のプロファイルが存在する場合、それを明示的に**削除**します。AP インターフェースは今
+や NM に*管理されておらず*、`hostapd` が `msd700-hotspot.service` を通じて直接それを所有していま
+す。現在のアーキテクチャでプロビジョニングされたどのユニットにも、`setHotspot()` が読み取れる
+`msd700-hotspot` 接続は存在しないため、何らかの変更を試みる前に即座に `not_provisioned` で失敗し
+ます。ステータスの読み取り(`GET /local/wifi/hotspot`、`GET /local/wifi/status`)は影響を受けません。
+`getApInfo()` は `iw` を使ってインターフェースを直接読み取るよう更新されましたが、*書き込み*パスだ
+けが移植されていません。これを修正するには、もはや存在しない NetworkManager プロファイルに触れる
+のではなく、`/etc/hostapd/hostapd-msd700.conf`(SSID/`wpa_passphrase`)を編集し `systemctl restart
+msd700-hotspot.service` するよう `setHotspot()` を書き直す必要があります。まだ実施されていません。
 :::
 
-Once fixed, two behaviours are worth knowing before using it, and both are already reflected in the
-API's shape:
+修正された後、使用前に知っておく価値のある 2 つの挙動があり、どちらも既に API の形状に反映されて
+います。
 
-::: danger Saving disconnects every device on the hotspot, including yours
-This is unavoidable, not a rough edge: the hotspot is what serves the dashboard, so the request to
-change it arrives over the very connection the change destroys. Restarting the AP under a new SSID
-(or a new key) drops every associated device, and none of them will auto-rejoin, to their OS this is
-now either an unknown network or one whose password no longer works.
+::: danger 保存すると、あなた自身のものを含め、ホットスポット上のすべてのデバイスが切断される
+これは避けられないものであり、粗さの問題ではありません。ホットスポットこそがダッシュボードを配信
+しているものであり、それを変更するリクエストは、まさにその変更によって破壊される接続を通じて到着
+します。新しい SSID(または新しいキー)で AP を再起動すると、関連付けられていたすべてのデバイスが
+切断され、それらのいずれも自動的に再参加することはありません。それらの OS にとって、これは今や
+未知のネットワークか、パスワードがもう機能しないネットワークになります。
 
-The API is built around that rather than against it. `POST /local/wifi/hotspot` validates
-immediately, answers **202 Accepted** carrying the SSID to reconnect to, and only *then* applies the
-change. Applying it inline would tear down the TCP connection mid-response, and a browser cannot
-tell that from a crash, the operator would see a network error for a change that actually succeeded,
-with no idea which network to look for. Answering first is what lets the UI say "reconnect to
-`<new name>`" while it still has a connection to say it on.
+この API はそれに逆らうのではなく、それを前提に設計されています。`POST /local/wifi/hotspot` は
+即座に検証を行い、再接続すべき SSID を伴う **202 Accepted** を返し、それから*初めて*変更を適用しま
+す。インラインで適用すると、応答の途中で TCP 接続が破壊されてしまい、ブラウザはそれをクラッシュと
+区別できません。オペレーターは、実際には成功した変更に対してネットワークエラーを目にすることにな
+り、どのネットワークを探せばよいか分からなくなります。先に応答することで、UI はまだ伝える手段のある
+接続を持っている間に「`<新しい名前>` に再接続してください」と伝えることができます。
 
-Consequently the response means *accepted*, never *succeeded*. What actually happened is reported by
-`GET /local/wifi/hotspot`'s `last_change` field, read after the operator has rejoined.
+その結果、この応答は*受理された*ことを意味するだけで、決して*成功した*ことを意味しません。実際に
+何が起きたかは、オペレーターが再参加した後に読み取られる `GET /local/wifi/hotspot` の `last_change`
+フィールドで報告されます。
 :::
 
-::: info A change that cannot activate is meant to roll back automatically
-The expensive failure here is a headless robot whose only access path is its own hotspot, left with
-a config that no longer activates: nobody can reach it to undo that, so it needs someone physically
-at the machine. The current implementation captures the previous SSID and key first and, if the new
-settings fail to come up, restores and reactivates them, with `last_change.rolled_back` set so a
-reconnecting operator can tell a rolled-back change from one that was never submitted, otherwise the
-two look identical, since in both cases the network in front of them is the one they started with.
-This logic still targets the deleted NetworkManager profile (see above), so it needs to move to
-editing/reverting the hostapd config file alongside the rest of the fix.
+::: info 有効化できなかった変更は自動的にロールバックされるよう設計されている
+ここで発生し得る高くつく失敗は、唯一のアクセス経路が自分自身のホットスポットであるヘッドレスな
+ロボットが、もはや有効化できない設定のまま取り残されることです。誰もそれを元に戻すためにアクセス
+できず、物理的にその機械の前にいる誰かが必要になります。現在の実装は、まず以前の SSID とキーを
+キャプチャしておき、新しい設定が有効化に失敗した場合はそれらを復元・再有効化し、`last_change.rolled_back`
+を設定します。これにより、再接続してきたオペレーターは、ロールバックされた変更なのか、そもそも
+一度も送信されなかった変更なのかを区別できます。そうしないと両者は見分けがつきません。どちらの場合
+も、目の前にあるネットワークは彼らが開始した時と同じものだからです。このロジックは依然として削除
+された NetworkManager プロファイルを対象としているため(上記参照)、修正の残り部分と一緒に、
+hostapd の設定ファイルの編集/復元へ移行させる必要があります。
 :::
 
-**Validation** (enforced in the agent, not just the form): SSID is 1 to 32 **octets**, a name in a
-non-Latin script hits the limit sooner than its character count suggests, and the WPA-PSK password
-is 8 to 63 characters. Control characters are rejected rather than stripped, since quietly sanitising
-one leaves the operator hunting for a network whose name is not what they typed. Nothing is touched
-until validation passes, so a bad value can never be the reason a unit loses its hotspot.
+**検証**(フォームだけでなくエージェント側でも強制されます): SSID は 1〜32 **オクテット**で、非
+ラテン文字のスクリプトの名前は、文字数から想像されるよりも早く上限に達します。WPA-PSK のパスワード
+は 8〜63 文字です。制御文字は取り除かれるのではなく拒否されます。黙って除去してしまうと、オペレー
+ターは自分が入力したのとは違う名前のネットワークを探し回ることになるからです。検証が通るまで何も
+変更されないため、不正な値がユニットのホットスポットを失わせる原因になることは決してありません。
 
-**The password is never sent to the browser.** Anyone already on the hotspot knows it (they typed it
-to get on), so returning it buys nothing, while putting it in a plain-HTTP response body hands it to
-anyone reaching the dashboard from the *client-side* network, who does not know it. The form asks
-for a new password and treats blank as "keep the current one".
+**パスワードは決してブラウザに送信されません。** 既にホットスポットに接続している人は誰でもそれを
+知っています(接続するために入力したので)。そのため返しても何の得もない一方、平文 HTTP の応答本体に
+それを載せてしまうと、それを知らない*クライアント側*ネットワークからダッシュボードに到達できる誰
+にでも渡してしまうことになります。フォームは新しいパスワードを尋ね、空欄は「現在のものを維持する」
+として扱います。
 
-::: warning `docker/.env` is a seed, not the source of truth
-`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` are read **only** by `setup.sh --provision-network`, and only
-when `/etc/hostapd/hostapd-msd700.conf` does not already exist (in effect: only on the first
-provisioning run). After that, `/etc/hostapd/hostapd-msd700.conf` is authoritative and those two keys
-are stale, re-running `--provision-network` re-renders the same file from `docker/.env` again, so
-edit `docker/.env` and re-run provisioning to change the hotspot from the CLI, or wait for the
-dashboard path above to be fixed. The honest live answer for the broadcast SSID is
-`iw dev <ap-interface> info`.
+::: warning `docker/.env` は種(シード)であって、正しさの拠り所(source of truth)ではない
+`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` は `setup.sh --provision-network` によって**のみ**読み取られ、
+それも `/etc/hostapd/hostapd-msd700.conf` がまだ存在しないとき(事実上、最初のプロビジョニング実行
+時のみ)に限られます。それ以降は `/etc/hostapd/hostapd-msd700.conf` が正となり、この 2 つのキーは
+古いままになります。`--provision-network` を再実行すると、同じファイルが `docker/.env` から再度
+レンダリングされます。そのため、CLI からホットスポットを変更するには `docker/.env` を編集してプロ
+ビジョニングを再実行するか、上記のダッシュボード側の修正を待ってください。ブロードキャストされて
+いる SSID についての誠実でライブな答えは `iw dev <ap-interface> info` です。
 :::
 
-Client-side internet reachability (`full` / `limited` / `portal` / `none`) is read straight from
-`nmcli networking connectivity`, NetworkManager's own periodic connectivity probe, nothing here
-implements a second one.
+クライアント側のインターネット到達可否(`full` / `limited` / `portal` / `none`)は、NetworkManager
+自身の定期的な接続性プローブである `nmcli networking connectivity` からそのまま読み取られており、
+ここで 2 つ目のプローブが実装されているわけではありません。
 
-## Configuration reference (`docker/.env`)
+## 設定リファレンス(`docker/.env`)
 
-| Variable | Meaning | Default |
+| 変数 | 意味 | デフォルト |
 | --- | --- | --- |
-| `AP_INTERFACE_LOCAL` | Dongle's interface name | auto-detected during `--provision-network` |
-| `STA_INTERFACE_LOCAL` | Onboard radio's interface name | auto-detected during `--provision-network` |
-| `AP_SSID_LOCAL` | Hotspot's broadcast name | `MSD700-<hostname suffix>` if left blank |
-| `AP_PASSWORD_LOCAL` | Hotspot's WPA2 password (8+ chars, required for provisioning to create the AP) | blank in `docker/.env.example` on purpose |
-| `AP_CONNECTION_NAME_LOCAL` | Legacy, only used to clean up a leftover pre-hostapd NetworkManager profile of this name during provisioning | `msd700-hotspot` |
-| `NETWORK_AGENT_PORT_LOCAL` | Port `network_local`'s loopback API listens on | `5011` |
-| `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: an upstream network to auto-join as a client on first provisioning | empty (add later from the dashboard's WiFi dropdown instead) |
-| `LOCAL_IP` | IP the dashboard's frontend build points at | `192.168.4.1` (matches the hotspot's static IP) |
+| `AP_INTERFACE_LOCAL` | ドングルのインターフェース名 | `--provision-network` 実行時に自動検出 |
+| `STA_INTERFACE_LOCAL` | オンボード無線機のインターフェース名 | `--provision-network` 実行時に自動検出 |
+| `AP_SSID_LOCAL` | ホットスポットのブロードキャスト名 | 空欄の場合は `MSD700-<hostname suffix>` |
+| `AP_PASSWORD_LOCAL` | ホットスポットの WPA2 パスワード(8 文字以上、プロビジョニングが AP を作成するために必須) | `docker/.env.example` では意図的に空欄 |
+| `AP_CONNECTION_NAME_LOCAL` | レガシー。プロビジョニング中に、この名前で残っている hostapd 移行前の NetworkManager プロファイルをクリーンアップするためだけに使用される | `msd700-hotspot` |
+| `NETWORK_AGENT_PORT_LOCAL` | `network_local` のループバック API が待ち受けるポート | `5011` |
+| `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | 任意: 初回プロビジョニング時にクライアントとして自動参加するアップストリームネットワーク | 空(後でダッシュボードの WiFi ドロップダウンから追加する方が推奨) |
+| `LOCAL_IP` | ダッシュボードのフロントエンドビルドが指す IP | `192.168.4.1`(ホットスポットの静的 IP と一致) |
 
-## Verifying it works
+## 動作を検証する
 
 ```bash
 # Services running?
@@ -444,85 +499,99 @@ sudo iptables -t nat -L POSTROUTING -n | grep 192.168.4.0
 sudo iptables -L DOCKER-USER -n
 ```
 
-From another device: connect to the SSID, the OS's own "Sign in to WiFi" prompt should appear and
-land on `http://192.168.4.1:3000` (or whatever port 80 redirects to, see `FRONTEND_PORT_LOCAL`).
-Everything else should browse normally if `STA_INTERFACE_LOCAL` is configured.
+別のデバイスから: SSID に接続すると、OS 自身の「Sign in to WiFi」プロンプトが表示され、
+`http://192.168.4.1:3000`(またはポート 80 のリダイレクト先。`FRONTEND_PORT_LOCAL` を参照)に着地
+するはずです。`STA_INTERFACE_LOCAL` が設定されていれば、それ以外はすべて通常どおり閲覧できるはずで
+す。
 
-## Troubleshooting
+## トラブルシューティング
 
-**`lsusb` doesn't show the dongle, or `nmcli device status` doesn't show a second WiFi device**
-Driver isn't installed/loaded yet. Run `./scripts/install-wifi-dongle-driver.sh --check` to see
-what's missing.
+**`lsusb` にドングルが表示されない、または `nmcli device status` に 2 つ目の WiFi デバイスが表示さ
+れない**
+ドライバがまだインストール/ロードされていません。`./scripts/install-wifi-dongle-driver.sh --check`
+を実行して何が不足しているか確認してください。
 
-**`install-wifi-dongle-driver.sh` reports the module isn't loaded even right after a successful
-build**
-Retry once, there's a known race between `dkms install`'s own `depmod` and `modprobe` right after.
-The script already retries this internally (5 attempts); if it still fails, check
-`sudo dmesg | tail -40`.
+**ビルドが成功した直後でも、`install-wifi-dongle-driver.sh` がモジュールはロードされていないと報告
+する**
+一度リトライしてください。`dkms install` 自身の `depmod` と、その直後の `modprobe` の間に既知の
+競合状態があります。スクリプトは既に内部でこれを自動的にリトライします(5 回試行)。それでも失敗
+する場合は `sudo dmesg | tail -40` を確認してください。
 
-**Hotspot won't broadcast / `iw dev` shows `type managed` instead of `AP`**
-Check `journalctl -u msd700-hotspot.service`. If you see repeated activation failures, confirm
-NetworkManager actually released the interface (`nmcli device status` should say `unmanaged`, not
-`disconnected` or `connecting`), a stale `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf`
-pointing at the wrong interface name is the usual cause after swapping to a different dongle.
+**ホットスポットがブロードキャストされない / `iw dev` が `AP` ではなく `type managed` と表示する**
+`journalctl -u msd700-hotspot.service` を確認してください。アクティベーションの失敗が繰り返し表示
+される場合は、NetworkManager が実際にそのインターフェースを解放したか確認してください
+(`nmcli device status` は `disconnected` や `connecting` ではなく `unmanaged` と表示するはずです)。
+別のドングルに交換した後、間違ったインターフェース名を指したままの古い
+`/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` が典型的な原因です。
 
-**`--provision-network` fails with "nmcli not found"**
-NetworkManager is not installed on the host. `sudo apt install network-manager`.
+**`--provision-network` が "nmcli not found" で失敗する**
+NetworkManager がホストにインストールされていません。`sudo apt install network-manager` してくだ
+さい。
 
-**`--provision-network` fails, "AP_PASSWORD_LOCAL is not set"**
-Password missing or under 8 characters. Set an 8+ character password in `docker/.env` or pass it
-inline, then re-run.
+**`--provision-network` が "AP_PASSWORD_LOCAL is not set" で失敗する**
+非対話実行(TTY なし、または `MSD700_NONINTERACTIVE=1`)でのみ発生します。パスワードが未設定か、
+8 文字未満です。`docker/.env` に 8 文字以上のパスワードを設定するか、`AP_PASSWORD_LOCAL` をインラ
+インで渡してから再実行してください。対話実行の場合は代わりに直接パスワードを尋ねられ、短すぎたり
+一致しなかったりした場合は再度尋ねられます。
 
-**Clients connect to the hotspot but get no IP**
-Check `systemctl status msd700-hotspot-dhcp.service` and `journalctl -u msd700-hotspot-dhcp.service`.
-Confirm `/etc/dnsmasq-msd700-hotspot.conf` has the right `interface=` line (re-run
-`./setup.sh --provision-network` to re-render it from the current `docker/.env`).
+**クライアントはホットスポットに接続できるが、IP を取得できない**
+`systemctl status msd700-hotspot-dhcp.service` と `journalctl -u msd700-hotspot-dhcp.service` を
+確認してください。`/etc/dnsmasq-msd700-hotspot.conf` に正しい `interface=` 行があるか確認してくだ
+さい(現在の `docker/.env` から再レンダリングするには `./setup.sh --provision-network` を再実行)。
 
-**Clients get the "Sign in to WiFi" prompt and reach the dashboard, but nothing else loads**
-`STA_INTERFACE_LOCAL` is probably empty in `docker/.env`, that's the AP-only mode, dashboard-only by
-design (no onboard uplink to relay through). If it should be set, check with `nmcli device status`,
-set it, and re-run `./setup.sh --provision-network`.
+**クライアントが「Sign in to WiFi」プロンプトを受け取りダッシュボードには到達できるが、他は何も読
+み込まれない**
+おそらく `docker/.env` の `STA_INTERFACE_LOCAL` が空です。それは AP 専用モードであり、設計上ダッシ
+ュボードのみが利用可能です(リレーするオンボードのアップリンクがない)。設定すべきであれば
+`nmcli device status` で確認し、設定してから `./setup.sh --provision-network` を再実行してくださ
+い。
 
-**`STA_INTERFACE_LOCAL` is set but clients still have no internet**
-Check the NAT rules actually exist (see [Verifying it works](#verifying-it-works) above). If missing
-after a re-provision, confirm `msd700-hotspot.service` was actually **restarted** (not just
-`enable`d, see step 6 of provisioning), and that `net.ipv4.ip_forward` is `1`
-(`sysctl net.ipv4.ip_forward`). Otherwise, confirm the onboard radio itself has real internet
-(`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`), the relay only forwards to wherever that radio's own
-connection goes.
+**`STA_INTERFACE_LOCAL` は設定されているが、クライアントに依然としてインターネットがない**
+NAT ルールが実際に存在するか確認してください(上記の[動作を検証する](#verifying-it-works)を参照)。
+再プロビジョニング後もルールがない場合は、`msd700-hotspot.service` が実際に(単に `enable` された
+だけでなく)**再起動**されたことを確認してください(プロビジョニングのステップ 6 を参照)。また
+`net.ipv4.ip_forward` が `1` であることを確認してください(`sysctl net.ipv4.ip_forward`)。それでも
+だめな場合は、オンボード無線機自体が実際にインターネットに接続できているか確認してください
+(`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`)。リレーは、その無線機自身の接続先へ転送するだけです。
 
-**Existing local services (backend, media, MySQL) become unreachable after provisioning**
-The iptables redirect rule was not scoped correctly to the AP interface. Check it targets only
-`<ap-interface>`, never the client interface or loopback: `sudo iptables -t nat -L PREROUTING -n`.
+**プロビジョニング後、既存のローカルサービス(バックエンド、メディア、MySQL)に到達できなくなる**
+iptables のリダイレクトルールが AP インターフェースに正しくスコープされていません。
+`<ap-interface>` だけを対象としており、クライアントインターフェースやループバックを対象にしていな
+いか確認してください: `sudo iptables -t nat -L PREROUTING -n`。
 
-**Badge menu says "Hotspot: no hotspot radio"**
-`AP_INTERFACE_LOCAL` is empty, or `--provision-network` was never run. Fill in `docker/.env` and run
-`./setup.sh --provision-network`.
+**バッジのメニューが "Hotspot: no hotspot radio" と表示する**
+`AP_INTERFACE_LOCAL` が空か、`--provision-network` が一度も実行されていません。`docker/.env` を
+入力し、`./setup.sh --provision-network` を実行してください。
 
-**No WiFi glyph on the badge at all**
-Neither radio is present, with no AP and no STA interface there is nothing to report. Expected on a
-unit built without WiFi; otherwise check `nmcli device` / `lsusb` for the interfaces.
+**バッジに WiFi のグリフがまったく表示されない**
+どちらの無線機も存在せず、AP インターフェースも STA インターフェースもないため、報告するものが
+何もありません。WiFi なしでビルドされたユニットでは想定内です。そうでない場合は `nmcli device` /
+`lsusb` でインターフェースを確認してください。
 
-**Hotspot up, but the WiFi glyph is red and the menu says "WiFi service unreachable on this unit"**
-`network_local` is not running, or `backend_local` cannot reach it. `docker compose ps` for
-`network_local`; confirm `NETWORK_AGENT_PORT_LOCAL` matches on both services.
+**ホットスポットは稼働しているが、WiFi のグリフが赤く、メニューが "WiFi service unreachable on this
+unit" と表示する**
+`network_local` が実行されていないか、`backend_local` がそれに到達できません。`network_local` に
+ついて `docker compose ps` を確認し、`NETWORK_AGENT_PORT_LOCAL` が両方のサービスで一致しているか
+確認してください。
 
-**`nmcli device wifi connect` fails from the badge with an unhelpful reason**
-nmcli's own stderr is passed through verbatim rather than reworded. Read the reason text directly,
-it distinguishes wrong password from out-of-range from refused.
+**バッジからの `nmcli device wifi connect` が役に立たない理由で失敗する**
+nmcli 自身の stderr が、言い換えられることなくそのまま渡されています。理由のテキストを直接読んで
+ください。パスワード間違い、範囲外、拒否のいずれかが区別されています。
 
-**Changing the hotspot name/password from the dashboard does nothing / reports `not_provisioned`**
-Known bug, see [Changing the unit's own hotspot](#changing-the-unit-s-own-hotspot) above, `setHotspot()`
-was not updated for the hostapd migration. Change `AP_SSID_LOCAL`/`AP_PASSWORD_LOCAL` in
-`docker/.env` and re-run `--provision-network` instead for now (only works before hostapd's config
-file already exists, see the warning under that section).
+**ダッシュボードからホットスポットの名前/パスワードを変更しても何も起きない / `not_provisioned`
+と表示される**
+既知のバグです。上記の[ユニット自身のホットスポットを変更する](#changing-the-unit-s-own-hotspot)
+を参照してください。`setHotspot()` は hostapd への移行に対応して更新されていません。今のところは、
+代わりに `docker/.env` の `AP_SSID_LOCAL`/`AP_PASSWORD_LOCAL` を変更して `--provision-network` を
+再実行してください(hostapd の設定ファイルがまだ存在しない場合にのみ機能します。そのセクション下の
+警告を参照)。
 
-## Related
+## 関連項目
 
-- [Unit Setup](/ja/setup/unit-setup): the base local-mode installation this feature sits on top of
-- [Docker Reference § network_mode: host](/ja/setup/docker-reference#network-mode-host): why some
-  services share the host's network namespace
-- [Data Sync § The Local Mode badge](/ja/development/data-sync#the-local-mode-badge): the badge this
-  section lives inside, and the sync state shown above it
-- [Architecture § Trust domains](/ja/development/architecture#trust-domains): why `/local/wifi/connect`
-  needs an operator session and `/local/status` does not
+- [ユニットセットアップ](/ja/setup/unit-setup): この機能が基盤とするローカルモードの基本インストール
+- [Docker コマンドリファレンス § network_mode: host](/ja/setup/docker-reference#network-mode-host):
+  一部のサービスがホストのネットワーク名前空間を共有する理由
+- [データ同期 § ローカルモードバッジ](/ja/development/data-sync#the-local-mode-badge): このセクション
+  が存在するバッジと、その上に表示される同期状態
+- [アーキテクチャ § 信頼ドメイン](/ja/development/architecture#trust-domains): `/local/wifi/connect`
+  がオペレーターセッションを必要とし、`/local/status` は必要としない理由

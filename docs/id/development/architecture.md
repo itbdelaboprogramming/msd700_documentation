@@ -3,50 +3,50 @@ outline: deep
 search: false
 ---
 
-
-# Architecture
+# Arsitektur
 
 <RoleBadge role="developer" />
 
-This document details the architectural design of the MSD700 autonomous robotics platform, explaining how the components interact, the data boundaries between them, and the engineering rationale behind every subsystem.
+Dokumen ini merinci desain arsitektur platform robotika otonom MSD700, menjelaskan bagaimana komponen-komponennya berinteraksi, batas data di antara mereka, dan rasional engineering di balik setiap subsistem.
 
-For repository locations, see [Repository Structure](/id/development/repository-structure). For exact data payloads, see [Message Contracts](/id/development/message-contracts). For finite state machines, see [State and Behavior](/id/development/state-and-behavior). For deployment topology, see [System Setup](/id/setup/system-setup).
+Untuk lokasi repositori, lihat [Struktur Repositori](/id/development/repository-structure). Untuk payload data yang tepat, lihat [Kontrak Pesan](/id/development/message-contracts). Untuk finite state machine, lihat [State and Behavior](/id/development/state-and-behavior). Untuk topologi deployment, lihat [System Setup](/id/setup/system-setup).
 
-## The Two-Machine Model
+## Model Dua Mesin
 
-The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
+Keputusan arsitektur sentral MSD700 adalah bahwa **sebuah Unit (robot fisik) menjalankan stack server lokal yang lengkap**, sementara **MSD700 Server (cloud)** menjalankan stack manajemen pusat untuk seluruh fleet. Keduanya adalah peer yang berbagi struktur data identik, terhubung lewat transport MQTT terenkripsi.
 
 ![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
-| Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
+| Dimensi | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |
-| **Execution** | ROS 1 Noetic bringup, move_base, gmapping, sensor drivers, plus `backend_local`, `db_local`, `mosquitto_local`, and `frontend_local`. | Central `backend_node`, `db` (MySQL), `hivemq` (MQTT broker), `rosbridge`, `signalling_server`, `media-server`, and `frontend_prod`. |
-| **Authority** | Owns the live physical robot, sensor readings, local operation lease, and raw map recordings. | Owns user accounts, authentication keyrings, rental profiles, robot enrolment registry, and fleet-wide synchronized maps/routes. |
-| **Fault Tolerance** | Operates autonomously offline during complete loss of internet or Wi-Fi connectivity. | Survives robot shutdowns, network disconnects, and restarts without losing fleet metadata. |
-| **Constraint** | Cannot assign its own global identity (requires initial cloud enrolment). | Cannot move a physical robot without an active robot connection. |
+| **Eksekusi** | ROS 1 Noetic bringup, move_base, gmapping, driver sensor, ditambah `backend_local`, `db_local`, `mosquitto_local`, dan `frontend_local`. | `backend_node` pusat, `db` (MySQL), `hivemq` (broker MQTT), `rosbridge`, `signalling_server`, `media-server`, dan `frontend_prod`. |
+| **Otoritas** | Memiliki robot fisik yang live, pembacaan sensor, lease operasi lokal, dan rekaman peta mentah. | Memiliki akun pengguna, keyring autentikasi, rental profile, registri pendaftaran robot, dan peta/rute tersinkronisasi fleet-wide. |
+| **Ketahanan Kegagalan** | Beroperasi secara otonom offline selama kehilangan total konektivitas internet atau Wi-Fi. | Bertahan dari shutdown robot, pemutusan jaringan, dan restart tanpa kehilangan metadata fleet. |
+| **Batasan** | Tidak bisa menetapkan identitas global miliknya sendiri (membutuhkan pendaftaran cloud awal). | Tidak bisa menggerakkan robot fisik tanpa koneksi robot yang aktif. |
 
-::: tip Core Design Principle: Local as Offline Cache
-The unit's local stack is an **offline-first cache of the cloud, not an isolated silo**. An enrolled unit functions indefinitely without an active internet connection. When network connectivity is restored, recorded maps, executed routes, and configuration states automatically synchronize back to the cloud.
+::: tip Prinsip Desain Inti: Lokal sebagai Cache Offline
+Stack lokal unit adalah **cache offline-first dari cloud, bukan silo terisolasi**. Sebuah unit yang terdaftar berfungsi tanpa batas waktu tanpa koneksi internet aktif. Ketika konektivitas jaringan dipulihkan, peta yang direkam, rute yang dieksekusi, dan state konfigurasi secara otomatis tersinkronisasi kembali ke cloud.
 :::
 
-## Component Overview
+## Ikhtisar Komponen
 
-| Component | Technology | Responsibility | Host Location |
+| Komponen | Teknologi | Tanggung Jawab | Lokasi Host |
 | --- | --- | --- | --- |
-| **Frontend Dashboard** | Next.js, React, TypeScript | Single-page operator interface with map canvas, telemetry widgets, manual teleop, and navigation controls. | `ROS-dashboard-next-ts` (built as `frontend_prod` on cloud and `frontend_local` on unit) |
-| **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, and sync coordination. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
-| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Multi-unit templated relay nodes serving all robots in a single unified ROS runtime via `/unit_<ULID>/...` namespaces. | Cloud backend container (`nakayama_cloud`) |
-| **unit_manager.js (Legacy)** | Node.js (Docker API) | (Deprecated) Legacy dynamic container manager that instantiated 1 container per robot; replaced by the single ROS runtime multi-unit relays. | Embedded inside `backend_node` |
-| **rosbridge** | `rosbridge_suite` (WebSocket) | Unified WebSocket bridge streaming live ROS topics for all units to browser canvases over port 9090. | Cloud container (`nakayama_cloud`) and unit local stack |
-| **HiveMQ (MQTT)** | HiveMQ CE (Java) | Encrypted, high-throughput message broker connecting robots to the server over port 8883 (TLS). | Server container (`hivemq` / `hivemq_dev`) |
-| **MySQL Database** | MySQL 8.0 | Stores user accounts, rental profiles, enrolled unit records, route geometry, custom area boundaries, and sync journals. | Server (`db` / `db_dev`) and unit (`db_local`) |
-| **media-server** | Node.js, Express | Manages map asset uploads, thumbnail generation, and serves static `.pgm` and `.yaml` map files. | Server container and unit container (`media_local`) |
-| **signalling_server** | Node.js (WebSocket) | WebRTC peer negotiation server facilitating direct video streaming between robot cameras and operator browsers. | Server container (`signalling`) and unit container (`signalling_local`) |
-| **coturn** | Coturn (C) | RFC 5766 TURN / STUN relay server providing media fallback when NAT traversal prevents direct peer-to-peer WebRTC video. | Server host (`coturn` service, host networking) |
-| **Apache2** | Apache HTTP Server | Handles TLS termination, security headers, and routes all public traffic via `/services/...` paths. | Server host (native service) |
-| **ROS Robot Packages** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigation, SLAM, boustrophedon coverage, EKF, sensor drivers) and `ros-web-ui` bridge packages (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (`msd700` container) |
+| **Frontend Dashboard** | Next.js, React, TypeScript | Antarmuka operator single-page dengan map canvas, widget telemetri, teleop manual, dan kontrol navigasi. | `ROS-dashboard-next-ts` (dibangun sebagai `frontend_prod` di cloud dan `frontend_local` di unit) |
+| **backend_node** | Node.js, Express | Middleware autentikasi, CRUD untuk peta/rute/area/playlist, dispatch perintah robot, dan koordinasi sinkronisasi. | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
+| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Node relay bertemplate multi-unit yang melayani semua robot dalam satu ROS runtime terpadu lewat namespace `/unit_<ULID>/...`. | Kontainer fleet relay (`rosweb_unit_relays`), sengaja dipisahkan dari backend sehingga sebuah code deploy bukan sebuah outage data-plane fleet-wide |
+| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python, ROS 1 Noetic | Memperluas peta topik bridge MQTT di atas sebuah roster unit sehingga satu nodelet `mqtt_client` dan satu koneksi TLS melayani seluruh fleet. | Kontainer fleet relay (`rosweb_unit_relays`) |
+| **unit_manager.js (Legacy)** | Node.js (Docker API) | (Deprecated) Manager kontainer dinamis legacy yang menginstansiasi 1 kontainer per robot; digantikan oleh fleet relay ROS runtime tunggal. | Ter-embed di dalam `backend_node` |
+| **rosbridge** | `rosbridge_suite` (WebSocket) | Bridge WebSocket terpadu yang men-streaming topik ROS live untuk semua unit ke canvas browser lewat port 9090. | Kontainer cloud (`nakayama_cloud`) dan stack lokal unit |
+| **HiveMQ (MQTT)** | HiveMQ CE (Java) | Broker pesan terenkripsi berthroughput tinggi yang menghubungkan robot ke server lewat port 8883 (TLS). | Kontainer server (`hivemq` / `hivemq_dev`) |
+| **Database MySQL** | MySQL 8.0 | Menyimpan akun pengguna, rental profile, record unit terdaftar, geometri rute, batas area kustom, dan journal sinkronisasi. | Server (`db` / `db_dev`) dan unit (`db_local`) |
+| **media-server** | Node.js, Express | Mengelola upload aset peta, generasi thumbnail, dan menyajikan file peta `.pgm` dan `.yaml` statis. | Kontainer server dan kontainer unit (`media_local`) |
+| **signalling_server** | Node.js (WebSocket) | Server negosiasi peer WebRTC yang memfasilitasi streaming video langsung antara kamera robot dan browser operator. | Kontainer server (`signalling`) dan kontainer unit (`signalling_local`) |
+| **coturn** | Coturn (C) | Server relay TURN / STUN RFC 5766 yang menyediakan fallback media ketika NAT traversal mencegah WebRTC video peer-to-peer langsung. | Host server (layanan `coturn`, host networking) |
+| **Apache2** | Apache HTTP Server | Menangani terminasi TLS, header keamanan, dan merutekan semua traffic publik lewat path `/services/...`. | Host server (layanan native) |
+| **Paket Robot ROS** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigasi, SLAM, coverage boustrophedon, EKF, driver sensor) dan paket bridge `ros-web-ui` (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (kontainer `msd700`) |
 
-## System Topology and Data Flow
+## Topologi Sistem dan Alur Data
 
 ```mermaid
 flowchart TB
@@ -98,14 +98,14 @@ flowchart TB
   LOCAL_STACK --> ROS_NAV
 ```
 
-### Architectural Key Rules:
-1. **Apache as the Single Public Ingress**: All HTTP and WebSocket requests enter through Apache port 443. Backend services bind to internal ports or loopback addresses. The only external port directly reached by robots is HiveMQ on port 8883 (TLS).
-2. **Commands Flow over MQTT, Not ROS**: Commands dispatched by `backend_node` ride the `/unit_<ULID>/system_command` MQTT topic and are acknowledged over `/unit_<ULID>/system_feedback`. ROS topics in the cloud exist exclusively to feed the browser map canvas and telemetry displays.
-3. **Per-Unit Containers as Deserializers**: The container `rosweb_unit_<ULID>` runs on demand to convert JSON/string payloads from MQTT back into native ROS messages (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), allowing `rosbridge` to stream them to the dashboard.
+### Aturan Kunci Arsitektur:
+1. **Apache sebagai Satu-Satunya Ingress Publik**: Semua permintaan HTTP dan WebSocket masuk lewat Apache port 443. Layanan backend binding ke port internal atau alamat loopback. Satu-satunya port eksternal yang dijangkau langsung oleh robot adalah HiveMQ pada port 8883 (TLS).
+2. **Perintah Mengalir lewat MQTT, Bukan ROS**: Perintah yang dikirim oleh `backend_node` menumpang topik MQTT `/unit_<ULID>/system_command` dan diakui lewat `/unit_<ULID>/system_feedback`. Topik ROS di cloud eksis semata-mata untuk memberi makan map canvas dan tampilan telemetri browser.
+3. **Kontainer Per-Unit sebagai Deserializer**: Kontainer `rosweb_unit_<ULID>` berjalan on-demand untuk mengonversi payload JSON/string dari MQTT kembali menjadi pesan ROS native (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), memungkinkan `rosbridge` men-streaming-nya ke dashboard.
 
-## Two Diagnostic Channels
+## Dua Kanal Diagnostik
 
-The platform uses two separate communication channels that fail independently:
+Platform ini menggunakan dua kanal komunikasi terpisah yang gagal secara independen:
 
 ```mermaid
 flowchart LR
@@ -118,15 +118,15 @@ flowchart LR
   end
 ```
 
-| Channel | Transport | Data Carried | Failure Symptom |
+| Kanal | Transport | Data yang Dibawa | Gejala Kegagalan |
 | --- | --- | --- | --- |
-| **MQTT** | TCP / TLS (8883) | Commands, acknowledgements, pose strings, status pings. | Robot appears **Offline** in the console. Commands fail immediately with HTTP 504. |
-| **rosbridge** | WebSocket (WSS) | Typed ROS messages (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot appears **Online** and accepts commands, but the map canvas remains blank. |
-| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because `rosweb_unit_<ULID>` is stopped or reaped due to inactivity. |
+| **MQTT** | TCP / TLS (8883) | Perintah, acknowledgement, string pose, ping status. | Robot tampak **Offline** di konsol. Perintah gagal seketika dengan HTTP 504. |
+| **rosbridge** | WebSocket (WSS) | Pesan ROS bertipe (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot tampak **Online** dan menerima perintah, tetapi map canvas tetap kosong. |
+| **Kontainer Relay Unit** | Docker di Server | Menerjemahkan string MQTT ke topik ROS bertipe untuk rosbridge. | Robot online dan rosbridge terhubung, tetapi canvas tetap kosong karena `rosweb_unit_<ULID>` dihentikan atau di-reap karena inaktivitas. |
 
-## End-to-End Command Execution Flow
+## Alur Eksekusi Perintah End-to-End
 
-When an operator commands the robot (for example, clicking a waypoint on the map):
+Ketika seorang operator memerintahkan robot (misalnya, mengklik sebuah waypoint pada peta):
 
 ```mermaid
 sequenceDiagram
@@ -158,17 +158,17 @@ sequenceDiagram
   end
 ```
 
-### Critical Implementation Details:
-- **HTTP Response Reflects Robot State**: `backend_node` holds the HTTP connection open until `system_feedback` with the matching `request_id` arrives from the robot. A status 504 Gateway Timeout signifies that the robot never processed the command.
-- **Selective Command Retry**: Mutating commands (navigation goals, mode switches, E-Stop) are retried every 1500 ms until acknowledged. Heartbeat pings are **never retried**: dropping a ping is the exact signal the safety watchdog uses to initiate zero-twist emergency stops.
+### Detail Implementasi Kritis:
+- **Response HTTP Mencerminkan State Robot**: `backend_node` menahan koneksi HTTP terbuka hingga `system_feedback` dengan `request_id` yang cocok tiba dari robot. Status 504 Gateway Timeout menandakan robot tidak pernah memproses perintah tersebut.
+- **Retry Perintah Selektif**: Perintah yang mengubah state (goal navigasi, mode switch, E-Stop) di-retry setiap 1500 ms hingga diakui. Ping heartbeat **tidak pernah di-retry**: hilangnya sebuah ping adalah sinyal persis yang digunakan safety watchdog untuk memulai zero-twist emergency stop.
 
-## Per-Unit Container Lifecycle (Legacy Architecture)
+## Siklus Hidup Kontainer Per-Unit
 
-::: info Single ROS Runtime Multi-Unit Architecture
-In active MSD700 deployments, multi-unit telemetry is processed inside a unified **Single ROS Runtime** using namespaced topics (`/unit_<ULID>/...`) and templated relays (`multi_unit.py` / `cloud_multi.launch`). The legacy dynamic 1-container-per-unit orchestration via `unit_manager.js` is deprecated due to server resource overhead when managing fleets.
+::: info Fleet relay adalah default
+Telemetri multi-unit diproses oleh satu kontainer **fleet relay** yang melayani seluruh fleet lewat topik bernamespace (`/unit_<ULID>/...`) dan relay bertemplate (`multi_unit.py` / `cloud_multi.launch`, ditambah `nakayama_cloud_multi.launch` untuk paruh MQTT-nya). Roster-nya berasal dari tabel `units`, sehingga mendaftarkan sebuah robot adalah satu-satunya hal yang diperlukan agar bisa dijangkau. Jalur per-unit di bawah ini masih tersedia dan hanya berjarak satu environment variable, tetapi keduanya tidak boleh pernah berjalan untuk unit yang sama. Lihat [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle#fleet-relay-one-container-for-every-unit).
 :::
 
-In earlier legacy configurations, `unit_manager.js` inside `backend_node` dynamically managed one container per active unit over `/var/run/docker.sock`:
+Pada jalur per-unit, `unit_manager.js` di dalam `backend_node` secara dinamis mengelola satu kontainer per unit aktif lewat `/var/run/docker.sock`:
 
 ```mermaid
 stateDiagram-v2
@@ -185,22 +185,22 @@ stateDiagram-v2
   Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
 ```
 
-| Configuration Variable | Default Value | Description |
+| Variabel Konfigurasi | Nilai Default | Deskripsi |
 | --- | --- | --- |
-| `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Controls whether dynamic container management is active. |
-| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (`:dev` in dev) | Docker image instantiated for the unit relay. |
-| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Duration of operator inactivity before container is reaped. |
-| `UNIT_REAP_INTERVAL_MS` | `60000` (1 minute) | Frequency of the background reaper sweep. |
-| `UNIT_REMOVE_ON_REAP` | `false` | When true, deletes the container; when false, keeps it stopped. |
-| `UNIT_MODE` | `prod` (or `dev`) | Selects port offsets (ROS master 11311/11312, rosbridge 9090/9091). |
+| `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Mengontrol apakah manajemen kontainer dinamis aktif. |
+| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` (`:dev` di dev) | Image Docker yang diinstansiasi untuk relay unit. |
+| `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 menit) | Durasi inaktivitas operator sebelum kontainer di-reap. |
+| `UNIT_REAP_INTERVAL_MS` | `60000` (1 menit) | Frekuensi sapuan reaper latar belakang. |
+| `UNIT_REMOVE_ON_REAP` | `false` | Bila true, menghapus kontainer; bila false, mempertahankannya dalam keadaan stopped. |
+| `UNIT_MODE` | `prod` (atau `dev`) | Memilih offset port (ROS master 11311/11312, rosbridge 9090/9091). |
 
-::: warning Autopilot Retention Guard
-When a robot executes an autonomous mission in **Autopilot Mode**, its relay container enters the **Retained** state. Retained containers are exempt from idle timeouts and are not terminated when an operator logs out or closes their browser, ensuring continuous mission monitoring.
+::: warning Guard Retensi Autopilot
+Ketika sebuah robot menjalankan misi otonom dalam **Mode Autopilot**, kontainer relay-nya memasuki state **Retained**. Kontainer Retained dikecualikan dari idle timeout dan tidak dihentikan ketika seorang operator logout atau menutup browser-nya, memastikan pemantauan misi berlanjut secara kontinu.
 :::
 
-## Clock Domain Boundary and Time Synchronization
+## Batas Domain Jam dan Sinkronisasi Waktu
 
-The robot onboard computer and the cloud server run separate ROS master instances with independent system clocks. To prevent timestamp divergence, all geometric messages crossing MQTT are restamped to local ROS time on ingress via `BoundaryPublisher`.
+Komputer onboard robot dan server cloud menjalankan instance ROS master terpisah dengan jam sistem independen. Untuk mencegah divergensi timestamp, semua pesan geometrik yang melintasi MQTT di-restamp ke waktu ROS lokal saat ingress lewat `BoundaryPublisher`.
 
 ```mermaid
 flowchart LR
@@ -222,13 +222,13 @@ flowchart LR
   U_MSG --> U_T2S --> MQTT_TOPIC --> C_BOUND --> C_ROS --> C_VIEW
 ```
 
-::: danger Why Clock Restamping Is Mandatory
-Omitting time restamping results in immediate `TF_OLD_DATA` warnings in RViz and web renderers. Furthermore, if `/use_sim_time` is enabled on one master without an active `/clock` generator, TF tree evaluation freezes completely.
+::: danger Mengapa Restamping Jam Wajib
+Melewatkan restamping waktu menghasilkan peringatan `TF_OLD_DATA` seketika di RViz dan renderer web. Lebih jauh lagi, jika `/use_sim_time` diaktifkan pada satu master tanpa generator `/clock` yang aktif, evaluasi pohon TF membeku sepenuhnya.
 :::
 
-## Multi-Tier Trust Domains and Security
+## Trust Domain dan Keamanan Multi-Tingkat
 
-The MSD700 architecture enforces three distinct security trust domains. Credentials issued within one domain are strictly rejected by the others.
+Arsitektur MSD700 menegakkan tiga trust domain keamanan yang berbeda. Kredensial yang diterbitkan dalam satu domain ditolak dengan tegas oleh yang lain.
 
 ```mermaid
 flowchart TB
@@ -253,13 +253,13 @@ flowchart TB
   ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
 ```
 
-1. **Operator Tokens**: Standard HS256 JWTs verified against the `/srv/msd/secrets/` keyring. Tokens include user IDs and account scope. Admin tokens (`typ=admin`) are rejected by standard robot operation routes.
-2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours and refreshed on every system boot.
-3. **Unit Local Tokens**: Issued locally by `backend_local` on the Jetson computer. Cloud-signed tokens are intentionally rejected by local endpoints to ensure complete local autonomy during network partitions.
+1. **Token Operator**: JWT HS256 standar yang diverifikasi terhadap keyring `/srv/msd/secrets/`. Token menyertakan ID pengguna dan lingkup akun. Token admin (`typ=admin`) ditolak oleh rute operasi robot standar.
+2. **Token Cloud Robot**: Dicetak oleh `/enroll/token` menggunakan device secret yang dihasilkan selama pendaftaran robot fisik. Valid selama 12 jam, disegarkan pada setiap boot sistem dan lagi setiap 6 jam selama robot menyala. Refresher dan resolver identitas saat boot menargetkan backend yang **sama** (`ENROLL_BASE_URL` di `run_msd.sh`); sebuah `401 reenroll` selama refresh latar belakang dicatat dan tidak pernah menyentuh `device.json`.
+3. **Token Lokal Unit**: Diterbitkan secara lokal oleh `backend_local` pada komputer Jetson. Token yang ditandatangani cloud sengaja ditolak oleh endpoint lokal untuk memastikan otonomi lokal yang lengkap selama partisi jaringan.
 
-## Operating Lease: Preventing Multi-Operator Conflicts
+## Operating Lease: Mencegah Konflik Multi-Operator
 
-Because a robot can be accessed from both the cloud web interface and the onboard local network dashboard, the physical robot enforces a single **Operating Lease**.
+Karena sebuah robot dapat diakses baik dari antarmuka web cloud maupun dashboard jaringan lokal onboard, robot fisik menegakkan satu **Operating Lease** eksklusif.
 
 ```mermaid
 flowchart LR
@@ -276,15 +276,33 @@ flowchart LR
   LEASE_MGR --> CONTROLLER
 ```
 
-- The lease is held on the **robot** (inside `system_command.py`), not on the server backend.
-- When an operator opens a robot dashboard, the client acquires a 15-second lease renewed continuously by heartbeat pings.
-- If a second operator attempts to send commands, the robot returns an `In Use` status. Takeover requires explicit confirmation from the original operator or lease expiration.
+- Lease dipegang pada **robot** (di dalam `system_command.py`), bukan pada backend server.
+- Ketika seorang operator membuka dashboard robot, klien memperoleh lease 15 detik yang diperbarui terus-menerus lewat ping heartbeat.
+- Jika operator kedua mencoba mengirim perintah, robot mengembalikan status `In Use`. Takeover membutuhkan konfirmasi eksplisit dari operator asli atau berakhirnya masa lease.
 
-## Related Documentation
+## Matriks Kepemilikan dan Persistensi State
 
-- [Message Contracts](/id/development/message-contracts): Full specification of MQTT, ROS, and WebSocket payloads.
-- [State and Behavior](/id/development/state-and-behavior): Detailed state machines for navigation, boustrophedon sweep, and E-Stop.
-- [API Reference](/id/development/api-reference): REST API endpoints and authentication contracts.
-- [Database Schema](/id/development/database-schema): MySQL schema, tables, foreign keys, and migration scripts.
-- [Camera Streaming](/id/development/camera-streaming): WebRTC video pipeline and ICE candidate negotiation.
-- [Data Sync](/id/development/data-sync): Synchronization mechanics between unit cache and central server.
+Prinsip arsitektur inti MSD700: **robot fisik adalah sumber kebenaran tertinggi**. Toggle, lease, dan progres operasional berada pada komputer robot (`system_command.py` dan `operation_supervisor.py`), bertahan dari penutupan tab browser, restart server, dan pemutusan jaringan.
+
+| Domain State | Pemilik Utama | Lingkup Persistensi | Konsumen Pembaca |
+| --- | --- | --- | --- |
+| **Aktivitas Robot** | `system_command.py` (`RobotStateTracker`) | Bertahan lewat penutupan browser dan restart backend. | Response ping telemetri |
+| **Operating Lease** | `system_command.py` | Bertahan lewat restart server; kedaluwarsa dalam 15 detik jika tidak disegarkan. | Feedback ping (`in_use`, `origin_conflict`) |
+| **Mode Autopilot / Manual** | `system_command.py` | Bertahan lewat penutupan tab browser. | Response ping telemetri |
+| **Batch Misi Aktif** | `operation_supervisor.py` | Bertahan lewat penutupan browser; disimpan di RAM. | `/string/operation_snapshot` yang di-latch |
+| **Siklus Hidup Kontainer** | `unit_manager.js` (RAM Server) | Hanya runtime server; direkonstruksi oleh `adoptExisting()` saat boot. | Konsol web admin dan reaper |
+| **Draft & Pilihan UI** | `sessionStorage` Browser | Umur sesi; dihapus saat tab ditutup. | Komponen React dashboard |
+| **Record Fleet & Peta** | MySQL Pusat (`db`) | Penyimpanan permanen. | REST API backend |
+
+::: warning Keterbatasan Penyimpanan Browser
+Menutup tab browser menghapus `sessionStorage`. Untuk memastikan pemulihan misi yang mulus, waypoint aktif dan batas coverage di-latch pada `/string/operation_snapshot`. Ketika seorang operator membuka kembali dashboard di tab baru, UI subscribe ke topik yang di-latch ini dan sepenuhnya merekonstruksi run yang aktif. Lihat [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot) untuk mekanika pemulihan sesi secara lengkap, dan [Safety Watchdog](/id/development/ros/safety-watchdog) untuk tingkatan timing sisi robot yang menjadi dasar baris "Operating Lease" dan "Autopilot" pada tabel ini.
+:::
+
+## Dokumentasi Terkait
+
+- [Kontrak Pesan](/id/development/message-contracts): Spesifikasi lengkap payload MQTT, ROS, dan WebSocket.
+- [State and Behavior](/id/development/state-and-behavior): State machine terperinci untuk navigasi, sweep boustrophedon, dan E-Stop.
+- [Referensi API](/id/development/api-reference): Endpoint REST API dan kontrak autentikasi.
+- [Skema Database](/id/development/database-schema): Skema MySQL, tabel, foreign key, dan script migrasi.
+- [Streaming Kamera](/id/development/webui/camera/overview): Pipeline video WebRTC dan negosiasi ICE candidate.
+- [Sinkronisasi Data](/id/development/data-sync): Mekanika sinkronisasi antara cache unit dan server pusat.

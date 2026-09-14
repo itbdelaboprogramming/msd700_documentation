@@ -3,71 +3,70 @@ outline: deep
 search: false
 ---
 
-
-# Frequently Asked Questions (FAQ)
+# よくある質問 (FAQ)
 
 <RoleBadge role="user" />
 
-Answers to common operational questions regarding the MSD700 robotic platform.
+MSD700ロボティクスプラットフォームに関する一般的な運用上の質問への回答です。
 
 ---
 
-::: details 1. What is the MSD700 robot designed to do?
-The MSD700 is an autonomous mobile robot platform designed for environmental mapping (SLAM), autonomous point-to-point transport, and systematic area coverage (e.g. floor cleaning, disinfection, or surface scanning) in indoor facilities such as warehouses, office corridors, and industrial plants.
+::: details 1. MSD700ロボットはどのような用途向けに設計されていますか?
+MSD700は、倉庫、オフィス廊下、工業プラントなどの屋内施設において、環境マッピング(SLAM)、自律的な地点間輸送、体系的なエリアカバレッジ(床清掃、消毒、表面スキャンなど)を行うために設計された自律移動ロボットプラットフォームです。
 :::
 
-::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
-Your user account exists, but an administrator has not yet assigned it to a **Rental Profile** containing active robots. Contact your facility administrator or lab supervisor to grant your account access to your organization's rental profile.
+::: details 2. ダッシュボードにログインしましたが、フリート一覧が空です。なぜですか?
+ユーザーアカウントは存在しますが、管理者がまだアクティブなロボットを含む**レンタルプロファイル**にそのアカウントを割り当てていません。施設の管理者またはラボの責任者に連絡し、組織のレンタルプロファイルへのアクセス権をアカウントに付与してもらってください。
 :::
 
-::: details 3. Can two operators control the same robot simultaneously?
-No. To ensure safety, each robot is governed by an **exclusive operating lease** held by a single active session:
-- If a colleague is operating the robot, the unit displays an **In Use** badge and commands are blocked.
-- If you open a second tab or switch devices under your own account, the dashboard displays a **Take Over Control** button, allowing you to explicitly transfer the lease to your new window.
+::: details 3. 2人のオペレーターが同じロボットを同時に操作できますか?
+いいえ。安全性を確保するため、各ロボットは1つのアクティブなセッションが保持する**排他的な操作リース**によって管理されています。
+- 同僚がロボットを操作中の場合、そのユニットには **In Use** バッジが表示され、コマンドはブロックされます。
+- 自分のアカウントで2つ目のタブを開いたり、別のデバイスに切り替えたりした場合、ダッシュボードには **Take Over Control** ボタンが表示され、新しいウィンドウへ明示的にリースを移すことができます。
 :::
 
-::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
-The system responds based on the active operating mode:
-- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
-- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and autonomously completes its entire waypoint sequence or area coverage playlist before returning to its homebase.
+::: details 4. ロボットが移動中にノートPCのWi-Fiが切れたり、PCを閉じたりするとどうなりますか?
+システムは有効な操作モードに応じて応答します。
+- **標準の手動/ナビゲーションモード**: ロボットがブラウザとの接続を**10秒間**失うと、自動的に**セーフティモーションポーズ**を実行して停止しますが、ミッション内容はメモリに保持されます。ブラウザを再接続すると、ミッションは自動的に再開されます。
+- **オートパイロットモード ON**: オートパイロットが有効な場合、ロボットはブラウザの切断を無視し、ウェイポイントの全シーケンスまたはエリアカバレッジのプレイリストを自律的に完了させてからホームベースへ戻ります。
 :::
 
-::: details 5. What is the Homebase point and why is it important?
-When creating a map during a SLAM session, clicking **Set Homebase Here** records the robot's physical docking station coordinates $(x=0, y=0, \theta=0)$. Future automated playlists use this coordinate to automatically navigate the robot back to its charging station upon completing a mission.
+::: details 5. Homebase地点とは何ですか。なぜ重要ですか?
+SLAMセッション中にマップを作成する際、**Set Homebase Here** をクリックすると、ロボットの物理的なドッキングステーションの座標 $(x=0, y=0, \theta=0)$ が記録されます。今後の自動プレイリストは、ミッション完了後にロボットを充電ステーションへ自動的にナビゲートするためにこの座標を使用します。
 :::
 
-::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?
-Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mirrors, which may cause invisible boundaries on a raw SLAM map. To protect the robot:
-1. Open the map in the dashboard.
-2. Use the **Keep-Out Zone** tool to draw virtual red exclusion boundaries along all glass partitions and drop-offs.
-3. The motion planner treats these virtual lines as solid impenetrable walls.
+::: details 6. ガラス壁、鏡、段差にはどのように対応しますか?
+光学式2D/3D LiDARビームは透明なガラスを透過したり、反射する鏡で散乱したりすることがあり、これが生のSLAMマップ上に見えない境界を生む場合があります。ロボットを保護するには:
+1. ダッシュボードでマップを開きます。
+2. **Keep-Out Zone** ツールを使用し、すべてのガラス間仕切りや段差に沿って仮想の赤い除外境界を描画します。
+3. モーションプランナーは、これらの仮想ラインを貫通不可能な実体の壁として扱います。
 :::
 
-::: details 7. How fast does the robot drive?
-Maximum speed limits are enforced in software for workplace safety:
-- **Default Speed**: `0.20 m/s` (approx. 0.72 km/h).
-- **Adjustable Range**: You can adjust linear speed between `0.05 m/s` and `0.40 m/s` using the speed slider in the bottom-right control panel.
-- **Angular Turning Speed**: Configurable up to `0.50 rad/s`.
+::: details 7. ロボットの走行速度はどのくらいですか?
+職場の安全のため、最大速度制限はソフトウェアで強制されています。
+- **デフォルト速度**: `0.20 m/s`(約0.72 km/h)。
+- **調整可能な範囲**: 右下の操作パネルにある速度スライダーで、直進速度を`0.05 m/s`から`0.40 m/s`の間で調整できます。
+- **角速度**: 最大`0.50 rad/s`まで設定可能です。
 :::
 
-::: details 8. How long does the battery last and how is it monitored?
-The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 to 6 hours** of continuous autonomous operation:
-- Live battery voltage and percentage are displayed in the top header bar.
-- If the battery falls below **20%**, the dashboard surfaces an amber warning.
-- If the battery falls below **15%**, running missions are paused and the robot prioritizes returning to its homebase charging station.
+::: details 8. バッテリーはどのくらい持続し、どのように監視されますか?
+ロボットは24V LiFePO4大容量バッテリーパックで駆動され、**4〜6時間**の連続自律運用が可能です。
+- バッテリー電圧とパーセンテージはヘッダーバー上部にリアルタイムで表示されます。
+- バッテリーが**20%**を下回ると、ダッシュボードにアンバー(黄色)の警告が表示されます。
+- バッテリーが**15%**を下回ると、実行中のミッションは一時停止され、ロボットはホームベースの充電ステーションへの帰還を優先します。
 :::
 
-::: details 9. Can I operate the robot if there is no internet connection in the building?
-Yes. Every MSD700 robot runs an onboard web server. Connect your laptop or tablet directly to the robot's Wi-Fi network (`MSD700_Unit_<ULID>`) and open `http://<jetson-ip>:3000`. You can perform all mapping, teleoperation, and coverage routines completely offline.
+::: details 9. 建物内にインターネット接続がない場合でもロボットを操作できますか?
+はい。すべてのMSD700ロボットは搭載Webサーバーを実行しています。ノートPCまたはタブレットをロボットのWi-Fiネットワーク(`MSD700_Unit_<ULID>`)に直接接続し、`http://<jetson-ip>:3000` を開いてください。マッピング、テレオペレーション、カバレッジのすべてのルーチンを完全にオフラインで実行できます。
 :::
 
-::: details 10. How does the Emergency Stop work?
-Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your keyboard) instantly overrides all active autonomous plans, brings motor velocity to zero within milliseconds, and latches the safety state. To resume operations, resolve the safety condition and click **Release Emergency Stop**.
+::: details 10. 緊急停止(Emergency Stop)はどのように機能しますか?
+赤い **Emergency Stop** ボタンをクリックする(またはキーボードの `Escape` キーを押す)と、実行中のすべての自律計画が即座にオーバーライドされ、数ミリ秒以内にモーター速度がゼロになり、安全状態がラッチされます。運用を再開するには、安全上の問題を解決してから **Release Emergency Stop** をクリックしてください。
 :::
 
 ---
 
-## Still have questions?
+## まだ質問がありますか?
 
-- Consult the [Operator Troubleshooting Guide](/ja/getting-started/troubleshooting).
-- For hardware maintenance and installation, see [System Setup](/ja/setup/system-setup).
+- [オペレーター向けトラブルシューティングガイド](/ja/getting-started/troubleshooting)をご覧ください。
+- ハードウェアの保守と設置については、[システムセットアップ](/ja/setup/system-setup)を参照してください。

@@ -2,20 +2,19 @@
 outline: deep
 ---
 
-
-# Server Setup
+# サーバーセットアップ
 
 <RoleBadge role="technician" />
 
-This guide provides step-by-step instructions for deploying the **MSD700 Cloud Server and Web Dashboard**.
+このガイドでは、**MSD700 クラウドサーバーと Web ダッシュボード**をデプロイするためのステップバイステップの手順を説明します。
 
-Complete [Prerequisites](/ja/setup/prerequisites) before proceeding.
+進める前に [前提条件](/ja/setup/prerequisites) を完了してください。
 
-::: info Production-First Architecture
-This guide defaults to a standard **Production Deployment**. Development mode instructions and advanced custom parameters are located in the [Advanced Configurations](#advanced-configurations) section at the bottom.
+::: info 本番環境を優先したアーキテクチャ
+このガイドは標準の**本番デプロイ**をデフォルトとしています。開発モードの手順や高度なカスタムパラメータは、末尾の [高度な設定](#advanced-configurations) セクションにあります。
 :::
 
-## System Topology
+## システムトポロジー
 
 ```mermaid
 flowchart TB
@@ -36,9 +35,9 @@ flowchart TB
   end
 ```
 
-## Directory Structure Overview
+## ディレクトリ構成の概要
 
-Before running any commands, understand how the repositories are structured on the host filesystem:
+コマンドを実行する前に、ホストのファイルシステム上でリポジトリがどのように構成されているかを理解してください。
 
 ```
 ~/ (e.g. /home/ubuntu)
@@ -59,13 +58,13 @@ Before running any commands, understand how the repositories are structured on t
 
 ---
 
-## Core Step-by-Step Setup
+## コアとなるステップバイステップのセットアップ
 
-Follow these 6 steps in sequence to stand up a complete production server.
+完全な本番サーバーを構築するために、以下の 6 つのステップを順番に実行してください。
 
-### Step 1: Clone Repositories
+### ステップ 1: リポジトリをクローンする
 
-Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` frontend repository directly into `source/dependencies/`:
+ブランチ `v2` で `ros-web-ui` をクローンし、続けて `ROS-dashboard-next-ts` フロントエンドリポジトリを `source/dependencies/` に直接クローンします。
 
 ```bash
 # 1. Clone main server repository on branch v2
@@ -76,15 +75,15 @@ git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
-::: tip Why is the frontend cloned inside dependencies?
-The Dockerfile builds the Next.js frontend directly within the Docker build context of `ros-web-ui`. The `source/dependencies/ROS-dashboard-next-ts` path is gitignored by the parent repository.
+::: tip なぜフロントエンドを dependencies 内にクローンするのか
+Dockerfile は、`ros-web-ui` の Docker ビルドコンテキスト内で直接 Next.js フロントエンドをビルドします。`source/dependencies/ROS-dashboard-next-ts` パスは、親リポジトリによって gitignore されています。
 :::
 
 ---
 
-### Step 2: Initialize Security Secrets
+### ステップ 2: セキュリティシークレットを初期化する
 
-Secrets live outside Docker containers in `/srv/msd/secrets/` to persist across image rebuilds.
+シークレットは、イメージの再ビルドをまたいで永続化するため、Docker コンテナの外部、`/srv/msd/secrets/` に置かれます。
 
 ```bash
 # 1. Navigate to the ros-web-ui repository
@@ -100,9 +99,9 @@ sudo mkdir -p /srv/msd/secrets
 
 ---
 
-### Step 3: Generate HiveMQ TLS Keystore
+### ステップ 3: HiveMQ TLS キーストアを生成する
 
-The HiveMQ MQTT broker requires a PKCS#12 keystore generated from your domain's Let's Encrypt SSL certificate.
+HiveMQ MQTT ブローカーには、ドメインの Let's Encrypt SSL 証明書から生成された PKCS#12 キーストアが必要です。
 
 ```bash
 # 1. Obtain Let's Encrypt certificate for your server domain
@@ -113,20 +112,20 @@ cd ~/ros-web-ui
 sudo ./source/dependencies/ssl_update/update_ssl.sh
 ```
 
-This script creates `/srv/msd/secrets/hivemq/keystore.p12` with UID `1001` ownership and `0600` permissions.
+このスクリプトは `/srv/msd/secrets/hivemq/keystore.p12` を UID `1001` の所有権、`0600` の権限で作成します。
 
 ---
 
-### Step 4: Configure Environment (`.env`)
+### ステップ 4: 環境変数(`.env`)を設定する
 
-Create `.env` at `~/ros-web-ui/.env`:
+`~/ros-web-ui/.env` に `.env` を作成します。
 
 ```bash
 cd ~/ros-web-ui
 nano .env
 ```
 
-Paste the following production configuration:
+以下の本番設定を貼り付けます。
 
 ```ini
 # Storage path for recorded map files on the host
@@ -170,9 +169,9 @@ TURN_PASSWORD=SetYourStrongTurnPasswordHere
 
 ---
 
-### Step 5: Start Production Docker Containers
+### ステップ 5: 本番 Docker コンテナを起動する
 
-Launch the production compose stack:
+本番 compose スタックを起動します。
 
 ```bash
 cd ~/ros-web-ui
@@ -186,9 +185,9 @@ docker compose --profile server_prod ps
 
 ---
 
-### Step 6: Configure Apache Reverse Proxy
+### ステップ 6: Apache リバースプロキシを設定する
 
-Apache terminates SSL on port 443 and routes incoming traffic to internal container ports.
+Apache はポート 443 で SSL を終端し、受信トラフィックを内部コンテナのポートへルーティングします。
 
 ```bash
 # 1. Enable required Apache modules
@@ -196,7 +195,7 @@ sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias
 sudo systemctl restart apache2
 ```
 
-Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
+`/etc/apache2/sites-available/000-default-le-ssl.conf` を編集します。
 
 ```apache
 <IfModule mod_ssl.c>
@@ -260,7 +259,7 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 </IfModule>
 ```
 
-Reload Apache:
+Apache をリロードします。
 
 ```bash
 sudo apache2ctl configtest
@@ -269,9 +268,9 @@ sudo systemctl reload apache2
 
 ---
 
-## Unit Registration & Enrolment Flow
+## ユニット登録・エンロルメントフロー
 
-Once the server is running, physical robots can be registered:
+サーバーが稼働すると、物理ロボットを登録できるようになります。
 
 ```mermaid
 sequenceDiagram
@@ -296,44 +295,44 @@ sequenceDiagram
   Unit->>Unit: Saves Certificates/robot/device.json and connects to HiveMQ
 ```
 
-1. Log into the administration panel at `https://msd.nglobal.jp/admin`.
-2. Under **Pending Units**, locate the 6-character claim code displayed by the technician on the robot.
-3. Select an active **Rental Profile**, assign a unit display label, and click **Approve**.
-4. The robot completes enrolment and appears in the fleet dashboard immediately.
+1. `https://msd.nglobal.jp/admin` の管理パネルにログインします。
+2. **Pending Units** の下で、技術者がロボット上に表示した 6 文字のクレームコードを見つけます。
+3. アクティブな **Rental Profile** を選択し、ユニットの表示ラベルを割り当てて **Approve** をクリックします。
+4. ロボットがエンロルメントを完了し、すぐにフリートダッシュボードに表示されます。
 
 ---
 
-## Advanced Configurations
+## 高度な設定
 
 <details>
-<summary><b>Development Mode Profile (`server_dev`)</b></summary>
+<summary><b>開発モードプロファイル(`server_dev`)</b></summary>
 
-To run an isolated development stack alongside production:
+本番環境と並行して、独立した開発スタックを実行するには:
 
-1. Initialize dev keyring:
+1. 開発用キーリングを初期化する:
    ```bash
    cd ~/ros-web-ui
    ./scripts/secrets.sh init --dev
    ```
 
-2. Start the dev profile:
+2. 開発プロファイルを起動する:
    ```bash
    docker compose --profile server_dev up -d
    ```
 
-3. Dev ports are offset to prevent collisions:
-   - Dev MySQL: `3308`
-   - Dev Backend: `5001`
-   - Dev HiveMQ: `8884`
-   - Dev rosbridge: `9091`
-   - Dev Frontend: `3100`
+3. 開発用ポートは衝突を避けるためオフセットされています:
+   - 開発用 MySQL: `3308`
+   - 開発用バックエンド: `5001`
+   - 開発用 HiveMQ: `8884`
+   - 開発用 rosbridge: `9091`
+   - 開発用フロントエンド: `3100`
 
 </details>
 
 <details>
-<summary><b>Keyring Rotation & Grace Periods</b></summary>
+<summary><b>キーリングのローテーションと猶予期間</b></summary>
 
-Rotate the active JWT signing key without terminating active user sessions:
+アクティブなユーザーセッションを終了させることなく、有効な JWT 署名鍵をローテーションします。
 
 ```bash
 cd ~/ros-web-ui
@@ -351,9 +350,9 @@ cd ~/ros-web-ui
 </details>
 
 <details>
-<summary><b>Manual HiveMQ Keystore Creation</b></summary>
+<summary><b>HiveMQ キーストアの手動作成</b></summary>
 
-If generating the keystore manually without `update_ssl.sh`:
+`update_ssl.sh` を使わずに手動でキーストアを生成する場合:
 
 ```bash
 sudo mkdir -p /srv/msd/secrets/hivemq
@@ -373,9 +372,9 @@ sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
 
 ---
 
-## Verification & Health Checks
+## 検証とヘルスチェック
 
-Run these diagnostic commands to confirm all server subsystems are operational:
+以下の診断コマンドを実行し、すべてのサーバーサブシステムが正常に動作していることを確認します。
 
 ```bash
 # 1. Confirm all Docker containers are running
@@ -391,8 +390,8 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 sudo ss -lptn 'sport = :8883'
 ```
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Unit Setup](/ja/setup/unit-setup): Configure the physical Jetson SBC.
-- [System Setup](/ja/setup/system-setup): End-to-end integration and calibration.
-- [Docker Reference](/ja/setup/docker-reference): Container options and lifecycle details.
+- [ユニットセットアップ](/ja/setup/unit-setup): 物理 Jetson SBC を設定します。
+- [システムセットアップ](/ja/setup/system-setup): エンドツーエンドの統合とキャリブレーション。
+- [Docker コマンドリファレンス](/ja/setup/docker-reference): コンテナのオプションとライフサイクルの詳細。

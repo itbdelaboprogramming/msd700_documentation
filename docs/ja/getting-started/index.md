@@ -2,25 +2,24 @@
 search: false
 ---
 
-
-# Getting Started
+# 導入ガイド
 
 <RoleBadge role="user" />
 
-Welcome to the **MSD700 Operator User Guide**. This documentation is designed for fleet operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots.
+**MSD700 オペレーター向けユーザーガイド**へようこそ。本ドキュメントは、Webダッシュボードを使ってMSD700自律ロボットの操作、マッピング、監視を行うフリートオペレーター、研究者、フィールド技術者を対象としています。
 
-No programming or robotics experience is required to operate the robot via the web interface.
+Webインターフェースからロボットを操作するにあたり、プログラミングやロボティクスの知識は一切必要ありません。
 
 <LinkCards>
-  <LinkCard icon="📖" title="Introduction" details="Learn about the MSD700 platform, hardware capabilities, and cloud architecture." link="/ja/getting-started/introduction" />
-  <LinkCard icon="🚀" title="Quick Start Guide" details="Step-by-step instructions to log in, select a robot, and execute your first mission." link="/ja/getting-started/quick-start" />
-  <LinkCard icon="✨" title="System Features" details="Comprehensive guide to teleoperation, SLAM mapping, area sweeps, and camera streaming." link="/ja/getting-started/features" />
-  <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/ja/getting-started/behavior" />
-  <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/ja/getting-started/faq" />
-  <LinkCard icon="🛠️" title="Operator Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/ja/getting-started/troubleshooting" />
+  <LinkCard icon="📖" title="概要" details="MSD700プラットフォーム、ハードウェアの能力、クラウドアーキテクチャについて学びます。" link="/ja/getting-started/introduction" />
+  <LinkCard icon="🚀" title="クイックスタートガイド" details="ログイン、ロボットの選択、最初のミッション実行までのステップバイステップの手順です。" link="/ja/getting-started/quick-start" />
+  <LinkCard icon="✨" title="システム機能" details="テレオペレーション、SLAMマッピング、エリア清掃、カメラストリーミングの包括的なガイドです。" link="/ja/getting-started/features" />
+  <LinkCard icon="🤖" title="ロボットの動作仕様" details="セーフティウォッチドッグ、操作リース、オートパイロットの持続性、セッション復旧について理解します。" link="/ja/getting-started/behavior" />
+  <LinkCard icon="❓" title="よくある質問 (FAQ)" details="バッテリー、マップ、接続に関する一般的な運用上の質問への回答です。" link="/ja/getting-started/faq" />
+  <LinkCard icon="🛠️" title="オペレーター向けトラブルシューティング" details="映像のフリーズやゴール中断など、よくあるオペレーターの症状に対する迅速な解決策です。" link="/ja/getting-started/troubleshooting" />
 </LinkCards>
 
-## Recommended Reading Path for Operators
+## オペレーター向け推奨読了順序
 
 ```mermaid
 flowchart LR
@@ -30,8 +29,8 @@ flowchart LR
   D --> E["5. FAQ & Help<br/>Troubleshooting"]
 ```
 
-## System Requirements
+## システム要件
 
-- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
-- **Display Resolution**: Optimized for desktop and laptop displays (1366 x 768 or higher) to display map canvases, live camera feeds, and telemetry side-by-side.
-- **Network**: Internet access for cloud dashboard (`msd.nglobal.jp`), or local Wi-Fi connection when operating robots offline in the field.
+- **対応ブラウザ**: Google Chrome(推奨)またはMicrosoft Edge(WebRTCに対応したモダンなChromiumベースのブラウザ)。
+- **表示解像度**: マップキャンバス、ライブカメラ映像、テレメトリを並べて表示できるよう、デスクトップおよびノートPC向けディスプレイ(1366 x 768以上)に最適化されています。
+- **ネットワーク**: クラウドダッシュボード(`msd.nglobal.jp`)へのインターネットアクセス、またはフィールドでロボットをオフライン運用する際のローカルWi-Fi接続。

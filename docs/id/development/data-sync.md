@@ -3,33 +3,32 @@ outline: deep
 search: false
 ---
 
-
-# Data Sync
+# Sinkronisasi Data
 
 <RoleBadge role="developer" />
 
-This document details how a Unit's local MySQL database (`ROS_DB`) and the central cloud database maintain bidirectional consistency across intermittent wireless connectivity.
+Dokumen ini merinci bagaimana database MySQL lokal sebuah Unit (`ROS_DB`) dan database cloud pusat menjaga konsistensi dua arah melintasi konektivitas nirkabel yang terputus-putus.
 
-It covers the recurring reconciliation loop (`sync_agent.js`, `sync_engine.js`, `sync_tables.js`), conflict resolution algorithms, watermark tracking, and the Local Mode operator status badge.
+Mencakup loop rekonsiliasi berulang (`sync_agent.js`, `sync_engine.js`, `sync_tables.js`), algoritma resolusi konflik, pelacakan watermark, dan badge status operator Local Mode.
 
-For the HTTP sync contract, see [API Reference](/id/development/api-reference). For real-time map save uploads, see [State and Behavior](/id/development/state-and-behavior).
+Untuk kontrak sinkronisasi HTTP, lihat [Referensi API](/id/development/api-reference). Untuk upload penyimpanan peta real-time, lihat [State and Behavior](/id/development/state-and-behavior).
 
-::: info Core Principle: Local as Cache
-A Unit functions offline indefinitely once enrolled. User accounts, permissions, and rental profiles originate from the cloud, while maps, routes, and playlists recorded on the robot synchronize back to the cloud when network links are established.
+::: info Prinsip Inti: Lokal sebagai Cache
+Sebuah Unit berfungsi offline tanpa batas waktu setelah terdaftar. Akun pengguna, izin, dan rental profile berasal dari cloud, sementara peta, rute, dan playlist yang direkam pada robot disinkronkan kembali ke cloud saat koneksi jaringan terbentuk.
 :::
 
-## Table Synchronization Regimes
+## Rezim Sinkronisasi Tabel
 
-Not all database tables synchronize in the same direction:
+Tidak semua tabel database bersinkronisasi ke arah yang sama:
 
-| Synchronization Direction | Tables Affected | Architectural Rationale |
+| Arah Sinkronisasi | Tabel yang Terpengaruh | Rasional Arsitektur |
 | --- | --- | --- |
-| **Downstream Only** (Cloud to Unit) | `units`, `rental_profiles`, `users` (including bcrypt password hashes for offline login), `profile_members`, `profile_units`. | Security boundary: identity and rental tenancy originate strictly on the cloud server. A local unit cannot mint new global accounts or reassign its own fleet tenancy. |
-| **Bidirectional** (Last-Write-Wins per row) | `maps_data`, `routes_data`, `areas_data`, `playlists_data`. | Operational data is authored on both sides: SLAM maps recorded on the robot, and waypoint routes or playlists created in web dashboards. |
+| **Hanya Downstream** (Cloud ke Unit) | `units`, `rental_profiles`, `users` (termasuk hash password bcrypt untuk login offline), `profile_members`, `profile_units`. | Batas keamanan: identitas dan tenancy rental berasal secara ketat dari server cloud. Sebuah unit lokal tidak bisa mencetak akun global baru atau menugaskan ulang tenancy fleet-nya sendiri. |
+| **Dua Arah** (Last-Write-Wins per baris) | `maps_data`, `routes_data`, `areas_data`, `playlists_data`. | Data operasional dibuat di kedua sisi: peta SLAM direkam pada robot, dan rute waypoint atau playlist dibuat di dashboard web. |
 
-Binary assets (such as `.pgm` occupancy grids, `.yaml` metadata, and map thumbnails) synchronize via dedicated endpoints (`/sync/file/:mapId/:kind`) and are verified by exact file size.
+Aset biner (seperti occupancy grid `.pgm`, metadata `.yaml`, dan thumbnail peta) disinkronkan lewat endpoint khusus (`/sync/file/:mapId/:kind`) dan diverifikasi lewat ukuran file yang tepat.
 
-## Synchronization Mechanics
+## Mekanika Sinkronisasi
 
 ```mermaid
 flowchart LR
@@ -55,45 +54,64 @@ flowchart LR
   EXEC <-->|"HTTP Sync Endpoints"| RESP
 ```
 
-### Key Components:
-- **`sync_agent.js`**: Runs exclusively on the Unit, managing polling timers, reachability probes, and outbound HTTP calls to cloud endpoints. (The cloud does not dial into robots behind NAT).
-- **`sync_engine.js`**: Shared library on both sides that queries changed rows based on watermarks, executes upserts, and manages delete tombstones.
-- **`sync_tables.js`**: Defines synchronization directions, primary keys, and conflict resolution rules for each table.
+### Komponen Kunci:
+- **`sync_agent.js`**: Berjalan eksklusif pada Unit, mengelola timer polling, probe reachability, dan panggilan HTTP keluar ke endpoint cloud. (Cloud tidak menghubungi robot di belakang NAT).
+- **`sync_engine.js`**: Library bersama di kedua sisi yang meng-query baris yang berubah berdasarkan watermark, menjalankan upsert, dan mengelola delete tombstone.
+- **`sync_tables.js`**: Mendefinisikan arah sinkronisasi, primary key, dan aturan resolusi konflik untuk setiap tabel.
 
-## Conflict Resolution Rules
+## Aturan Resolusi Konflik
 
-Conflict resolution follows a deterministic **Last-Write-Wins per row** strategy:
+Resolusi konflik mengikuti strategi deterministik **Last-Write-Wins per baris**:
 
-1. **Row-Level Granularity**: The newer row replaces the older record entirely.
-2. **Delete Tombstones**: Deleting a record generates an entry in `sync_tombstones` with a `deleted_at` timestamp. A recent delete supersedes an older edit.
-3. **Clock Skew Compensation**: During initial handshake, the unit calculates `clock_offset_ms` against cloud server time. All local timestamps are normalized to the cloud time reference frame before comparison.
-4. **Deterministic Tie-Breaking**: If timestamps match exactly, deletes take precedence over edits, and the cloud version takes precedence over the unit version.
-5. **Name Collision Handling**: If two operators create different routes or maps with the same name while offline, the later sync automatically appends an incremental suffix (e.g. `(1)`, `(2)`) rather than overwriting existing data.
+1. **Granularitas Level-Baris**: Baris yang lebih baru sepenuhnya menggantikan record yang lebih lama.
+2. **Delete Tombstone**: Menghapus sebuah record menghasilkan entri di `sync_tombstones` dengan timestamp `deleted_at`. Sebuah delete yang lebih baru mengungguli edit yang lebih lama.
+3. **Kompensasi Clock Skew**: Selama handshake awal, unit menghitung `clock_offset_ms` terhadap waktu server cloud. Semua timestamp lokal dinormalisasi ke frame referensi waktu cloud sebelum dibandingkan.
+4. **Tie-Breaking Deterministik**: Jika timestamp persis sama, delete diutamakan di atas edit, dan versi cloud diutamakan di atas versi unit.
+5. **Penanganan Tabrakan Nama**: Jika dua operator membuat rute atau peta berbeda dengan nama yang sama saat offline, sinkronisasi berikutnya secara otomatis menambahkan sufiks inkremental (misalnya `(1)`, `(2)`) alih-alih menimpa data yang ada.
 
-## The Local Mode Status Badge
+## Badge Status Local Mode
 
-In local dashboard builds (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), the top-right header displays the Local Mode badge:
+Pada build dashboard lokal (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), header kanan atas menampilkan badge Local Mode:
 
 ```mermaid
 flowchart TB
   BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 30 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (auth or network error)"]
+  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
   BADGE --> CLICK["Click Badge: Opens Modal Menu"]
   CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
 ```
 
-### Detailed Sync Phases:
-1. `token`: Authenticating with cloud server using robot credentials.
-2. `handshake`: Exchanging watermarks and calibrating clock offsets.
-3. `pull`: Downloading downstream account and profile updates.
-4. `apply`: Committing pulled records to local MySQL.
-5. `push`: Uploading locally recorded maps and routes to cloud.
-6. `files`: Transferring binary `.pgm` and `.yaml` map images.
-7. `finish`: Acknowledging committed watermarks.
+### Fase Sinkronisasi Detail:
+1. `token`: Mengautentikasi dengan server cloud menggunakan kredensial robot.
+2. `handshake`: Bertukar watermark dan mengkalibrasi clock offset.
+3. `pull`: Mengunduh update akun dan profil downstream.
+4. `apply`: Melakukan commit record yang ditarik ke MySQL lokal.
+5. `push`: Mengunggah peta dan rute yang direkam secara lokal ke cloud.
+6. `files`: Mentransfer gambar peta `.pgm` dan `.yaml` biner.
+7. `finish`: Mengakui watermark yang di-commit.
 
-## Related Documentation
+::: warning Label Fase vs. Asal Kegagalan
+Nama fase yang ditampilkan pada progress bar mencerminkan *kapan* sebuah ronde berhenti, bukan *di mana*. `readState()`, pembacaan pertama baris `sync_state` milik unit ini sendiri, berjalan segera setelah panggilan HTTP handshake tetapi sebelum `setPhase('pull')`, sehingga sebuah kegagalan di sana tetap ditampilkan sebagai `handshake`, meskipun tidak pernah menyentuh jaringan. Baca baris log itu sendiri (lihat di bawah) untuk membedakan keduanya.
+:::
 
-- [API Reference](/id/development/api-reference): REST sync endpoints and payloads.
-- [State and Behavior](/id/development/state-and-behavior): Map saving and storage replication flows.
-- [Architecture](/id/development/architecture): Hardware and cloud trust domain models.
-- [Database Schema](/id/development/database-schema): Schema definitions for `sync_state` and `sync_tombstones`.
+### Klasifikasi Kegagalan
+
+`sync_agent.js` menandai setiap panggilan yang gagal dengan asalnya sebelum error tersebut mencapai log, karena koneksi yang ditolak ke cloud dan koneksi yang ditolak ke `ROS_DB` lokal milik unit ini sendiri keduanya muncul sebagai `ECONNREFUSED` yang identik. Tanpa tanda tersebut, database lokal yang mati dulu dilaporkan sebagai "cloud tidak dapat dijangkau."
+
+| Tag Asal | Contoh Penyebab | Redaksi Log | Badge Status |
+| --- | --- | --- | --- |
+| `local_db` — kredensial ditolak | `MYSQL_USER`/`MYSQL_PASSWORD` pada `docker/.env` unit ini tidak cocok dengan password yang menjadi dasar inisialisasi volume `mysql_data_local` lokal (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db` — tidak terjangkau | Kontainer MySQL lokal unit tidak berjalan (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
+| `local_db` — lainnya | Error MySQL lain apa pun (skema, lock, dll.) selama read/write lokal. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud` — error jaringan | Kegagalan DNS, timeout, atau koneksi ditolak ke endpoint cloud. Diperkirakan terjadi selama unit tidak memiliki uplink. | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud` — error HTTP | Cloud menjawab dengan status non-2xx di luar kasus `NOT_ENROLLED`/`NO_RENTAL`/reenroll yang sudah diketahui. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| *(tidak ada)* | Sebuah throw di dalam `sync_agent.js` itu sendiri tanpa status HTTP dan tanpa tanda jaringan, sebuah bug di agen, bukan masalah konektivitas atau kredensial. | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
+
+Lihat `classifyFailure()` di `sync_agent.js` untuk aturan prioritas yang tepat.
+
+## Dokumentasi Terkait
+
+- [Referensi API](/id/development/api-reference): Endpoint dan payload sinkronisasi REST.
+- [State and Behavior](/id/development/state-and-behavior): Alur penyimpanan peta dan replikasi storage.
+- [Arsitektur](/id/development/architecture): Model trust domain hardware dan cloud.
+- [Skema Database](/id/development/database-schema): Definisi skema untuk `sync_state` dan `sync_tombstones`.

@@ -3,18 +3,17 @@ outline: deep
 search: false
 ---
 
-
-# Operator Troubleshooting Guide
+# Panduan Pemecahan Masalah Operator
 
 <RoleBadge role="user" />
 
-This guide provides quick solutions for common operational symptoms encountered while controlling the MSD700 robot from the web dashboard.
+Panduan ini menyediakan solusi cepat untuk gejala operasional umum yang ditemui saat mengendalikan robot MSD700 dari dashboard web.
 
-::: tip Technical or Hardware Diagnostics
-For low-level server errors, Docker container logs, or ROS driver diagnostics, see the [Technician Troubleshooting Guide](/id/setup/troubleshooting) or [Developer Diagnostics](/id/development/troubleshooting-guide).
+::: tip Diagnostik Teknis atau Perangkat Keras
+Untuk error server tingkat rendah, log kontainer Docker, atau diagnostik driver ROS, lihat [Panduan Pemecahan Masalah Teknisi](/id/setup/troubleshooting) atau [Diagnostik Pengembang](/id/development/troubleshooting-guide).
 :::
 
-## Operator Diagnostic Flowchart
+## Diagram Alur Diagnostik Operator
 
 ```mermaid
 flowchart TD
@@ -35,82 +34,82 @@ flowchart TD
 
 ---
 
-## Common Issues and Solutions
+## Masalah Umum dan Solusinya
 
-### 1. Map Canvas is Blank or Infinite Loading Spinner
-- **Symptom**: The navigation page opens, but the center area remains a dark grey screen with a spinning loader.
-- **Probable Causes**:
-  - No active map has been selected for this unit.
-  - The browser WebSocket connection to `rosbridge` was temporarily interrupted.
-- **Operator Actions**:
-  1. Look at the top-left **Select Map** dropdown. If it displays "No Map Loaded", click it and choose your facility map.
-  2. If a map is selected but still blank, refresh your browser tab (`Ctrl + F5` or `Cmd + Shift + R`).
-  3. Verify that the unit status badge in the header displays **Online** (green).
-
----
-
-### 2. Live Camera Video Feed Frozen or Black
-- **Symptom**: The camera window shows a frozen frame, spinning wheel, or black rectangle.
-- **Probable Causes**:
-  - Temporary packet loss on the Wi-Fi link between robot and server.
-  - Browser blocked WebRTC ICE negotiation.
-- **Operator Actions**:
-  1. Click the small **Refresh Stream** icon in the camera header.
-  2. If using Chrome, ensure hardware acceleration is enabled in browser settings.
-  3. If operating on a local facility network without internet, ensure you are connected to the robot's local Wi-Fi and accessing `http://<unit-ip>:3000`.
+### 1. Kanvas Peta Kosong atau Loading Spinner Tanpa Henti
+- **Gejala**: Halaman navigasi terbuka, tetapi area tengah tetap berupa layar abu-abu gelap dengan loader berputar.
+- **Kemungkinan Penyebab**:
+  - Belum ada peta aktif yang dipilih untuk unit ini.
+  - Koneksi WebSocket peramban ke `rosbridge` sempat terputus sementara.
+- **Tindakan Operator**:
+  1. Lihat dropdown **Select Map** di kiri atas. Jika menampilkan "No Map Loaded", klik dan pilih peta fasilitas Anda.
+  2. Jika peta sudah dipilih tetapi masih kosong, refresh tab peramban Anda (`Ctrl + F5` atau `Cmd + Shift + R`).
+  3. Verifikasi bahwa lencana status unit di header menampilkan **Online** (hijau).
 
 ---
 
-### 3. Navigation Goal Aborted / Robot Refuses to Move
-- **Symptom**: You set a 2D Nav Goal or start a route, but the robot beeps and the status immediately flips from `On Progress` back to `Idle` or `Goal Aborted`.
-- **Probable Causes**:
-  - The destination point is placed inside a black wall, inside an obstacle, or within the lethal inflation buffer (within 0.575 m of a wall).
-  - The robot has lost its localization coordinates relative to the map.
-- **Operator Actions**:
-  1. Click a goal in wide, open free space (light grey area) well clear of walls and pillars.
-  2. Click the **Auto Align** button on the toolbar to re-synchronize the robot's LiDAR scan with the static map.
-  3. If Auto-Align fails, drive the robot forward 0.5 meters manually and re-trigger Auto-Align.
+### 2. Feed Video Kamera Langsung Beku atau Hitam
+- **Gejala**: Jendela kamera menampilkan frame beku, roda berputar, atau kotak hitam.
+- **Kemungkinan Penyebab**:
+  - Kehilangan paket sementara pada tautan Wi-Fi antara robot dan server.
+  - Peramban memblokir negosiasi WebRTC ICE.
+- **Tindakan Operator**:
+  1. Klik ikon kecil **Refresh Stream** di header kamera.
+  2. Jika menggunakan Chrome, pastikan akselerasi perangkat keras diaktifkan di pengaturan peramban.
+  3. Jika beroperasi di jaringan fasilitas lokal tanpa internet, pastikan Anda terhubung ke Wi-Fi lokal robot dan mengakses `http://<unit-ip>:3000`.
 
 ---
 
-### 4. "Robot Stuck" Banner Won't Clear
-- **Symptom**: An amber banner at the top of the canvas reads "Robot Stuck: Recovery in Progress".
-- **Probable Causes**:
-  - A person, forklift, or newly placed box is blocking the planned trajectory path.
-  - The robot is attempting an area coverage sweep in a tight corridor narrower than 1.15 meters.
-- **Operator Actions**:
-  1. Check the live camera feed and red LiDAR dots on the canvas for nearby physical obstructions.
-  2. If the path is blocked by transient objects, wait 10 seconds; the local planner automatically steers around obstacles once clearance opens.
-  3. If the robot cannot resolve the pinch, click **Pause / Cancel Goal**, switch to **Manual Drive**, and jog the robot into open floor space before resuming.
+### 3. Goal Navigasi Dibatalkan / Robot Menolak Bergerak
+- **Gejala**: Anda mengatur 2D Nav Goal atau memulai rute, tetapi robot berbunyi bip dan status langsung berubah dari `On Progress` kembali ke `Idle` atau `Goal Aborted`.
+- **Kemungkinan Penyebab**:
+  - Titik tujuan berada di dalam dinding hitam, di dalam halangan, atau dalam buffer inflasi mematikan (dalam jarak 0,575 m dari dinding).
+  - Robot kehilangan koordinat lokalisasinya terhadap peta.
+- **Tindakan Operator**:
+  1. Klik goal di ruang kosong terbuka yang luas (area abu-abu terang), jauh dari dinding dan tiang.
+  2. Klik tombol **Auto Align** pada toolbar untuk menyinkronkan ulang pemindaian LiDAR robot dengan peta statis.
+  3. Jika Auto-Align gagal, kendarai robot maju 0,5 meter secara manual lalu picu ulang Auto-Align.
 
 ---
 
-### 5. Control Locked: "In Use by Another Operator"
-- **Symptom**: You open a robot and all drive buttons are disabled with an "In Use" banner.
-- **Probable Causes**:
-  - Another operator account in your organization is currently driving this unit.
-  - You left another tab or laptop open logged into the same robot.
-- **Operator Actions**:
-  1. If the banner shows a different colleague's name, coordinate with them before requesting control.
-  2. If the banner shows your own account (e.g. from an old tab), click the **Take Over Control** button. The previous session is gracefully detached and control transfers to your active window.
+### 4. Banner "Robot Stuck" Tidak Kunjung Hilang
+- **Gejala**: Banner kuning kecoklatan (amber) di bagian atas kanvas bertuliskan "Robot Stuck: Recovery in Progress".
+- **Kemungkinan Penyebab**:
+  - Seseorang, forklift, atau kotak yang baru diletakkan menghalangi jalur trajektori yang direncanakan.
+  - Robot mencoba sesi penyapuan cakupan area di koridor sempit yang lebih kecil dari 1,15 meter.
+- **Tindakan Operator**:
+  1. Periksa feed kamera langsung dan titik LiDAR merah pada kanvas untuk mencari halangan fisik terdekat.
+  2. Jika jalur terhalang oleh objek sementara, tunggu 10 detik; perencana lokal secara otomatis mengarahkan robot mengelilingi halangan setelah jalur terbuka.
+  3. Jika robot tidak dapat mengatasi kebuntuan itu, klik **Pause / Cancel Goal**, beralih ke **Manual Drive**, dan kendarai robot ke ruang lantai terbuka sebelum melanjutkan.
 
 ---
 
-### 6. Emergency Stop Engaged
-- **Symptom**: The header flashes red with "Emergency Stop Engaged" and all movement is locked.
-- **Probable Causes**:
-  - An operator pressed the `Escape` key or clicked the on-screen E-Stop button.
-  - A technician triggered the physical hardware E-Stop bumper on the robot.
-- **Operator Actions**:
-  1. Verify that the physical robot environment is completely safe.
-  2. If physical hardware E-Stop was pressed, twist and release the hardware button on the robot chassis.
-  3. In the web dashboard, click **Release Emergency Stop** to re-engage motor controllers.
+### 5. Kendali Terkunci: "In Use by Another Operator"
+- **Gejala**: Anda membuka sebuah robot dan semua tombol kendali dinonaktifkan dengan banner "In Use".
+- **Kemungkinan Penyebab**:
+  - Akun operator lain di organisasi Anda sedang mengendarai unit ini.
+  - Anda meninggalkan tab atau laptop lain terbuka dan masuk ke robot yang sama.
+- **Tindakan Operator**:
+  1. Jika banner menampilkan nama rekan yang berbeda, koordinasikan dengan mereka sebelum meminta kendali.
+  2. Jika banner menampilkan akun Anda sendiri (misalnya dari tab lama), klik tombol **Take Over Control**. Sesi sebelumnya dilepaskan secara mulus dan kendali berpindah ke jendela aktif Anda.
 
 ---
 
-## Escalation Path
+### 6. Emergency Stop Aktif
+- **Gejala**: Header berkedip merah dengan tulisan "Emergency Stop Engaged" dan semua pergerakan terkunci.
+- **Kemungkinan Penyebab**:
+  - Seorang operator menekan tombol `Escape` atau mengklik tombol E-Stop pada layar.
+  - Seorang teknisi memicu bumper E-Stop perangkat keras fisik pada robot.
+- **Tindakan Operator**:
+  1. Verifikasi bahwa lingkungan robot fisik sepenuhnya aman.
+  2. Jika E-Stop perangkat keras fisik ditekan, putar dan lepaskan tombol perangkat keras pada chassis robot.
+  3. Pada dashboard web, klik **Release Emergency Stop** untuk mengaktifkan kembali pengendali motor.
 
-If the steps above do not resolve the issue:
-1. Contact your on-site **Field Technician** to inspect physical hardware power and sensors.
-2. Provide the technician with the robot's ULID (displayed in the dashboard header, e.g. `01JZ8P9WZ...`).
-3. Refer the technician to the [Technician Troubleshooting Guide](/id/setup/troubleshooting).
+---
+
+## Jalur Eskalasi
+
+Jika langkah-langkah di atas tidak menyelesaikan masalah:
+1. Hubungi **Teknisi Lapangan** di lokasi Anda untuk memeriksa daya perangkat keras fisik dan sensor.
+2. Berikan ULID robot kepada teknisi (ditampilkan di header dashboard, misalnya `01JZ8P9WZ...`).
+3. Arahkan teknisi ke [Panduan Pemecahan Masalah Teknisi](/id/setup/troubleshooting).

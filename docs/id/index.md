@@ -3,32 +3,31 @@
 layout: home
 
 hero:
-  name: "MSD700 Platform Documentation"
-  text: "by ITB de Labo Research Lab"
-  tagline: "Complete technical manual for operators, field technicians, and robotics developers."
+  name: "Dokumentasi Platform MSD700"
+  text: "oleh ITB de Labo Research Lab"
+  tagline: "Manual teknis lengkap untuk operator, teknisi lapangan, dan pengembang robotika."
   actions:
     - theme: brand
-      text: Getting Started
+      text: Panduan Memulai
       link: /id/getting-started/
     - theme: alt
-      text: Setup Guide
+      text: Panduan Instalasi
       link: /id/setup/
     - theme: alt
-      text: Developer Docs
+      text: Dokumentasi Pengembang
       link: /id/development/
 
 features:
-  - title: Getting Started
-    details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
+  - title: Panduan Memulai
+    details: "Untuk operator armada: pelajari cara mengendalikan robot, merekam peta SLAM, menjalankan penyapuan area, dan memantau video langsung."
     link: /id/getting-started/
-    linkText: Read the operator guide
-  - title: Setup & Deployment
-    details: "For field technicians: step-by-step installation guides for the cloud server stack and NVIDIA Jetson robot hardware."
+    linkText: Baca panduan operator
+  - title: Instalasi & Penerapan
+    details: "Untuk teknisi lapangan: panduan instalasi langkah demi langkah untuk stack server cloud dan perangkat keras robot NVIDIA Jetson."
     link: /id/setup/
-    linkText: Read the technician setup guide
-  - title: Developer Documentation
-    details: "For software engineers: deep system architecture, 15-state EKF kinematics, message contracts, and REST API reference."
+    linkText: Baca panduan instalasi teknisi
+  - title: Dokumentasi Pengembang
+    details: "Untuk rekayasawan perangkat lunak: arsitektur sistem mendalam, kinematika EKF 15-state, kontrak pesan, dan referensi REST API."
     link: /id/development/
-    linkText: Read the developer documentation
+    linkText: Baca dokumentasi pengembang
 ---
-

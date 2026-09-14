@@ -3,26 +3,25 @@ outline: deep
 search: false
 ---
 
-
-# Quick Start Guide
+# Panduan Cepat
 
 <RoleBadge role="user" />
 
-This guide walks you through logging in to the MSD700 dashboard, taking control of an assigned robot unit, loading a map, and executing your first navigation mission.
+Panduan ini memandu Anda melalui proses masuk ke dashboard MSD700, mengambil alih kendali unit robot yang ditetapkan, memuat peta, dan menjalankan misi navigasi pertama Anda.
 
-## Prerequisites
+## Prasyarat
 
-Before starting, ensure you have:
-1. An active user account on the dashboard.
-2. At least one robot assigned to your account by an administrator.
-3. Google Chrome or Microsoft Edge on a laptop or desktop computer.
+Sebelum memulai, pastikan Anda memiliki:
+1. Akun pengguna aktif di dashboard.
+2. Setidaknya satu robot yang ditetapkan ke akun Anda oleh administrator.
+3. Google Chrome atau Microsoft Edge pada laptop atau komputer desktop.
 
 ---
 
-## Step 1: Log In to the Dashboard
+## Langkah 1: Masuk ke Dashboard
 
-1. Open your browser and navigate to: `https://msd.nglobal.jp`.
-2. Enter your username and password, then click **Sign In**.
+1. Buka peramban Anda dan navigasikan ke: `https://msd.nglobal.jp`.
+2. Masukkan nama pengguna dan kata sandi Anda, lalu klik **Sign In**.
 
 ```mermaid
 flowchart LR
@@ -33,23 +32,23 @@ flowchart LR
 
 ---
 
-## Step 2: Select a Robot Unit
+## Langkah 2: Pilih Unit Robot
 
-After logging in, the **Fleet Dashboard** displays all robots assigned to your rental profile:
+Setelah masuk, **Fleet Dashboard** menampilkan semua robot yang ditetapkan ke profil penyewaan Anda:
 
-| Status Badge | Meaning | Action Allowed |
+| Lencana Status | Arti | Aksi yang Diizinkan |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | Robot is active, connected, and ready for commands. | Click unit card to open dashboard. |
-| <Badge type="warning" text="In Use" /> | Another operator is actively connected. | You may open the unit in view mode or request control takeover. |
-| <Badge type="danger" text="Offline" /> | Robot is powered down or disconnected from the network. | Wait for the unit to reconnect or check hardware power. |
+| <Badge type="tip" text="Online" /> | Robot aktif, terhubung, dan siap menerima perintah. | Klik kartu unit untuk membuka dashboard. |
+| <Badge type="warning" text="In Use" /> | Operator lain sedang terhubung aktif. | Anda dapat membuka unit dalam mode lihat saja atau meminta pengambilalihan kendali. |
+| <Badge type="danger" text="Offline" /> | Robot mati atau terputus dari jaringan. | Tunggu unit terhubung kembali atau periksa daya perangkat keras. |
 
-Click on any **Online** robot card to enter its control workspace.
+Klik kartu robot mana pun yang berstatus **Online** untuk masuk ke ruang kerja kendalinya.
 
 ---
 
-## Step 3: Understand the Operator Workspace
+## Langkah 3: Memahami Ruang Kerja Operator
 
-The operator interface is divided into three main operational panels:
+Antarmuka operator dibagi menjadi tiga panel operasional utama:
 
 ```mermaid
 flowchart TD
@@ -63,21 +62,21 @@ flowchart TD
 
 ---
 
-## Step 4: Load a Map
+## Langkah 4: Memuat Peta
 
-1. In the left panel header, click the **Select Map** dropdown.
-2. Choose a pre-recorded map from the list (e.g. `Warehouse_Floor_1`).
-3. The 2D floorplan renders on the canvas along with the robot's current position (blue circular icon with direction arrow).
+1. Pada header panel kiri, klik dropdown **Select Map**.
+2. Pilih peta yang sudah direkam sebelumnya dari daftar (misalnya `Warehouse_Floor_1`).
+3. Denah lantai 2D ditampilkan pada kanvas beserta posisi robot saat ini (ikon lingkaran biru dengan panah arah).
 
-::: tip No map available?
-If no maps exist in the dropdown, see [Building a New Map (SLAM)](/id/getting-started/features#1-autonomous-slam-mapping) to create your first map.
+::: tip Tidak ada peta yang tersedia?
+Jika tidak ada peta dalam dropdown, lihat [Membuat Peta Baru (SLAM)](/id/getting-started/features#1-autonomous-slam-mapping) untuk membuat peta pertama Anda.
 :::
 
 ---
 
-## Step 5: Drive Manually (Teleoperation)
+## Langkah 5: Mengendarai Secara Manual (Teleoperasi)
 
-You can drive the robot manually using your keyboard or the on-screen virtual joystick:
+Anda dapat mengendarai robot secara manual menggunakan keyboard atau joystick virtual pada layar:
 
 ```mermaid
 flowchart LR
@@ -90,21 +89,21 @@ flowchart LR
   end
 ```
 
-### Teleoperation Controls:
-- **Linear Speed Slider**: Adjusts maximum forward speed (default: `0.20 m/s`, range: `0.05` to `0.40 m/s`).
-- **Angular Speed Slider**: Adjusts rotational turning speed (default: `0.40 rad/s`).
-- **Virtual Joystick**: Click and drag the on-screen joystick handle in the desired direction.
+### Kontrol Teleoperasi:
+- **Slider Kecepatan Linear**: Mengatur kecepatan maju maksimum (default: `0.20 m/s`, rentang: `0.05` hingga `0.40 m/s`).
+- **Slider Kecepatan Angular**: Mengatur kecepatan putar rotasi (default: `0.40 rad/s`).
+- **Joystick Virtual**: Klik dan seret pegangan joystick pada layar ke arah yang diinginkan.
 
 ---
 
-## Step 6: Dispatch a Navigation Goal (Point-to-Point)
+## Langkah 6: Mengirim Goal Navigasi (Titik-ke-Titik)
 
-To send the robot to a target destination autonomously:
+Untuk mengirim robot ke tujuan target secara otonom:
 
-1. Click the **Navigate Goal** button on the canvas toolbar.
-2. Click on the desired destination point on the map.
-3. Click and drag outward to orient the target heading arrow, then release.
-4. The robot calculates a collision-free global path (blue line) and navigates autonomously to the target.
+1. Klik tombol **Navigate Goal** pada toolbar kanvas.
+2. Klik titik tujuan yang diinginkan pada peta.
+3. Klik dan seret ke luar untuk mengatur arah panah heading target, lalu lepaskan.
+4. Robot menghitung jalur global bebas tabrakan (garis biru) dan menavigasi secara otonom ke target.
 
 ```mermaid
 flowchart LR
@@ -115,16 +114,16 @@ flowchart LR
 
 ---
 
-## Step 7: Emergency Stop (E-Stop)
+## Langkah 7: Berhenti Darurat (E-Stop)
 
-The **Emergency Stop** button is prominently located at the top right of every page:
+Tombol **Emergency Stop** terletak menonjol di bagian kanan atas setiap halaman:
 
-- **Activate E-Stop**: Click the red **Emergency Stop** button (or press the `Escape` key). The robot brakes immediately and halts all autonomous routines.
-- **Clear E-Stop**: Resolve the safety condition and click **Resume Operations** to restore motor power.
+- **Mengaktifkan E-Stop**: Klik tombol merah **Emergency Stop** (atau tekan tombol `Escape`). Robot langsung mengerem dan menghentikan semua rutinitas otonom.
+- **Menghapus E-Stop**: Selesaikan kondisi keselamatan lalu klik **Resume Operations** untuk memulihkan daya motor.
 
 ---
 
-## Next Steps
+## Langkah Selanjutnya
 
-- Learn how to perform systematic area coverage in [System Features](/id/getting-started/features).
-- Understand safety timers and Autopilot in [How the Robot Behaves](/id/getting-started/behavior).
+- Pelajari cara melakukan cakupan area sistematis di [Fitur Sistem](/id/getting-started/features).
+- Pahami timer keselamatan dan Autopilot di [Bagaimana Robot Berperilaku](/id/getting-started/behavior).

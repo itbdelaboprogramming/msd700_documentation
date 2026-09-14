@@ -3,18 +3,17 @@ outline: deep
 search: false
 ---
 
-
-# System Features & User Guide
+# Fitur Sistem & Panduan Pengguna
 
 <RoleBadge role="user" />
 
-This document provides a comprehensive operational guide to all features available in the MSD700 web dashboard.
+Dokumen ini menyediakan panduan operasional lengkap untuk semua fitur yang tersedia di dashboard web MSD700.
 
 ---
 
-## 1. Autonomous SLAM Mapping
+## 1. Pemetaan SLAM Otonom
 
-Simultaneous Localization and Mapping (SLAM) is used to generate a digital 2D floorplan of a new facility.
+Simultaneous Localization and Mapping (SLAM) digunakan untuk menghasilkan denah lantai 2D digital dari fasilitas baru.
 
 ```mermaid
 flowchart LR
@@ -23,21 +22,21 @@ flowchart LR
   HOME --> SAVE["4. Name & Save Map<br/>Generates .pgm, .yaml & Thumbnail"]
 ```
 
-### Step-by-Step Mapping Procedure:
-1. In the top navigation bar, click the **Mapping** tab.
-2. Click **Start Mapping Session**. The robot initializes its 360-degree LiDAR and opens a fresh blank grid canvas.
-3. Drive the robot slowly (approx. `0.15 m/s`) through the environment using keyboard keys `W`, `A`, `S`, `D`.
-4. Observe the live map canvas as black lines (walls/obstacles) and light gray areas (open free space) emerge.
-5. Once all rooms and corridors are cleanly mapped, drive the robot back to its intended starting/charging station.
-6. Click **Set Homebase Here** on the toolbar. This marks the reference origin for future missions.
-7. Click **Save Map**, enter a descriptive name (e.g. `First_Floor_Warehouse`), and click **Confirm**.
-8. The map is saved locally to the robot and synchronized to the cloud repository automatically.
+### Prosedur Pemetaan Langkah demi Langkah:
+1. Pada bilah navigasi atas, klik tab **Mapping**.
+2. Klik **Start Mapping Session**. Robot menginisialisasi LiDAR 360 derajatnya dan membuka kanvas grid kosong yang baru.
+3. Kendarai robot secara perlahan (kira-kira `0.15 m/s`) melintasi lingkungan menggunakan tombol keyboard `W`, `A`, `S`, `D`.
+4. Amati kanvas peta langsung saat garis hitam (dinding/halangan) dan area abu-abu terang (ruang kosong terbuka) muncul.
+5. Setelah semua ruangan dan koridor terpetakan dengan bersih, kendarai robot kembali ke stasiun awal/pengisian daya yang dimaksud.
+6. Klik **Set Homebase Here** pada toolbar. Ini menandai titik acuan asal untuk misi di masa mendatang.
+7. Klik **Save Map**, masukkan nama deskriptif (misalnya `First_Floor_Warehouse`), lalu klik **Confirm**.
+8. Peta disimpan secara lokal di robot dan disinkronkan ke repositori cloud secara otomatis.
 
 ---
 
-## 2. Point-to-Point Navigation
+## 2. Navigasi Titik-ke-Titik
 
-Allows sending the robot to precise coordinates with automatic path planning and dynamic obstacle avoidance.
+Memungkinkan pengiriman robot ke koordinat yang presisi dengan perencanaan jalur otomatis dan penghindaran halangan dinamis.
 
 ```mermaid
 flowchart TD
@@ -48,17 +47,17 @@ flowchart TD
   AVOID --> REACH["Arrives at goal and aligns to target heading"]
 ```
 
-### Path Canvas Visual Indicators:
-- **Blue Line**: The global planned path computed across static map geometry.
-- **Green/Red Trajectory**: The active local trajectory calculated in real time (up to 4 meters ahead).
-- **Red Laser Dots**: Live 2D LiDAR reflection points showing real-time obstacles.
-- **Translucent Hull**: The safety footprint envelope surrounding the robot.
+### Indikator Visual Kanvas Jalur:
+- **Garis Biru**: Jalur global yang direncanakan, dihitung berdasarkan geometri peta statis.
+- **Trajektori Hijau/Merah**: Trajektori lokal aktif yang dihitung secara real time (hingga 4 meter ke depan).
+- **Titik Laser Merah**: Titik pantulan LiDAR 2D langsung yang menunjukkan halangan secara real time.
+- **Selubung Tembus Pandang**: Envelope jejak keselamatan yang mengelilingi robot.
 
 ---
 
-## 3. Boustrophedon Area Coverage Sweeping
+## 3. Penyapuan Cakupan Area Boustrophedon
 
-For floor cleaning, ultraviolet disinfection, or surface inspection, the robot performs systematic serpentine sweep passes within custom polygonal boundaries.
+Untuk pembersihan lantai, disinfeksi ultraviolet, atau inspeksi permukaan, robot melakukan penyapuan berpola serpentine sistematis dalam batas poligon khusus.
 
 ```mermaid
 flowchart LR
@@ -67,17 +66,17 @@ flowchart LR
   PITCH --> EXEC["4. Execute Sweep Mission<br/>Parallel lanes with 90-degree comb turns"]
 ```
 
-### Coverage Configuration Options:
-1. **Polygon Drawing**: Click the **Draw Area** tool, then click sequential points on the canvas to outline the cleaning region. Double-click or click the first vertex to close the polygon.
-2. **Keep-Out Zones**: Draw polygons inside the area marked as **No-Cover** to prevent the robot from entering hazardous or restricted zones.
-3. **Sweep Direction**: Align the sweep angle to the long axis of the room to minimize turning cycles.
-4. **Lane Pitch**: Default is `0.574 m`, calculated from the 0.70 m chassis width with 18% lane overlap to guarantee 100% coverage.
+### Opsi Konfigurasi Cakupan:
+1. **Menggambar Poligon**: Klik alat **Draw Area**, lalu klik titik-titik berurutan pada kanvas untuk menggambar batas area pembersihan. Klik dua kali atau klik titik pertama untuk menutup poligon.
+2. **Zona Terlarang (Keep-Out)**: Gambar poligon di dalam area yang ditandai sebagai **No-Cover** untuk mencegah robot memasuki zona berbahaya atau terlarang.
+3. **Arah Penyapuan**: Selaraskan sudut penyapuan dengan sumbu panjang ruangan untuk meminimalkan siklus belokan.
+4. **Jarak Antar-Jalur**: Default `0.574 m`, dihitung dari lebar chassis 0,70 m dengan overlap jalur 18% untuk menjamin cakupan 100%.
 
 ---
 
-## 4. Multi-Waypoint Routes & Sequence Playlists
+## 4. Rute Multi-Waypoint & Playlist Berurutan
 
-You can chain multiple navigation goals and coverage areas into automated mission playlists.
+Anda dapat merangkaikan beberapa goal navigasi dan area cakupan menjadi playlist misi otomatis.
 
 ```mermaid
 flowchart LR
@@ -89,50 +88,50 @@ flowchart LR
   end
 ```
 
-### Creating and Running a Playlist:
-1. Navigate to the **Playlists** tab.
-2. Click **Create New Playlist** and give it a name (e.g. `Nightly_Sanitization_Routine`).
-3. Click **Add Step** and select saved waypoints or coverage areas from your library.
-4. Set optional pause dwell times at specific waypoints (e.g. wait 30 seconds at an inspection checkpoint).
-5. Toggle **Autopilot Mode ON** and click **Start Playlist**.
-6. The robot will execute every step in sequence and return to its homebase when finished.
+### Membuat dan Menjalankan Playlist:
+1. Navigasikan ke tab **Playlists**.
+2. Klik **Create New Playlist** dan beri nama (misalnya `Nightly_Sanitization_Routine`).
+3. Klik **Add Step** dan pilih waypoint atau area cakupan tersimpan dari library Anda.
+4. Atur waktu jeda opsional pada waypoint tertentu (misalnya tunggu 30 detik di titik pemeriksaan inspeksi).
+5. Aktifkan **Autopilot Mode ON** lalu klik **Start Playlist**.
+6. Robot akan menjalankan setiap langkah secara berurutan dan kembali ke homebase-nya setelah selesai.
 
 ---
 
-## 5. Zero-Spin Heading Alignment (Auto-Align)
+## 5. Penyelarasan Heading Tanpa Putaran (Auto-Align)
 
-When placing the robot in a room whose map is already recorded, traditional robots must rotate 360 degrees to find their heading, which can collide with nearby walls or pallets.
+Saat menempatkan robot di ruangan yang petanya sudah direkam, robot konvensional harus berputar 360 derajat untuk menemukan headingnya, yang dapat bertabrakan dengan dinding atau palet di dekatnya.
 
-MSD700 includes **Zero-Spin Auto-Align**:
-- Click **Auto Align** on the navigation toolbar.
-- The robot performs Correlative Scan Matching (CSM) against the static map in **less than 50 milliseconds without moving**.
-- If the robot is in a symmetric corridor, it performs a subtle 15 cm forward/backward jog to establish heading without rotating in place.
-
----
-
-## 6. Live HD Video Streaming
-
-The top-right panel provides a real-time, low-latency WebRTC video stream directly from the onboard camera.
-
-- **Full Screen View**: Click the expand icon to enlarge the video feed.
-- **Stall Detector**: If the video stream freezes due to temporary network disruption, the player automatically triggers peer-reflexive ICE reconnection.
+MSD700 dilengkapi **Zero-Spin Auto-Align**:
+- Klik **Auto Align** pada toolbar navigasi.
+- Robot melakukan Correlative Scan Matching (CSM) terhadap peta statis dalam **kurang dari 50 milidetik tanpa bergerak**.
+- Jika robot berada di koridor simetris, robot melakukan gerakan maju/mundur halus sejauh 15 cm untuk menetapkan heading tanpa berputar di tempat.
 
 ---
 
-## 7. Offline Local Operation
+## 6. Streaming Video HD Langsung
 
-When deploying the robot in facilities without internet or cellular connectivity:
+Panel kanan atas menyediakan streaming video WebRTC real time dengan latensi rendah langsung dari kamera onboard.
 
-1. Connect your computer or tablet to the robot's onboard Wi-Fi hotspot (`MSD700_Unit_<ULID>`).
-2. Open `http://<jetson-ip>:3000` in your browser.
-3. The **Local Mode Badge** in the header confirms offline operation.
-4. All mapping, navigation, and area coverage features operate with full functionality.
-5. When the robot reconnects to internet Wi-Fi, click the Local Badge and select **Sync Now** to push recorded maps to the cloud database.
+- **Tampilan Layar Penuh**: Klik ikon perbesar untuk memperbesar feed video.
+- **Detektor Macet**: Jika streaming video membeku akibat gangguan jaringan sementara, pemutar secara otomatis memicu rekoneksi ICE peer-reflexive.
 
 ---
 
-## Related Documentation
+## 7. Operasi Lokal Offline
 
-- [Quick Start Guide](/id/getting-started/quick-start): Getting started in 5 minutes.
-- [How the Robot Behaves](/id/getting-started/behavior): Safety watchdogs and session recovery.
-- [Operator Troubleshooting](/id/getting-started/troubleshooting): Diagnosing common operator issues.
+Saat menerapkan robot di fasilitas tanpa konektivitas internet atau seluler:
+
+1. Hubungkan komputer atau tablet Anda ke hotspot Wi-Fi onboard robot (`MSD700_Unit_<ULID>`).
+2. Buka `http://<jetson-ip>:3000` di peramban Anda.
+3. **Local Mode Badge** pada header mengonfirmasi operasi offline.
+4. Semua fitur pemetaan, navigasi, dan cakupan area berfungsi dengan kapabilitas penuh.
+5. Saat robot terhubung kembali ke Wi-Fi internet, klik Local Badge dan pilih **Sync Now** untuk mendorong peta yang telah direkam ke database cloud.
+
+---
+
+## Dokumentasi Terkait
+
+- [Panduan Cepat](/id/getting-started/quick-start): Mulai dalam 5 menit.
+- [Bagaimana Robot Berperilaku](/id/getting-started/behavior): Watchdog keselamatan dan pemulihan sesi.
+- [Pemecahan Masalah Operator](/id/getting-started/troubleshooting): Mendiagnosis masalah operator umum.

@@ -2,90 +2,58 @@
 search: false
 ---
 
-
-# Developer Documentation
+# 開発者ドキュメント
 
 <RoleBadge role="developer" />
 
-Comprehensive technical documentation for software engineers, robotics developers, and systems architects working on the MSD700 platform.
+MSD700 プラットフォームに携わるソフトウェアエンジニア、ロボティクス開発者、システムアーキテクト向けの包括的な技術ドキュメント。ロボット自体のソフトウェアと、それを運用するプラットフォームの2領域に分かれています。
 
-## Start Here
+## ROS: ロボットソフトウェア
 
-<LinkCards>
-  <LinkCard icon="🏗️" title="Architecture" details="Two-machine peer model, system topology, trust domains, and seams." link="/ja/development/architecture" />
-  <LinkCard icon="🛡️" title="Security & Authentication" details="JWT keyring, 3-stage cryptographic enrolment nonce, and trust isolation." link="/ja/development/security-and-auth" />
-  <LinkCard icon="🗂️" title="Repository Structure" details="Codebase layout across msd700_robot, ros-web-ui, and msd700_noetic." link="/ja/development/repository-structure" />
-  <LinkCard icon="📦" title="ROS Package Registry" details="Complete directory of ROS 1 Noetic nodes, launch files, and topics." link="/ja/development/ros-packages" />
-</LinkCards>
-
-## Boustrophedon Coverage Cleaning
+物理ユニット上で動作する ROS 1 Noetic スタック: パッケージ、アルゴリズム、センサー、制御ループ。この側には独自のオペレーター向け UI がないため、サブシステムごとに整理されています。
 
 <LinkCards>
-  <LinkCard icon="📐" title="Boustrophedon Coverage" details="Dual geometry models, cellular decomposition, and zero-spin alignment." link="/ja/development/boustrophedon-and-alignment" />
+  <LinkCard icon="🤖" title="ROS セクション" details="パッケージレジストリ、知覚&ローカリゼーション、ナビゲーション&プランニング、ボウストロフェドン・カバレッジアルゴリズム、ファームウェア&ハードウェア、セーフティウォッチドッグ、シミュレーション。" link="/ja/development/ros/" />
 </LinkCards>
 
-## Navigation & Path Planning
+## ROS Web UI: プラットフォーム
+
+オペレーターダッシュボード、管理コンソール、そしてそれらをロボットに接続するバックエンド/ブリッジサービス。プロトコル層ではなく、実際の機能画面ごとに整理されています。
 
 <LinkCards>
-  <LinkCard icon="📐" title="Coordinate Transforms (TF)" details="REP-103/105 transform tree, sensor offsets, and BoundaryPublisher restamping." link="/ja/development/tf-transforms" />
-  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/ja/development/costmaps-and-planners" />
+  <LinkCard icon="🧭" title="ナビゲーション" details="手動操作、Autopilot、ピンポイント/ルート、マップ同期&アライメント、カバレッジクリーニング。" link="/ja/development/webui/navigation/overview" />
+  <LinkCard icon="🗺️" title="マッピング" details="新しいマップの構築: Play/Pause/Stop、手動 vs 自律探索、save-on-stop。" link="/ja/development/webui/mapping/overview" />
+  <LinkCard icon="🗄️" title="データベース" details="マップDB画面: 記録済みマップの一覧表示、検索、リネーム、削除。" link="/ja/development/webui/database/overview" />
+  <LinkCard icon="🛠️" title="管理コンソール" details="Operators、Units & Fleet、Rentals、Backups、そしてスーパー管理者専用の Admins タブ。" link="/ja/development/webui/admin-console/overview" />
+  <LinkCard icon="🔑" title="アカウント & アクセス" details="オペレーターのログイン/サインアップ、管理者ログイン、JWT キーリング、ハードウェア登録。" link="/ja/development/webui/accounts/overview" />
+  <LinkCard icon="📷" title="カメラ & ライブビュー" details="ダッシュボードのライブフィードを支える WebRTC 映像パイプライン。" link="/ja/development/webui/camera/overview" />
 </LinkCards>
 
-## Robot Control, Sensing & Hardware
+## まずはここから & リファレンス
+
+両領域に共通して適用される横断的な資料であり、どちらのセクションにも重複させていません。
 
 <LinkCards>
-  <LinkCard icon="🔁" title="State and Behavior" details="Robot activities, safety watchdog tiers, Autopilot mode, and session recovery." link="/ja/development/state-and-behavior" />
-  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, roslaunch Python API process spawning, and Autopilot sequencer." link="/ja/development/mode-switching" />
-  <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/ja/development/sensor-fusion-and-control" />
-  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/ja/development/firmware-and-hardware" />
+  <LinkCard icon="🏗️" title="アーキテクチャ" details="2マシン・ピアモデル、システムトポロジー、トラストドメイン、状態の所有権。" link="/ja/development/architecture" />
+  <LinkCard icon="🗂️" title="リポジトリ構成" details="msd700_robot、ros-web-ui、msd700_noetic 間のコードベース構成。" link="/ja/development/repository-structure" />
+  <LinkCard icon="📨" title="メッセージ仕様" details="MQTT ワイヤーフォーマット全体: コマンドエンベロープ、フィードバックスキーマ、ARQ ACK プロトコル。" link="/ja/development/message-contracts" />
+  <LinkCard icon="🔧" title="診断 & トラブルシューティング" details="スタック全体の障害判断ツリーと根本原因のマッピング。" link="/ja/development/troubleshooting-guide" />
+  <LinkCard icon="🤝" title="コントリビューションガイド" details="開発ワークフロー、コミット規約、プルリクエスト手順。" link="/ja/development/contributing" />
+  <LinkCard icon="📝" title="変更履歴" details="プラットフォームの変更履歴とリリースノート。" link="/ja/development/changelog" />
 </LinkCards>
 
-## Web Dashboard & Live Media
+::: info 現在も移行中
+`REST API リファレンス`、`rosbridge プロトコル`、`Frontend Canvas`、`データベース設計`、`データ同期`、`バックアップ & リストア`、`ユニットコンテナライフサイクル` は、当面は独立した完全なリファレンスとして残ります。上記の各 ROS Web UI 機能ページは、これらを複製するのではなく、必要な該当セクションへリンクします。
+:::
 
-<LinkCards>
-  <LinkCard icon="🎨" title="Frontend Canvas & Web UI" details="EaselJS stage rendering, metric-to-pixel math, and createjs prototype patches." link="/ja/development/frontend-canvas" />
-  <LinkCard icon="🌐" title="rosbridge Protocol" details="WebSocket JSON streaming protocol, topic subscriptions, and canvas rendering." link="/ja/development/rosbridge-protocol" />
-  <LinkCard icon="📷" title="Camera Streaming" details="WebRTC video pipeline, STUN/TURN relays, and mDNS candidate filtering." link="/ja/development/camera-streaming" />
-</LinkCards>
+## 推奨される読み進め方
 
-## Cloud-Robot Messaging & API
+MSD700 に新しく参加するエンジニアには、次の基礎的な進行順序を推奨します。
 
-<LinkCards>
-  <LinkCard icon="📨" title="Message Contracts" details="MQTT command envelopes, feedback schemas, and ARQ ACK protocols." link="/ja/development/message-contracts" />
-  <LinkCard icon="🔌" title="API Reference" details="Exhaustive REST API endpoints, request parameters, and response bodies." link="/ja/development/api-reference" />
-</LinkCards>
-
-## Fleet, Data & Backup
-
-<LinkCards>
-  <LinkCard icon="🐳" title="Unit Container Lifecycle" details="unit_manager.js, Docker socket proxying, and idle reaper sweeps." link="/ja/development/unit-container-lifecycle" />
-  <LinkCard icon="🗄️" title="Database Schema" details="MySQL 8.0 tables, uniform timestamps, and rental profile foreign keys." link="/ja/development/database-schema" />
-  <LinkCard icon="🔄" title="Data Sync" details="Offline-first database reconciliation, conflict resolution, and Local badge." link="/ja/development/data-sync" />
-  <LinkCard icon="💾" title="Backup & Migration" details="Profile and unit scoped backups, tar.gz manifests, and schema migrations." link="/ja/development/backup-and-restore" />
-</LinkCards>
-
-## Simulation & Testing
-
-<LinkCards>
-  <LinkCard icon="🏭" title="Simulation" details="True-scale Gazebo simulation, AWS Small Warehouse world, and clearance testing." link="/ja/development/simulation" />
-</LinkCards>
-
-## Reference & Process
-
-<LinkCards>
-  <LinkCard icon="🔧" title="Diagnostics & Troubleshooting" details="Developer failure decision trees, root cause mappings, and recovery." link="/ja/development/troubleshooting-guide" />
-  <LinkCard icon="🤝" title="Contributing Guide" details="Development workflow, commit conventions, and pull request procedures." link="/ja/development/contributing" />
-  <LinkCard icon="📝" title="Changelog" details="Historical platform changelog and release notes." link="/ja/development/changelog" />
-</LinkCards>
-
-## Recommended Reading Order
-
-For engineers newly onboarding to MSD700, the recommended foundational progression is:
-
-1. [Architecture](/ja/development/architecture): Understand the two-machine model and the separation between MQTT and rosbridge.
-2. [Security & Authentication](/ja/development/security-and-auth): Learn the three trust domains and cryptographic device enrolment.
-3. [ROS Package Registry](/ja/development/ros-packages): Explore the ROS nodes and package bindings.
-4. [Coordinate Transforms (TF)](/ja/development/tf-transforms): Understand the spatial reference tree and clock domain restamping.
-5. [Message Contracts](/ja/development/message-contracts): Master the exact wire formats crossing machine boundaries.
-6. [State and Behavior](/ja/development/state-and-behavior): Trace finite state machine transitions and safety watchdogs.
-7. [API Reference](/ja/development/api-reference): Integrate web and external client controllers.
+1. [アーキテクチャ](/ja/development/architecture): 2マシンモデルと MQTT / rosbridge の分離を理解する。
+2. [アカウント & アクセス: セキュリティ & トークン](/ja/development/webui/accounts/security-and-tokens): 3つのトラストドメインと暗号学的デバイス登録を学ぶ。
+3. [ROS パッケージレジストリ](/ja/development/ros/ros-packages): ROS ノードとパッケージバインディングを探る。
+4. [座標変換 (TF)](/ja/development/ros/tf-transforms): 空間参照ツリーとクロックドメインの再スタンプを理解する。
+5. [メッセージ仕様](/ja/development/message-contracts): マシン境界を越える正確なワイヤーフォーマットを習得する。
+6. [ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot): ロボットのアクティビティステートマシンとセッション復旧を追跡する。
+7. [REST API リファレンス](/ja/development/api-reference): Web および外部クライアントコントローラーを統合する。

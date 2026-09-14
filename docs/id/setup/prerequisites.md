@@ -2,14 +2,13 @@
 outline: deep
 ---
 
-
-# Prerequisites
+# Prasyarat
 
 <RoleBadge role="technician" />
 
-This document details the hardware specifications, operating system requirements, networking rules, and software dependencies needed before deploying the **MSD700 Server** or **MSD700 Physical Robot Units**.
+Dokumen ini merinci spesifikasi perangkat keras, kebutuhan sistem operasi, aturan jaringan, dan dependensi perangkat lunak yang diperlukan sebelum melakukan deployment **MSD700 Server** atau **Unit Robot Fisik MSD700**.
 
-## System Sizing and Hardware Specifications
+## Ukuran Sistem dan Spesifikasi Perangkat Keras
 
 ```mermaid
 flowchart LR
@@ -29,31 +28,31 @@ flowchart LR
   end
 ```
 
-### 1. Server Hardware Specifications (Cloud Host)
+### 1. Spesifikasi Perangkat Keras Server (Host Cloud)
 
-| Component | Minimum Specification | Recommended Production |
+| Komponen | Spesifikasi Minimum | Rekomendasi Produksi |
 | --- | --- | --- |
-| **Processor** | 2 vCPUs (x86_64 / amd64) | 4 to 8 vCPUs |
-| **System Memory** | 4 GB RAM | 8 to 16 GB RAM |
-| **Disk Storage** | 30 GB SSD | 100 GB NVMe (for map archives and media logs) |
-| **Network Ingress** | Static Public IPv4 with Port 443, 8883 forwarded | 100 Mbps+ Full Duplex link |
+| **Prosesor** | 2 vCPU (x86_64 / amd64) | 4 sampai 8 vCPU |
+| **Memori Sistem** | RAM 4 GB | RAM 8 sampai 16 GB |
+| **Penyimpanan Disk** | SSD 30 GB | NVMe 100 GB (untuk arsip peta dan log media) |
+| **Ingress Jaringan** | IPv4 Publik statis dengan Port 443, 8883 diteruskan (forward) | Tautan Full Duplex 100 Mbps+ |
 
-### 2. Physical Robot Unit Specifications (Jetson SBC)
+### 2. Spesifikasi Unit Robot Fisik (SBC Jetson)
 
-| Component | Hardware Specification | Purpose |
+| Komponen | Spesifikasi Perangkat Keras | Tujuan |
 | --- | --- | --- |
-| **Single-Board Computer** | NVIDIA Jetson (JetPack 5.x / 6.x) | Runs ROS Noetic runtime in Docker, sensor fusion, and local web stack. |
-| **Primary 3D LiDAR** | Velodyne VLP-16 (16 Channels, Ethernet) | 360-degree environmental mapping and 100 m range obstacle detection. |
-| **State IMU** | 9-DOF MEMS Sensor (I2C/UART) | Fused with wheel odometry via Madgwick filter for high-rate orientation. |
-| **Motor Microcontroller** | Arduino / Teensy Embedded Controller | Executes closed-loop PID velocity control and encoder tick interrupts. |
-| **Chassis & Drive** | Differential Drive with 4 Swivel Casters | 0.90 x 0.70 m physical chassis footprint; 2.5 m/s maximum design speed. |
-| **Power Stage** | 24V LiFePO4 Battery Pack | 4 to 6 hours continuous autonomous operation; hardware E-Stop relay. |
+| **Single-Board Computer** | NVIDIA Jetson (JetPack 5.x / 6.x) | Menjalankan runtime ROS Noetic di Docker, sensor fusion, dan stack web lokal. |
+| **LiDAR 3D Utama** | Velodyne VLP-16 (16 Channel, Ethernet) | Pemetaan lingkungan 360 derajat dan deteksi halangan jarak 100 m. |
+| **IMU Status** | Sensor MEMS 9-DOF (I2C/UART) | Digabung dengan odometri roda melalui filter Madgwick untuk orientasi dengan laju tinggi. |
+| **Mikrokontroler Motor** | Kontroler Embedded Arduino / Teensy | Menjalankan kontrol kecepatan PID closed-loop dan interrupt tick encoder. |
+| **Sasis & Penggerak** | Differential Drive dengan 4 Swivel Caster | Jejak sasis fisik 0,90 x 0,70 m; kecepatan desain maksimum 2,5 m/s. |
+| **Tahap Daya** | Paket Baterai LiFePO4 24V | Operasi otonom berkelanjutan 4 sampai 6 jam; relai E-Stop perangkat keras. |
 
 ---
 
-## Network Firewall and Port Matrix
+## Matriks Firewall Jaringan dan Port
 
-Ensure network routers and security groups allow the following traffic:
+Pastikan router jaringan dan security group mengizinkan trafik berikut:
 
 ```mermaid
 flowchart TD
@@ -72,37 +71,37 @@ flowchart TD
   end
 ```
 
-| Port | Protocol | Scope | Service | Required For |
+| Port | Protokol | Cakupan | Layanan | Diperlukan Untuk |
 | --- | --- | --- | --- | --- |
-| **`443`** | TCP | Public | Apache2 Reverse Proxy | Web dashboard HTTPS, REST API, and rosbridge WebSocket streams. |
-| **`8883`** | TCP | Public | HiveMQ TLS Broker | Encrypted MQTT command and telemetry bridge connecting robots to the cloud. |
-| **`3478`** | UDP + TCP | Public | coturn TURN Server | WebRTC camera video traversal when peer-to-peer NAT punch is blocked. |
-| **`49152 - 65535`** | UDP | Public | coturn Dynamic Media Range | WebRTC video payload relaying across symmetric NATs. |
-| **`3307`** | TCP | Localhost | MySQL Production DB | Central relational store for accounts, maps, routes, and rental profiles. |
-| **`5000`** | TCP | Localhost | Express Backend API | Internal REST API and Docker container orchestrator. |
-| **`9090`** | TCP | Localhost | rosbridge WebSocket | High-frequency ROS topic deserializer feeding web canvases. |
+| **`443`** | TCP | Publik | Apache2 Reverse Proxy | Dashboard web HTTPS, REST API, dan stream WebSocket rosbridge. |
+| **`8883`** | TCP | Publik | HiveMQ TLS Broker | Jembatan perintah dan telemetri MQTT terenkripsi yang menghubungkan robot ke cloud. |
+| **`3478`** | UDP + TCP | Publik | coturn TURN Server | Traversal video kamera WebRTC saat peer-to-peer NAT punch diblokir. |
+| **`49152 - 65535`** | UDP | Publik | coturn Dynamic Media Range | Relay payload video WebRTC melintasi symmetric NAT. |
+| **`3307`** | TCP | Localhost | MySQL Production DB | Penyimpanan relasional pusat untuk akun, peta, rute, dan profil penyewaan. |
+| **`5000`** | TCP | Localhost | Express Backend API | REST API internal dan orkestrator container Docker. |
+| **`9090`** | TCP | Localhost | rosbridge WebSocket | Deserializer topic ROS berfrekuensi tinggi yang memasok kanvas web. |
 
 ---
 
-## Host Operating System & Dependencies
+## Sistem Operasi Host & Dependensi
 
-### For the Cloud Server:
-1. **Operating System**: Ubuntu 22.04 LTS or Ubuntu 24.04 LTS (x86_64).
-2. **Docker Engine**: Docker CE 20.10+ with Compose Plugin (`docker compose` v2).
+### Untuk Server Cloud:
+1. **Sistem Operasi**: Ubuntu 22.04 LTS atau Ubuntu 24.04 LTS (x86_64).
+2. **Docker Engine**: Docker CE 20.10+ dengan Compose Plugin (`docker compose` v2).
 3. **Web Server**: Apache 2.4+ (`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`).
-4. **SSL Certificates**: Certbot installed for automatic Let's Encrypt renewal.
+4. **Sertifikat SSL**: Certbot terinstal untuk perpanjangan otomatis Let's Encrypt.
 
-### For the Physical Jetson Unit:
-1. **Operating System**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x on ARM64).
-2. **Docker Engine**: Docker CE with `network_mode: host` support.
-3. **USB Device Rules**: `udev` rules granting non-root access to `/dev/ttyUSB*` (motor controller).
-4. **Static IP Configuration**: Static IP `192.168.103.100` configured on the dedicated LiDAR Ethernet port (`end0`).
+### Untuk Unit Jetson Fisik:
+1. **Sistem Operasi**: Ubuntu 20.04 / 22.04 LTS (JetPack 5.x / 6.x pada ARM64).
+2. **Docker Engine**: Docker CE dengan dukungan `network_mode: host`.
+3. **Aturan Perangkat USB**: Aturan `udev` yang memberi akses non-root ke `/dev/ttyUSB*` (kontroler motor).
+4. **Konfigurasi IP Statis**: IP statis `192.168.103.100` dikonfigurasi pada port Ethernet LiDAR khusus (`end0`).
 
 ---
 
-## Installing Docker Engine on Ubuntu
+## Menginstal Docker Engine di Ubuntu
 
-Both the Cloud Server and the Jetson Unit need Docker CE with the Compose plugin (`docker compose` v2). Install it from Docker's official `apt` repository rather than the `docker.io` package in Ubuntu's default repos, which lags behind and often ships without the Compose plugin.
+Baik Server Cloud maupun Unit Jetson memerlukan Docker CE dengan plugin Compose (`docker compose` v2). Instal dari repositori `apt` resmi Docker, bukan dari paket `docker.io` di repositori default Ubuntu, yang tertinggal versinya dan sering tidak menyertakan plugin Compose.
 
 ```bash
 # 1. Remove any old or conflicting packages
@@ -131,13 +130,13 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 sudo docker run hello-world
 ```
 
-::: info Works on both `amd64` and `arm64`
-The steps above are architecture-agnostic: `dpkg --print-architecture` resolves to `amd64` on the Cloud Server and `arm64` on the Jetson Unit, and Docker's repository serves the matching package for each. No separate procedure is needed for JetPack.
+::: info Berfungsi baik di `amd64` maupun `arm64`
+Langkah-langkah di atas bersifat agnostik terhadap arsitektur: `dpkg --print-architecture` menghasilkan `amd64` pada Server Cloud dan `arm64` pada Unit Jetson, dan repositori Docker menyajikan paket yang sesuai untuk masing-masing. Tidak diperlukan prosedur terpisah untuk JetPack.
 :::
 
-### Post-install: run Docker without `sudo`
+### Pasca-instalasi: menjalankan Docker tanpa `sudo`
 
-`docker-manager.sh` and `run_msd.sh` (see [Docker Reference](/id/setup/docker-reference)) assume the invoking user can run `docker` without `sudo`. Add the user to the `docker` group and start a new shell session for it to take effect:
+`docker-manager.sh` dan `run_msd.sh` (lihat [Referensi Docker](/id/setup/docker-reference)) mengasumsikan pengguna yang menjalankannya dapat menjalankan `docker` tanpa `sudo`. Tambahkan pengguna ke grup `docker` dan mulai sesi shell baru agar perubahan berlaku:
 
 ```bash
 sudo usermod -aG docker $USER
@@ -147,11 +146,11 @@ newgrp docker
 docker run hello-world
 ```
 
-::: warning Log out and back in if it still asks for `sudo`
-`newgrp docker` only applies the new group to the current shell. If another shell, an SSH session, or a systemd unit still fails with a permission error on `/var/run/docker.sock`, fully log out and back in (or reboot) so group membership is picked up everywhere.
+::: warning Log out lalu login kembali jika masih meminta `sudo`
+`newgrp docker` hanya menerapkan grup baru pada shell saat ini. Jika shell lain, sesi SSH, atau unit systemd masih gagal dengan error izin pada `/var/run/docker.sock`, lakukan log out sepenuhnya lalu login kembali (atau reboot) agar keanggotaan grup diterapkan di mana pun.
 :::
 
-### Enable Docker on boot
+### Mengaktifkan Docker saat boot
 
 ```bash
 sudo systemctl enable docker.service
@@ -160,15 +159,15 @@ sudo systemctl enable containerd.service
 
 ---
 
-## Safety Checklist
+## Checklist Keselamatan
 
-::: danger Safety First
-1. **Keep E-Stop Reachable**: Before running motor tests, verify that the physical Emergency Stop mushroom button is within immediate physical reach.
-2. **Elevate Chassis for First Power-Up**: During initial firmware bringup and motor direction tests, place the robot chassis on wooden blocks so drive wheels spin freely without touching the floor.
-3. **LiDAR Eye Safety**: The Velodyne VLP-16 is a Class 1 eye-safe laser device ($905\text{ nm}$ wavelength); avoid placing optical magnifying lenses directly in front of active optics.
+::: danger Keselamatan Terlebih Dahulu
+1. **Jaga E-Stop Tetap Terjangkau**: Sebelum menjalankan pengujian motor, pastikan tombol jamur Emergency Stop fisik berada dalam jangkauan langsung.
+2. **Angkat Sasis untuk Penyalaan Pertama**: Selama bringup firmware awal dan pengujian arah motor, letakkan sasis robot di atas balok kayu sehingga roda penggerak berputar bebas tanpa menyentuh lantai.
+3. **Keselamatan Mata terhadap LiDAR**: Velodyne VLP-16 adalah perangkat laser aman-mata Kelas 1 (panjang gelombang $905\text{ nm}$); hindari menempatkan lensa pembesar optik langsung di depan optik yang aktif.
 :::
 
-## Next Step
+## Langkah Berikutnya
 
-- Proceed to [Server Setup](/id/setup/server-setup) to deploy the cloud backend.
-- Or proceed directly to [Unit Setup](/id/setup/unit-setup) if the server is already active.
+- Lanjutkan ke [Penyiapan Server](/id/setup/server-setup) untuk melakukan deployment backend cloud.
+- Atau langsung lanjutkan ke [Penyiapan Unit](/id/setup/unit-setup) jika server sudah aktif.

@@ -2,43 +2,49 @@
 search: false
 ---
 
-
-# Platform Changelog & Release Milestones
+# Changelog & Tonggak Rilis Platform
 
 <RoleBadge role="developer" />
 
-This changelog summarizes key architectural milestones, platform overhauls, and protocol advancements across the MSD700 robotics ecosystem.
+Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajuan protokol di seluruh ekosistem robotika MSD700.
 
-## Architectural Milestones
+## Tonggak Arsitektur
 
-### August 2026: Documentation Overhaul & Precision Kinematics
-- **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.
-- **True-Scale Gazebo Simulation**: Upgraded simulator model to `msd700_field` ($0.90 \times 0.70\text{ m}$ body footprint with 4 casters) operating in the AWS RoboMaker Small Warehouse.
-- **Correlative Scan Matching (Auto-Align)**: Implemented zero-spin initial pose alignment (< 50 ms) to eliminate 360-degree rotation in narrow corridors.
-- **32-Byte Nonce Cryptographic Enrolment**: Enforced CSPRNG nonce hashing protocol for robot device authentication.
+### September 2026: Optimisasi Bandwidth & Lingkup Data Per-Unit
+- **Egress yang Digerbangi Kehadiran**: Telemetri robot-ke-cloud kini membaca `/msd700/viewers` dan mengirim dengan laju yang disesuaikan dengan ada tidaknya yang menonton. Overlay dan occupancy grid dikirim saat berubah alih-alih berdasarkan timer, dan keempat topik overlay di-latch pada bridge cloud sehingga tab yang menyambung ulang tetap mendapatkan gambarnya.
+- **Lingkup Peta Per-Unit**: Daftar peta, pembacaan peta tunggal, dan `POST /api/navigation/init` kini dibatasi pada unit yang sedang dikendalikan sekaligus rental-nya. Sebuah rental yang memegang beberapa robot tidak lagi mendaftarkan peta semua robot bersamaan, dan peta milik robot sibling ditolak di API alih-alih gagal di robot.
+- **Jangkauan Pemulihan di Atas Jumlah Pesan**: Rebuild snapshot kini juga dipicu pada tab `Idle` tanpa mode terpilih (state yang ditinggalkan oleh membuka ulang peta dari halaman Database), dan prompt resync kini mencapai 9,4 detik alih-alih 3,4 detik. Baik halaman Navigation maupun komponen peta tidak lagi menimpa status atau mode yang tersimpan saat mount.
+- **Pencegahan Self-Join**: Hotspot milik unit sendiri kini dikecualikan dari pemindaian WiFi-nya dan ditolak oleh `connect()`, sehingga operator yang membaca daftar lewat hotspot tersebut tidak dapat menyuruh unit bergabung dengan dirinya sendiri.
+- **Autostart Boot yang Mempertahankan Mode**: `msd700.service` kini membawa flag `--dev` dan `--simulator` dari `up` yang mempersenjatainya. Unit boot sebelumnya menjalankan ulang `up` polos, sehingga robot yang dimulai melawan cloud dev, atau sebagai simulator, secara diam-diam kembali setelah reboot sebagai hardware melawan produksi.
 
-### July 2026: Multi-Tenant Rental Security & ULID Migration
-- **Rental Profile Authorization**: Added `attachUnit` Express middleware to enforce strict tenant isolation across maps and units.
-- **ULID Architecture**: Migrated system addressing from raw hardware strings to Universally Unique Lexicographically Sortable Identifiers (`/unit_<ULID>/...`).
-- **Uniform Database Timestamps**: Standardized `created_at` and `modified_at` columns with automatic `ON UPDATE CURRENT_TIMESTAMP` triggers across 15 database tables.
+### Agustus 2026: Overhaul Dokumentasi & Kinematika Presisi
+- **Arsitektur Dokumentasi Modular**: Penulisan ulang menyeluruh semua halaman dokumentasi dengan diagram SVG Mermaid responsif, formulasi matematis, dan operasi zero-downtime.
+- **Simulasi Gazebo Skala Nyata**: Meningkatkan model simulator ke `msd700_field` (jejak badan $0,90 \times 0,70\text{ m}$ dengan 4 caster) beroperasi di AWS RoboMaker Small Warehouse.
+- **Correlative Scan Matching (Auto-Align)**: Mengimplementasikan penyelarasan pose awal tanpa putaran (< 50 ms) untuk menghilangkan rotasi 360 derajat di koridor sempit.
+- **Pendaftaran Kriptografis Nonce 32-Byte**: Menegakkan protokol hashing nonce CSPRNG untuk autentikasi perangkat robot.
 
-### June 2026: Offline-First Replication & Local Mode Stack
-- **Bidirectional Data Sync Agent**: Deployed `sync_agent.js` and `sync_engine.js` with last-write-wins per-row conflict resolution and delete tombstones.
-- **Two-Tier Map Storage**: Implemented mandatory local upload (`media_local :3003`) with best-effort cloud sync (`media-server :3003`).
-- **Jetson Local Dashboard**: Bundled onboard `frontend_local` and `backend_local` stacks for autonomous offline field operations.
+### Juli 2026: Keamanan Rental Multi-Tenant & Migrasi ULID
+- **Otorisasi Profil Rental**: Menambahkan middleware Express `attachUnit` untuk menegakkan isolasi tenant yang ketat di seluruh peta dan unit.
+- **Arsitektur ULID**: Memigrasikan pengalamatan sistem dari string hardware mentah ke Universally Unique Lexicographically Sortable Identifier (`/unit_<ULID>/...`).
+- **Timestamp Database Seragam**: Menstandardisasi kolom `created_at` dan `modified_at` dengan trigger `ON UPDATE CURRENT_TIMESTAMP` otomatis di 15 tabel database.
 
-### May 2026: Ultra-Low Latency WebRTC Video Pipeline
-- **mDNS Candidate Filter**: Introduced `_strip_mdns_candidates()` in `camera_client.py` to prevent RFC 8445 network resolution errors on offline LANs.
-- **coturn TURN Relay**: Integrated production WebRTC media relaying across symmetric NATs.
+### Juni 2026: Replikasi Offline-First & Local Mode Stack
+- **Agen Sinkronisasi Data Dua Arah**: Men-deploy `sync_agent.js` dan `sync_engine.js` dengan resolusi konflik per-baris last-write-wins dan delete tombstone.
+- **Penyimpanan Peta Dua Tingkat**: Mengimplementasikan upload lokal wajib (`media_local :3003`) dengan sinkronisasi cloud best-effort (`media-server :3003`).
+- **Dashboard Lokal Jetson**: Membundel stack `frontend_local` dan `backend_local` onboard untuk operasi lapangan offline yang otonom.
+
+### Mei 2026: Pipeline Video WebRTC Latensi Ultra-Rendah
+- **Filter Kandidat mDNS**: Memperkenalkan `_strip_mdns_candidates()` di `camera_client.py` untuk mencegah error resolusi jaringan RFC 8445 pada LAN offline.
+- **coturn TURN Relay**: Mengintegrasikan relay media WebRTC produksi lintas symmetric NAT.
 
 ---
 
-## Repository Commit Histories
+## Riwayat Commit Repositori
 
-For line-by-line commit logs, refer to the respective GitHub repositories:
+Untuk log commit baris demi baris, lihat repositori GitHub masing-masing:
 
-- [msd700_documentation Commits](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
-- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
-- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
-- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)
+- [Commit msd700_documentation](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
+- [Commit ros-web-ui](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
+- [Commit msd700_robot](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
+- [Commit ROS-dashboard-next-ts](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
+- [Commit msd700_noetic](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)

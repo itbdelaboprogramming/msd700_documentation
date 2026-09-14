@@ -2,25 +2,25 @@
 outline: deep
 ---
 
-
-# Docker Reference
+# Docker コマンドリファレンス
 
 <RoleBadge role="technician" />
 
-Every Docker command, flag and compose construct used in MSD700, and what each one is actually
-doing. This page is the reference the setup pages link into: read
-[Server Setup](/ja/setup/server-setup) and [Unit Setup](/ja/setup/unit-setup) for the ordered procedure,
-and come here when you need to know why a flag is there or what happens if you drop it.
+MSD700 で使用されているすべての Docker コマンド、フラグ、compose の構文と、それぞれが実際に何を
+行っているか。このページは、セットアップページからリンクされているリファレンスです。順序立った
+手順については [サーバーセットアップ](/ja/setup/server-setup) と [ユニットセットアップ](/ja/setup/unit-setup)
+を読み、なぜそのフラグがそこにあるのか、外すと何が起きるのかを知りたいときにここへ戻ってきてください。
 
-## Which compose file am I looking at?
+## 今見ている compose ファイルはどれか
 
-There are three, and they are not variants of each other. They describe different machines.
+compose ファイルは 3 つあり、それらは互いのバリエーションではありません。それぞれ異なるマシンを
+記述しています。
 
-| File | Runs on | Brings up |
+| ファイル | 実行先 | 起動するもの |
 | --- | --- | --- |
-| `ros-web-ui/docker-compose.yml` | the **Server** | the whole cloud stack: MySQL, HiveMQ, backend + rosbridge, media, signalling, dashboard, coturn |
-| `msd700_noetic/docker/docker-compose.yml` | a **Unit** | the `msd700` robot container, plus the unit's own `local_dev` server stack |
-| `ros-web-ui/docker-compose.robot.yml` | a dev laptop | the robot half alone, standalone, no unit orchestration |
+| `ros-web-ui/docker-compose.yml` | **サーバー** | クラウドスタック全体: MySQL、HiveMQ、バックエンド + rosbridge、メディア、signalling、ダッシュボード、coturn |
+| `msd700_noetic/docker/docker-compose.yml` | **ユニット** | `msd700` ロボットコンテナ、およびユニット自身の `local_dev` サーバースタック |
+| `ros-web-ui/docker-compose.robot.yml` | 開発用ラップトップ | ロボット側のみ単独、ユニットオーケストレーションなし |
 
 ```mermaid
 flowchart TB
@@ -42,41 +42,43 @@ flowchart TB
   end
 ```
 
-## Server: compose profiles
+## サーバー: compose プロファイル
 
-Compose runs a service when **any** of its declared profiles is active. Nothing starts without a
-profile, which is why a bare `docker compose up -d` in this repository does nothing useful.
+Compose は、宣言されたプロファイルの**いずれか**がアクティブなときにサービスを実行します。プロファ
+イルなしでは何も起動しないため、このリポジトリで素の `docker compose up -d` を実行しても何も役に立
+ちません。
 
-| Profile | Services | Purpose |
+| プロファイル | サービス | 目的 |
 | --- | --- | --- |
-| `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | The live deployment |
-| `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | A full parallel stack on different ports and a different database |
-| `turn` | `coturn` only | Start or restart the relay on its own, without touching the rest of prod |
-| `manual` | `dev`, `aws`, `hive`, `hive_serverless`, `nakayama_msd`, `nakayama_msd_sim` | Legacy cloud-only robot-half services. Not part of any normal deployment |
+| `server_prod` | `db`、`hivemq`、`fix_perms_prod`、`nakayama_cloud`、`nakayama_media`、`nakayama_signalling`、`frontend_prod`、`coturn` | 本番デプロイ |
+| `server_dev` | `db_dev`、`hivemq_dev`、`fix_perms_dev`、`nakayama_cloud_dev`、`nakayama_media_dev`、`nakayama_signalling_dev`、`frontend_dev` | 異なるポートと異なるデータベースを持つ、完全に並行するスタック |
+| `turn` | `coturn` のみ | 本番の他の部分に触れずに、リレー単体を起動または再起動する |
+| `manual` | `dev`、`aws`、`hive`、`hive_serverless`、`nakayama_msd`、`nakayama_msd_sim` | レガシーなクラウド専用ロボット側サービス。通常のデプロイの一部ではない |
 
-::: warning `coturn` is in two profiles on purpose
-`profiles: ["server_prod", "turn"]` means a normal prod `up` brings the relay with it, **and** you
-can start it alone with `--profile turn`. It is deliberately **not** in `server_dev`: there is one
-relay instance and it belongs to prod. Bringing up the dev stack must not start production
-infrastructure. Sharing is safe because a relay holds no state and pairs nobody: peers find each
-other through the signalling servers, and those **are** split (3001 prod, 4001 dev).
+::: warning `coturn` は意図的に 2 つのプロファイルに属している
+`profiles: ["server_prod", "turn"]` は、通常の本番 `up` がリレーも一緒に起動することを意味し、
+**かつ** `--profile turn` で単独でも起動できることを意味します。これは意図的に `server_dev` には
+**含まれていません**。リレーのインスタンスは 1 つだけであり、それは本番に属します。開発スタックの
+起動が本番インフラを起動してしまってはいけません。共有が安全なのは、リレーが状態を持たず誰もペアリ
+ングしないためです。ピア同士は signalling サーバー経由でお互いを見つけますが、こちらは実際に分離さ
+れています(本番 3001、開発 4001)。
 :::
 
-### Service and port map
+### サービスとポートの対応表
 
-| Service | Container | Network | Host port | Notes |
+| サービス | コンテナ | ネットワーク | ホストポート | 備考 |
 | --- | --- | --- | --- | --- |
-| `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; the backend waits on it |
-| `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Container-internal port is `8883` in both |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000` / `5001` API, `9090` / `9091` rosbridge | Also hosts `unit_manager` |
+| `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | ヘルスチェックあり。バックエンドはこれを待つ |
+| `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | コンテナ内部のポートはどちらも `8883` |
+| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | API `5000` / `5001`、rosbridge `9090` / `9091` | `unit_manager` もここでホストされる |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
-| `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001` / `4001` WS, `3002` / `4002` HTTP | |
-| `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache's catch-all points at `3000` |
-| `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + relay range | Prod only |
+| `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | WS `3001` / `4001`、HTTP `3002` / `4002` | |
+| `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache のキャッチオールは `3000` を指す |
+| `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + リレー範囲 | 本番のみ |
 
-## Compose command reference
+## Compose コマンドリファレンス
 
-### Bringing services up
+### サービスを起動する
 
 ```bash
 # The normal case: start (or restart into) an entire profile, detached.
@@ -92,17 +94,17 @@ docker compose up -d nakayama_cloud
 docker compose --profile turn up -d coturn
 ```
 
-| Flag | Effect | When you actually need it |
+| フラグ | 効果 | 実際に必要になる場面 |
 | --- | --- | --- |
-| `--profile <name>` | Activates a profile. Repeatable. | Always, in this repository |
-| `-d`, `--detach` | Return to the shell instead of streaming logs | Always, except when debugging a start-up failure |
-| `--build` | Rebuild images before starting | After a dependency or Dockerfile change |
-| `--force-recreate` | Recreate containers even if config and image are unchanged | Rarely; a stuck container is usually better handled with `down` then `up` |
-| `--no-deps` | Start the named service without its `depends_on` chain | Debugging a service whose dependency is deliberately down |
-| `--remove-orphans` | Delete containers from services no longer in the file | After a service is renamed or removed |
-| `--pull always` | Re-pull base images | Picking up a new upstream `mysql:8.0` or `hivemq4` patch |
+| `--profile <name>` | プロファイルを有効化する。繰り返し指定可能。 | このリポジトリでは常に |
+| `-d`, `--detach` | ログをストリーミングせずシェルに戻る | 起動失敗をデバッグするとき以外は常に |
+| `--build` | 起動前にイメージを再ビルドする | 依存関係や Dockerfile の変更後 |
+| `--force-recreate` | 設定とイメージに変更がなくてもコンテナを再作成する | まれ。詰まったコンテナは通常 `down` してから `up` する方がよい |
+| `--no-deps` | `depends_on` の連鎖なしで指定サービスを起動する | 依存先が意図的に停止しているサービスをデバッグするとき |
+| `--remove-orphans` | ファイルにもう存在しないサービスのコンテナを削除する | サービスの名前変更や削除の後 |
+| `--pull always` | ベースイメージを再取得する | 新しい上流の `mysql:8.0` や `hivemq4` のパッチを取り込むとき |
 
-### Building
+### ビルドする
 
 ```bash
 docker compose --profile server_prod build          # all services in the profile
@@ -111,11 +113,11 @@ docker compose build --no-cache nakayama_cloud      # ignore every cached layer
 docker compose build --progress plain nakayama_cloud # full build output, not the collapsed view
 ```
 
-`--no-cache` is the answer when a build "succeeds" but produces stale content: Docker cached a
-`COPY` or a `RUN apt-get` layer whose inputs it cannot see changing. It is slow, so reach for it
-only when a normal build has already failed to pick something up.
+`--no-cache` は、ビルドが「成功」したのに内容が古いままという場合の答えです。Docker が `COPY` や
+`RUN apt-get` のレイヤーをキャッシュしてしまい、その入力の変化を検知できていないのです。これは低速
+なので、通常のビルドで既に何かを取りこぼしたときにのみ使ってください。
 
-### Inspecting
+### 調査する
 
 ```bash
 docker compose ps                        # services in this project and their health
@@ -128,13 +130,14 @@ docker compose run --rm busybox sh       # one-off container, removed on exit
 docker compose config                    # the fully-resolved file, with all variables expanded
 ```
 
-::: tip `docker compose config` is the fastest `.env` debugging tool there is
-It prints the compose file with every `${VARIABLE}` substituted. If a port, a path or a password is
-not what you expected, this shows you what compose actually resolved, which is very often "empty
-string, because the key is misspelled in `.env`".
+::: tip `docker compose config` は最速の `.env` デバッグツール
+これは、すべての `${VARIABLE}` が置換された状態で compose ファイルを出力します。ポート、パス、
+パスワードが期待どおりでない場合、これは compose が実際に何を解決したかを示してくれます。それは
+非常によくあるケースとして「`.env` でキー名を打ち間違えたため空文字列になっている」ことを教えて
+くれます。
 :::
 
-### Stopping and removing
+### 停止と削除
 
 ```bash
 docker compose --profile server_prod stop   # stop, keep the containers
@@ -143,18 +146,18 @@ docker compose down --remove-orphans        # also remove containers of deleted 
 docker compose down -v                      # ALSO DELETE NAMED VOLUMES
 ```
 
-::: danger `down -v` deletes HiveMQ's data and log volumes
-`ros_webui_hivemq_data_prod` holds retained messages, client sessions and queued QoS>0 messages.
-There is almost never a reason to run `-v` on this project. If you want a clean broker, delete that
-one volume by name, deliberately.
+::: danger `down -v` は HiveMQ のデータとログのボリュームを削除する
+`ros_webui_hivemq_data_prod` には、保持されたメッセージ、クライアントセッション、キューに入った
+QoS>0 のメッセージが格納されています。このプロジェクトで `-v` を実行すべき理由はほぼありません。
+ブローカーをクリーンにしたい場合は、そのボリュームだけを名前で指定して意図的に削除してください。
 :::
 
-## Compose constructs used in this project
+## このプロジェクトで使われている compose の構文
 
-The server compose file uses several constructs that are load-bearing rather than stylistic. Each
-one is here because dropping it caused a real outage.
+サーバーの compose ファイルは、スタイルの問題ではなく構造上必要ないくつかの構文を使用しています。
+それぞれは、取り除いたことで実際に障害が起きたために存在しています。
 
-### YAML anchors (`x-common-env`, `<<: *`)
+### YAML アンカー(`x-common-env`、`<<: *`)
 
 ```yaml
 x-common-env: &common-env
@@ -166,20 +169,22 @@ x-common-env-prod: &common-env-prod
   PORT_SQL: "${MYSQL_PORT_PROD:-3307}"
 ```
 
-`&name` defines an anchor, `*name` references it, `<<:` merges it. `${VAR:-default}` is compose's
-own interpolation: use `VAR` if set and non-empty, otherwise the default.
+`&name` はアンカーを定義し、`*name` はそれを参照し、`<<:` はそれをマージします。`${VAR:-default}`
+は compose 自体の補間構文です。`VAR` が設定されていて空でなければそれを使い、そうでなければデフォ
+ルト値を使います。
 
 ### `network_mode: host`
 
-Used by every ROS-carrying service and by `coturn`. It means the container shares the host's network
-namespace: no port mapping, no NAT, `localhost` inside the container is the host.
+ROS を扱うすべてのサービスと `coturn` で使用されています。これはコンテナがホストのネットワーク
+名前空間を共有することを意味します。ポートマッピングなし、NAT なし、コンテナ内の `localhost` は
+ホストそのものです。
 
-| Service | Why host networking |
+| サービス | ホストネットワーキングが必要な理由 |
 | --- | --- |
-| `nakayama_*` | ROS 1 nodes negotiate arbitrary ephemeral ports with each other. Bridged networking breaks the ROS master's returned URIs. |
-| `coturn` | A relay hands out one port per allocation from `min-port..max-port`. Publishing that range through the bridge means one `docker-proxy` process per port. At coturn's 16384-port default it takes the machine down. This host is also already behind NAT, and a bridge adds a second translation, which breaks the one thing a TURN server must get right: knowing and advertising its own external address. |
+| `nakayama_*` | ROS 1 ノードは互いに任意のエフェメラルポートをネゴシエートする。ブリッジネットワークは ROS マスターが返す URI を壊してしまう。 |
+| `coturn` | リレーは `min-port..max-port` の範囲から割り当てごとに 1 ポートを配布する。その範囲をブリッジ経由で公開すると、ポートごとに 1 つの `docker-proxy` プロセスが必要になる。coturn のデフォルトである 16384 ポートではマシンがダウンしてしまう。このホストは既に NAT の背後にあり、ブリッジは 2 回目の変換を追加することになり、TURN サーバーが絶対に正しく行わなければならない唯一のこと、すなわち自身の外部アドレスを把握し告知することを壊してしまう。 |
 
-### `depends_on` with conditions
+### 条件付き `depends_on`
 
 ```yaml
 depends_on:
@@ -189,13 +194,13 @@ depends_on:
     condition: service_completed_successfully
 ```
 
-| Condition | Meaning |
+| 条件 | 意味 |
 | --- | --- |
-| `service_started` | The default. Only waits for the container to exist. Almost never enough. |
-| `service_healthy` | Waits for the `healthcheck` to pass. This is what stops the backend racing MySQL and failing with `Connection lost`. |
-| `service_completed_successfully` | Waits for a one-shot container to exit `0`. Used for the permissions fixer. |
+| `service_started` | デフォルト。コンテナが存在するのを待つだけ。ほとんどの場合これでは不十分。 |
+| `service_healthy` | `healthcheck` が通るのを待つ。これにより、バックエンドが MySQL と競合して `Connection lost` で失敗するのを防いでいる。 |
+| `service_completed_successfully` | 一回限りのコンテナが `0` で終了するのを待つ。権限修正処理に使われる。 |
 
-### The one-shot permissions fixer
+### 一回限りの権限修正コンテナ
 
 ```yaml
 fix_perms_prod:
@@ -209,22 +214,24 @@ fix_perms_prod:
     sh -c "mkdir -p ... && chown -R $$USER_UID:$$USER_GID ..."
 ```
 
-A bind-mounted host path that does not exist yet is auto-created **by the Docker daemon, as root**,
-not as the app user. The app containers run unprivileged, so their first write gets `EACCES`. This
-container runs first, as root, and fixes ownership so a fresh host self-corrects with no manual
-`chown`.
+まだ存在しないバインドマウントのホストパスは、アプリユーザーとしてではなく、**Docker デーモンに
+よって root として**自動的に作成されます。アプリコンテナは非特権ユーザーで動作するため、最初の
+書き込みは `EACCES` になります。このコンテナは最初に root として実行され、所有権を修正することで、
+新しいホストが手動の `chown` なしに自己修復できるようにします。
 
-::: warning `network_mode: "none"` on this service is not cosmetic
-Without a `networks:` key, compose puts a service on the project default network. A container
-records its network by **ID**. Once that default network is removed and recreated (any
-`docker compose down`, and two checkouts share the project name `ros-web-ui`, so either can do it),
-this container can never start again: `failed to set up container networking: network <old-id> not
-found`. Every app service depends on it with `service_completed_successfully`, so the whole profile
-then refuses to come up behind a stuck `chown` job. This happened twice before `network_mode: none`
-was added. It mkdirs and chowns; it has never needed networking.
+::: warning このサービスの `network_mode: "none"` は見た目だけのものではない
+`networks:` キーがない場合、compose はサービスをプロジェクトのデフォルトネットワークに配置します。
+コンテナは自身のネットワークを **ID** で記録します。そのデフォルトネットワークが削除・再作成される
+と(どの `docker compose down` でも起こり得て、しかも 2 つのチェックアウトが同じプロジェクト名
+`ros-web-ui` を共有しているため、どちらからでも起こり得ます)、このコンテナは二度と起動できなくな
+ります: `failed to set up container networking: network <old-id> not found`。すべてのアプリサービ
+スはこれに `service_completed_successfully` で依存しているため、プロファイル全体が、詰まった
+`chown` ジョブの後ろで起動を拒否するようになります。これは `network_mode: none` が追加される前に
+2 回発生しました。このコンテナは mkdir と chown をするだけで、ネットワークを必要としたことは一度も
+ありません。
 :::
 
-### `user:` and `group_add:`
+### `user:` と `group_add:`
 
 ```yaml
 user: "itbdelabo"
@@ -232,16 +239,17 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` puts the container's user in the host's `docker` group so `backend_node` can talk to the
-mounted `/var/run/docker.sock` and manage per-unit containers. Find the right value with
-`getent group docker | cut -d: -f3` on the host.
+`group_add` は、コンテナのユーザーをホストの `docker` グループに入れることで、`backend_node` が
+マウントされた `/var/run/docker.sock` と通信し、ユニットごとのコンテナを管理できるようにします。
+正しい値はホスト上で `getent group docker | cut -d: -f3` を実行して確認してください。
 
-HiveMQ uses `user: "1001:0"` instead, and both halves matter: uid `1001` owns the `0600` keystore,
-so the container has to *be* that user to read its own private key. Gid `0` is not a privilege grab:
-the image ships `/opt/hivemq` as `root:root 775` and `bin/run.sh` refuses to start unless
-`$HIVEMQ_HOME` is writable, which group root satisfies without chowning anything.
+HiveMQ は代わりに `user: "1001:0"` を使用しており、両方の値が重要です。uid `1001` は `0600` の
+キーストアを所有しているため、コンテナは自身の秘密鍵を読むためにこのユーザーで**なければなりません**。
+gid `0` は権限の奪取ではありません。イメージは `/opt/hivemq` を `root:root 775` で出荷しており、
+`bin/run.sh` は `$HIVEMQ_HOME` が書き込み可能でない限り起動を拒否しますが、これは何も chown する
+ことなく root グループによって満たされます。
 
-### Long-syntax bind mounts
+### 長い構文のバインドマウント
 
 ```yaml
 - type: bind
@@ -252,29 +260,31 @@ the image ships `/opt/hivemq` as `root:root 775` and `bin/run.sh` refuses to sta
     create_host_path: false
 ```
 
-The long syntax is used here purely for `create_host_path: false`. Docker's default is to **create**
-a missing bind source, and for a single-file mount it creates a **directory** there. A missing
-keystore would then surface as an unreadable-key error deep in HiveMQ's startup rather than as "this
-file is not on the host". Failing at `up` is the honest outcome.
+ここで長い構文が使われているのは、純粋に `create_host_path: false` のためです。Docker のデフォルト
+動作は、存在しないバインドソースを**作成する**ことであり、単一ファイルのマウントの場合、そこに
+**ディレクトリ**が作成されてしまいます。すると、キーストアが存在しない場合、「このファイルはホスト
+に存在しません」ではなく、HiveMQ の起動処理の奥深くで「鍵が読み取れない」というエラーとして表面化
+してしまいます。`up` の時点で失敗するのが、誠実な結果です。
 
-### Named volumes vs bind mounts
+### 名前付きボリューム対バインドマウント
 
-| Path | Kind | Why |
+| パス | 種類 | 理由 |
 | --- | --- | --- |
-| `./mysql_data/prod` | bind | Lives inside the repo and is backed up with it |
-| `hivemq_data_prod`, `hivemq_log_prod` | named volume | Docker owns them, seeds them from the image on first use, and they survive an `rm -rf` of anything under `$HOME` |
-| `./Docker/hivemq/config.xml` | bind, `:ro` | Configuration belongs in git |
-| `/srv/msd/secrets/...` | bind, `:ro` | Secrets never enter an image |
+| `./mysql_data/prod` | bind | リポジトリの内部にあり、それと一緒にバックアップされる |
+| `hivemq_data_prod`、`hivemq_log_prod` | 名前付きボリューム | Docker が所有し、初回使用時にイメージから中身を作成し、`$HOME` 以下を `rm -rf` しても生き残る |
+| `./Docker/hivemq/config.xml` | bind、`:ro` | 設定は git に属するべきもの |
+| `/srv/msd/secrets/...` | bind、`:ro` | シークレットは決してイメージに入らない |
 
-::: danger A bind mount MASKS the image's own directory
-HiveMQ used to bind-mount `conf/ data/ log/` from a hand-extracted tarball in a home directory. A
-`sudo rm -rf` of those "leftover" directories took the configuration with it, and an empty host
-directory is not a degraded broker: it is a broker that cannot start at all
-(`The configuration file /opt/hivemq/conf/config.xml does not exist`). Nothing in the repo recorded
-what the listener block had been. That is why the host now holds nothing a broker needs to boot.
+::: danger バインドマウントはイメージ自身のディレクトリを覆い隠す
+かつて HiveMQ は、ホームディレクトリで手動展開した tarball から `conf/ data/ log/` をバインドマウント
+していました。それらの「残骸」ディレクトリに対する `sudo rm -rf` は設定ごと消し去ってしまい、空の
+ホストディレクトリは機能が低下したブローカーではなく、まったく起動できないブローカーになりました
+(`The configuration file /opt/hivemq/conf/config.xml does not exist`)。リスナーブロックが元々どう
+なっていたかを記録したものはリポジトリのどこにもありませんでした。だからこそ、今ではホスト側には
+ブローカーの起動に必要なものが何も置かれていません。
 :::
 
-### Healthchecks
+### ヘルスチェック
 
 ```yaml
 healthcheck:
@@ -285,16 +295,17 @@ healthcheck:
   start_period: 60s
 ```
 
-Two details worth copying. It probes HiveMQ's **Control Center** port (8080), not the MQTT listener:
-a bare TCP probe against the MQTT port closes before sending `CONNECT`, and HiveMQ records every one
-of those in `log/event.log` as `Client ID: UNKNOWN ... disconnected ungracefully`, which is about
-2880 junk lines a day in the exact file used to audit which robots connected. Both listeners belong
-to the same JVM, so 8080 answering is an adequate liveness signal.
+真似する価値のある詳細が 2 つあります。これは MQTT リスナーではなく、HiveMQ の **Control Center**
+ポート(8080)を調べます。単純な TCP プローブを MQTT ポートに対して行うと、`CONNECT` を送信する前に
+閉じてしまい、HiveMQ はそのすべてを `log/event.log` に `Client ID: UNKNOWN ... disconnected
+ungracefully` として記録します。これは、どのロボットが接続したかを監査するために使う、まさにその
+ファイルに、1 日あたり約 2880 行のゴミを生み出すことになります。両方のリスナーは同じ JVM に属して
+いるため、8080 が応答することは十分な生存確認シグナルになります。
 
-And it says `bash` explicitly, because `/bin/sh` in that image is `dash`, which has no `/dev/tcp` and
-fails every probe with `Directory nonexistent`.
+そして、`bash` を明示的に指定しているのは、そのイメージの `/bin/sh` が `dash` であり、`/dev/tcp`
+を持たず、すべてのプローブが `Directory nonexistent` で失敗してしまうためです。
 
-### Log rotation
+### ログローテーション
 
 ```yaml
 logging:
@@ -304,37 +315,39 @@ logging:
     max-file: "3"
 ```
 
-Only `coturn` currently caps its logs, because its config logs allocations at `verbose` and an
-unauthenticated scanner hammering 3478 could otherwise fill the disk with 401s. Every other service
-still logs unbounded. Fixing that is worth doing on purpose rather than incidentally, because
-changing a logging driver forces a container recreate on every service it touches.
+現時点でログサイズに上限を設けているのは `coturn` だけです。その設定は `verbose` レベルで割り当てを
+ログに記録しており、3478 に対して未認証のスキャナーが連打すると、ディスクを 401 で埋め尽くしかねな
+いためです。他のすべてのサービスは今も無制限にログを記録しています。これを修正することは、成り行き
+ではなく意図的に行う価値があります。なぜなら、ロギングドライバーを変更すると、それが触れるすべての
+サービスでコンテナの再作成が強制されるからです。
 
-### Image tags
+### イメージタグ
 
-| Tag | Used by |
+| タグ | 使用元 |
 | --- | --- |
-| `ros-noetic-webui-app-v2:latest` | prod services and prod per-unit containers |
-| `ros-noetic-webui-app-v2:dev` | dev services and dev per-unit containers |
-| `ros-dashboard-next-v2:prod` / `:dev` | the two dashboard builds |
-| `ros-noetic-webui-app-local:latest` | a unit's own backend, media and signalling |
-| `ros-dashboard-next-local:latest` | a unit's own dashboard |
-| `msd700:latest` / `msd700-simulator:latest` | the robot container |
+| `ros-noetic-webui-app-v2:latest` | 本番サービスと本番のユニットごとのコンテナ |
+| `ros-noetic-webui-app-v2:dev` | 開発サービスと開発のユニットごとのコンテナ |
+| `ros-dashboard-next-v2:prod` / `:dev` | 2 つのダッシュボードビルド |
+| `ros-noetic-webui-app-local:latest` | ユニット自身のバックエンド、メディア、signalling |
+| `ros-dashboard-next-local:latest` | ユニット自身のダッシュボード |
+| `msd700:latest` / `msd700-simulator:latest` | ロボットコンテナ |
 
-::: warning Prod and dev must never share a tag
-Both server profiles used to build `ros-noetic-webui-app-v2:latest`. A build done for dev silently
-changed what production would run on its next recreate, with no deploy and no announcement. The tags
-are split now, and `UNIT_IMAGE` is set per profile so dev unit containers run dev code.
+::: warning 本番と開発は決してタグを共有してはいけない
+かつては両方のサーバープロファイルが `ros-noetic-webui-app-v2:latest` をビルドしていました。開発用
+に行ったビルドが、デプロイも告知もないまま、次の再作成時に本番が実行する内容を黙って変えてしまって
+いました。タグは今では分離されており、`UNIT_IMAGE` はプロファイルごとに設定されるため、開発用ユニ
+ットコンテナは開発用コードを実行します。
 :::
 
-## coturn: the production-only service
+## coturn: 本番専用のサービス
 
-The relay is the one piece of the stack that exists in prod and nowhere else.
+リレーは、本番にのみ存在し他のどこにも存在しないスタックの唯一の部分です。
 
-### Configuration
+### 設定
 
-Per-host values are passed as **flags**, not in the config file, because coturn expands no
-environment variables in its config. Flags win over the file, so shared policy stays in git and
-addresses stay in `.env`.
+ホストごとの値は、設定ファイルではなく**フラグ**として渡されます。これは、coturn が設定ファイル内
+で環境変数の展開を一切行わないためです。フラグはファイルより優先されるため、共有ポリシーは git に
+残り、アドレスは `.env` に残ります。
 
 ```bash
 # ros-web-ui/.env
@@ -346,18 +359,18 @@ TURN_MIN_PORT=49152                  # optional, coturn's own default
 TURN_MAX_PORT=65535                  # optional
 ```
 
-All four of the first values are checked at **container start**, not by compose's `${VAR:?}`
-required-variable syntax. Compose interpolates every service in the file regardless of which profile
-is being brought up, so a required variable here would make `--profile server_dev up` fail on a
-relay nobody asked to start.
+最初の 4 つの値はすべて、compose の必須変数構文 `${VAR:?}` ではなく、**コンテナ起動時**にチェック
+されます。Compose は、どのプロファイルが起動されているかに関わらず、ファイル内のすべてのサービスを
+補間します。そのため、ここで必須変数にしてしまうと、誰も起動を頼んでいないリレーのせいで
+`--profile server_dev up` が失敗してしまいます。
 
-::: warning `TURN_EXTERNAL_IP` is the one that breaks video silently
-Without it, coturn advertises its private address as the relay candidate. Every browser outside the
-LAN then tries to reach an address that does not route, and the camera feed simply never appears,
-with no error in the dashboard.
+::: warning `TURN_EXTERNAL_IP` は映像を静かに壊す原因になる項目
+これがないと、coturn は自身のプライベートアドレスをリレー候補として広告してしまいます。LAN の外に
+いるすべてのブラウザは、その後ルーティングできないアドレスに到達しようとし、カメラ映像はダッシュ
+ボードに何のエラーも出さずに、単純に一切表示されなくなります。
 :::
 
-### Running it
+### 実行方法
 
 ```bash
 # Prod: comes up with the rest of the stack.
@@ -373,22 +386,22 @@ docker compose logs -f coturn
 docker compose --profile turn stop coturn
 ```
 
-### Dev stacks and the relay
+### 開発スタックとリレー
 
-`server_dev` does not include `coturn`, and that is correct. If you are testing WebRTC against the
-dev stack, the dev signalling server (`4001`) will hand peers the **prod** relay's address, which is
-what you want: one relay, shared, stateless.
+`server_dev` には `coturn` が含まれておらず、それは正しい設計です。開発スタックに対して WebRTC を
+テストしている場合、開発用の signalling サーバー(`4001`)はピアに**本番**リレーのアドレスを渡し
+ます。これはまさに望ましい動作です。リレーは 1 つで、共有され、状態を持ちません。
 
-If you genuinely need a relay and prod's is not running, start it explicitly:
+本当にリレーが必要で、本番のものが起動していない場合は、明示的に起動してください。
 
 ```bash
 docker compose --profile turn up -d coturn
 ```
 
-### Migrating off the apt/systemd coturn
+### apt/systemd の coturn からの移行
 
-If this host still runs coturn under systemd, the order matters exactly once. Port 3478 is a single
-well-known port and the two cannot both hold it.
+このホストがまだ systemd の下で coturn を動かしている場合、順序がちょうど一度だけ重要になります。
+ポート 3478 は単一のウェルノウンポートであり、両者が同時にそれを保持することはできません。
 
 ```bash
 sudo systemctl disable --now coturn                 # 1. free the port
@@ -397,85 +410,96 @@ docker compose logs -f coturn                       # 3. confirm it bound and is
 docker compose --profile server_prod up -d          # 4. now it is just another prod service
 ```
 
-Run a prod `up` while the systemd unit is still listening and the container fails to bind, then
-`restart: always` retries it forever: noisy, harmless, and a long way from its cause.
+systemd ユニットがまだリスンしている状態で本番の `up` を実行するとコンテナはバインドに失敗し、
+`restart: always` によって永遠に再試行され続けます。うるさいだけで実害はありませんが、原因からは
+かけ離れた症状です。
 
-## Unit: `docker-manager.sh`
+## ユニット: `docker-manager.sh`
 
-The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wraps it, because
-several things have to be decided **once** and handed to both halves (the robot container and the
-unit's own server stack) so they cannot disagree.
+ユニットは決して `docker compose` を直接呼び出しません。`scripts/docker-manager.sh` がそれをラップ
+しています。なぜなら、いくつかの事項は**一度だけ**決定され、両サイド(ロボットコンテナとユニット
+自身のサーバースタック)に渡されなければならず、そうしないと両者の認識が食い違ってしまうからです。
 
-### Commands
+### コマンド
 
-| Command | What it does |
+| コマンド | 動作内容 |
 | --- | --- |
-| `up` | Start the robot container **and** the unit's `local_dev` server stack, then run `run_msd.sh` inside the container |
-| `down` / `stop` | Stop and remove the robot container and the local stack |
-| `build` | Build the robot image |
-| `build-clean` | Build the robot image with `--no-cache` |
-| `shell` | `docker exec -it` a bash login shell in the running container |
-| `logs` | Follow the robot container's logs |
-| `status` | `docker compose ps` for the robot container |
-| `local-up` | Start **only** the local server stack, no robot bringup |
-| `local-down` | Stop only the local server stack |
-| `local-build` | Rebuild the local stack images |
-| `local-logs` | Tail the local stack logs |
-| `local-status` | `docker compose ps` for the local stack |
-| `help` | Full flag and environment help |
+| `up` | ロボットコンテナ**と**ユニットの `local_dev` サーバースタックを起動し、続けてコンテナ内で `run_msd.sh` を実行する |
+| `down` / `stop` | ロボットコンテナとローカルスタックを停止・削除する |
+| `build` | ロボットイメージをビルドする |
+| `build-clean` | `--no-cache` でロボットイメージをビルドする |
+| `shell` | 実行中のコンテナで `docker exec -it` によるログインシェル(bash)を開く |
+| `logs` | ロボットコンテナのログを追跡する |
+| `status` | ロボットコンテナに対する `docker compose ps` |
+| `local-up` | ロボットを起動せず、ローカルサーバースタック**のみ**を起動する |
+| `local-down` | ローカルサーバースタックのみを停止する |
+| `local-build` | ローカルスタックのイメージを再ビルドする |
+| `local-logs` | ローカルスタックのログを追跡する |
+| `local-status` | ローカルスタックに対する `docker compose ps` |
+| `help` | フラグと環境変数の完全なヘルプ |
 
-### Flags
+### フラグ
 
-| Flag | Applies to | Effect |
+| フラグ | 適用対象 | 効果 |
 | --- | --- | --- |
-| `--simulator`, `-s` | `build`, `up` | Use the Gazebo image (`msd700-simulator:latest`) and container. Forwarded to `run_msd.sh` too, because that is what actually sets `use_simulator_val:=true` |
-| `--dev` | `up` | Which **cloud** is this unit's peer: the dev stack instead of production. Changes MQTT to 8884, this robot's own ROS master to 11322, and enrolment to the dev backend |
-| `--build` | `up` | Rebuild the image before starting |
-| `-d`, `--detach` | `up` only | Hand the terminal back once everything is running |
-| `--debug` | forwarded | `run_msd.sh` verbose mode. **Type it in full**: `-d` is this script's detach flag |
-| `--dry-run` | forwarded | Print what would run without running it |
-| `--kill` | forwarded | Kill the tmux session inside the container |
-| `--local` | accepted, ignored | Deprecated. The local stack starts either way |
-| `--unit_id` | **rejected** | Removed on purpose. Identity comes from the cloud admin console |
+| `--simulator`, `-s` | `build`、`up` | Gazebo イメージ(`msd700-simulator:latest`)とコンテナを使用する。`run_msd.sh` にも転送され、実際に `use_simulator_val:=true` を設定するのはそちら側 |
+| `--dev` | `up` | このユニットのピアとなるのはどの**クラウド**か: 本番ではなく開発スタック。MQTT を 8884 に、このロボット自身の ROS マスターを 11322 に、エンロルメントを開発用バックエンドに変更する |
+| `--build` | `up` | 起動前にイメージを再ビルドする |
+| `-d`, `--detach` | `up` のみ | すべてが起動した時点でターミナルを返す |
+| `--debug` | 転送される | `run_msd.sh` の詳細出力モード。**省略しないで入力すること**: `-d` はこのスクリプト自体の detach フラグ |
+| `--dry-run` | 転送される | 実行内容を実行せずに出力する |
+| `--kill` | 転送される | コンテナ内の tmux セッションを終了する |
+| `--local` | 受理されるが無視される | 非推奨。ローカルスタックはいずれにせよ起動する |
+| `--unit_id` | **拒否される** | 意図的に削除された。ID はクラウド管理コンソールから来る |
 
-::: info What `-d` actually changes, and what it does not
-Start-up still runs in the **foreground**: the image build, the enrolment claim code and any failure
-are all things you want to see, and a Ctrl-C before the services are up still aborts and tears the
-half-started stack down. What changes is the end. Once every service is running, the command returns
-to the shell, and closing that terminal no longer stops the robot. This is the form that belongs in
-a systemd unit or an `ssh unit './scripts/docker-manager.sh up -d'` one-liner.
+::: info `-d` が実際に変えるもの、変えないもの
+起動処理は依然として**フォアグラウンド**で実行されます。イメージのビルド、エンロルメントのクレーム
+コード、失敗の有無はすべて確認したいものであり、サービスが起動する前の Ctrl-C は今も中断され、半端
+に起動したスタックを解体します。変わるのは終わり方です。すべてのサービスが起動すると、コマンドは
+シェルに戻り、そのターミナルを閉じてもロボットは停止しなくなります。これが systemd ユニットや
+`ssh unit './scripts/docker-manager.sh up -d'` のようなワンライナーに適した形です。
 :::
 
-::: danger `--unit_id` is rejected, not ignored
-Typing it produces an error explaining the replacement. A robot with no cached identity self-enrols
-and prints a claim code, and an admin either **registers** it (brand new unit) or **adopts** it onto
-an existing unit's ULID (hardware swap, lost cache) from the cloud admin console. Both need the unit
-to have internet access at that moment. After that, `Certificates/robot/device.json` is read
-automatically on every later run.
+::: danger `--unit_id` は無視されるのではなく拒否される
+入力するとエラーが表示され、代替手段が説明されます。キャッシュされた ID を持たないロボットは自ら
+エンロルメントを行いクレームコードを出力し、管理者はクラウド管理コンソールからそれを**登録する**
+(まったく新しいユニットの場合)か、既存ユニットの ULID に**採用する**(ハードウェア交換、キャッシュ
+消失の場合)かのいずれかを行います。どちらの場合も、その時点でユニットがインターネットに接続して
+いる必要があります。その後は、`Certificates/robot/device.json` が以降のすべての実行で自動的に
+読み込まれます。
 :::
 
-### Environment variables `docker-manager.sh` forwards
+### `docker-manager.sh` が転送する環境変数
 
-| Variable | Default | Purpose |
+| 変数 | デフォルト | 目的 |
 | --- | --- | --- |
-| `DEVICE_FINGERPRINT` | derived from the **host** | sha256 of the Jetson serial (or machine-id, or first real MAC) plus the model. Read on the host so a rebuilt container does not reappear as a new pending unit |
-| `ENROLL_SERVER_URL` | derived | Overrides the enrolment endpoint outright |
-| `ENROLL_BOOTSTRAP_KEY` | unset | Shared image key. A trust marker in the console, never a gate |
-| `ENROLL_CODE` | unset | Single-use registration voucher, skips the pending pool |
-| `DEV_SERVER_HOST` | `118.22.31.252` | Where `--dev` points. Set to `localhost` when running on that host |
-| `DEV_BACKEND_PORT` | `5001` | Backend port for `--dev` |
-| `CLOUD_BASE_URL` | derived | Points a whole fleet at a different cloud without a code change |
-| `ROS_MASTER_PORT` | `11322` with `--dev`, else `11321` | Handed to **both** the container and `backend_local`, so they cannot disagree. Never the cloud's `11311`/`11312` |
-| `BACKEND_PORT_LOCAL` | `5002` | What the local dashboard's browser talks to, and where `camera_client` fetches a unit-local token |
+| `DEVICE_FINGERPRINT` | **ホスト**から導出 | Jetson のシリアル番号(またはマシン ID、または最初の実 MAC アドレス)とモデル名の sha256。ホスト上で読み取られるため、再ビルドされたコンテナが新しい pending ユニットとして再出現することはない |
+| `ENROLL_SERVER_URL` | 導出 | エンロルメントエンドポイントを完全に上書きする |
+| `ENROLL_BOOTSTRAP_KEY` | 未設定 | 共有イメージキー。コンソール上の信頼の印であり、決してゲートではない |
+| `ENROLL_CODE` | 未設定 | 使い捨ての登録用バウチャー。pending プールをスキップする |
+| `DEV_SERVER_HOST` | `118.22.31.252` | `--dev` が指す先。そのホスト自身で実行している場合は `localhost` に設定する |
+| `DEV_BACKEND_PORT` | `5001` | `--dev` のバックエンドポート |
+| `CLOUD_BASE_URL` | 導出 | コード変更なしにフリート全体を別のクラウドに向ける |
+| `ROS_MASTER_PORT` | `--dev` 時は `11322`、それ以外は `11321` | コンテナ**と** `backend_local` の両方に渡され、両者の認識が食い違わないようにする。クラウドの `11311`/`11312` には決してならない |
+| `BACKEND_PORT_LOCAL` | `5002` | ローカルダッシュボードのブラウザが通信する相手であり、`camera_client` がユニットローカルのトークンを取得する先 |
 
-::: warning One decision, handed to both halves
-`CLOUD_BASE_URL` and `ROS_MASTER_PORT` are resolved once in `docker-manager.sh` and passed to the
-container **and** to compose. They used to be derived independently on both sides, which is exactly
-how `--dev` broke on a unit: `run_msd.sh` moved the master while `backend_local` kept asking for
-the old port, so the master existed and nothing could find it.
+::: warning 1 つの決定を両サイドに渡す
+`CLOUD_BASE_URL` と `ROS_MASTER_PORT` は `docker-manager.sh` 内で一度だけ解決され、コンテナ**と**
+compose の両方に渡されます。かつては両サイドで独立に導出されており、それがまさに `--dev` があるユ
+ニットで壊れた原因でした。`run_msd.sh` がマスターを移動させる一方、`backend_local` は古いポートを
+要求し続けたため、マスターは存在するのに誰もそれを見つけられなかったのです。
+
+同じ原則が、今では `run_msd.sh` **内部**のエンロルメント用バックエンドにも適用されています。
+`resolve_enroll_base_url()` は 1 つの `ENROLL_BASE_URL`(`ENROLL_SERVER_URL`、次に `--dev` の開発用
+バックエンド、次に本番の順)を導出し、両方の利用箇所がそれを使います。起動時の「自分はどのユニット
+か」という解決処理と、6 時間ごとに `token.cred` を更新するトークンリフレッシャーです。以前はこれら
+が食い違うことがありました。リフレッシャーが本番の `CLOUD_BASE_URL` をハードコードしていたため、
+`run_msd.sh --dev` は開発用バックエンドでエンロルメントを行いながら本番に対してリフレッシュを行い、
+毎回のリフレッシュで開発側が発行した `device_secret` が `401 reenroll` で拒否されていました
+(2026-09-01 の事象)。
 :::
 
-### What `up` does, in order
+### `up` が行うこと(順番)
 
 ```mermaid
 flowchart TB
@@ -495,52 +519,62 @@ flowchart TB
   K --> L["docker exec run_msd.sh"]
 ```
 
-::: warning `up` builds only when an image does not exist at all
-Before 2026-08-13, a stale image (source edited, or a port changed in `docker/.env`) triggered an
-automatic rebuild on the next `up`. That meant bringing a unit online could suddenly need internet,
-which is exactly backwards for hardware whose entire point is running without it. Now a stale image
-only prints `[WARN] ... is OUT OF DATE` and starts anyway with what is already built. Rebuild
-deliberately: `./scripts/docker-manager.sh build` (or `local-build` for just the web half), or
-`up --build` to do both in one command. `build-clean` forces a rebuild with no layer cache at all.
+::: warning `up` はイメージがまったく存在しない場合にのみビルドする
+2026-08-13 より前は、古くなったイメージ(ソースが編集された、あるいは `docker/.env` でポートが変更
+された)は、次の `up` で自動的な再ビルドを引き起こしていました。つまり、ユニットをオンラインにする
+ことが突然インターネットを必要とする場合があったということであり、これはインターネットなしで動く
+ことこそが存在意義であるハードウェアにとって、まさに本末転倒でした。今では、古くなったイメージは
+`[WARN] ... is OUT OF DATE` を出力するだけで、既にビルド済みのものでそのまま起動します。再ビルドは
+意図的に行ってください: `./scripts/docker-manager.sh build`(Web 側だけなら `local-build`)、または
+両方を一度に行う `up --build`。`build-clean` はレイヤーキャッシュを一切使わずに強制的に再ビルドし
+ます。
 :::
 
-Two more of those steps exist because of failures that looked like nothing at all:
+さらに 2 つのステップは、一見何でもないように見える障害のために存在しています。
 
-- **`ensure_robot_token_file`.** Four services bind-mount `Certificates/robot/token.cred`. Bring any
-  of them up on a robot that has never enrolled and Docker, finding no such host file, creates a
-  root-owned empty **directory** there. `enroll.py` then cannot write the token it just earned, and
-  the robot re-enrols from scratch on every boot.
-- **The staleness check itself.** `Dockerfile.webui-local` **COPY**s the source into the image; there
-  is no bind mount for those services. Without comparing source-file mtimes against the image build
-  time (plus the port and deployment-mode labels), a unit would have no way to notice it is serving
-  last week's backend at all. That is how a new endpoint ends up returning 404 on a unit whose source
-  tree plainly contains it, see [Troubleshooting](/ja/setup/troubleshooting).
+- **`ensure_robot_token_file`。** 4 つのサービスが `Certificates/robot/token.cred` をバインドマウン
+  トします。一度もエンロルメントしたことのないロボットでそのいずれかを起動すると、Docker はそのよ
+  うなホストファイルが見つからないため、そこに root 所有の空の**ディレクトリ**を作成してしまいます。
+  すると `enroll.py` は取得したばかりのトークンを書き込めず、ロボットは起動のたびに最初からエンロ
+  ルメントし直すことになります。
+- **トークンリフレッシャーは `device.json` を決して削除しません。** `run_msd.sh` は `token.cred` を
+  新鮮に保つため、6 時間ごとに `enroll.py --refresh` を実行します。`401 reenroll` を受け取ると、今
+  ではログを記録して停止し、`device.json` はそのまま残します。本当の起動時のみがそれをクリアできま
+  す。これ以前は、間違ったバックエンドに対するリフレッシュ(または一時的なサーバー障害)が ID ファ
+  イルを削除してしまい、次の再起動で管理者による完全な再承認が強制されていました。リフレッシャーと
+  起動時のリゾルバーが異なるバックエンドにずれてしまうと、ほぼ毎回の再起動でこれが発生していました。
+- **古さのチェック自体。** `Dockerfile.webui-local` はソースをイメージに **COPY** しており、それら
+  のサービスにはバインドマウントがありません。ソースファイルの mtime をイメージのビルド時刻(に加え
+  てポートとデプロイモードのラベル)と比較しなければ、ユニットは自分が先週のバックエンドを配信して
+  いることにまったく気づく手段がありません。それが、ソースツリーには明らかに含まれている新しいエン
+  ドポイントが、あるユニットで 404 を返してしまう仕組みです。[トラブルシューティング](/ja/setup/troubleshooting)
+  を参照してください。
 
-## Unit: `run_msd.sh`
+## ユニット: `run_msd.sh`
 
-Runs **inside** the robot container and launches every ROS service in a tmux session
-(`robot_services`). `docker-manager.sh` normally drives it, but you can call it directly from
-`docker-manager.sh shell`.
+ロボットコンテナの**内部**で実行され、すべての ROS サービスを 1 つの tmux セッション
+(`robot_services`)内で起動します。通常は `docker-manager.sh` がこれを制御しますが、
+`docker-manager.sh shell` から直接呼び出すこともできます。
 
-| Flag | Effect |
+| フラグ | 効果 |
 | --- | --- |
-| `-s`, `--simulator` | Data source is Gazebo instead of the robot's hardware |
-| `--dev` | Everything dev: MQTT 8884, this robot's ROS master 11322, dev signalling, dev enrolment. The unit's **own** service ports do not shift |
-| `-d`, `--debug` | Verbose output |
-| `-n`, `--dry-run` | Print the commands without running them |
-| `-k`, `--kill` | Kill the tmux session and exit |
-| `--detach` | Start everything, print status, exit. Long form only |
-| `--unit_id <ULID>` | Pin the identity explicitly. Optional recovery override |
-| `--camera_device <path>` | Override the camera device path or index |
+| `-s`, `--simulator` | データソースがロボットのハードウェアではなく Gazebo になる |
+| `--dev` | すべてが開発用になる: MQTT 8884、このロボットの ROS マスター 11322、開発用 signalling、開発用エンロルメント。ユニット**自身**のサービスポートはシフトしない |
+| `-d`, `--debug` | 詳細出力 |
+| `-n`, `--dry-run` | コマンドを実行せずに出力する |
+| `-k`, `--kill` | tmux セッションを終了して終了する |
+| `--detach` | すべてを起動し、状態を出力して終了する。長い形式のみ |
+| `--unit_id <ULID>` | ID を明示的に固定する。任意のリカバリ用オーバーライド |
+| `--camera_device <path>` | カメラデバイスのパスまたはインデックスを上書きする |
 
-| Environment | Default | Purpose |
+| 環境変数 | デフォルト | 目的 |
 | --- | --- | --- |
-| `SERVICE_HOST` | `localhost` | Where this robot's server-side services live |
-| `ROS_LOG_CAP_MB` | `512` | Ceiling for `~/.ros/log`, which ROS 1 never rotates |
-| `ROS_LOG_SWEEP_SECONDS` | `60` | How often the janitor checks |
+| `SERVICE_HOST` | `localhost` | このロボットのサーバー側サービスが存在する場所 |
+| `ROS_LOG_CAP_MB` | `512` | ROS 1 が決してローテーションしない `~/.ros/log` の上限 |
+| `ROS_LOG_SWEEP_SECONDS` | `60` | 「janitor」がチェックする頻度 |
 
-tmux windows in the `robot_services` session: `roscore`, `ros_webui`, `camera_client`,
-`switch_mode`, `log_janitor`.
+`robot_services` セッション内の tmux ウィンドウ: `roscore`、`ros_webui`、`camera_client`、
+`switch_mode`、`log_janitor`。
 
 ```bash
 docker exec -it msd700 tmux attach -t robot_services   # attach
@@ -548,29 +582,29 @@ docker exec -it msd700 tmux attach -t robot_services   # attach
 docker exec -it msd700 tmux list-windows -t robot_services
 ```
 
-::: danger `--detach` is wrong for `docker-compose.robot.yml`
-On that path `run_msd.sh` **is** the container's main command, so returning stops the container and
-takes the tmux server with it. That path is already detached at the compose level; the foreground
-loop is what keeps the container alive.
+::: danger `docker-compose.robot.yml` では `--detach` は誤り
+その経路では `run_msd.sh` がコンテナの**メインコマンドそのもの**であるため、これが戻る(return)と
+コンテナは停止し、tmux サーバーも道連れになります。その経路は compose レベルで既に detach されて
+おり、フォアグラウンドのループこそがコンテナを生かし続けているものです。
 :::
 
-## The unit's own stack (`local_dev` profile)
+## ユニット自身のスタック(`local_dev` プロファイル)
 
-| Service | Container | Port | Bound to |
+| サービス | コンテナ | ポート | バインド先 |
 | --- | --- | --- | --- |
 | `db_local` | `msd700_db_local` | `3306` | `127.0.0.1` |
 | `mosquitto_local` | `msd700_mosquitto_local` | `1883` | `127.0.0.1` |
-| `backend_local` | `msd700_backend_local` | `5002` API, `9090` rosbridge | all interfaces |
-| `media_local` | `msd700_media_local` | `3003` | all interfaces |
-| `signalling_local` | `msd700_signalling_local` | `3001` WS, `3002` HTTP | all interfaces |
-| `frontend_local` | `msd700_frontend_local` | `3000` | all interfaces |
+| `backend_local` | `msd700_backend_local` | API `5002`、rosbridge `9090` | 全インターフェース |
+| `media_local` | `msd700_media_local` | `3003` | 全インターフェース |
+| `signalling_local` | `msd700_signalling_local` | WS `3001`、HTTP `3002` | 全インターフェース |
+| `frontend_local` | `msd700_frontend_local` | `3000` | 全インターフェース |
 
-Every one of them uses `network_mode: host`, so **Docker publishes nothing** and the unit's own
-firewall is what matters. Allow the five browser-facing ports; MySQL and Mosquitto are deliberately
-bound to loopback and need no rule.
+これらはすべて `network_mode: host` を使用しているため、**Docker は何も公開せず**、重要なのは
+ユニット自身のファイアウォールです。ブラウザ向けの 5 つのポートを許可してください。MySQL と
+Mosquitto は意図的にループバックにバインドされており、ルールは不要です。
 
-Configuration lives in `msd700_noetic/docker/.env` (created from `.env.example` automatically on
-first run). The keys most worth reviewing:
+設定は `msd700_noetic/docker/.env`(初回実行時に `.env.example` から自動生成される)にあります。
+特に確認する価値のあるキー:
 
 ```bash
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
@@ -580,22 +614,22 @@ USER_UID=                 # empty = detect from `id -u` (Jetson 2002, laptop 100
 USER_GID=
 ```
 
-::: info `LOCAL_IP` stopped being part of the bundle on 2026-08-13
-It used to be: `NEXT_PUBLIC_*` URLs were compiled into the JS with the unit's IP baked in, so moving
-a unit to a new network meant a mandatory rebuild. The bundle now takes its **host** from whatever
-address the operator's browser actually used to open the page
-(`src/config/apiConfig.ts` in `ROS-dashboard-next-ts`), which by construction is the same machine , 
-only the **port** still comes from the build. A unit reached by IP, hostname, mDNS
-(`msd700.local`), or an SSH tunnel on `localhost` all work correctly now, none of which was possible
-before. `LOCAL_IP` in `docker/.env` is left as a hint for the script's own printed URLs and the
-DHCP-less fallback baked in before a browser ever exists, getting it wrong is no longer fatal to
-the dashboard, only to what the script prints.
+::: info `LOCAL_IP` は 2026-08-13 にバンドルの一部でなくなった
+かつては、`NEXT_PUBLIC_*` の URL がユニットの IP を焼き込んだ形で JS にコンパイルされていたため、
+ユニットを新しいネットワークに移すには必ず再ビルドが必要でした。バンドルは今では、オペレーターの
+ブラウザが実際にページを開くために使用したアドレスから**ホスト**を取得します
+(`ROS-dashboard-next-ts` の `src/config/apiConfig.ts`)。これは構造上、同じマシンになりますが、
+**ポート**だけは依然としてビルド時のものが使われます。IP、ホスト名、mDNS(`msd700.local`)、
+`localhost` 上の SSH トンネルのいずれでアクセスされたユニットも、今では正しく動作します。これらは
+以前は不可能でした。`docker/.env` の `LOCAL_IP` は、スクリプト自身が出力する URL のヒントとして、
+またブラウザが存在する前に焼き込まれる DHCP なしのフォールバックとして残されていますが、これを
+間違えても、もはやダッシュボードにとって致命的ではなく、スクリプトが出力する内容にのみ影響します。
 :::
 
-## Per-unit containers (created by the backend, not by compose)
+## ユニットごとのコンテナ(compose ではなくバックエンドが作成する)
 
-`unit_manager.js` creates these through the Docker API. There is no compose file for them. The
-equivalent `docker run` is:
+`unit_manager.js` は Docker API 経由でこれらのコンテナを作成します。これらに対応する compose ファ
+イルはありません。相当する `docker run` は次のとおりです。
 
 ```bash
 docker run -d \
@@ -616,7 +650,7 @@ docker run -d \
     use_backend_web:=false use_unit_relays:=true unit_id:=01JZ8P9WZ0UNIT00000000000"
 ```
 
-Useful commands against them:
+これらに対して便利なコマンド:
 
 ```bash
 docker ps --filter "name=rosweb_unit_"           # every running unit bridge
@@ -624,27 +658,28 @@ docker logs -f rosweb_unit_<ULID>_nakayama       # one unit's relays
 docker stop rosweb_unit_<ULID>_nakayama          # the backend will restart it on next use
 ```
 
-::: warning Recreating the backend orphans every unit container
-The unit containers were started by a specific `backend_node` process. After
-`docker compose up -d nakayama_cloud` recreates the backend, restart every `rosweb_unit_*`
-container too, or they will be running while the new backend does not consider them adopted.
+::: warning バックエンドの再作成はすべてのユニットコンテナを孤児にする
+ユニットのコンテナは、特定の `backend_node` プロセスによって起動されました。
+`docker compose up -d nakayama_cloud` でバックエンドを再作成した後は、すべての `rosweb_unit_*`
+コンテナも再起動してください。そうしないと、新しいバックエンドがそれらを採用済みとみなさないまま、
+それらは稼働し続けてしまいます。
 :::
 
-## Troubleshooting Docker itself
+## Docker 自体のトラブルシューティング
 
-| Symptom | Cause | Fix |
+| 症状 | 原因 | 対処 |
 | --- | --- | --- |
-| `permission denied ... /var/run/docker.sock` | Your user is not in the `docker` group, or the membership has not applied to this shell | `sudo usermod -aG docker $USER`, then log out and back in (or `newgrp docker`) |
-| `network <id> not found` on start | A container recorded a network that was recreated | `docker compose down --remove-orphans` then `up` |
-| `port is already allocated` | Another process (often a systemd service, or the other profile) holds it | `sudo ss -lptn 'sport = :3478'` to find it |
-| Backend logs `Connection lost` right after `up` | It started before MySQL passed its healthcheck | It retries; if not, `docker compose up -d <backend>` once `ps` shows the DB `healthy` |
-| Build succeeds but the change is not there | A cached layer | `docker compose build --no-cache <service>` |
-| Disk filling up | Old images and build cache | `docker system df`, then `docker image prune -a` and `docker builder prune` |
-| `the input device is not a TTY` | `docker exec -t` in a non-interactive context | Expected in scripts; `docker-manager.sh` already drops `-t` when stdin is not a TTY |
+| `permission denied ... /var/run/docker.sock` | ユーザーが `docker` グループに入っていない、またはそのメンバーシップがこのシェルにまだ適用されていない | `sudo usermod -aG docker $USER` を実行し、ログアウトして再ログイン(または `newgrp docker`) |
+| 起動時に `network <id> not found` | あるコンテナが、再作成されたネットワークを記録していた | `docker compose down --remove-orphans` の後に `up` |
+| `port is already allocated` | 別のプロセス(多くの場合 systemd サービスや別プロファイル)がそれを保持している | `sudo ss -lptn 'sport = :3478'` で特定する |
+| `up` の直後にバックエンドのログが `Connection lost` | MySQL がヘルスチェックに通る前に起動してしまった | 自動的にリトライされる。だめな場合は、`ps` が DB を `healthy` と示した時点で `docker compose up -d <backend>` |
+| ビルドは成功するが変更が反映されていない | キャッシュされたレイヤー | `docker compose build --no-cache <service>` |
+| ディスクが埋まっていく | 古いイメージとビルドキャッシュ | `docker system df`、続けて `docker image prune -a` と `docker builder prune` |
+| `the input device is not a TTY` | 非対話的なコンテキストでの `docker exec -t` | スクリプト内では想定内。`docker-manager.sh` は stdin が TTY でないときは既に `-t` を外している |
 
-## Related
+## 関連項目
 
-- [Server Setup](/ja/setup/server-setup)
-- [Unit Setup](/ja/setup/unit-setup)
-- [Maintenance](/ja/setup/maintenance)
-- [Troubleshooting](/ja/setup/troubleshooting)
+- [サーバーセットアップ](/ja/setup/server-setup)
+- [ユニットセットアップ](/ja/setup/unit-setup)
+- [メンテナンス](/ja/setup/maintenance)
+- [トラブルシューティング](/ja/setup/troubleshooting)

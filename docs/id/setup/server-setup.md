@@ -2,20 +2,19 @@
 outline: deep
 ---
 
-
-# Server Setup
+# Penyiapan Server
 
 <RoleBadge role="technician" />
 
-This guide provides step-by-step instructions for deploying the **MSD700 Cloud Server and Web Dashboard**.
+Panduan ini memberikan instruksi langkah demi langkah untuk melakukan deployment **Server Cloud dan Dashboard Web MSD700**.
 
-Complete [Prerequisites](/id/setup/prerequisites) before proceeding.
+Selesaikan [Prasyarat](/id/setup/prerequisites) sebelum melanjutkan.
 
-::: info Production-First Architecture
-This guide defaults to a standard **Production Deployment**. Development mode instructions and advanced custom parameters are located in the [Advanced Configurations](#advanced-configurations) section at the bottom.
+::: info Arsitektur Mengutamakan Produksi
+Panduan ini secara default menggunakan **Deployment Produksi** standar. Instruksi mode pengembangan dan parameter kustom lanjutan berada di bagian [Konfigurasi Lanjutan](#advanced-configurations) di bagian bawah.
 :::
 
-## System Topology
+## Topologi Sistem
 
 ```mermaid
 flowchart TB
@@ -36,9 +35,9 @@ flowchart TB
   end
 ```
 
-## Directory Structure Overview
+## Ikhtisar Struktur Direktori
 
-Before running any commands, understand how the repositories are structured on the host filesystem:
+Sebelum menjalankan perintah apa pun, pahami bagaimana repositori disusun pada filesystem host:
 
 ```
 ~/ (e.g. /home/ubuntu)
@@ -59,13 +58,13 @@ Before running any commands, understand how the repositories are structured on t
 
 ---
 
-## Core Step-by-Step Setup
+## Langkah Inti Penyiapan Bertahap
 
-Follow these 6 steps in sequence to stand up a complete production server.
+Ikuti 6 langkah berikut secara berurutan untuk membangun server produksi yang lengkap.
 
-### Step 1: Clone Repositories
+### Langkah 1: Clone Repositori
 
-Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` frontend repository directly into `source/dependencies/`:
+Clone `ros-web-ui` pada branch `v2`, lalu clone repositori frontend `ROS-dashboard-next-ts` langsung ke dalam `source/dependencies/`:
 
 ```bash
 # 1. Clone main server repository on branch v2
@@ -76,15 +75,15 @@ git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
-::: tip Why is the frontend cloned inside dependencies?
-The Dockerfile builds the Next.js frontend directly within the Docker build context of `ros-web-ui`. The `source/dependencies/ROS-dashboard-next-ts` path is gitignored by the parent repository.
+::: tip Mengapa frontend di-clone di dalam dependencies?
+Dockerfile membangun (build) frontend Next.js langsung di dalam konteks build Docker milik `ros-web-ui`. Path `source/dependencies/ROS-dashboard-next-ts` di-gitignore oleh repositori induk.
 :::
 
 ---
 
-### Step 2: Initialize Security Secrets
+### Langkah 2: Inisialisasi Security Secrets
 
-Secrets live outside Docker containers in `/srv/msd/secrets/` to persist across image rebuilds.
+Secrets berada di luar container Docker, di `/srv/msd/secrets/`, agar tetap ada meski image dibangun ulang.
 
 ```bash
 # 1. Navigate to the ros-web-ui repository
@@ -100,9 +99,9 @@ sudo mkdir -p /srv/msd/secrets
 
 ---
 
-### Step 3: Generate HiveMQ TLS Keystore
+### Langkah 3: Membuat HiveMQ TLS Keystore
 
-The HiveMQ MQTT broker requires a PKCS#12 keystore generated from your domain's Let's Encrypt SSL certificate.
+Broker MQTT HiveMQ memerlukan keystore PKCS#12 yang dibuat dari sertifikat SSL Let's Encrypt milik domain Anda.
 
 ```bash
 # 1. Obtain Let's Encrypt certificate for your server domain
@@ -113,20 +112,20 @@ cd ~/ros-web-ui
 sudo ./source/dependencies/ssl_update/update_ssl.sh
 ```
 
-This script creates `/srv/msd/secrets/hivemq/keystore.p12` with UID `1001` ownership and `0600` permissions.
+Skrip ini membuat `/srv/msd/secrets/hivemq/keystore.p12` dengan kepemilikan UID `1001` dan izin `0600`.
 
 ---
 
-### Step 4: Configure Environment (`.env`)
+### Langkah 4: Konfigurasi Environment (`.env`)
 
-Create `.env` at `~/ros-web-ui/.env`:
+Buat `.env` di `~/ros-web-ui/.env`:
 
 ```bash
 cd ~/ros-web-ui
 nano .env
 ```
 
-Paste the following production configuration:
+Tempel konfigurasi produksi berikut:
 
 ```ini
 # Storage path for recorded map files on the host
@@ -170,9 +169,9 @@ TURN_PASSWORD=SetYourStrongTurnPasswordHere
 
 ---
 
-### Step 5: Start Production Docker Containers
+### Langkah 5: Menjalankan Container Docker Produksi
 
-Launch the production compose stack:
+Jalankan stack compose produksi:
 
 ```bash
 cd ~/ros-web-ui
@@ -186,9 +185,9 @@ docker compose --profile server_prod ps
 
 ---
 
-### Step 6: Configure Apache Reverse Proxy
+### Langkah 6: Konfigurasi Apache Reverse Proxy
 
-Apache terminates SSL on port 443 and routes incoming traffic to internal container ports.
+Apache melakukan terminasi SSL pada port 443 dan meneruskan trafik masuk ke port container internal.
 
 ```bash
 # 1. Enable required Apache modules
@@ -260,7 +259,7 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 </IfModule>
 ```
 
-Reload Apache:
+Muat ulang Apache:
 
 ```bash
 sudo apache2ctl configtest
@@ -269,9 +268,9 @@ sudo systemctl reload apache2
 
 ---
 
-## Unit Registration & Enrolment Flow
+## Alur Registrasi & Enrolment Unit
 
-Once the server is running, physical robots can be registered:
+Setelah server berjalan, robot fisik dapat didaftarkan:
 
 ```mermaid
 sequenceDiagram
@@ -296,44 +295,44 @@ sequenceDiagram
   Unit->>Unit: Saves Certificates/robot/device.json and connects to HiveMQ
 ```
 
-1. Log into the administration panel at `https://msd.nglobal.jp/admin`.
-2. Under **Pending Units**, locate the 6-character claim code displayed by the technician on the robot.
-3. Select an active **Rental Profile**, assign a unit display label, and click **Approve**.
-4. The robot completes enrolment and appears in the fleet dashboard immediately.
+1. Login ke panel administrasi di `https://msd.nglobal.jp/admin`.
+2. Di bawah **Pending Units**, temukan kode klaim 6 karakter yang ditampilkan oleh teknisi pada robot.
+3. Pilih **Rental Profile** yang aktif, tetapkan label tampilan unit, lalu klik **Approve**.
+4. Robot menyelesaikan enrolment dan langsung muncul di dashboard armada.
 
 ---
 
-## Advanced Configurations
+## Konfigurasi Lanjutan
 
 <details>
-<summary><b>Development Mode Profile (`server_dev`)</b></summary>
+<summary><b>Profil Mode Pengembangan (`server_dev`)</b></summary>
 
-To run an isolated development stack alongside production:
+Untuk menjalankan stack pengembangan yang terisolasi berdampingan dengan produksi:
 
-1. Initialize dev keyring:
+1. Inisialisasi keyring dev:
    ```bash
    cd ~/ros-web-ui
    ./scripts/secrets.sh init --dev
    ```
 
-2. Start the dev profile:
+2. Jalankan profil dev:
    ```bash
    docker compose --profile server_dev up -d
    ```
 
-3. Dev ports are offset to prevent collisions:
-   - Dev MySQL: `3308`
-   - Dev Backend: `5001`
-   - Dev HiveMQ: `8884`
-   - Dev rosbridge: `9091`
-   - Dev Frontend: `3100`
+3. Port dev digeser untuk mencegah tabrakan:
+   - MySQL Dev: `3308`
+   - Backend Dev: `5001`
+   - HiveMQ Dev: `8884`
+   - rosbridge Dev: `9091`
+   - Frontend Dev: `3100`
 
 </details>
 
 <details>
-<summary><b>Keyring Rotation & Grace Periods</b></summary>
+<summary><b>Rotasi Keyring & Grace Period</b></summary>
 
-Rotate the active JWT signing key without terminating active user sessions:
+Rotasi kunci signing JWT yang aktif tanpa mengakhiri sesi pengguna yang sedang berjalan:
 
 ```bash
 cd ~/ros-web-ui
@@ -351,9 +350,9 @@ cd ~/ros-web-ui
 </details>
 
 <details>
-<summary><b>Manual HiveMQ Keystore Creation</b></summary>
+<summary><b>Pembuatan HiveMQ Keystore secara Manual</b></summary>
 
-If generating the keystore manually without `update_ssl.sh`:
+Jika membuat keystore secara manual tanpa `update_ssl.sh`:
 
 ```bash
 sudo mkdir -p /srv/msd/secrets/hivemq
@@ -373,9 +372,9 @@ sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
 
 ---
 
-## Verification & Health Checks
+## Verifikasi & Pemeriksaan Kesehatan
 
-Run these diagnostic commands to confirm all server subsystems are operational:
+Jalankan perintah diagnostik berikut untuk memastikan semua subsistem server beroperasi:
 
 ```bash
 # 1. Confirm all Docker containers are running
@@ -391,8 +390,8 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 sudo ss -lptn 'sport = :8883'
 ```
 
-## Related Documentation
+## Dokumentasi Terkait
 
-- [Unit Setup](/id/setup/unit-setup): Configure the physical Jetson SBC.
-- [System Setup](/id/setup/system-setup): End-to-end integration and calibration.
-- [Docker Reference](/id/setup/docker-reference): Container options and lifecycle details.
+- [Penyiapan Unit](/id/setup/unit-setup): Mengonfigurasi SBC Jetson fisik.
+- [Penyiapan Sistem](/id/setup/system-setup): Integrasi menyeluruh dan kalibrasi.
+- [Referensi Docker](/id/setup/docker-reference): Opsi container dan detail siklus hidup.

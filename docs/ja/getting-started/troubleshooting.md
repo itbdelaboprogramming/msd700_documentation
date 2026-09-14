@@ -3,18 +3,17 @@ outline: deep
 search: false
 ---
 
-
-# Operator Troubleshooting Guide
+# オペレーター向けトラブルシューティングガイド
 
 <RoleBadge role="user" />
 
-This guide provides quick solutions for common operational symptoms encountered while controlling the MSD700 robot from the web dashboard.
+本ガイドは、WebダッシュボードからMSD700ロボットを操作する際によく発生する運用上の症状に対する迅速な解決策を提供します。
 
-::: tip Technical or Hardware Diagnostics
-For low-level server errors, Docker container logs, or ROS driver diagnostics, see the [Technician Troubleshooting Guide](/ja/setup/troubleshooting) or [Developer Diagnostics](/ja/development/troubleshooting-guide).
+::: tip 技術的またはハードウェアの診断について
+低レベルのサーバーエラー、Dockerコンテナのログ、ROSドライバーの診断については、[技術者向けトラブルシューティングガイド](/ja/setup/troubleshooting)または[開発者向け診断](/ja/development/troubleshooting-guide)を参照してください。
 :::
 
-## Operator Diagnostic Flowchart
+## オペレーター診断フローチャート
 
 ```mermaid
 flowchart TD
@@ -35,82 +34,82 @@ flowchart TD
 
 ---
 
-## Common Issues and Solutions
+## よくある問題と解決策
 
-### 1. Map Canvas is Blank or Infinite Loading Spinner
-- **Symptom**: The navigation page opens, but the center area remains a dark grey screen with a spinning loader.
-- **Probable Causes**:
-  - No active map has been selected for this unit.
-  - The browser WebSocket connection to `rosbridge` was temporarily interrupted.
-- **Operator Actions**:
-  1. Look at the top-left **Select Map** dropdown. If it displays "No Map Loaded", click it and choose your facility map.
-  2. If a map is selected but still blank, refresh your browser tab (`Ctrl + F5` or `Cmd + Shift + R`).
-  3. Verify that the unit status badge in the header displays **Online** (green).
-
----
-
-### 2. Live Camera Video Feed Frozen or Black
-- **Symptom**: The camera window shows a frozen frame, spinning wheel, or black rectangle.
-- **Probable Causes**:
-  - Temporary packet loss on the Wi-Fi link between robot and server.
-  - Browser blocked WebRTC ICE negotiation.
-- **Operator Actions**:
-  1. Click the small **Refresh Stream** icon in the camera header.
-  2. If using Chrome, ensure hardware acceleration is enabled in browser settings.
-  3. If operating on a local facility network without internet, ensure you are connected to the robot's local Wi-Fi and accessing `http://<unit-ip>:3000`.
+### 1. マップキャンバスが空白、または読み込みスピナーが終わらない
+- **症状**: ナビゲーションページは開くものの、中央エリアが暗いグレーの画面のままで、スピナーが回り続けます。
+- **考えられる原因**:
+  - このユニットに対してアクティブなマップが選択されていません。
+  - `rosbridge` へのブラウザWebSocket接続が一時的に中断されました。
+- **オペレーターが行う操作**:
+  1. 左上の **Select Map** ドロップダウンを確認します。「No Map Loaded」と表示されている場合はクリックして施設のマップを選択します。
+  2. マップは選択済みだが空白のままの場合は、ブラウザタブをリロードします(`Ctrl + F5` または `Cmd + Shift + R`)。
+  3. ヘッダーのユニットステータスバッジが **Online**(緑)と表示されていることを確認します。
 
 ---
 
-### 3. Navigation Goal Aborted / Robot Refuses to Move
-- **Symptom**: You set a 2D Nav Goal or start a route, but the robot beeps and the status immediately flips from `On Progress` back to `Idle` or `Goal Aborted`.
-- **Probable Causes**:
-  - The destination point is placed inside a black wall, inside an obstacle, or within the lethal inflation buffer (within 0.575 m of a wall).
-  - The robot has lost its localization coordinates relative to the map.
-- **Operator Actions**:
-  1. Click a goal in wide, open free space (light grey area) well clear of walls and pillars.
-  2. Click the **Auto Align** button on the toolbar to re-synchronize the robot's LiDAR scan with the static map.
-  3. If Auto-Align fails, drive the robot forward 0.5 meters manually and re-trigger Auto-Align.
+### 2. ライブカメラ映像がフリーズまたは真っ黒になる
+- **症状**: カメラウィンドウにフリーズしたフレーム、回転するホイール、または黒い矩形が表示されます。
+- **考えられる原因**:
+  - ロボットとサーバー間のWi-Fiリンクでの一時的なパケットロス。
+  - ブラウザがWebRTCのICEネゴシエーションをブロックしています。
+- **オペレーターが行う操作**:
+  1. カメラヘッダーにある小さな **Refresh Stream** アイコンをクリックします。
+  2. Chromeを使用している場合は、ブラウザ設定でハードウェアアクセラレーションが有効になっていることを確認します。
+  3. インターネットのないローカル施設ネットワークで運用している場合は、ロボットのローカルWi-Fiに接続し、`http://<unit-ip>:3000` にアクセスしていることを確認します。
 
 ---
 
-### 4. "Robot Stuck" Banner Won't Clear
-- **Symptom**: An amber banner at the top of the canvas reads "Robot Stuck: Recovery in Progress".
-- **Probable Causes**:
-  - A person, forklift, or newly placed box is blocking the planned trajectory path.
-  - The robot is attempting an area coverage sweep in a tight corridor narrower than 1.15 meters.
-- **Operator Actions**:
-  1. Check the live camera feed and red LiDAR dots on the canvas for nearby physical obstructions.
-  2. If the path is blocked by transient objects, wait 10 seconds; the local planner automatically steers around obstacles once clearance opens.
-  3. If the robot cannot resolve the pinch, click **Pause / Cancel Goal**, switch to **Manual Drive**, and jog the robot into open floor space before resuming.
+### 3. ナビゲーションゴールが中断される / ロボットが動こうとしない
+- **症状**: 2D Nav Goalを設定するかルートを開始しても、ロボットがビープ音を鳴らし、ステータスが直ちに `On Progress` から `Idle` または `Goal Aborted` に戻ります。
+- **考えられる原因**:
+  - 目的地点が黒い壁の内側、障害物の内側、または致死インフレーションバッファ内(壁から0.575 m以内)にあります。
+  - ロボットがマップに対する自己位置推定座標を失っています。
+- **オペレーターが行う操作**:
+  1. 壁や柱から十分に離れた、広く開けた空きスペース(明るいグレーの領域)にゴールを設定します。
+  2. ツールバーの **Auto Align** ボタンをクリックし、ロボットのLiDARスキャンを静的マップと再同期させます。
+  3. Auto-Alignが失敗する場合は、ロボットを手動で0.5メートル前進させてからAuto-Alignを再実行します。
 
 ---
 
-### 5. Control Locked: "In Use by Another Operator"
-- **Symptom**: You open a robot and all drive buttons are disabled with an "In Use" banner.
-- **Probable Causes**:
-  - Another operator account in your organization is currently driving this unit.
-  - You left another tab or laptop open logged into the same robot.
-- **Operator Actions**:
-  1. If the banner shows a different colleague's name, coordinate with them before requesting control.
-  2. If the banner shows your own account (e.g. from an old tab), click the **Take Over Control** button. The previous session is gracefully detached and control transfers to your active window.
+### 4. 「Robot Stuck」バナーが消えない
+- **症状**: キャンバス上部にアンバー色のバナーで「Robot Stuck: Recovery in Progress」と表示されます。
+- **考えられる原因**:
+  - 人、フォークリフト、または新しく置かれた箱が計画された走行経路を塞いでいます。
+  - ロボットが1.15メートルより狭い通路でエリアカバレッジ清掃を試みています。
+- **オペレーターが行う操作**:
+  1. ライブカメラ映像とキャンバス上の赤いLiDARドットを確認し、近くに物理的な障害物がないか調べます。
+  2. 一時的な物体によって経路が塞がれている場合は10秒待ちます。ローカルプランナーは経路が開き次第、自動的に障害物を回避します。
+  3. ロボットが詰まりを解消できない場合は、**Pause / Cancel Goal** をクリックし、**Manual Drive** に切り替え、再開する前にロボットを開けた床スペースへジョグ操作で移動させます。
 
 ---
 
-### 6. Emergency Stop Engaged
-- **Symptom**: The header flashes red with "Emergency Stop Engaged" and all movement is locked.
-- **Probable Causes**:
-  - An operator pressed the `Escape` key or clicked the on-screen E-Stop button.
-  - A technician triggered the physical hardware E-Stop bumper on the robot.
-- **Operator Actions**:
-  1. Verify that the physical robot environment is completely safe.
-  2. If physical hardware E-Stop was pressed, twist and release the hardware button on the robot chassis.
-  3. In the web dashboard, click **Release Emergency Stop** to re-engage motor controllers.
+### 5. 制御権がロックされている: 「In Use by Another Operator」
+- **症状**: ロボットを開くと、すべての操作ボタンが無効化され「In Use」バナーが表示されます。
+- **考えられる原因**:
+  - 組織内の別のオペレーターアカウントが現在このユニットを操作中です。
+  - 同じロボットにログインした状態の別のタブまたはノートPCを開いたままにしています。
+- **オペレーターが行う操作**:
+  1. バナーに別の同僚の名前が表示されている場合は、制御権をリクエストする前にその同僚と調整してください。
+  2. バナーに自分自身のアカウントが表示されている場合(例: 古いタブから)、**Take Over Control** ボタンをクリックします。以前のセッションは正常に切り離され、制御権がアクティブなウィンドウへ移行します。
 
 ---
 
-## Escalation Path
+### 6. 緊急停止が作動中
+- **症状**: ヘッダーが赤く点滅し「Emergency Stop Engaged」と表示され、すべての動作がロックされます。
+- **考えられる原因**:
+  - オペレーターが `Escape` キーを押したか、画面上のE-Stopボタンをクリックしました。
+  - 技術者がロボット上の物理ハードウェアE-Stopバンパーを作動させました。
+- **オペレーターが行う操作**:
+  1. 物理的なロボット周辺環境が完全に安全であることを確認します。
+  2. 物理ハードウェアE-Stopが押された場合は、ロボットのシャーシにあるハードウェアボタンをひねって解除します。
+  3. Webダッシュボードで **Release Emergency Stop** をクリックし、モーターコントローラーを再作動させます。
 
-If the steps above do not resolve the issue:
-1. Contact your on-site **Field Technician** to inspect physical hardware power and sensors.
-2. Provide the technician with the robot's ULID (displayed in the dashboard header, e.g. `01JZ8P9WZ...`).
-3. Refer the technician to the [Technician Troubleshooting Guide](/ja/setup/troubleshooting).
+---
+
+## エスカレーションパス
+
+上記の手順で問題が解決しない場合:
+1. 現地の**フィールド技術者**に連絡し、物理ハードウェアの電源とセンサーを点検してもらいます。
+2. ロボットのULID(ダッシュボードヘッダーに表示、例: `01JZ8P9WZ...`)を技術者に伝えます。
+3. 技術者を[技術者向けトラブルシューティングガイド](/ja/setup/troubleshooting)へ案内します。

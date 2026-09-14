@@ -3,14 +3,13 @@ outline: deep
 search: false
 ---
 
-
-# Developer Diagnostics and Troubleshooting
+# Diagnostik dan Troubleshooting Pengembang
 
 <RoleBadge role="developer" />
 
-This document provides structured diagnostic workflows, symptom-to-cause mappings, and recovery procedures for resolving common engineering issues across the MSD700 stack.
+Dokumen ini menyediakan alur kerja diagnostik terstruktur, pemetaan gejala-ke-penyebab, dan prosedur pemulihan untuk mengatasi masalah engineering umum di seluruh stack MSD700.
 
-## Systematic Diagnostic Flowchart
+## Diagram Alur Diagnostik Sistematis
 
 ```mermaid
 flowchart TD
@@ -29,45 +28,62 @@ flowchart TD
   Q4 -->|Yes| APP_OK["All Core Subsystems Operational"]
 ```
 
-## Common Failure Modes and Solutions
+## Mode Kegagalan Umum dan Solusi
 
-### 1. Unit Appears Offline (MQTT Broker Layer)
-- **Symptom**: The unit status badge in the dashboard displays `offline`.
-- **Root Cause**: The physical robot cannot establish an encrypted TLS connection to HiveMQ port 8883.
-- **Diagnostic Steps**:
-  1. Check HiveMQ container status on the server: `docker ps | grep hivemq`.
-  2. Verify that the TLS certificate keystore (`/srv/msd/secrets/hivemq/keystore.p12`) is valid and readable by UID 1001.
-  3. On the robot, inspect MQTT bridge logs: `tmux attach -t robot_services` and check the `aws_mqtt` window.
+### 1. Unit Tampak Offline (Lapisan Broker MQTT)
+- **Gejala**: Badge status unit pada dashboard menampilkan `offline`.
+- **Akar Penyebab**: Robot fisik tidak dapat membangun koneksi TLS terenkripsi ke HiveMQ port 8883.
+- **Langkah Diagnostik**:
+  1. Periksa status kontainer HiveMQ di server: `docker ps | grep hivemq`.
+  2. Verifikasi bahwa keystore sertifikat TLS (`/srv/msd/secrets/hivemq/keystore.p12`) valid dan dapat dibaca oleh UID 1001.
+  3. Pada robot, periksa log bridge MQTT: `tmux attach -t robot_services` dan periksa window `aws_mqtt`.
 
-### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
-- **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
-- **Root Cause**: The on-demand relay container `rosweb_unit_<ULID>` was stopped by the idle reaper, or Apache WebSocket proxying is blocked.
-- **Diagnostic Steps**:
-  1. Verify if the per-unit container is running on the server: `docker ps | grep rosweb_unit`.
-  2. If absent, reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`.
-  3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
+### 2. Unit Online, Tetapi Map Canvas Tetap Kosong (rosbridge / Kontainer Relay)
+- **Gejala**: Perintah berhasil, tetapi tidak ada peta, ikon robot, atau laser scan yang muncul di canvas web.
+- **Akar Penyebab**: Kontainer relay on-demand `rosweb_unit_<ULID>` dihentikan oleh idle reaper, atau proxy WebSocket Apache terblokir.
+- **Langkah Diagnostik**:
+  1. Verifikasi apakah kontainer per-unit berjalan di server: `docker ps | grep rosweb_unit`.
+  2. Jika tidak ada, muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`.
+  3. Uji konektivitas WebSocket ke `/services/rosbridge` menggunakan developer tools browser.
 
-### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
-- **Symptom**: The robot refuses to move, and console logs display repeated TF warnings mentioning "simulated time" or `TF_OLD_DATA`.
-- **Root Cause**: `/use_sim_time` was set to `true` on the ROS master by a simulation run, but no `/clock` publisher exists during real robot operation.
-- **Resolution**:
+### 3. Navigasi Membeku dengan Error TF (Basi-nya `use_sim_time`)
+- **Gejala**: Robot menolak bergerak, dan log konsol menampilkan peringatan TF berulang yang menyebut "simulated time" atau `TF_OLD_DATA`.
+- **Akar Penyebab**: `/use_sim_time` diset ke `true` pada ROS master oleh sebuah run simulasi, tetapi tidak ada publisher `/clock` selama operasi robot nyata.
+- **Resolusi**:
   ```bash
   rosparam set /use_sim_time false
   ```
-  Restart the robot bringup stack. Note that restarting nodes alone will not clear the parameter because it resides directly on `roscore`.
+  Restart stack bringup robot. Perhatikan bahwa me-restart node saja tidak akan membersihkan parameter ini karena berada langsung pada `roscore`.
 
-### 4. Video Stream Stalls or Fails on Local Wi-Fi (mDNS Candidate Error)
-- **Symptom**: WebRTC video fails to connect on a local network with `Errno 19: No such device`.
-- **Root Cause**: Chrome emits privacy-preserving `.local` mDNS candidate names. When the robot has no internet gateway, `aioice` fails attempting to join multicast DNS.
-- **Resolution**: Verify that `camera_client.py` contains the `_strip_mdns_candidates()` filter and that local ICE configuration variables (`LOCAL_STUN_URLS`, `LOCAL_TURN_URL`) are set to `none`.
+### 4. Video Stream Macet atau Gagal pada Wi-Fi Lokal (Error Kandidat mDNS)
+- **Gejala**: Video WebRTC gagal terhubung pada jaringan lokal dengan `Errno 19: No such device`.
+- **Akar Penyebab**: Chrome memancarkan nama kandidat mDNS `.local` yang menjaga privasi. Ketika robot tidak memiliki gateway internet, `aioice` gagal saat mencoba bergabung ke multicast DNS.
+- **Resolusi**: Verifikasi bahwa `camera_client.py` berisi filter `_strip_mdns_candidates()` dan bahwa variabel konfigurasi ICE lokal (`LOCAL_STUN_URLS`, `LOCAL_TURN_URL`) diset ke `none`.
 
-### 5. Keep-Out Costmap Deadlock
-- **Symptom**: Goals are accepted by `move_base`, but the robot never drives forward.
-- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
-- **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
+### 5. Deadlock Keep-Out Costmap
+- **Gejala**: Goal diterima oleh `move_base`, tetapi robot tidak pernah maju.
+- **Akar Penyebab**: `keepout_layer` diaktifkan di `costmap_common_params.yaml` tetapi menunggu `/msd700/keepout_grid`. Jika tidak ada keep-out grid yang dipublikasikan, costmap tidak pernah ditandai "current".
+- **Resolusi**: Pastikan `path_coverage_node` atau `system_command.py` mempublikasikan keepout grid kosong saat inisialisasi.
 
-## Related Documentation
+### 6. Sinkronisasi Lokal Melaporkan "Access Denied" (Drift Kredensial Database Lokal)
+- **Gejala**: Log sinkronisasi Local Mode menampilkan `Access denied for user '<MYSQL_USER>'@'127.0.0.1' (using password: YES)`, yang secara historis salah dilabeli sebagai gagal pada fase `handshake` padahal cloud dapat dijangkau.
+- **Akar Penyebab**: `docker/.env` pada unit adalah git-tracked dan per-host. Jika `MYSQL_USER`/`MYSQL_PASSWORD` di sana berubah (sebuah `git pull`, atau edit manual) setelah volume `mysql_data_local` milik unit sudah diinisialisasi, MySQL tetap menyimpan password lama yang dipanggang ke dalam data directory; ia tidak secara retroaktif mengadopsi yang baru. `sync_agent.js` kemudian gagal pada pembacaan `sync_state` lokal pertamanya sendiri dengan `ER_ACCESS_DENIED_ERROR`, bukan error konektivitas cloud. Lihat [Sinkronisasi Data: Klasifikasi Kegagalan](/id/development/data-sync#failure-classification) untuk bagaimana ini sekarang dibedakan dari pemadaman cloud yang sesungguhnya.
+- **Langkah Diagnostik**:
+  1. Pada unit: `cat docker/.env | grep MYSQL_` dan periksa apakah nilainya terlihat baru saja berubah (misalnya tepat setelah `git pull`).
+  2. Konfirmasi ketidakcocokan secara langsung: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — `Access denied` secara manual mengonfirmasi adanya drift, bukan gangguan sesaat.
+- **Resolusi**: Kembalikan `docker/.env` ke password yang menjadi dasar inisialisasi volume tersebut, atau, jika rotasi memang disengaja, jalankan `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` terhadap MySQL lokal sebagai root agar database cocok dengan nilai `.env` yang baru. Jangan menghapus `mysql_data_local` untuk "memperbaiki" ini; itu adalah satu-satunya salinan lokal milik unit atas peta/rute yang belum tersinkronisasi ke cloud, dan mode kegagalan ini berarti sinkronisasi itu sendiri saat ini tidak berfungsi.
 
-- [Architecture](/id/development/architecture): Two-channel communication models.
-- [Message Contracts](/id/development/message-contracts): Expected topic formats and payloads.
-- [Setup: Troubleshooting](/id/setup/troubleshooting): Technician and deployment troubleshooting steps.
+### 7. Dashboard Cloud Tidak Memiliki Topik Live (ROS Master Dibajak oleh Port yang Di-forward)
+- **Gejala**: Dashboard cloud menampilkan status, aktivitas, dan peta tersimpan secara normal, tetapi tidak ada yang live: tidak ada peta saat mapping, tidak ada lidar, tidak ada pose robot. Dashboard lokal unit itu sendiri berfungsi dengan sempurna. Kontainer backend masih melaporkan `Up`.
+- **Akar Penyebab**: Sebuah stack unit mendaftar pada ROS master **cloud** alih-alih miliknya sendiri, dan ROS mematikan node yang lebih lama setiap kali sebuah nama diklaim dua kali, sehingga server kehilangan `/rosbridge_websocket` (dan `/backend_node`) miliknya. Jalur masuk yang biasa adalah sesi VS Code Remote atau `ssh -L` yang mem-forward port master server ke sebuah laptop, yang membuat master jarak jauh menjawab pada `localhost`. Unit sekarang menggunakan `11321`/`11322` dan `run_msd.sh` menolak master yang bukan miliknya, tetapi sebuah override atau checkout pra-fix masih bisa sampai ke sana.
+- **Langkah Diagnostik**:
+  1. Jalankan `scripts/ros_doctor.sh` di kontainer backend. Ini menyebutkan pemilik master, mendaftar node yang terdaftar dari host yang tidak dapat dijangkau mesin ini, dan mengatakan apakah ada sesuatu yang listen di port rosbridge.
+  2. Tandanya adalah sebuah node rosbridge yang TERDAFTAR tetapi dari hostname asing, di samping hampir tidak ada yang listen di 9090/9091.
+  3. `docker ps` menampilkan kontainer backend `unhealthy` setelah healthcheck rosbridge-nya sempat diberi waktu untuk gagal.
+- **Resolusi**: Perbaiki `ROS_MASTER_URI` pada mesin yang nyasar (tutup port forward tersebut), lalu `rosnode cleanup` di server dan restart kontainer backend. Me-restart lebih dulu hanya memulai perebutan nama.
+
+## Dokumentasi Terkait
+
+- [Arsitektur](/id/development/architecture): Model komunikasi dua kanal.
+- [Kontrak Pesan](/id/development/message-contracts): Format topik dan payload yang diharapkan.
+- [Setup: Troubleshooting](/id/setup/troubleshooting): Langkah troubleshooting untuk teknisi dan deployment.

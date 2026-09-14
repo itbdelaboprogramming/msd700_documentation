@@ -3,26 +3,25 @@ outline: deep
 search: false
 ---
 
-
-# Quick Start Guide
+# クイックスタートガイド
 
 <RoleBadge role="user" />
 
-This guide walks you through logging in to the MSD700 dashboard, taking control of an assigned robot unit, loading a map, and executing your first navigation mission.
+本ガイドでは、MSD700ダッシュボードへのログイン、割り当てられたロボットユニットの制御権取得、マップの読み込み、最初のナビゲーションミッションの実行までの流れを説明します。
 
-## Prerequisites
+## 事前準備
 
-Before starting, ensure you have:
-1. An active user account on the dashboard.
-2. At least one robot assigned to your account by an administrator.
-3. Google Chrome or Microsoft Edge on a laptop or desktop computer.
+開始する前に、以下を確認してください。
+1. ダッシュボード上の有効なユーザーアカウントを持っていること。
+2. 管理者によって、少なくとも1台のロボットがアカウントに割り当てられていること。
+3. ノートPCまたはデスクトップPC上のGoogle ChromeまたはMicrosoft Edge。
 
 ---
 
-## Step 1: Log In to the Dashboard
+## ステップ1: ダッシュボードにログイン
 
-1. Open your browser and navigate to: `https://msd.nglobal.jp`.
-2. Enter your username and password, then click **Sign In**.
+1. ブラウザを開き、`https://msd.nglobal.jp` にアクセスします。
+2. ユーザー名とパスワードを入力し、**Sign In** をクリックします。
 
 ```mermaid
 flowchart LR
@@ -33,23 +32,23 @@ flowchart LR
 
 ---
 
-## Step 2: Select a Robot Unit
+## ステップ2: ロボットユニットを選択
 
-After logging in, the **Fleet Dashboard** displays all robots assigned to your rental profile:
+ログイン後、**Fleet Dashboard** にレンタルプロファイルへ割り当てられたすべてのロボットが表示されます。
 
-| Status Badge | Meaning | Action Allowed |
+| ステータスバッジ | 意味 | 実行可能な操作 |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | Robot is active, connected, and ready for commands. | Click unit card to open dashboard. |
-| <Badge type="warning" text="In Use" /> | Another operator is actively connected. | You may open the unit in view mode or request control takeover. |
-| <Badge type="danger" text="Offline" /> | Robot is powered down or disconnected from the network. | Wait for the unit to reconnect or check hardware power. |
+| <Badge type="tip" text="Online" /> | ロボットはアクティブで接続済み、コマンド受付可能です。 | ユニットカードをクリックしてダッシュボードを開きます。 |
+| <Badge type="warning" text="In Use" /> | 他のオペレーターがアクティブに接続中です。 | 閲覧モードでユニットを開くか、制御権の引き継ぎをリクエストできます。 |
+| <Badge type="danger" text="Offline" /> | ロボットの電源が切れているか、ネットワークから切断されています。 | ユニットが再接続するのを待つか、ハードウェアの電源を確認してください。 |
 
-Click on any **Online** robot card to enter its control workspace.
+**Online** 状態のロボットカードをクリックすると、その制御ワークスペースに入ります。
 
 ---
 
-## Step 3: Understand the Operator Workspace
+## ステップ3: オペレーターワークスペースを理解する
 
-The operator interface is divided into three main operational panels:
+オペレーターインターフェースは3つの主要な操作パネルに分かれています。
 
 ```mermaid
 flowchart TD
@@ -63,21 +62,21 @@ flowchart TD
 
 ---
 
-## Step 4: Load a Map
+## ステップ4: マップを読み込む
 
-1. In the left panel header, click the **Select Map** dropdown.
-2. Choose a pre-recorded map from the list (e.g. `Warehouse_Floor_1`).
-3. The 2D floorplan renders on the canvas along with the robot's current position (blue circular icon with direction arrow).
+1. 左パネルのヘッダーで **Select Map** ドロップダウンをクリックします。
+2. リストから事前に記録済みのマップを選択します(例: `Warehouse_Floor_1`)。
+3. 2D床図がキャンバスにレンダリングされ、ロボットの現在位置(方向矢印付きの青い円形アイコン)も表示されます。
 
-::: tip No map available?
-If no maps exist in the dropdown, see [Building a New Map (SLAM)](/ja/getting-started/features#1-autonomous-slam-mapping) to create your first map.
+::: tip 利用できるマップがない場合
+ドロップダウンにマップが存在しない場合は、[新しいマップの作成(SLAM)](/ja/getting-started/features#1-autonomous-slam-mapping)を参照して最初のマップを作成してください。
 :::
 
 ---
 
-## Step 5: Drive Manually (Teleoperation)
+## ステップ5: 手動走行(テレオペレーション)
 
-You can drive the robot manually using your keyboard or the on-screen virtual joystick:
+キーボードまたは画面上の仮想ジョイスティックを使ってロボットを手動で操作できます。
 
 ```mermaid
 flowchart LR
@@ -90,21 +89,21 @@ flowchart LR
   end
 ```
 
-### Teleoperation Controls:
-- **Linear Speed Slider**: Adjusts maximum forward speed (default: `0.20 m/s`, range: `0.05` to `0.40 m/s`).
-- **Angular Speed Slider**: Adjusts rotational turning speed (default: `0.40 rad/s`).
-- **Virtual Joystick**: Click and drag the on-screen joystick handle in the desired direction.
+### テレオペレーション操作:
+- **直進速度スライダー**: 最大前進速度を調整します(デフォルト: `0.20 m/s`、範囲: `0.05`〜`0.40 m/s`)。
+- **角速度スライダー**: 回転速度を調整します(デフォルト: `0.40 rad/s`)。
+- **仮想ジョイスティック**: 画面上のジョイスティックハンドルをクリックし、目的の方向にドラッグします。
 
 ---
 
-## Step 6: Dispatch a Navigation Goal (Point-to-Point)
+## ステップ6: ナビゲーションゴールを送信する(地点間移動)
 
-To send the robot to a target destination autonomously:
+ロボットを目標地点へ自律的に移動させるには、以下を行います。
 
-1. Click the **Navigate Goal** button on the canvas toolbar.
-2. Click on the desired destination point on the map.
-3. Click and drag outward to orient the target heading arrow, then release.
-4. The robot calculates a collision-free global path (blue line) and navigates autonomously to the target.
+1. キャンバスツールバーの **Navigate Goal** ボタンをクリックします。
+2. マップ上で目的の目標地点をクリックします。
+3. 外側にクリック&ドラッグして目標の向きの矢印を設定し、離します。
+4. ロボットは衝突のないグローバル経路(青い線)を計算し、目標地点まで自律的にナビゲートします。
 
 ```mermaid
 flowchart LR
@@ -115,16 +114,16 @@ flowchart LR
 
 ---
 
-## Step 7: Emergency Stop (E-Stop)
+## ステップ7: 緊急停止(E-Stop)
 
-The **Emergency Stop** button is prominently located at the top right of every page:
+**Emergency Stop** ボタンは、すべてのページの右上に目立つ形で配置されています。
 
-- **Activate E-Stop**: Click the red **Emergency Stop** button (or press the `Escape` key). The robot brakes immediately and halts all autonomous routines.
-- **Clear E-Stop**: Resolve the safety condition and click **Resume Operations** to restore motor power.
+- **E-Stopの作動**: 赤い **Emergency Stop** ボタンをクリックする(または `Escape` キーを押す)と、ロボットは即座にブレーキをかけ、すべての自律ルーチンを停止します。
+- **E-Stopの解除**: 安全上の問題を解決した後、**Resume Operations** をクリックしてモーター電源を復帰させます。
 
 ---
 
-## Next Steps
+## 次のステップ
 
-- Learn how to perform systematic area coverage in [System Features](/ja/getting-started/features).
-- Understand safety timers and Autopilot in [How the Robot Behaves](/ja/getting-started/behavior).
+- [システム機能](/ja/getting-started/features)で体系的なエリアカバレッジの実行方法を学びましょう。
+- [ロボットの動作仕様](/ja/getting-started/behavior)で安全タイマーとオートパイロットについて理解しましょう。

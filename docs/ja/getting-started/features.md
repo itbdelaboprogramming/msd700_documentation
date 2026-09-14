@@ -3,18 +3,17 @@ outline: deep
 search: false
 ---
 
-
-# System Features & User Guide
+# システム機能 & ユーザーガイド
 
 <RoleBadge role="user" />
 
-This document provides a comprehensive operational guide to all features available in the MSD700 web dashboard.
+本ドキュメントは、MSD700 Webダッシュボードで利用可能なすべての機能に関する包括的な操作ガイドです。
 
 ---
 
-## 1. Autonomous SLAM Mapping
+## 1. 自律SLAMマッピング
 
-Simultaneous Localization and Mapping (SLAM) is used to generate a digital 2D floorplan of a new facility.
+Simultaneous Localization and Mapping(SLAM)は、新しい施設のデジタル2D床図を生成するために使用されます。
 
 ```mermaid
 flowchart LR
@@ -23,21 +22,21 @@ flowchart LR
   HOME --> SAVE["4. Name & Save Map<br/>Generates .pgm, .yaml & Thumbnail"]
 ```
 
-### Step-by-Step Mapping Procedure:
-1. In the top navigation bar, click the **Mapping** tab.
-2. Click **Start Mapping Session**. The robot initializes its 360-degree LiDAR and opens a fresh blank grid canvas.
-3. Drive the robot slowly (approx. `0.15 m/s`) through the environment using keyboard keys `W`, `A`, `S`, `D`.
-4. Observe the live map canvas as black lines (walls/obstacles) and light gray areas (open free space) emerge.
-5. Once all rooms and corridors are cleanly mapped, drive the robot back to its intended starting/charging station.
-6. Click **Set Homebase Here** on the toolbar. This marks the reference origin for future missions.
-7. Click **Save Map**, enter a descriptive name (e.g. `First_Floor_Warehouse`), and click **Confirm**.
-8. The map is saved locally to the robot and synchronized to the cloud repository automatically.
+### マッピング手順(ステップバイステップ):
+1. 上部ナビゲーションバーで **Mapping** タブをクリックします。
+2. **Start Mapping Session** をクリックします。ロボットは360度LiDARを初期化し、新しい空のグリッドキャンバスを開きます。
+3. キーボードの `W`、`A`、`S`、`D` キーを使い、ロボットをゆっくり(約`0.15 m/s`)走行させて環境を巡回します。
+4. 黒い線(壁/障害物)と明るいグレーの領域(開けた空きスペース)が現れる様子をライブマップキャンバスで確認します。
+5. すべての部屋と廊下がきれいにマッピングされたら、ロボットを想定している開始/充電ステーションまで戻します。
+6. ツールバーの **Set Homebase Here** をクリックします。これにより、今後のミッションの基準原点がマークされます。
+7. **Save Map** をクリックし、わかりやすい名前(例: `First_Floor_Warehouse`)を入力して **Confirm** をクリックします。
+8. マップはロボットにローカル保存されると同時に、自動的にクラウドリポジトリへ同期されます。
 
 ---
 
-## 2. Point-to-Point Navigation
+## 2. 地点間ナビゲーション
 
-Allows sending the robot to precise coordinates with automatic path planning and dynamic obstacle avoidance.
+自動経路計画と動的な障害物回避により、ロボットを正確な座標へ送ることができます。
 
 ```mermaid
 flowchart TD
@@ -48,17 +47,17 @@ flowchart TD
   AVOID --> REACH["Arrives at goal and aligns to target heading"]
 ```
 
-### Path Canvas Visual Indicators:
-- **Blue Line**: The global planned path computed across static map geometry.
-- **Green/Red Trajectory**: The active local trajectory calculated in real time (up to 4 meters ahead).
-- **Red Laser Dots**: Live 2D LiDAR reflection points showing real-time obstacles.
-- **Translucent Hull**: The safety footprint envelope surrounding the robot.
+### 経路キャンバスの視覚的インジケーター:
+- **青い線**: 静的なマップ形状全体で計算されたグローバル計画経路です。
+- **緑/赤の軌跡**: リアルタイムに計算されるアクティブなローカル軌跡です(最大4メートル先まで)。
+- **赤いレーザードット**: リアルタイムの障害物を示すライブ2D LiDAR反射点です。
+- **半透明のハル**: ロボットを取り囲む安全フットプリントのエンベロープです。
 
 ---
 
-## 3. Boustrophedon Area Coverage Sweeping
+## 3. ボウストロフェドン(往復走査)エリアカバレッジ清掃
 
-For floor cleaning, ultraviolet disinfection, or surface inspection, the robot performs systematic serpentine sweep passes within custom polygonal boundaries.
+床清掃、紫外線消毒、表面検査のために、ロボットはカスタムポリゴン境界内で体系的な往復清掃パスを実行します。
 
 ```mermaid
 flowchart LR
@@ -67,17 +66,17 @@ flowchart LR
   PITCH --> EXEC["4. Execute Sweep Mission<br/>Parallel lanes with 90-degree comb turns"]
 ```
 
-### Coverage Configuration Options:
-1. **Polygon Drawing**: Click the **Draw Area** tool, then click sequential points on the canvas to outline the cleaning region. Double-click or click the first vertex to close the polygon.
-2. **Keep-Out Zones**: Draw polygons inside the area marked as **No-Cover** to prevent the robot from entering hazardous or restricted zones.
-3. **Sweep Direction**: Align the sweep angle to the long axis of the room to minimize turning cycles.
-4. **Lane Pitch**: Default is `0.574 m`, calculated from the 0.70 m chassis width with 18% lane overlap to guarantee 100% coverage.
+### カバレッジ設定オプション:
+1. **ポリゴンの描画**: **Draw Area** ツールをクリックし、キャンバス上を順にクリックして清掃領域の輪郭を描きます。ダブルクリックするか最初の頂点をクリックしてポリゴンを閉じます。
+2. **立入禁止ゾーン**: エリア内に **No-Cover** としてマークされたポリゴンを描き、ロボットが危険区域や制限区域に進入しないようにします。
+3. **清掃方向**: 旋回回数を最小限に抑えるため、清掃角度を部屋の長軸に合わせます。
+4. **レーンピッチ**: デフォルトは `0.574 m` で、100%のカバレッジを保証するために、0.70 mのシャーシ幅と18%のレーンオーバーラップから算出されています。
 
 ---
 
-## 4. Multi-Waypoint Routes & Sequence Playlists
+## 4. マルチウェイポイントルート & 連続プレイリスト
 
-You can chain multiple navigation goals and coverage areas into automated mission playlists.
+複数のナビゲーションゴールとカバレッジエリアを連結し、自動ミッションプレイリストとして実行できます。
 
 ```mermaid
 flowchart LR
@@ -89,50 +88,51 @@ flowchart LR
   end
 ```
 
-### Creating and Running a Playlist:
-1. Navigate to the **Playlists** tab.
-2. Click **Create New Playlist** and give it a name (e.g. `Nightly_Sanitization_Routine`).
-3. Click **Add Step** and select saved waypoints or coverage areas from your library.
-4. Set optional pause dwell times at specific waypoints (e.g. wait 30 seconds at an inspection checkpoint).
-5. Toggle **Autopilot Mode ON** and click **Start Playlist**.
-6. The robot will execute every step in sequence and return to its homebase when finished.
+### プレイリストの作成と実行:
+1. **Playlists** タブに移動します。
+2. **Create New Playlist** をクリックし、名前を付けます(例: `Nightly_Sanitization_Routine`)。
+3. **Add Step** をクリックし、ライブラリから保存済みのウェイポイントまたはカバレッジエリアを選択します。
+4. 特定のウェイポイントでオプションの一時停止時間を設定します(例: 点検チェックポイントで30秒待機)。
+5. **Autopilot Mode ON** を切り替え、**Start Playlist** をクリックします。
+6. ロボットはすべてのステップを順に実行し、完了後にホームベースへ戻ります。
 
 ---
 
-## 5. Zero-Spin Heading Alignment (Auto-Align)
+## 5. 回転レスな向き合わせ(オートアライン)
 
-When placing the robot in a room whose map is already recorded, traditional robots must rotate 360 degrees to find their heading, which can collide with nearby walls or pallets.
+マップがすでに記録されている部屋にロボットを配置する場合、従来のロボットは向きを見つけるために360度回転する必要があり、近くの壁やパレットに衝突する可能性があります。
 
-MSD700 includes **Zero-Spin Auto-Align**:
-- Click **Auto Align** on the navigation toolbar.
-- The robot performs Correlative Scan Matching (CSM) against the static map in **less than 50 milliseconds without moving**.
-- If the robot is in a symmetric corridor, it performs a subtle 15 cm forward/backward jog to establish heading without rotating in place.
+MSD700には **Zero-Spin Auto-Align** が搭載されています。
 
----
-
-## 6. Live HD Video Streaming
-
-The top-right panel provides a real-time, low-latency WebRTC video stream directly from the onboard camera.
-
-- **Full Screen View**: Click the expand icon to enlarge the video feed.
-- **Stall Detector**: If the video stream freezes due to temporary network disruption, the player automatically triggers peer-reflexive ICE reconnection.
+- ナビゲーションツールバーの **Auto Align** をクリックします。
+- ロボットは静的マップに対してCorrelative Scan Matching(CSM)を実行し、**動かずに50ミリ秒未満**で処理を完了します。
+- ロボットが対称的な廊下にいる場合は、その場で回転することなく向きを確定するため、前後15cmのわずかなジョグ動作を行います。
 
 ---
 
-## 7. Offline Local Operation
+## 6. ライブHD映像ストリーミング
 
-When deploying the robot in facilities without internet or cellular connectivity:
+右上のパネルでは、搭載カメラからのリアルタイム低遅延WebRTC映像ストリームが提供されます。
 
-1. Connect your computer or tablet to the robot's onboard Wi-Fi hotspot (`MSD700_Unit_<ULID>`).
-2. Open `http://<jetson-ip>:3000` in your browser.
-3. The **Local Mode Badge** in the header confirms offline operation.
-4. All mapping, navigation, and area coverage features operate with full functionality.
-5. When the robot reconnects to internet Wi-Fi, click the Local Badge and select **Sync Now** to push recorded maps to the cloud database.
+- **フルスクリーン表示**: 拡大アイコンをクリックして映像フィードを拡大します。
+- **フリーズ検出**: 一時的なネットワーク障害により映像ストリームがフリーズした場合、プレーヤーは自動的にpeer-reflexive ICE再接続をトリガーします。
 
 ---
 
-## Related Documentation
+## 7. オフラインローカル運用
 
-- [Quick Start Guide](/ja/getting-started/quick-start): Getting started in 5 minutes.
-- [How the Robot Behaves](/ja/getting-started/behavior): Safety watchdogs and session recovery.
-- [Operator Troubleshooting](/ja/getting-started/troubleshooting): Diagnosing common operator issues.
+インターネットやセルラー接続のない施設でロボットを展開する場合:
+
+1. コンピュータまたはタブレットを、ロボット搭載のWi-Fiホットスポット(`MSD700_Unit_<ULID>`)に接続します。
+2. ブラウザで `http://<jetson-ip>:3000` を開きます。
+3. ヘッダーの **Local Mode Badge** がオフライン運用を確認します。
+4. マッピング、ナビゲーション、エリアカバレッジのすべての機能がフル機能で動作します。
+5. ロボットがインターネットWi-Fiに再接続したら、Local Badgeをクリックして **Sync Now** を選択し、記録済みのマップをクラウドデータベースへ送信します。
+
+---
+
+## 関連ドキュメント
+
+- [クイックスタートガイド](/ja/getting-started/quick-start): 5分で始める導入手順。
+- [ロボットの動作仕様](/ja/getting-started/behavior): セーフティウォッチドッグとセッション復旧。
+- [オペレーター向けトラブルシューティング](/ja/getting-started/troubleshooting): よくあるオペレーター問題の診断。

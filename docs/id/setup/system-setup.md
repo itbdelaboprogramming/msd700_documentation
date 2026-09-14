@@ -1,15 +1,15 @@
-# System Setup
+# Penyiapan Sistem
 
 <RoleBadge role="technician" />
 
-How to confirm a configured [Server](/id/setup/server-setup) and a configured [Unit](/id/setup/unit-setup)
-are actually working together as one system. If you followed both of those pages in order and the
-unit enrolled successfully, most of this is verification rather than new configuration.
+Cara memastikan [Server](/id/setup/server-setup) yang telah dikonfigurasi dan [Unit](/id/setup/unit-setup) yang telah dikonfigurasi
+benar-benar bekerja sama sebagai satu sistem. Jika Anda mengikuti kedua halaman tersebut secara berurutan dan
+unit berhasil melakukan enrolment, sebagian besar langkah di sini adalah verifikasi, bukan konfigurasi baru.
 
-## Overview
+## Ikhtisar
 
-A Unit and the Server talk over channels that fail **independently**. Telling them apart is the
-whole skill here.
+Sebuah Unit dan Server berkomunikasi melalui beberapa jalur (channel) yang dapat gagal secara **independen**. Membedakan jalur-jalur
+tersebut adalah keahlian inti di sini.
 
 ```mermaid
 flowchart LR
@@ -35,25 +35,25 @@ flowchart LR
   UI -.->|"4. WebRTC media, direct or via coturn"| R
 ```
 
-| # | Channel | Carries | Broken looks like |
+| # | Jalur | Membawa | Tampilan saat rusak |
 | --- | --- | --- | --- |
-| 1 | MQTT | commands, feedback, and every stream, as strings | Unit shows **offline**. Nothing works |
-| 2 | rosbridge | the browser's subscription to cloud-side typed topics | Unit is **online**, commands work, map canvas blank |
-| 3 | signalling | WebRTC peer negotiation | No video, everything else fine |
-| 4 | WebRTC media | the camera image itself | Video works on the LAN, never off it. That is the TURN relay |
+| 1 | MQTT | perintah, feedback, dan setiap stream, dalam bentuk string | Unit tampak **offline**. Tidak ada yang berfungsi |
+| 2 | rosbridge | langganan (subscription) browser ke topic bertipe sisi cloud | Unit **online**, perintah berfungsi, kanvas peta kosong |
+| 3 | signalling | negosiasi peer WebRTC | Tidak ada video, sisanya baik-baik saja |
+| 4 | Media WebRTC | gambar kamera itu sendiri | Video berfungsi di LAN, tidak pernah di luar itu. Itulah relay TURN |
 
-There is a fifth failure that looks like number 2: the unit is online and rosbridge is connected,
-but **nobody has opened that unit recently enough for its per-unit container to still be running**,
-so the cloud-side relays that rosbridge subscribes to do not exist. Same blank canvas, different
-cause. Check with `docker ps --filter name=rosweb_unit_`.
+Ada kegagalan kelima yang tampak seperti nomor 2: unit online dan rosbridge terhubung,
+tetapi **belum ada yang membuka unit tersebut cukup baru-baru ini agar container per-unit-nya tetap berjalan**,
+sehingga relay sisi cloud yang menjadi tempat rosbridge berlangganan tidak ada. Kanvas kosong yang sama, penyebab
+yang berbeda. Periksa dengan `docker ps --filter name=rosweb_unit_`.
 
-## 1. Confirm the network path
+## 1. Konfirmasi jalur jaringan
 
-| From | To | Port | Required for |
+| Dari | Ke | Port | Diperlukan untuk |
 | --- | --- | --- | --- |
-| Unit | Server | `8883` TCP (prod) or `8884` TCP (dev) | Everything. This is the only mandatory one |
-| Operator browser | Server | `443` TCP | Dashboard, API, rosbridge, signalling |
-| Operator browser | Server | `3478` UDP+TCP and the relay range | WebRTC video when there is no direct path |
+| Unit | Server | TCP `8883` (prod) atau TCP `8884` (dev) | Semuanya. Ini satu-satunya yang wajib |
+| Browser operator | Server | TCP `443` | Dashboard, API, rosbridge, signalling |
+| Browser operator | Server | UDP+TCP `3478` dan rentang relay | Video WebRTC saat tidak ada jalur langsung |
 
 ```bash
 # From the Unit: can it reach the broker at all?
@@ -64,25 +64,25 @@ openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/n
   | openssl x509 -noout -subject -dates
 ```
 
-::: warning An expired certificate fails silently in the browser
-The dashboard's WebSocket connections just never open. Most browsers show nothing more useful than a
-generic network error in the console, so check the certificate before chasing anything else. Note
-that the MQTT broker's certificate is a **separate artifact** from Apache's, rebuilt from the same
-PEM files: see [Maintenance](/id/setup/maintenance#certificates).
+::: warning Sertifikat kedaluwarsa gagal secara diam-diam di browser
+Koneksi WebSocket dashboard hanya tidak pernah terbuka. Sebagian besar browser tidak menampilkan apa pun
+yang lebih berguna selain error jaringan generik di konsol, jadi periksa sertifikat terlebih dahulu sebelum
+mengejar hal lain. Perhatikan bahwa sertifikat broker MQTT adalah **artefak terpisah** dari milik Apache,
+dibangun ulang dari file PEM yang sama: lihat [Pemeliharaan](/id/setup/maintenance#certificates).
 :::
 
-::: info Choosing production vs. dev
-`--dev` on the unit side (`./scripts/docker-manager.sh up --dev`) points enrolment and the MQTT
-bridge at the Server's `server_dev` profile instead of `server_prod`: different port, different
-database, different fleet. It's the right choice while you're testing a new unit or a server-side
-change; drop the flag once you're deploying for real. A unit's identity is *not* shared between the
-two: enrolling against dev does not register it in prod, and vice versa.
+::: info Memilih antara produksi vs. dev
+`--dev` di sisi unit (`./scripts/docker-manager.sh up --dev`) mengarahkan enrolment dan jembatan MQTT
+ke profil `server_dev` milik Server, bukan `server_prod`: port berbeda, database berbeda, armada berbeda.
+Ini pilihan yang tepat saat Anda sedang menguji unit baru atau perubahan sisi server; hapus flag tersebut
+setelah Anda melakukan deployment sungguhan. Identitas sebuah unit *tidak* dibagi antara keduanya:
+melakukan enrolment terhadap dev tidak mendaftarkannya di prod, begitu pula sebaliknya.
 :::
 
-## 2. Confirm the unit registered correctly
+## 2. Konfirmasi unit terdaftar dengan benar
 
-In the admin console, under **Registered Units**, find the unit you approved in
-[Unit Setup](/id/setup/unit-setup). Note its ULID; you'll want it for the next check.
+Di konsol admin, di bawah **Registered Units**, temukan unit yang Anda setujui pada
+[Penyiapan Unit](/id/setup/unit-setup). Catat ULID-nya; Anda akan membutuhkannya untuk pemeriksaan berikutnya.
 
 ```bash
 # On the Server. The per-unit container has to be RUNNING for these topics to exist,
@@ -92,53 +92,53 @@ docker exec -it ros_web_ui_v2_nakayama_ros bash -lc \
   'source /home/itbdelabo/ros-web-ui-ws/devel/setup.bash && rostopic list | grep unit_<ULID>'
 ```
 
-You should see topics like `/unit_<ULID>/system_command`, `/unit_<ULID>/system_feedback` and
-`/unit_<ULID>/server/robot_pose`. Seeing nothing here, with no error anywhere else, is the single
-most common "it looks broken but is not telling you why" symptom in this system.
+Anda seharusnya melihat topic seperti `/unit_<ULID>/system_command`, `/unit_<ULID>/system_feedback`, dan
+`/unit_<ULID>/server/robot_pose`. Tidak melihat apa pun di sini, tanpa error di tempat lain, adalah gejala
+"tampak rusak tapi tidak memberi tahu alasannya" yang paling umum di sistem ini.
 
-You can also watch the broker directly, which separates "the robot is not publishing" from "the
-cloud relays are not running":
+Anda juga bisa mengamati broker secara langsung, yang memisahkan antara "robot tidak melakukan publish" dan
+"relay cloud tidak berjalan":
 
 ```bash
 mosquitto_sub -h msd.nglobal.jp -p 8883 --capath /etc/ssl/certs \
   -t '/unit_<ULID>/#' -v | head -20
 ```
 
-## 3. End-to-end verification checklist
+## 3. Checklist verifikasi menyeluruh
 
-Work down this list. Each item rules out one of the channels in the overview diagram.
+Kerjakan daftar ini dari atas ke bawah. Setiap butir menyingkirkan satu kemungkinan dari jalur-jalur pada diagram ikhtisar.
 
-- [ ] Server healthy: `docker compose --profile server_prod ps` shows every service `Up` or `healthy`
-- [ ] Unit's ROS graph healthy: `rosnode list` inside the unit's container shows the bringup nodes
-- [ ] Unit shows **online** in the admin console's Registered Units list (channel 1, MQTT)
-- [ ] Its per-unit container is running: `docker ps --filter name=rosweb_unit_`
-- [ ] Opening the unit shows an up-to-date robot position and a live map (channel 2, rosbridge)
-- [ ] The live camera feed appears **from outside the unit's LAN** (channels 3 and 4)
-- [ ] A small W-A-S-D movement actually moves the robot, and the dashboard position follows
-- [ ] A click-to-navigate goal is accepted and the robot drives to it
-- [ ] Emergency Stop, tested once, stops the robot immediately
-- [ ] Closing the browser mid-operation pauses the robot within about 10 seconds
+- [ ] Server sehat: `docker compose --profile server_prod ps` menunjukkan setiap service `Up` atau `healthy`
+- [ ] Graf ROS unit sehat: `rosnode list` di dalam container unit menunjukkan node-node bringup
+- [ ] Unit tampak **online** pada daftar Registered Units di konsol admin (jalur 1, MQTT)
+- [ ] Container per-unit-nya berjalan: `docker ps --filter name=rosweb_unit_`
+- [ ] Membuka unit menunjukkan posisi robot yang mutakhir dan peta live (jalur 2, rosbridge)
+- [ ] Feed kamera live muncul **dari luar LAN unit tersebut** (jalur 3 dan 4)
+- [ ] Gerakan W-A-S-D kecil benar-benar menggerakkan robot, dan posisi di dashboard mengikuti
+- [ ] Goal click-to-navigate diterima dan robot bergerak ke sana
+- [ ] Emergency Stop, diuji sekali, menghentikan robot dengan segera
+- [ ] Menutup browser di tengah operasi menjeda robot dalam waktu sekitar 10 detik
 
-::: warning Do not skip the last four
-A unit can look fully connected (online badge, video working) while the command path is broken in
-one direction, and that only shows up once something is asked to move. The disconnect test matters
-just as much: it is the safety behavior, and the only way to know it works is to trigger it
-deliberately once, on a robot with clear space around it.
+::: warning Jangan lewati empat butir terakhir
+Sebuah unit bisa tampak terhubung sepenuhnya (badge online, video berfungsi) sementara jalur perintah rusak
+di satu arah, dan itu hanya terlihat begitu robot diminta bergerak. Pengujian disconnect sama pentingnya:
+itu adalah perilaku keselamatan, dan satu-satunya cara mengetahui apakah itu berfungsi adalah dengan
+memicunya secara sengaja sekali, pada robot dengan ruang bebas di sekitarnya.
 :::
 
-## 4. Handover
+## 4. Serah Terima
 
-Once verification passes, the unit is ready for day-to-day use. Two things still need doing before
-handing it to an operator:
+Setelah verifikasi berhasil, unit siap untuk penggunaan sehari-hari. Dua hal masih perlu dilakukan sebelum
+menyerahkannya ke operator:
 
-1. **Grant dashboard access.** In the admin console, add the operator's account to the rental
-   profile that includes this unit. A unit existing and being enrolled does not, by itself, make it
-   visible to any user account: units are shared, fleet-wide resources, and access to them is
-   controlled entirely through profiles, not through the unit itself.
-2. **Point them at [Getting Started](/id/getting-started/).** That section assumes exactly this state:
-   a unit that's already installed, connected, and access-granted.
+1. **Berikan akses dashboard.** Di konsol admin, tambahkan akun operator ke profil penyewaan
+   yang mencakup unit ini. Sebuah unit yang ada dan telah di-enrol tidak, dengan sendirinya, membuatnya
+   terlihat oleh akun pengguna mana pun: unit adalah sumber daya bersama lintas armada, dan akses ke
+   unit tersebut sepenuhnya dikontrol melalui profil, bukan melalui unit itu sendiri.
+2. **Arahkan mereka ke [Memulai](/id/getting-started/).** Bagian tersebut mengasumsikan persis kondisi ini:
+   unit yang sudah terpasang, terhubung, dan telah diberi akses.
 
-## Next step
+## Langkah Berikutnya
 
-- Set up a [Maintenance](/id/setup/maintenance) schedule for the new deployment.
-- Keep [Troubleshooting](/id/setup/troubleshooting) handy for future issues.
+- Siapkan jadwal [Pemeliharaan](/id/setup/maintenance) untuk deployment baru ini.
+- Simpan [Pemecahan Masalah](/id/setup/troubleshooting) untuk masalah di masa mendatang.

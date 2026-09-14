@@ -3,14 +3,13 @@ outline: deep
 search: false
 ---
 
-
-# Frontend Canvas & React Visualization Pipeline
+# フロントエンド Canvas & React ビジュアライゼーションパイプライン
 
 <RoleBadge role="developer" />
 
-This document details the 2D rendering pipeline, coordinate space conversions, layer stacking architecture, and React lifecycle integration implemented in `ROS-dashboard-next-ts` using HTML5 Canvas, EaselJS, and `ROS2D.js`.
+このドキュメントは、`ROS-dashboard-next-ts` において HTML5 Canvas、EaselJS、`ROS2D.js` を使って実装されている、2D レンダリングパイプライン、座標空間変換、レイヤースタッキングアーキテクチャ、React ライフサイクル統合について詳述します。
 
-## Canvas Rendering Pipeline Architecture
+## Canvas レンダリングパイプラインアーキテクチャ
 
 ```mermaid
 flowchart TD
@@ -38,31 +37,31 @@ flowchart TD
 
 ---
 
-## Coordinate Transformations: Metric Space to Screen Pixels
+## 座標変換: メートル空間からスクリーンピクセルへ
 
-The ROS coordinate frame is metric (meters, with $(0, 0)$ at map origin), while HTML5 Canvas uses top-left origin pixel coordinates $(p_x, p_y)$.
+ROS の座標フレームはメートル単位(マップ原点が $(0, 0)$)であるのに対し、HTML5 Canvas は左上を原点とするピクセル座標 $(p_x, p_y)$ を使用します。
 
-Given map resolution $r$ (meters per pixel), image height $H$ (pixels), and map origin $\mathbf{o} = [x_0, y_0]^T$:
+マップ解像度 $r$(1ピクセルあたりのメートル)、画像高さ $H$(ピクセル)、マップ原点 $\mathbf{o} = [x_0, y_0]^T$ が与えられたとき:
 
-### 1. Metric to Canvas Pixel Conversion:
+### 1. メートルから Canvas ピクセルへの変換:
 $$p_x = \frac{x - x_0}{r}$$
 
 $$p_y = H - \frac{y - y_0}{r}$$
 
-*(The $y$-axis is inverted because ROS $Y$ increases upward while Canvas $Y$ increases downward).*
+*($y$ 軸が反転しているのは、ROS の $Y$ が上方向に増加するのに対し、Canvas の $Y$ は下方向に増加するためです)。*
 
-### 2. Canvas Pixel to Metric Conversion (For Goal Dispatching):
+### 2. Canvas ピクセルからメートルへの変換(ゴール送信用):
 $$x = x_0 + (p_x \cdot r)$$
 
 $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ---
 
-## The `createjs.Stage.prototype` Patch (`rosScriptLoader.ts`)
+## `createjs.Stage.prototype` パッチ(`rosScriptLoader.ts`)
 
-In modern React SPA frameworks (such as Next.js 14+), components mount and unmount rapidly during page transitions. Standard `ROS2D.js` binds coordinate conversion functions to stage instances on creation, which can be lost upon React DOM re-renders, causing fatal `TypeError: this.stage.globalToRos is not a function` errors.
+Next.js 14+ のような最新の React SPA フレームワークでは、ページ遷移中にコンポーネントが高速にマウント・アンマウントされます。標準の `ROS2D.js` は座標変換関数を生成時に stage インスタンスへバインドしますが、これは React の DOM 再レンダリング時に失われることがあり、致命的な `TypeError: this.stage.globalToRos is not a function` エラーを引き起こします。
 
-To guarantee zero-crash visualization resilience, `rosScriptLoader.ts` dynamically patches `createjs.Stage.prototype` prior to canvas instantiation:
+クラッシュのないビジュアライゼーションのレジリエンスを保証するため、`rosScriptLoader.ts` は canvas のインスタンス化前に `createjs.Stage.prototype` を動的にパッチします。
 
 ```typescript
 // scripts/rosScriptLoader.ts
@@ -91,15 +90,15 @@ export function patchEaselJSStage(): void {
 
 ---
 
-## Interactive Polygon Drawing Engine
+## インタラクティブなポリゴン描画エンジン
 
-When an operator defines area coverage sweep polygons or keep-out zones:
-1. **Vertex Placement**: Clicking the canvas records metric coordinates $(x_i, y_i)$.
-2. **Dynamic Rubberbanding**: As the mouse moves, a dynamic temporary edge line renders to the cursor position.
-3. **Closing Snapping**: If the cursor enters within $15\text{ pixels}$ of the initial vertex, the polygon snaps closed and rasterizes into the `/msd700/keepout_grid` or coverage boundary.
+オペレーターがエリアカバレッジのスイープポリゴンや keep-out ゾーンを定義する際:
+1. **頂点の配置**: キャンバスをクリックするとメートル座標 $(x_i, y_i)$ が記録されます。
+2. **動的なラバーバンディング**: マウスが動くと、カーソル位置まで動的な仮のエッジラインがレンダリングされます。
+3. **クロージングスナップ**: カーソルが最初の頂点から $15\text{ ピクセル}$ 以内に入ると、ポリゴンはスナップして閉じ、`/msd700/keepout_grid` またはカバレッジ境界へとラスタライズされます。
 
-## Related Documentation
+## 関連ドキュメント
 
-- [rosbridge Protocol](/ja/development/rosbridge-protocol): WebSocket JSON operations and streaming topics.
-- [Boustrophedon Coverage](/ja/development/boustrophedon-and-alignment): Dual-geometry sweep calculations.
-- [API Reference](/ja/development/api-reference): Map and route REST endpoints.
+- [rosbridge プロトコル](/ja/development/rosbridge-protocol): WebSocket の JSON 操作とストリーミングトピック。
+- [ボウストロフェドン・カバレッジ](/ja/development/ros/boustrophedon-and-alignment): デュアルジオメトリのスイープ計算。
+- [API リファレンス](/ja/development/api-reference): マップおよびルートの REST エンドポイント。
