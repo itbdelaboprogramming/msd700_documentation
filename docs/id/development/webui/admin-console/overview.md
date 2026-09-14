@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Sisi back-office dari MSD700, dicapai lewat [login admin](/id/development/webui/accounts/overview#admin-login-admin)
+Sisi back-office dari MSD700, dicapai lewat [login admin](/id/development/webui/accounts/overview#login-admin-admin)
 terpisah yang dijelaskan di Akun & Akses: sebuah shell lima-tab (`admin/dashboard.tsx`, satu
 komponen `*Panel.tsx` per tab di bawah `src/components/admin/`) untuk staf yang menjalankan seluruh
 armada alih-alih mengemudikan satu robot. Halaman ini memperkenalkan shell itu sendiri, dua peran
@@ -38,7 +38,7 @@ atau menghapus akun back-office lain.
 ## Dua peran admin, ditegakkan di kedua sisi
 
 `admin_accounts.role` adalah salah satu dari `admin` atau `superadmin` (lihat
-[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access)). Tab
+[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses)). Tab
 Admin tidak sekadar disembunyikan secara visual untuk `admin` biasa; ia dihilangkan sepenuhnya dari
 daftar tab, dan aksi yang diekspos juga dijaga di sisi server.
 
@@ -48,7 +48,7 @@ menghentikan aksinya. Pemeriksaan sisi-server yang sesuailah yang menegakkan atu
 khusus-superadmin, sama seperti `admin_accounts` yang dijaga sebagai tabel yang sepenuhnya
 terpisah dari `users` alih-alih flag peran pada satu tabel bersama (lihat
 [Akun & Akses § Akun operator dan akun admin adalah sistem
-terpisah](/id/development/webui/accounts/overview#operator-accounts-and-admin-accounts-are-separate-systems)).
+terpisah](/id/development/webui/accounts/overview#akun-operator-dan-akun-admin-adalah-sistem-yang-terpisah)).
 Seorang admin biasa yang mengetuk aksi tab Admin secara langsung, melewati UI, diharapkan ditolak
 oleh backend, bukan hanya dicegah melihat tombolnya.
 :::
@@ -87,7 +87,7 @@ admin dapat dihapus sepenuhnya. Tidak ada apa pun dalam skema yang bergantung pa
 stempel `created_by` / `modified_by` milik seorang admin pada `rental_profiles`, `units`,
 `profile_backups`, `pending_units`, dan `unit_enrollment_codes` hanya untuk atribusi, sehingga
 menghapus akun tidak membuat yatim atau menghancurkan apa pun yang disentuhnya (lihat
-[Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-keys-in-full)).
+[Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap)).
 
 ## Menu akun
 
@@ -98,7 +98,7 @@ akun lain, dan mencakup tiga hal:
 - Melihat identitas admin yang sedang masuk itu sendiri (nama pengguna, peran).
 - Menyunting profil admin itu sendiri (nama pengguna, nama lengkap).
 - Berpindah ke layar ganti-kata-sandi-sendiri, mode sukarela yang sama seperti yang dijelaskan di
-  [Akun & Akses § Ganti kata sandi admin](/id/development/webui/accounts/overview#admin-change-password-admin-change-password).
+  [Akun & Akses § Ganti kata sandi admin](/id/development/webui/accounts/overview#ganti-password-admin-admin-change-password).
 
 Mereset kata sandi akun *lain* adalah aksi terpisah, khusus per tab — tab Admin di atas untuk
 sesama akun back-office, [Operator](/id/development/webui/admin-console/operators) untuk akun

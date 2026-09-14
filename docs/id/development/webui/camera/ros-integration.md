@@ -134,7 +134,7 @@ melibatkan build image. `signalling_server`, sebaliknya, adalah salah satu layan
 **`COPY`**-kan oleh `Dockerfile.webui-local` ke dalam image local-stack milik unit itu sendiri;
 perubahan di sana membutuhkan rebuild yang sama, yang sudah diperiksa staleness-nya oleh
 `docker-manager.sh` pada image dashboard dan backend (lihat
-[Referensi Docker § Yang dilakukan `up`, secara berurutan](/id/setup/docker-reference#what-up-does-in-order)).
+[Referensi Docker § Yang dilakukan `up`, secara berurutan](/id/setup/docker-reference#apa-yang-dilakukan-up-secara-berurutan)).
 Melupakan hal ini terlihat persis seperti kegagalan staleness yang didokumentasikan di sana: stack
 naik dengan bersih dan tetap menyajikan logika signalling dari sebelum perubahan itu dibuat.
 

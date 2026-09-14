@@ -68,7 +68,7 @@ openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/n
 Koneksi WebSocket dashboard hanya tidak pernah terbuka. Sebagian besar browser tidak menampilkan apa pun
 yang lebih berguna selain error jaringan generik di konsol, jadi periksa sertifikat terlebih dahulu sebelum
 mengejar hal lain. Perhatikan bahwa sertifikat broker MQTT adalah **artefak terpisah** dari milik Apache,
-dibangun ulang dari file PEM yang sama: lihat [Pemeliharaan](/id/setup/maintenance#certificates).
+dibangun ulang dari file PEM yang sama: lihat [Pemeliharaan](/id/setup/maintenance#sertifikat).
 :::
 
 ::: info Memilih antara produksi vs. dev

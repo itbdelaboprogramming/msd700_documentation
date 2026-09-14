@@ -19,7 +19,7 @@ unggah, dan pulihkan.
 ## Dua cakupan, satu tab untuk separuh profil
 
 [Cadangan dan Pemulihan § Arsitektur Backup
-Dua-Cakupan](/id/development/backup-and-restore#dual-scope-backup-architecture) mendefinisikan dua
+Dua-Cakupan](/id/development/backup-and-restore#arsitektur-backup-dua-lingkup) mendefinisikan dua
 cakupan backup independen, dikunci dengan `scope: 'profile'` atau `scope: 'unit'`. Tab ini
 mengerjakan sisi bercakupan-profil: arsip berpusat-penyewa yang menangkap "semua peta, rute, area,
 dan playlist yang dimiliki sebuah profil penyewaan di seluruh robot" yang pernah dipakainya,
@@ -30,7 +30,7 @@ dicapai dari tab Unit sebagai gantinya (lihat di atas).
 ## Buat arsip sebuah profil
 
 Menghasilkan arsip `.tar.gz` dengan struktur yang didokumentasikan di
-[Cadangan dan Pemulihan § Struktur Arsip](/id/development/backup-and-restore#archive-structure-tar-gz):
+[Cadangan dan Pemulihan § Struktur Arsip](/id/development/backup-and-restore#struktur-arsip-tar-gz):
 sebuah `manifest.json`, sebuah `database_dump.sql` berisi pernyataan SQL insert bercakupan, dan
 sebuah direktori `maps/` berisi berkas peta biner (`.pgm`, `.yaml`, `.png`) yang menyertainya.
 
@@ -41,14 +41,14 @@ operator.** Manifest dan `database_dump.sql` memang menstempel baris individual 
 pengguna `created_by` untuk atribusi — contoh `manifest.json` yang sama di Cadangan dan Pemulihan
 menampilkan field `created_by` tingkat-atas — tetapi itu hanya atribusi, aturan "Atribusi bukanlah
 otorisasi" yang sama seperti disebutkan di
-[Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-keys-in-full).
+[Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap).
 Memulihkan sebuah arsip tidak pernah membuat, mengubah, atau menghapus apa pun di tabel `users`.
 :::
 
 ## Hapus sebuah arsip
 
 Menghapus arsip tersebut. Sesuai
-[Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#backup-and-sync),
+[Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#cadangan-dan-sinkronisasi),
 baris `profile_backups` independen dari profil asalnya (`profile_id` adalah `ON DELETE SET NULL`,
 "sebuah arsip harus bertahan lebih lama dari yang diarsipkannya"), tetapi sebaliknya tidak benar:
 menghapus arsip itu sendiri hanyalah menghapus arsip, tanpa efek pada profil hidup asalnya.
@@ -56,11 +56,11 @@ menghapus arsip itu sendiri hanyalah menghapus arsip, tanpa efek pada profil hid
 ## Unduh / unggah
 
 - **Unduh** sesuai dengan
-  [Cadangan dan Pemulihan § Ekspor Arsip](/id/development/backup-and-restore#_1-export-archive),
+  [Cadangan dan Pemulihan § Ekspor Arsip](/id/development/backup-and-restore#_1-ekspor-arsip),
   `POST /api/backup/export`, yang menghasilkan dan mengunduh `.tar.gz` untuk sebuah
   `{ scope, profile_id }` tertentu.
 - **Unggah** sesuai dengan
-  [Cadangan dan Pemulihan § Impor dan Pulihkan Arsip](/id/development/backup-and-restore#_2-import-and-restore-archive),
+  [Cadangan dan Pemulihan § Impor dan Pulihkan Arsip](/id/development/backup-and-restore#_2-impor-dan-restore-arsip),
   `POST /api/backup/import`, sebuah permintaan multipart yang membawa berkas arsip dan
   `profile_id` target.
 
@@ -82,7 +82,7 @@ didokumentasikan secara terpisah.
 
 ::: warning Restore selalu aditif
 Sesuai [Cadangan dan Pemulihan § Arsitektur Backup
-Dua-Cakupan](/id/development/backup-and-restore#dual-scope-backup-architecture), restore
+Dua-Cakupan](/id/development/backup-and-restore#arsitektur-backup-dua-lingkup), restore
 bercakupan-profil adalah "restore aditif ke profil target," dan endpoint impor itu sendiri
 "menerapkannya secara aditif." Menjalankan sebuah restore tidak pernah menimpa data profil yang
 sudah ada; paling buruk ia menambahkan baris di samping apa yang sudah ada. Tidak ada mode
@@ -92,7 +92,7 @@ sudah ada; paling buruk ia menambahkan baris di samping apa yang sudah ada. Tida
 Evolusi skema untuk tabel yang disentuh backup (`profile_backups.scope`, tabel sinkronisasi, dan
 sejenisnya) ditangani oleh skrip migrasi di
 [Cadangan dan Pemulihan § Skrip Migrasi
-Skema](/id/development/backup-and-restore#schema-migration-scripts), bukan oleh apa pun pada tab
+Skema](/id/development/backup-and-restore#script-migrasi-skema), bukan oleh apa pun pada tab
 ini — skrip itu berjalan langsung terhadap basis data dan di luar cakupan untuk `BackupsPanel.tsx`.
 
 ## Terkait

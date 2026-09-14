@@ -70,7 +70,7 @@ Playlist(`src/components/area-playlist/AreaPlaylistModal.tsx`)は、保存済み
 /api/playlists`で永続化され、`GET /api/playlists/:mapId`(`areaApi.ts`)で一覧取得される。
 
 プレイリストの実行は、送信前に項目をタイプ別に分割する。各`cover`項目のポリゴンはcoverage-init呼び出しの`areas`の1つになり、各`no_cover`項目は`exclusions`の1つになる。これは
-[ROS連携 § MQTTコマンド: Boustrophedonサブシステム](/ja/development/webui/navigation/ros-integration#mqtt-commands-boustrophedon-subsystem)で文書化されているのと同じ`areas`/`exclusions`形式である。少なくとも1つのcoverエリアが必要であり、keep-outゾーンのみで構成されたプレイリストはロボットに届く前にクライアント側で拒否される。送信後、プレイリストのrunは、その後のpause/deactivate呼び出しに関してCustom
+[ROS連携 § MQTTコマンド: Boustrophedonサブシステム](/ja/development/webui/navigation/ros-integration#mqttコマンド-boustrophedonサブシステム)で文書化されているのと同じ`areas`/`exclusions`形式である。少なくとも1つのcoverエリアが必要であり、keep-outゾーンのみで構成されたプレイリストはロボットに届く前にクライアント側で拒否される。送信後、プレイリストのrunは、その後のpause/deactivate呼び出しに関してCustom
 Range
 Coverageと同じcustom-coverage(`use_autocover: false`)経路にルーティングされる。ロボットの視点からは、これは一連の個別の掃引ではなく1つの境界付きマルチポリゴン掃引だからである。
 
@@ -84,7 +84,7 @@ Range、Playlistのいずれか)の開始時に毎回リセット(消去して�
 
 軌跡とは別に、オレンジ色のオーバーレイがboustrophedonプランナー自身の意図した掃引経路をレンダーする(`/server/boustrophedon_path`上の`nav_msgs/Path`、
 [ROS連携 §
-ストリーミングテレメトリ](/ja/development/webui/navigation/ros-integration#streaming-telemetry)で説明)。このオーバーレイのサブスクリプションはCancel/Finish時に破棄され、次のrunの開始時に再開される(Auto
+ストリーミングテレメトリ](/ja/development/webui/navigation/ros-integration#ストリーミングテレメトリ)で説明)。このオーバーレイのサブスクリプションはCancel/Finish時に破棄され、次のrunの開始時に再開される(Auto
 Coverage、Custom Range
 Coverage、Playlistはいずれも同じ「必要なら初期化してから表示する」というシーケンスを呼び出す)。またrun終了時には破棄ではなく意図的に非表示にされ、新しいrunが始まるまで完了した掃引線が見え続けるようにしている。
 

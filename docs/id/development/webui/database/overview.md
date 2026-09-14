@@ -42,7 +42,7 @@ Nama peta hanya unik per `(unit_id, profile_id)`, bukan secara global, sehingga 
 penyewaan yang sama masing-masing bisa memiliki peta dengan nama sama namun `id` berbeda. Tabel
 wajib dicakup berdasarkan `unit_id` dan mengunci segalanya berdasarkan `id`, jangan pernah
 dedupe baris berdasarkan nama. Lihat
-[Integrasi ROS § Tabel](/id/development/webui/database/ros-integration#tables) untuk batasan
+[Integrasi ROS § Tabel](/id/development/webui/database/ros-integration#tabel) untuk batasan
 skema di balik ini.
 
 ## Pencarian, urutan, dan paginasi
@@ -64,7 +64,7 @@ menandai peta mana yang menjadi target saat ini untuk aksi ganti nama dan hapus 
 Membuka sebuah peta mengarahkan ke `/unit/navigation?index=<id>`. Jika sesi pemetaan sedang
 berjalan atau dijeda pada unit dan operator membuka peta yang *berbeda* dari yang sedang direkam,
 layar ini tidak diam-diam membuang peta yang sedang berjalan itu. Lihat
-[Ganti Nama & Hapus § Pengaman konflik sesi](/id/development/webui/database/rename-and-delete#session-conflict-guard).
+[Ganti Nama & Hapus § Pengaman konflik sesi](/id/development/webui/database/rename-and-delete#pengaman-konflik-sesi).
 
 ## Keadaan kosong dan memuat
 

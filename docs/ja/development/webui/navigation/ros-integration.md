@@ -29,7 +29,7 @@ AlignのRESTエンドポイント、ライブcanvasに供給するrosbridgeサ�
 ## MQTTコマンド: ナビゲーションサブシステム
 
 エンベロープの完全な形状、リトライ/タイムアウトのパラメータ、`hardware`/`mapping`サブシステムについては
-[メッセージ契約 § コマンドリファレンスカタログ](/ja/development/message-contracts#command-reference-catalogue)にある。ナビゲーションに関連するコマンド(`header:
+[メッセージ契約 § コマンドリファレンスカタログ](/ja/development/message-contracts#コマンドリファレンスカタログ)にある。ナビゲーションに関連するコマンド(`header:
 "navigation"`)は以下のとおりである。
 
 | コマンド | ペイロード | 目的 |
@@ -61,7 +61,7 @@ AlignのRESTエンドポイント、ライブcanvasに供給するrosbridgeサ�
 ## ハートビート/リース
 
 ナビゲーションページの読み込みとモード切り替えは、すべて同じハートビート契約に乗る。これは
-[メッセージ契約 § ハートビートPingとリース契約](/ja/development/message-contracts#heartbeat-ping-and-lease-contract)で完全に文書化されている。本ページに最も関連するフィールドは以下のとおり。
+[メッセージ契約 § ハートビートPingとリース契約](/ja/development/message-contracts#ハートビート-ping-とリース契約)で完全に文書化されている。本ページに最も関連するフィールドは以下のとおり。
 
 - **リクエスト**: `page: "navigation"`と`claim: true`は、読み取り専用のフリート一覧(`claim:
   false`)とは異なり、稼働中のナビゲーションセッションがpingごとに送信するものである。
@@ -70,14 +70,14 @@ AlignのRESTエンドポイント、ライブcanvasに供給するrosbridgeサ�
   オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)で扱う2つのモードを反映する。`in_use`と`origin_conflict`は、このタブが上記のコマンドを発行することすらできるかどうかを制御する。
 
 同じpingのREST側の形は`POST /api/units/ping`であり、
-[APIリファレンス § ロボットハートビートPing](/ja/development/api-reference#_2-robot-heartbeat-ping)で文書化されている。`data`ブロックはMQTT契約とフィールド単位で一致する。
+[APIリファレンス § ロボットハートビートPing](/ja/development/api-reference#_2-ロボットハートビート-ping)で文書化されている。`data`ブロックはMQTT契約とフィールド単位で一致する。
 
 ## Operation Supervisor同期
 
 `operation_supervisor.py`は、ブラウザが`/string/operation_sync`で送信するものをすべてミラーリングする。これにより、マルチピンポイントであれカバレッジであれ、ナビゲーションミッションはブラウザタブが閉じても実行を続ける。完全なプロトコルとシーケンス図は
 [メッセージ契約 §
 Operation
-Supervisor同期](/ja/development/message-contracts#operation-supervisor-synchronization)にある。ナビゲーション固有の点として、
+Supervisor同期](/ja/development/message-contracts#operation-supervisor-同期)にある。ナビゲーション固有の点として、
 
 - Auto Coverage、Custom Range Coverage、またはPlaylist
   runの開始はそれぞれ、その操作を記録する`batch`同期を送信する(`operation: "coverage" |
@@ -92,7 +92,7 @@ Supervisor同期](/ja/development/message-contracts#operation-supervisor-synchro
 
 ナビゲーションcanvasは、ユニット上で`topic2string`によりシリアライズされ、MQTT経由で運ばれ、cloudサーバー上で`rosbridge`向けに型付きROSメッセージへ再構成されるトピックのみから構築されている。ホップ単位の完全な詳細は
 [メッセージ契約 §
-ストリーミングテレメトリトピック](/ja/development/message-contracts#streaming-telemetry-topics)にある。ナビゲーションcanvasに具体的に供給されるトピックは以下のとおり。
+ストリーミングテレメトリトピック](/ja/development/message-contracts#ストリーミングテレメトリトピック)にある。ナビゲーションcanvasに具体的に供給されるトピックは以下のとおり。
 
 | ロボットトピック | Cloudサーバートピック | レート | canvasでの役割 |
 | --- | --- | --- | --- |
@@ -102,19 +102,19 @@ Supervisor同期](/ja/development/message-contracts#operation-supervisor-synchro
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | ロボット周囲の赤いレーザースキャン点。 |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | プラン発生時 | ピンポイント/ルートナビゲーション用の青いグローバルプラン線。 |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | 継続的 | ローカル軌道線。 |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | プラン発生時 | オレンジ色の[カバレッジパスオーバーレイ](/ja/development/webui/navigation/coverage-cleaning#the-coverage-path-overlay)。 |
+| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | プラン発生時 | オレンジ色の[カバレッジパスオーバーレイ](/ja/development/webui/navigation/coverage-cleaning#カバレッジパスオーバーレイ)。 |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | ラッチ | 再接続/リロード時にナビゲーションstateを復旧するために使われるミッションの完全なスナップショット。 |
 
 ## RESTエンドポイント
 
 [APIリファレンス §
-ナビゲーションとミッション送信](/ja/development/api-reference#navigation-and-mission-dispatch)より。
+ナビゲーションとミッション送信](/ja/development/api-reference#ナビゲーションとミッション送出)より。
 
 ### ナビゲーションモードの初期化: `POST /api/navigation/init`
 
 `map_id`でナビゲーションスタックを起動する。そのマップは、呼び出し元が参加しているレンタル内の要求元ユニットに属していなければならない。呼び出し元からは見えるが同じレンタル上の**別の**ロボットによって記録されたマップは、転送されるのではなく`404`で拒否される。かつては転送していたため、ロボットが一度も記録したことのないマップファイルを見つけられずに静かに失敗する一方で、リクエスト自体は通過していた(この修正の元になったインシデントについては
 [APIリファレンス §
-ナビゲーションモードの初期化](/ja/development/api-reference#_1-initialize-navigation-mode)を参照)。
+ナビゲーションモードの初期化](/ja/development/api-reference#_1-ナビゲーションモードの初期化)を参照)。
 
 ### ウェイポイントゴールの送信: `POST /api/navigation/pointstamped`
 
@@ -135,7 +135,7 @@ MQTTコマンドのRESTラッパーである。単一/複数ピンポイント�
 ### Auto Alignシステム: `POST /api/autoalign/start`
 
 [APIリファレンス § Auto
-Alignシステム](/ja/development/api-reference#auto-align-system)より、パーティクルフィルター/スキャンマッチの収束チェックを開始する。`api-reference.md`は`start`のみを文書化している。フロントエンドも呼び出す(`src/components/navigationMap/autoAlignApi.ts`)`status`と`reset`の対については、現時点でRESTリファレンス自体には書かれていないため、
+Alignシステム](/ja/development/api-reference#auto-align-システム)より、パーティクルフィルター/スキャンマッチの収束チェックを開始する。`api-reference.md`は`start`のみを文書化している。フロントエンドも呼び出す(`src/components/navigationMap/autoAlignApi.ts`)`status`と`reset`の対については、現時点でRESTリファレンス自体には書かれていないため、
 [マップ同期 & Auto
 Align](/ja/development/webui/navigation/map-sync-and-alignment#api-autoalign-status)でソースから文書化されている。
 
@@ -145,7 +145,7 @@ Align](/ja/development/webui/navigation/map-sync-and-alignment#api-autoalign-sta
 [WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol)で完全に文書化されているWebSocketプロトコルを通じて`rosbridge_suite`と通信する。環境ごとの接続エンドポイント、`subscribe`/`publish`/`call_service`操作の形状、フロントエンドのレジリエンス/自己修復(EaselJSの`createjs.Stage`プロトタイプパッチと3回失敗での再接続デバウンス)はすべてナビゲーションにも変更なく適用され、ここでは繰り返さない。
 
 ナビゲーションが実際にレンダーする
-[主要Web Canvasサブスクリプション](/ja/development/rosbridge-protocol#primary-web-canvas-subscriptions)のサブセットは、上記の[ストリーミングテレメトリ](#streaming-telemetry)に挙げたのと同じトピック群であるが、MQTT側の`/unit_<ULID>/server/...`形式ではなく、rosbridge側の名前(例:
+[主要Web Canvasサブスクリプション](/ja/development/rosbridge-protocol#主要な-web-キャンバスのサブスクリプション)のサブセットは、上記の[ストリーミングテレメトリ](#streaming-telemetry)に挙げたのと同じトピック群であるが、MQTT側の`/unit_<ULID>/server/...`形式ではなく、rosbridge側の名前(例:
 `/server/robot_pose`、`/server/boustrophedon_path`)でアドレス指定される。rosbridgeはユニットごとのrelayに対してサブスクライブするため、ULIDセグメントはそのレイヤーの各トピック名に繰り返されるのではなく、ブラウザがどのrelayに接続しているかに暗黙的に含まれる。
 
 ## 関連

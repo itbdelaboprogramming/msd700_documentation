@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 Tab Operator (`UsersPanel.tsx`) adalah tempat admin mengelola `users`: akun yang login di
-[login operator](/id/development/webui/accounts/overview#operator-login) dan mengemudikan robot.
+[login operator](/id/development/webui/accounts/overview#login-operator) dan mengemudikan robot.
 Untuk shell tab dan peran yang dapat mengaksesnya, lihat
 [Ikhtisar](/id/development/webui/admin-console/overview); untuk cara operator mendapatkan akses
 ke robot sungguhan setelah akun ada, lihat [Penyewaan](/id/development/webui/admin-console/rentals).
@@ -30,7 +30,7 @@ menggunakan sistem.
 ## Tangguhkan / aktifkan kembali
 
 `PATCH /admin/api/users/:id/status` menulis `users.status` (`active` atau `suspended`), sesuai
-[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access).
+[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses).
 
 ::: warning Penangguhan tertulis, tapi belum ditegakkan saat login
 `/user/login` tidak membaca `users.status`. Sesi yang ada milik operator yang ditangguhkan tetap
@@ -45,7 +45,7 @@ penangguhan pada batas login adalah pekerjaan lain yang belum selesai.
 Ini adalah mekanisme yang berbeda dari menangguhkan sebuah *profil penyewaan*, yang segera
 menghilangkan sebuah unit dan datanya dari tampilan setiap anggota meskipun akun anggota itu
 sendiri tetap aktif dan dapat login — lihat [Penyewaan](/id/development/webui/admin-console/rentals)
-dan [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access)
+dan [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses)
 untuk perbedaan itu. Jika tujuannya adalah benar-benar memutus seorang operator dari sebuah robot
 hari ini, menangguhkan keanggotaan profil atau penugasan unit adalah tuas yang bekerja;
 menangguhkan akun operator itu sendiri untuk saat ini adalah aksi pencatatan saja.
@@ -54,7 +54,7 @@ menangguhkan akun operator itu sendiri untuk saat ini adalah aksi pencatatan saj
 
 Mereset kata sandi seorang operator ke nilai baru yang ditetapkan oleh admin. Ini terpisah dari
 alur ganti-kata-sandi-sendiri yang dapat dipicu oleh operator atau admin untuk akun mereka sendiri
-(lihat [Ikhtisar § Menu akun](/id/development/webui/admin-console/overview#account-menu)); di sini,
+(lihat [Ikhtisar § Menu akun](/id/development/webui/admin-console/overview#menu-akun)); di sini,
 seorang admin menetapkan kata sandi pada akun orang lain, bukan akunnya sendiri.
 
 ## Terkait

@@ -68,7 +68,7 @@ openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/n
 ダッシュボードの WebSocket 接続が単に開かなくなります。ほとんどのブラウザはコンソールに汎用的な
 ネットワークエラー以上の有用な情報を表示しないため、他の原因を追う前にまず証明書を確認してください。
 なお、MQTT ブローカーの証明書は Apache のものとは**別の成果物**であり、同じ PEM ファイルから再構築
-されたものです。[メンテナンス](/ja/setup/maintenance#certificates) を参照してください。
+されたものです。[メンテナンス](/ja/setup/maintenance#証明書) を参照してください。
 :::
 
 ::: info 本番と開発の選択

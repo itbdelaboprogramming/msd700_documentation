@@ -157,7 +157,7 @@ Nama database selalu `ROS_DB`; yang berbeda adalah host dan port.
 `migrate_backup_scope.js` meng-hardcode pasangan ini dan **menolak berjalan tanpa flag `--profile`
 eksplisit**, khusus agar sebuah default fallback tidak pernah bisa mengarahkan script maintenance
 ke database yang salah. Lihat
-[Referensi Docker § Pemetaan layanan dan port](/id/setup/docker-reference#service-and-port-map)
+[Referensi Docker § Pemetaan layanan dan port](/id/setup/docker-reference#peta-service-dan-port)
 untuk bagaimana port-port ini cocok dengan sisa profil compose.
 
 ## Indeks yang perlu diketahui alasannya

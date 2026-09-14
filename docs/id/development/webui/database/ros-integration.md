@@ -28,17 +28,17 @@ merupakan sebuah peta, atau sesuatu yang menyertai peta.
 
 `unit_operation_state` juga membawa foreign key `map_id`, `ON DELETE SET NULL` alih-alih
 `CASCADE`: menghapus peta yang sedang dimuat unit menghapus pointer itu alih-alih diblokir. Lihat
-[Skema Basis Data § Data operasional (per peta)](/id/development/database-schema#operational-data-per-map)
+[Skema Basis Data § Data operasional (per peta)](/id/development/database-schema#data-operasional-per-peta)
 untuk baris asal ini.
 
 `users`, `units`, dan `rental_profiles` tidak diulang di sini karena merupakan tabel
 identitas/akses yang dibahas pada halamannya sendiri: lihat
-[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access).
+[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses).
 
 `maps_data.unique_map_unit (map_name, unit_id, profile_id)` adalah alasan mengapa dua robot pada
 satu penyewaan bisa masing-masing memegang peta dengan nama sama tanpa tabrakan, dan mengapa layar
 Basis Data harus dicakup berdasarkan `unit_id` dan dedupe berdasarkan `id` alih-alih berdasarkan
-nama (lihat [Ikhtisar § Daftar peta](/id/development/webui/database/overview#map-list)).
+nama (lihat [Ikhtisar § Daftar peta](/id/development/webui/database/overview#daftar-peta)).
 
 Keempat tabel di atas mengikuti konvensi bersama `created_at` / `modified_at`, dan kolom
 `created_by` / `modified_by` mereka mencatat ULID pengguna hanya untuk atribusi, tidak pernah untuk
@@ -49,7 +49,7 @@ atribusinya.
 
 ## Foreign key
 
-Subset dari [Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-keys-in-full)
+Subset dari [Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap)
 yang relevan dengan fitur ini:
 
 ```mermaid
@@ -73,7 +73,7 @@ memblokir status operasi mana pun yang menunjuk ke situ.
 
 ## Endpoint REST
 
-Dari [Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#map-and-route-data-management):
+Dari [Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#manajemen-data-peta-dan-rute):
 
 ### Daftar Peta
 
@@ -107,7 +107,7 @@ ini dan tidak ditebak-tebak di sini.
 
 Bagian Referensi API yang sama juga mendokumentasikan `POST /api/routes` untuk menyimpan rute
 waypoint. Endpoint itu milik fitur Navigasi, bukan Basis Data: rute tidak didaftar atau dikelola
-dari layar ini (lihat [Ikhtisar § Cakupan](/id/development/webui/database/overview#scope)), jadi
+dari layar ini (lihat [Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), jadi
 tidak diulang di sini.
 
 ## Terkait

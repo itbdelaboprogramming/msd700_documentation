@@ -41,7 +41,7 @@ gridはインラインでレンダーされ、Navigation画面と同じcanvasの
 
 Stopを押しても即座には保存されない。`ConfirmSaving`(`src/components/confirm-saving-mapping/confirmSaving.tsx`)というダイアログが開き、永続化される前にオペレーターがマップに名前を付ける。確定すると、`MapSaving`進捗オーバーレイが画面を覆い、その間にロボットはマップを書き込みアップロードする(このウィンドウの間にワイヤー上で何が起きるか、なぜ保存が単一のHTTPリクエスト/レスポンス内で完了しないかについては
 [ROS連携 §
-マッピングセッションの開始と停止](/ja/development/webui/mapping/ros-integration#starting-and-stopping-a-mapping-session)を参照)。
+マッピングセッションの開始と停止](/ja/development/webui/mapping/ros-integration#マッピングセッションの開始と停止)を参照)。
 
 ::: info ホームベースのポーズは自動取得され、手入力ではない
 マップのホームベースポーズは、マッピング開始後にロボットが最初に報告したポーズから自動的に取得される。オペレーターは保存ダイアログの一部として手動でそれを設定するよう求められることはない。Stopが確定した時点で、マップの他のメタデータと一緒に自動的に付随する。

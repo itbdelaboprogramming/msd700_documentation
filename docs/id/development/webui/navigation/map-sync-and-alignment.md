@@ -30,7 +30,7 @@ melenceng dari posisi fisik robot sebenarnya: setelah didorong secara manual, na
 daya yang menghilangkan pose dalam memori, atau robot yang diangkat sepenuhnya. Secara tradisional
 inilah fungsi langkah AMCL sendiri "berputar 360 derajat di tempat untuk mengumpulkan dispersi
 partikel", tetapi
-[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default)
+[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
 menolak putaran tanpa pengawasan secara default, sehingga platform memerlukan cara yang dihadapkan
 ke operator untuk mengoreksi pose tanpa bergantung pada gerakan tersebut.
 
@@ -46,7 +46,7 @@ scan LiDAR live milik robot dicocokkan terhadap peta yang dimuat oleh pencocok s
 (stationary scan matcher), dan pose hasilnya ditulis langsung ke AMCL, tanpa rotasi dan tanpa
 translasi. Ini adalah algoritma Correlative Scan Matching (CSM) zero-spin yang sama yang
 didokumentasikan secara lengkap di
-[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#zero-spin-orientation-alignment-correlative-scan-matching):
+[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#alignment-orientasi-zero-spin-correlative-scan-matching):
 halaman tersebut adalah sumber kebenaran untuk fungsi skoring, ambang keyakinan (confidence
 threshold), dan fallback micro-jog. Halaman ini hanya membahas kontrak tombol itu sendiri dengan
 backend.
@@ -54,7 +54,7 @@ backend.
 ### `/api/autoalign/start`
 
 `POST /api/autoalign/start` (didokumentasikan lengkap di
-[Referensi API § Sistem Auto Align](/id/development/api-reference#auto-align-system)) memulai
+[Referensi API § Sistem Auto Align](/id/development/api-reference#sistem-auto-align)) memulai
 pencocokan scan. Frontend (`autoAlignApi.ts`, `postAutoAlign('start', { unit_id })`)
 menonaktifkan tombol tersebut segera dan melakukan polling status alih-alih menunggu panggilan ini
 melaporkan konvergensi, karena konvergensi bersifat asinkron di sisi robot.
@@ -91,7 +91,7 @@ materi sumber yang tersedia saat ini dan tidak ditebak di sini.
 
 Auto Align sendiri tidak memerintahkan rotasi apa pun: itulah inti dari penggunaan pencocok scan
 alih-alih putaran. Namun ia tetap menjadi penopang penting bagi
-[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default)
+[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
 milik platform, yang menolak setiap rotasi di tempat kecuali disertai perintah live pada salah
 satu dari dua topic consent, dan pemeriksa internal Auto Align sendiri (`align_checker`) adalah
 salah satu dari keduanya (yang lain adalah WASD manual). Secara konkret, ini berarti:
@@ -108,7 +108,7 @@ Halaman ini menyatakan tautan tersebut karena ini adalah titik integrasi UI-ke-R
 tombol yang ditekan operator di mode Map Sync dinamai, oleh guard tersebut, sebagai sumber consent
 yang tepercaya. Logika gating lengkap guard tersebut (gerbang geometri, jendela toleransi, apa
 yang dimatikan) didokumentasikan di
-[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default)
+[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
 dan tidak diulang di sini.
 
 ## Terkait

@@ -33,7 +33,7 @@ Work through these in order: each one rules out an entire layer.
    ULID, and that it shows online.
 4. **Is the per-unit container running?** `docker ps --filter name=rosweb_unit_` on the Server.
 5. **Is the network path open**, on the ports in
-   [System Setup](/ja/setup/system-setup#_1-confirm-the-network-path)?
+   [System Setup](/ja/setup/system-setup#_1-ネットワーク経路の確認)?
 6. **Check the logs**: `docker compose logs -f <service>` on the Server,
    `docker exec -it msd700 tmux attach -t robot_services` on the Unit (windows: `roscore`,
    `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`).
@@ -54,7 +54,7 @@ Work through these in order: each one rules out an entire layer.
 | Map canvas blank, but the unit is online and commands work | The per-unit container is not running, so the cloud-side relays rosbridge subscribes to do not exist | `docker ps --filter name=rosweb_unit_`. Re-open the unit in the dashboard; if it still does not appear, check `unit_manager` lines in the backend log |
 | Browser console shows a rosbridge handshake failure | Apache is proxying rosbridge without the `Host` header rewrite, so rosbridge answers `missing port in HTTP Host header` | Add the `<Location /services/rosbridge>` block from [Server Setup](/ja/setup/server-setup#the-vhost-block) |
 | Every WebSocket path fails, HTTP paths are fine | `mod_proxy_wstunnel` is not enabled | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
-| Camera feed works on the LAN, never from outside | The TURN relay is advertising an unreachable address, or its ports are not forwarded | Check `TURN_EXTERNAL_IP` and the router forward; see [Maintenance](/ja/setup/maintenance#the-turn-relay) |
+| Camera feed works on the LAN, never from outside | The TURN relay is advertising an unreachable address, or its ports are not forwarded | Check `TURN_EXTERNAL_IP` and the router forward; see [Maintenance](/ja/setup/maintenance#turn-リレー) |
 | The whole fleet drops offline at once with TLS errors | The HiveMQ keystore is serving an expired certificate. `certbot renew` alone does not update it | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, then restart the broker in a maintenance window |
 | `coturn` restarts in a loop and never binds | The apt/systemd `coturn` still holds port 3478 | `sudo systemctl disable --now coturn`, then start the container |
 | Backend logs `ECONNREFUSED 127.0.0.1:1883` repeatedly | `MQTT_BROKER_TYPE` is unset or not `nakayama`, so the backend fell back to a local broker nothing serves | Set `MQTT_BROKER_TYPE=nakayama` in `.env` and recreate the backend |

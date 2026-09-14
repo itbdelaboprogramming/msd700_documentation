@@ -20,12 +20,12 @@ Klik dua kali pada nama peta di tabel membukanya untuk penyuntingan inline, yang
 Nama duplikat ditolak sepenuhnya, bukan diterima secara diam-diam. Ini berbeda dari perilaku ganti
 nama yang dipakai di tempat lain pada dashboard untuk rute, area, dan playlist, yang malah
 auto-suffix nama duplikat alih-alih menolaknya. Peta dicakup ke `(unit_id, profile_id)` dalam
-skema (lihat [Integrasi ROS § Tabel](/id/development/webui/database/ros-integration#tables)),
+skema (lihat [Integrasi ROS § Tabel](/id/development/webui/database/ros-integration#tabel)),
 sehingga duplikat yang ditolak di sini lebih mungkin merupakan kesalahan penamaan sungguhan
 ketimbang tabrakan alami.
 
 ::: info Belum terdokumentasi di Referensi API
-[Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#map-and-route-data-management)
+[Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#manajemen-data-peta-dan-rute)
 saat ini mencakup pendaftaran peta tetapi bukan endpoint ganti nama itu sendiri. Perilaku di atas
 dikonfirmasi terhadap komponen frontend (`updateMapName` di `services.ts`); metode HTTP dan path
 yang persis tidak tercakup dalam Referensi API saat ini dan tidak ditebak-tebak di sini.
@@ -36,18 +36,18 @@ yang persis tidak tercakup dalam Referensi API saat ini dan tidak ditebak-tebak 
 Menghapus sebuah peta melewati dialog konfirmasi `ConfirmDelete` sebelum apa pun dikirim.
 Mengonfirmasi akan menghapus baris peta dan, sesuai foreign key pada `maps_data`, mem-cascade ke
 setiap rute, area, dan playlist yang menyertainya, ditambah berkas tersimpan milik peta tersebut.
-Lihat [Integrasi ROS § Foreign key](/id/development/webui/database/ros-integration#foreign-keys)
+Lihat [Integrasi ROS § Foreign key](/id/development/webui/database/ros-integration#foreign-key)
 untuk tabel mana yang cascade dan mana yang hanya dinolkan.
 
 Tidak ada undo. Karena rute, area, dan playlist tidak didaftar secara terpisah di layar ini (lihat
-[Ikhtisar § Cakupan](/id/development/webui/database/overview#scope)), operator yang menghapus
+[Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), operator yang menghapus
 sebuah peta tidak diperlihatkan daftar terperinci hal-hal yang akan ikut terbawa selain prompt
 konfirmasi itu sendiri.
 
 ## Pengaman konflik sesi
 
 Membuka sebuah peta (lihat
-[Ikhtisar § Membuka peta ke Navigasi](/id/development/webui/database/overview#opening-a-map-into-navigation))
+[Ikhtisar § Membuka peta ke Navigasi](/id/development/webui/database/overview#membuka-peta-ke-navigasi))
 sementara sesi pemetaan sedang berjalan atau dijeda pada unit ditangani berbeda tergantung peta
 mana yang dibuka:
 
@@ -56,7 +56,7 @@ mana yang dibuka:
   pilihan alih-alih diam-diam membuang peta yang sedang berjalan itu:
   - **Simpan**: peta yang sedang berjalan disimpan sebelum peta baru dimuat. Ini mengikuti jalur
     stop-and-save yang sama seperti yang terdokumentasi di
-    [Referensi API § Hentikan Pemetaan dan Simpan Peta](/id/development/api-reference#_2-stop-mapping-and-save-map)
+    [Referensi API § Hentikan Pemetaan dan Simpan Peta](/id/development/api-reference#_2-hentikan-mapping-dan-simpan-peta)
     (`POST /api/mapping/stop`).
   - **Buang**: peta yang sedang berjalan dibuang tanpa disimpan.
   - **Batal**: operator tetap berada di peta saat ini dan sesi pemetaan berlanjut tanpa perubahan.

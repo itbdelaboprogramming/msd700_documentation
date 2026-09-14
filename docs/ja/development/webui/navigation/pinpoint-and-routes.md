@@ -16,8 +16,8 @@ List/Action Barパターンについては[概要](/ja/development/webui/navigat
 ## canvas上への点の配置
 
 本ページでマーカーを落とす各モード(単一のピンポイント、複数点ルート内のウェイポイント、あるいは新しいホームベース位置)はすべて、
-[概要 § 座標変換](/ja/development/webui/navigation/overview#coordinate-transforms-metric-space-to-screen-pixels)で説明した同じクリック・トゥ・メートル変換を通る。canvas上のクリックは、
-[概要 § `createjs.Stage.prototype`パッチ](/ja/development/webui/navigation/overview#the-createjs-stage-prototype-patch)で説明したように`createjs.Stage.prototype`にパッチされた`stage.globalToRos`によって、ピクセル座標からROSのメートル座標に変換される。
+[概要 § 座標変換](/ja/development/webui/navigation/overview#座標変換-メートル空間から画面ピクセルへ)で説明した同じクリック・トゥ・メートル変換を通る。canvas上のクリックは、
+[概要 § `createjs.Stage.prototype`パッチ](/ja/development/webui/navigation/overview#createjs-stage-prototypeパッチ)で説明したように`createjs.Stage.prototype`にパッチされた`stage.globalToRos`によって、ピクセル座標からROSのメートル座標に変換される。
 
 これは、keep-outゾーンやカバレッジエリアに使われる閉ループのポリゴン描画(カーソルに追従する一時的な辺をラバーバンド表示し、開始頂点から15ピクセル以内でスナップして閉じる)よりも軽量なcanvasのインタラクティブ描画エンジンの使い方である。ピンポイント配置は単一頂点の操作であり、クリックごとに1つのメートル座標を記録して1つのマーカーを落とす。閉じる工程は不要である。ピンポイントは境界ではなく目的地だからだ。
 
@@ -32,7 +32,7 @@ List/Action Barパターンについては[概要](/ja/development/webui/navigat
 ### Save Route / Load Route
 
 Multiple Pinpointの並びは`SaveRouteModal.tsx`によって名前を付けて永続化でき、後から`LoadRouteModal.tsx`で呼び出すと、保存済みのウェイポイント列がcanvasに再現される。どちらの経路での失敗も、
-[概要 § 補助UI](/ja/development/webui/navigation/overview#supporting-ui)で説明した`TopToast`コンポーネントを通じて表示される。
+[概要 § 補助UI](/ja/development/webui/navigation/overview#補助ui)で説明した`TopToast`コンポーネントを通じて表示される。
 
 ### Round Trip / Loop Route
 
@@ -41,8 +41,8 @@ Multiple Pinpointの並びは`SaveRouteModal.tsx`によって名前を付けて�
 ## Set Home Base
 
 canvasをクリックすることでロボットのホーム位置を配置または更新し、データベースサービス層の`updateHomebase`を呼び出す。これはDatabase画面に表示されるのと同じホームベース位置(`homebase_x`/`homebase_y`列。
-[Database概要 § マップ一覧](/ja/development/webui/database/overview#map-list)を参照)であり、Action BarのReturn to Home Baseアクションが使う目的地でもある
-(([概要 § 1つのページ、多数のモード](/ja/development/webui/navigation/overview#one-page-many-modes))を参照)。
+[Database概要 § マップ一覧](/ja/development/webui/database/overview#マップ一覧)を参照)であり、Action BarのReturn to Home Baseアクションが使う目的地でもある
+(([概要 § 1つのページ、多数のモード](/ja/development/webui/navigation/overview#_1つのページ、多数のモード))を参照)。
 
 ## Delete All Pinpoints
 

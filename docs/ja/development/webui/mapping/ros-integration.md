@@ -12,7 +12,7 @@ search: false
 
 ## マッピングセッションの開始と停止
 
-[APIリファレンス § マッピング(SLAM)操作](/ja/development/api-reference#mapping-slam-operations)より。
+[APIリファレンス § マッピング(SLAM)操作](/ja/development/api-reference#マッピング-slam-操作)より。
 
 ### Start
 
@@ -38,12 +38,12 @@ gridを保存し、サムネイルのメタデータを生成し、アセット�
 
 ここでの`homebase_x` / `homebase_y`は、マッピング開始時に自動的に取得されたポーズであり(
 [概要 §
-マップの保存](/ja/development/webui/mapping/overview#saving-the-map-stop-flow)を参照)、オペレーターが入力する値ではない。
+マップの保存](/ja/development/webui/mapping/overview#マップの保存-stopフロー)を参照)、オペレーターが入力する値ではない。
 
 ::: info 保存は非同期である
 SLAMマップの保存には、このプラットフォームの他の箇所で使われている標準の30秒HTTPタイムアウト予算(
 [メッセージ契約 §
-コマンド相関とリトライアーキテクチャ](/ja/development/message-contracts#command-correlation-and-retry-architecture)を参照)よりも長い時間がかかる。そのため`POST
+コマンド相関とリトライアーキテクチャ](/ja/development/message-contracts#コマンドの相関とリトライアーキテクチャ)を参照)よりも長い時間がかかる。そのため`POST
 /api/mapping/stop`は、`request_id`と`map_ulid`を伴って即座に`200 OK`を返す。
 
 ```json
@@ -56,15 +56,15 @@ SLAMマップの保存には、このプラットフォームの他の箇所で�
 
 その後フロントエンドは`GET
 /api/mapping/progress/:request_id`のSSEストリームに接続し、保存が完了するまで追跡する。これはおそらく
-[概要](/ja/development/webui/mapping/overview#saving-the-map-stop-flow)で説明した`MapSaving`進捗オーバーレイの裏側にあるものだが、クライアント側の正確なサブスクリプションコードは本ページで入手可能なソース資料では扱われていない。
+[概要](/ja/development/webui/mapping/overview#マップの保存-stopフロー)で説明した`MapSaving`進捗オーバーレイの裏側にあるものだが、クライアント側の正確なサブスクリプションコードは本ページで入手可能なソース資料では扱われていない。
 [メッセージ契約 §
-マッピングサブシステム](/ja/development/message-contracts#_3-mapping-subsystem-header-mapping)も参照。
+マッピングサブシステム](/ja/development/message-contracts#_3-マッピングサブシステム-header-mapping)も参照。
 :::
 
 ## MQTTコマンドエンベロープ(`header: "mapping"`)
 
 上記のHTTP
-stopリクエストは、共有の[コマンドエンベロープ](/ja/development/message-contracts#command-payload-envelope)を用いて、`/unit_<ULID>/system_command`上の`mapping`
+stopリクエストは、共有の[コマンドエンベロープ](/ja/development/message-contracts#コマンドペイロードのエンベロープ)を用いて、`/unit_<ULID>/system_command`上の`mapping`
 / `stop`コマンドとしてロボットへ中継される。
 
 ```json
@@ -93,7 +93,7 @@ stopリクエストは、共有の[コマンドエンベロープ](/ja/developme
 ここでの完全なホームベースポーズには、RESTボディと`maps_data`テーブルが持つ`x`/`y`位置に加えて、向きのクォータニオン(`homebase_o{x,y,z,w}`)が含まれていることに注意。これは、マップがロードされる際に`navigation`
 / `init`が後で読み戻すのと同じ形状であり(
 [メッセージ契約 §
-ナビゲーションサブシステム](/ja/development/message-contracts#_2-navigation-subsystem-header-navigation)を参照)、本ページの対象外である。
+ナビゲーションサブシステム](/ja/development/message-contracts#_2-ナビゲーションサブシステム-header-navigation)を参照)、本ページの対象外である。
 
 ::: warning コマンドカタログで文書化されているのは`stop`のみ
 [状態 &
@@ -134,7 +134,7 @@ stopリクエストは、共有の[コマンドエンベロープ](/ja/developme
 
 この表の出典については
 [メッセージ契約 §
-マッピング進捗フィードバック](/ja/development/message-contracts#mapping-progress-feedback-header-mapping-progress)を参照。
+マッピング進捗フィードバック](/ja/development/message-contracts#マッピング進捗フィードバック-header-mapping-progress)を参照。
 
 ## ロボット側の保存: `map_saver`とプリフライトチェック
 

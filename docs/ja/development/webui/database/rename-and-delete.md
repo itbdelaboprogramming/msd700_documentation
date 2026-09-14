@@ -21,11 +21,11 @@ search: false
 ルート、エリア、プレイリストで使われている名前変更の挙動とは異なり、それらは重複した名前を拒否する
 代わりに自動的にサフィックスを付加する。マップはスキーマ上 `(unit_id, profile_id)` にスコープされて
 いるため
-（[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#tables) を参照）、ここで拒否
+（[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#テーブル) を参照）、ここで拒否
 される重複は、自然な衝突というより本物の命名ミスである可能性が高い。
 
 ::: info API リファレンスには未記載
-現在の [API リファレンス § マップとルートデータ管理](/ja/development/api-reference#map-and-route-data-management)
+現在の [API リファレンス § マップとルートデータ管理](/ja/development/api-reference#マップとルートのデータ管理)
 はマップの一覧取得はカバーしているが、名前変更エンドポイント自体はカバーしていない。上記の挙動は
 フロントエンドコンポーネント（`services.ts` の `updateMapName`）に基づいて確認されたものであり、
 正確な HTTP メソッドとパスは現在の API リファレンスではカバーされておらず、ここで推測することもしない。
@@ -37,16 +37,16 @@ search: false
 マップの行が削除され、`maps_data` の外部キーに従って、それに付随するすべてのルート、エリア、
 プレイリスト、およびマップの保存済みファイルへとカスケードする。どのテーブルがカスケードし、どれが
 null 化されるだけかについては
-[ROS連携 § 外部キー](/ja/development/webui/database/ros-integration#foreign-keys) を参照。
+[ROS連携 § 外部キー](/ja/development/webui/database/ros-integration#外部キー) を参照。
 
 元に戻す操作はない。ルート、エリア、プレイリストはこの画面で個別に一覧表示されないため
-（[概要 § スコープ](/ja/development/webui/database/overview#scope) を参照）、マップを削除する
+（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、マップを削除する
 オペレーターには、確認プロンプト自体を超えて、一緒に失われるものの詳細な一覧は示されない。
 
 ## セッション競合ガード
 
 マップを開く操作（
-[概要 § マップをナビゲーションで開く](/ja/development/webui/database/overview#opening-a-map-into-navigation)
+[概要 § マップをナビゲーションで開く](/ja/development/webui/database/overview#マップをナビゲーションで開く)
 を参照）は、マッピングセッションがユニット上で現在実行中または一時停止中である間、開こうとしている
 マップによって扱いが異なる。
 
@@ -54,7 +54,7 @@ null 化されるだけかについては
 - *別の*マップを開くと `ConfirmSaving` と `MapSaving` が表示され、進行中のマップを黙って破棄する
   のではなく、オペレーターに選択肢を提示する。
   - **保存**: 新しいマップが読み込まれる前に、進行中のマップが保存される。これは
-    [API リファレンス § マッピングの停止とマップの保存](/ja/development/api-reference#_2-stop-mapping-and-save-map)
+    [API リファレンス § マッピングの停止とマップの保存](/ja/development/api-reference#_2-マッピングの停止とマップの保存)
     （`POST /api/mapping/stop`）に記載されているものと同じ停止・保存パスをたどる。
   - **破棄**: 進行中のマップは保存されずに破棄される。
   - **キャンセル**: オペレーターは現在のマップにとどまり、マッピングセッションは変更されずに続行

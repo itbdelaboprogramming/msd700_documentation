@@ -21,9 +21,9 @@ MySQL-と-REST の話である。このコンソールの中には、実際に�
 ## ユニットのエンロールメントとバインド解除
 
 保留中のロボットを承認する操作(全く新しいユニットとして登録 / 既存のユニットに採用、
-[ユニット & フリート § Pending ビュー](/ja/development/webui/admin-console/units-and-fleet#pending-view)
+[ユニット & フリート § Pending ビュー](/ja/development/webui/admin-console/units-and-fleet#pending-ビュー)
 を参照)は、
-[ハードウェアエンロールメント § 暗号学的ハードウェアエンロールメント(nonce プロトコル)](/ja/development/webui/accounts/enrolment#cryptographic-hardware-enrolment-the-nonce-protocol)
+[ハードウェアエンロールメント § 暗号学的ハードウェアエンロールメント(nonce プロトコル)](/ja/development/webui/accounts/enrolment#暗号によるハードウェア登録-nonceプロトコル)
 で完全に説明されている3段階の nonce プロトコルの管理者認可段階である。このページではその
 ハンドシェイクを繰り返さない。管理コンソールの役割はその中間の1ステップである。`status:
 pending` の `pending_units` 行を、特定の `units` 行に紐づけて `approved` に変える。
@@ -38,7 +38,7 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 > (本物の再イメージング、または偽物)、あるいは稼働中のバインディングがない(ハードウェアが
 > 別のユニットに採用された、**または管理者が意図的にバインドを解除した**)場合である。
 >
-> — [ハードウェアエンロールメント § セルフヒールリカバリー](/ja/development/webui/accounts/enrolment#self-heal-recovery-a-lost-device-json-without-a-new-approval)
+> — [ハードウェアエンロールメント § セルフヒールリカバリー](/ja/development/webui/accounts/enrolment#self-heal復旧-承認をやり直さずに失われたdevice-jsonを復旧する)
 
 言い換えれば、バインド解除は単にデータベースの行をクリアするだけではない。セルフヒールリカバ
 リーがチェックする3つの条件のうち3番目(「稼働中の `unit_devices` 行がこのまさに `fingerprint`
@@ -53,7 +53,7 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 
 ユニットタブのアクションのいずれも、ロボットのリレーコンテナを起動または停止しない。コンテナ
 ライフサイクル、すなわち
-[ユニットコンテナライフサイクル § コンテナライフサイクルステートマシン](/ja/development/unit-container-lifecycle#container-lifecycle-state-machine)
+[ユニットコンテナライフサイクル § コンテナライフサイクルステートマシン](/ja/development/unit-container-lifecycle#コンテナライフサイクルのステートマシン)
 にある `Absent → Starting → Running → Retained → Stopped` のステートマシンは、完全にオペレー
 ターの活動(ユニットのダッシュボードを開くこと、ping ハートビート、Autopilot の状態)によって
 駆動され、ここで管理者が何をクリックするかによるものではない。管理者のアクションが実際に変更
@@ -62,15 +62,15 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 - **ユニットの登録 / 削除**は `units` テーブルを変更する。これはフリートリレーのロスターの
   由来でもある。`fleet_roster.js` は「`units` テーブルの各行を読み取り、各 `BINARY(16)` の
   id を ULID にデコードする」。
-  [ユニットコンテナライフサイクル § ロスターはデータベースに由来する](/ja/development/unit-container-lifecycle#the-roster-comes-from-the-database)
+  [ユニットコンテナライフサイクル § ロスターはデータベースに由来する](/ja/development/unit-container-lifecycle#ロスターはデータベースから来る)
   に従う。ユニットのエンロールメントまたは削除がそのメカニズムのすべてであり、それに対して
   「ブリッジをオンにする」ための別ステップはない。
 - **`startRosterReconciler()`** は `FLEET_ROSTER_POLL_MS`(デフォルト 60秒)ごとにそのロスター
   を再読み込みし、変化があればリレーコンテナを再起動する。
-  [ユニットコンテナライフサイクル § エンロールメントは自動的にリレーを再起動する](/ja/development/unit-container-lifecycle#enrolment-restarts-the-relay-automatically)
+  [ユニットコンテナライフサイクル § エンロールメントは自動的にリレーを再起動する](/ja/development/unit-container-lifecycle#登録がリレーを自動的に再起動させる)
   を参照。このコンソールから登録または削除されたユニットは、即座にではなく1ポーリング間隔以内
   に稼働中のリレーへ到達する。これが
-  [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet#delete-a-unit)
+  [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet#ユニットを削除する)
   における古さを意識した削除確認の裏付けとなっている。
 - ロスターは意図的にテーブル内の**すべて**のユニットであり、レンタル状態でフィルタリングされて
   いない。「レンタルが失効したロボットも、電源を入れてパブリッシュできるロボットであることに
@@ -81,12 +81,12 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 ::: info フリートリレーがデフォルトであり、レガシーな per-unit パスも依然として存在する
 `UNIT_CONTAINERS_ENABLED=false`(デフォルト)は、1つの共有コンテナ `rosweb_unit_relays` が
 すべてのユニットをブリッジすることを意味する。これを `true` に設定すると、
-[ユニットコンテナライフサイクル § コンテナアーキテクチャ概要(レガシー)](/ja/development/unit-container-lifecycle#container-architecture-overview-legacy)
+[ユニットコンテナライフサイクル § コンテナアーキテクチャ概要(レガシー)](/ja/development/unit-container-lifecycle#コンテナアーキテクチャ概要-レガシー)
 にあるアーキテクチャ、すなわちロボットごとの専用 `rosweb_unit_<ULID>` コンテナに戻る。管理
 コンソール内では、この2つのモード間で異なることは何もない。同じ `units` テーブルが、フリート
 ロスターとしても、`unit_manager.js` がオンデマンドでインスタンス化するコンテナの集合として
 も、両方を駆動する。両方を同時に実行することの危険性については
-[ユニットコンテナライフサイクル § ロボットごとに1コンテナへ戻す](/ja/development/unit-container-lifecycle#reverting-to-one-container-per-robot)
+[ユニットコンテナライフサイクル § ロボットごとに1コンテナへ戻す](/ja/development/unit-container-lifecycle#ロボットごとに1コンテナへ戻す)
 を参照。
 :::
 
@@ -94,7 +94,7 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 
 このコンソール全体が実行されているプロセスである `backend_node` は、`/var/run/docker.sock` の
 バインドマウントを介してホストの Docker エンジンと通信する。
-[ユニットコンテナライフサイクル § Docker ソケットのセキュリティ](/ja/development/unit-container-lifecycle#docker-socket-security)
+[ユニットコンテナライフサイクル § Docker ソケットのセキュリティ](/ja/development/unit-container-lifecycle#docker-ソケットのセキュリティ)
 によれば、そのソケットを通じたコンテナ実行は `rosweb_unit_*` 名前空間に一致するコンテナの管理
 のみに制限されており、ホスト上での任意のコンテナ操作を防いでいる。最終的にコンテナに触れる
 すべての管理者アクション、すなわち上記のロスター変化の副作用としてリレーを起動、停止、または

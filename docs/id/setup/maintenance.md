@@ -106,7 +106,7 @@ Catat tanggal kedaluwarsanya di kalender.
 ## Relay TURN
 
 `coturn` **hanya untuk produksi**. Lihat
-[Referensi Docker](/id/setup/docker-reference#coturn-the-production-only-service) untuk penjelasan
+[Referensi Docker](/id/setup/docker-reference#coturn-service-khusus-produksi) untuk penjelasan
 lengkapnya.
 
 ```bash

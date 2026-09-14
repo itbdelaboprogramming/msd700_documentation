@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 オペレータータブ（`UsersPanel.tsx`）は、管理者が `users` を管理する場所である。`users` とは、
-[オペレーターログイン](/ja/development/webui/accounts/overview#operator-login) でログインし
+[オペレーターログイン](/ja/development/webui/accounts/overview#オペレーターログイン) でログインし
 ロボットを操縦するアカウントのことだ。タブのシェルとそこにアクセスできるロールについては
 [概要](/ja/development/webui/admin-console/overview) を、アカウント作成後にオペレーターが実際の
 ロボットへのアクセスをどう得るかについては
@@ -30,7 +30,7 @@ search: false
 ## 停止 / 再有効化
 
 `PATCH /admin/api/users/:id/status` が `users.status`（`active` または `suspended`）を書き込む。
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 に準拠する。
 
 ::: warning 停止は書き込まれるが、ログイン時にはまだ強制されない
@@ -47,7 +47,7 @@ search: false
 アカウント自体はアクティブでログイン可能なままであっても、ユニットとそのデータをすべてのメンバー
 のビューから即座に取り除く。その違いについては
 [レンタル](/ja/development/webui/admin-console/rentals) と
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 を参照。もし今日実際にオペレーターをロボットから切り離すことが目的であれば、有効なレバーはプロ
 ファイルメンバーシップまたはユニット割り当ての停止であり、オペレーターアカウント自体の停止は今の
 ところ記録目的のアクションにすぎない。
@@ -56,7 +56,7 @@ search: false
 
 管理者が設定した新しい値にオペレーターのパスワードをリセットする。これは、オペレーターまたは
 管理者が自分自身のアカウントに対してトリガーできる自己パスワード変更フロー（
-[概要 § アカウントメニュー](/ja/development/webui/admin-console/overview#account-menu) を参照）
+[概要 § アカウントメニュー](/ja/development/webui/admin-console/overview#アカウントメニュー) を参照）
 とは別のものである。ここでは、管理者が他人のアカウントにパスワードを設定しているのであり、自分
 自身のアカウントではない。
 

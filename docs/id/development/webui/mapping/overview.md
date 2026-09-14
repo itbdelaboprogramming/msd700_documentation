@@ -57,7 +57,7 @@ Menekan Stop tidak langsung menyimpan. Ia membuka `ConfirmSaving`
 (`src/components/confirm-saving-mapping/confirmSaving.tsx`), sebuah dialog tempat operator
 memberi nama peta sebelum dipersist. Setelah dikonfirmasi, overlay progres `MapSaving` menutupi
 layar selagi robot menulis peta dan mengunggahnya (lihat
-[Integrasi ROS § Memulai dan menghentikan sesi pemetaan](/id/development/webui/mapping/ros-integration#starting-and-stopping-a-mapping-session)
+[Integrasi ROS § Memulai dan menghentikan sesi pemetaan](/id/development/webui/mapping/ros-integration#memulai-dan-menghentikan-sesi-pemetaan)
 untuk apa yang terjadi di jalur selama jendela ini, termasuk mengapa penyimpanan tidak selesai
 dalam satu request/response HTTP tunggal).
 

@@ -29,18 +29,18 @@ search: false
 `unit_operation_state` も `map_id` 外部キーを持つが、`CASCADE` ではなく `ON DELETE SET NULL` である。
 ユニットが現在読み込んでいるマップを削除すると、ブロックされる代わりにそのポインターがクリアされる。
 このレコードの由来については
-[データベーススキーマ § 運用データ（マップごと）](/ja/development/database-schema#operational-data-per-map)
+[データベーススキーマ § 運用データ（マップごと）](/ja/development/database-schema#運用データ-マップごと)
 を参照。
 
 `users`、`units`、`rental_profiles` は、それ自体のページでカバーされるアイデンティティ/アクセス
 テーブルであるため、ここでは繰り返さない。
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 を参照。
 
 `maps_data.unique_map_unit (map_name, unit_id, profile_id)` があるからこそ、1つのレンタル上の2台の
 ロボットがそれぞれ同名のマップを衝突なく持つことができ、またデータベース画面が名前ではなく `unit_id`
 でスコープし `id` で重複排除しなければならない理由でもある（
-[概要 § マップ一覧](/ja/development/webui/database/overview#map-list) を参照）。
+[概要 § マップ一覧](/ja/development/webui/database/overview#マップ一覧) を参照）。
 
 上記4つのテーブルはすべて、共通の `created_at` / `modified_at` 規約に従っており、その `created_by` /
 `modified_by` 列はユーザーの ULID を帰属のためだけに記録するのであって、アクセス制御のためではない。
@@ -50,7 +50,7 @@ search: false
 
 ## 外部キー
 
-[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#foreign-keys-in-full)
+[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#外部キー、完全版)
 のうち、この機能に関連するサブセット:
 
 ```mermaid
@@ -69,13 +69,13 @@ flowchart TB
 ```
 
 これが
-[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#cascade-delete)
+[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)
 を支えている仕組みである。`maps_data` の行を削除すると、そのルート、エリア、プレイリストへとカスケード
 し、それを指す操作状態はブロックされるのではなくクリアされる。
 
 ## REST エンドポイント
 
-[API リファレンス § マップとルートデータ管理](/ja/development/api-reference#map-and-route-data-management)
+[API リファレンス § マップとルートデータ管理](/ja/development/api-reference#マップとルートのデータ管理)
 より:
 
 ### マップ一覧の取得
@@ -110,7 +110,7 @@ API リファレンスのマップとルートデータ管理セクションは�
 
 同じ API リファレンスセクションは、ウェイポイントルートを保存するための `POST /api/routes` も記載して
 いる。そのエンドポイントは Database 機能ではなく Navigation 機能に属する。ルートはこの画面から一覧
-表示も管理もされないため（[概要 § スコープ](/ja/development/webui/database/overview#scope) を参照）、
+表示も管理もされないため（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、
 ここでは繰り返さない。
 
 ## 関連

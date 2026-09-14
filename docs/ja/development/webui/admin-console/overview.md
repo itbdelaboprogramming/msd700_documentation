@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 MSD700 のバックオフィス側であり、Accounts & Access で説明されている別の
-[管理者ログイン](/ja/development/webui/accounts/overview#admin-login-admin) からアクセスする。
+[管理者ログイン](/ja/development/webui/accounts/overview#管理者ログイン-admin) からアクセスする。
 5つのタブを持つシェル（`admin/dashboard.tsx`、`src/components/admin/` 以下にタブごとの
 `*Panel.tsx` コンポーネント）で、1台のロボットを操縦するのではなくフリート全体を運用するスタッフ
 向けである。このページでは、シェル自体、そこにサービスされる2つの管理者ロール、すべてのタブで
@@ -39,7 +39,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 ## 両側で強制される2つの管理者ロール
 
 `admin_accounts.role` は `admin` または `superadmin` のいずれかである（
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 を参照）。管理者タブは、単に一般の `admin` に対してスタイルで隠されているだけではない。タブ一覧
 から完全に省かれており、そこで公開されるアクションもサーバー側で同様にゲートされている。
 
@@ -48,7 +48,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 を止めているものではない。superadmin 専用ルールを実際に強制しているのはサーバー側のチェックであり、
 それは `admin_accounts` が1つの共有テーブル上のロールフラグではなく `users` から完全に分離された
 テーブルとして保たれているのと同じ理由による（
-[Accounts & Access § オペレーターアカウントと管理者アカウントは別々のシステムである](/ja/development/webui/accounts/overview#operator-accounts-and-admin-accounts-are-separate-systems)
+[Accounts & Access § オペレーターアカウントと管理者アカウントは別々のシステムである](/ja/development/webui/accounts/overview#オペレーターアカウントと管理者アカウントは別系統のシステム)
 を参照）。UI を迂回して一般の管理者が管理者タブのアクションに直接アクセスした場合、ボタンが見え
 ないだけでなく、バックエンドによって拒否されることが期待される。
 :::
@@ -87,7 +87,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 管理者による `rental_profiles`、`units`、`profile_backups`、`pending_units`、
 `unit_enrollment_codes` への `created_by` / `modified_by` のスタンプは帰属情報にすぎないため、
 アカウントを削除しても、それが触れたものを孤立させたり破壊したりすることはない（
-[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#foreign-keys-in-full) を参照）。
+[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#外部キー、完全版) を参照）。
 
 ## アカウントメニュー
 
@@ -98,7 +98,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 - ログイン中の管理者自身のアイデンティティ(ユーザー名、ロール)を確認する。
 - その管理者自身のプロファイル(ユーザー名、フルネーム)を編集する。
 - 自分自身のパスワード変更画面へ移動する。これは
-  [Accounts & Access § 管理者のパスワード変更](/ja/development/webui/accounts/overview#admin-change-password-admin-change-password)
+  [Accounts & Access § 管理者のパスワード変更](/ja/development/webui/accounts/overview#管理者パスワード変更-admin-change-password)
   で説明されているのと同じ任意のモードである。
 
 *他の*アカウントのパスワードをリセットするのは、タブ固有の別のアクションである。同じバックオフィス

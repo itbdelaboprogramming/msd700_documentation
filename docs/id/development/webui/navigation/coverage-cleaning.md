@@ -116,7 +116,7 @@ Menjalankan sebuah playlist memisahkan entrinya berdasarkan tipe sebelum pengiri
 `cover` polygonnya menjadi salah satu `areas` dalam panggilan coverage-init, dan setiap entri
 `no_cover` menjadi salah satu `exclusions`, bentuk `areas`/`exclusions` yang sama yang
 didokumentasikan di
-[Integrasi ROS § Perintah MQTT: subsistem Boustrophedon](/id/development/webui/navigation/ros-integration#mqtt-commands-boustrophedon-subsystem).
+[Integrasi ROS § Perintah MQTT: subsistem Boustrophedon](/id/development/webui/navigation/ros-integration#perintah-mqtt-subsistem-boustrophedon).
 Setidaknya satu area cover diperlukan; playlist yang hanya berisi zona keep-out ditolak di sisi
 klien sebelum mencapai robot. Setelah dikirim, run playlist dialihkan lewat jalur
 custom-coverage (`use_autocover: false`) yang sama seperti Custom Range Coverage untuk
@@ -139,7 +139,7 @@ menunjukkan progresnya alih-alih memulai ulang garisnya.
 
 Terpisah dari jejak, sebuah overlay oranye me-render jalur sapuan yang dimaksudkan oleh planner
 boustrophedon sendiri (`nav_msgs/Path` pada `/server/boustrophedon_path`, dijelaskan di
-[Integrasi ROS § Telemetri Streaming](/id/development/webui/navigation/ros-integration#streaming-telemetry)).
+[Integrasi ROS § Telemetri Streaming](/id/development/webui/navigation/ros-integration#telemetri-streaming)).
 Subscription overlay ini dirobohkan saat Cancel/Finish dan dihidupkan kembali di awal run
 berikutnya (Auto Coverage, Custom Range Coverage, dan Playlist semuanya memanggil urutan
 "inisialisasi jika perlu, lalu tampilkan" yang sama), dan sengaja disembunyikan alih-alih

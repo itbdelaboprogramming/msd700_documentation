@@ -10,14 +10,14 @@ search: false
 レンタルタブ(`ProfilesPanel.tsx`)は `rental_profiles` を管理する。**ロボットが誰にレンタルされて
 いるか**という問いは、**誰がそれを操縦するか**を扱う `users` とは意図的に区別されている。オペレー
 ターアカウントとレンタルプロファイルが別々のテーブルであるのには理由がある。
-[概要 § 3つのアイデンティティ空間、3つのタブ](/ja/development/webui/admin-console/overview#three-identity-spaces-three-tabs)
+[概要 § 3つのアイデンティティ空間、3つのタブ](/ja/development/webui/admin-console/overview#_3つのアイデンティティ空間、3つのタブ)
 を参照。このタブは、両者に加えてユニットが実際に結び付けられる場所である。オペレーターアカウント
 側については [オペレーター](/ja/development/webui/admin-console/operators) を、ユニット側に
 ついては [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet) を参照。
 
 ## このタブの背後にあるテーブル
 
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 より:
 
 | テーブル | 目的 | 主要な列 |
@@ -30,7 +30,7 @@ search: false
 
 プロファイルは `tenant_name` と自由記述のメモを持つ。プロファイルの削除は一様に破壊的という
 わけではない。
-[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#foreign-keys-in-full)
+[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#外部キー、完全版)
 によれば、`rental_profiles` はその従属先と3つの異なる方法で関係しており、そのうち削除を実際に
 ブロックするのは1つだけである。
 
@@ -40,12 +40,12 @@ search: false
 - `profile_members` と `profile_units` 上の `profile_id CASCADE` — メンバーシップ行とユニット
   割り当ては、プロファイルとともに自動的に消える。
 - `profile_backups` 上の `profile_id SET NULL` — このプロファイルの既存のアーカイブは、
-  [データベーススキーマ § バックアップと同期](/ja/development/database-schema#backup-and-sync)
+  [データベーススキーマ § バックアップと同期](/ja/development/database-schema#バックアップと同期)
   で説明されているのと同じ「アーカイブはアーカイブされたものより長生きしなければならない」という
   ルールに従い、プロファイル自体の削除後も存続する。
 
 削除ではなくプロファイルを停止することは、より緩やかなレバーである。
-[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#identity-and-access)
+[データベーススキーマ § アイデンティティとアクセス](/ja/development/database-schema#識別とアクセス)
 によれば、「これを停止すると、どちらにも触れることなく、ユニットとそのデータの両方をメンバーから
 隠す」。何も削除されたり再割り当てされたりせず、プロファイルを再有効化するとそこにあったものが
 そのまま復元される。これは*オペレーター*アカウントの停止(
@@ -72,7 +72,7 @@ user_id)` によって同じオペレーターが1つのプロファイルに二
 ::: warning ユニットは一度に1つのプロファイルにのみ割り当て可能
 `profile_units.unique_rented_unit (unit_id)` は、「二重割り当てが既存の割り当てを黙って上書き
 するのではなく、明確に失敗する」ようにするために存在する(
-[データベーススキーマ § 理由を知っておく価値のあるインデックス](/ja/development/database-schema#indexes-worth-knowing-the-reason-for)
+[データベーススキーマ § 理由を知っておく価値のあるインデックス](/ja/development/database-schema#知っておく価値のあるインデックス)
 を参照)。すでに別のプロファイルに割り当てられているユニットを再割り当てしようとすると完全に
 拒否される。現在のテナントからユニットを黙って移動させることはない。ユニットを現在のプロファイル
 から先に解放することが、それを他の場所に割り当て可能にする方法である。

@@ -104,7 +104,7 @@ HiveMQ が復帰するまで約 14 秒かかり、これは 10 秒の ping ウ�
 ## TURN リレー
 
 `coturn` は**本番のみ**です。完全な理由については
-[Docker コマンドリファレンス](/ja/setup/docker-reference#coturn-the-production-only-service) を参照
+[Docker コマンドリファレンス](/ja/setup/docker-reference#coturn-本番専用のサービス) を参照
 してください。
 
 ```bash

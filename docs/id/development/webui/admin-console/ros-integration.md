@@ -21,10 +21,10 @@ lengkap yang dijalankan robot di sisinya sendiri, lihat
 ## Enrolmen dan pelepasan ikatan unit
 
 Menyetujui robot tertunda (Daftarkan sebagai baru / Adopsi ke unit yang sudah ada, lihat
-[Unit & Armada § Tampilan Tertunda](/id/development/webui/admin-console/units-and-fleet#pending-view))
+[Unit & Armada § Tampilan Tertunda](/id/development/webui/admin-console/units-and-fleet#tampilan-tertunda))
 adalah tahap otorisasi-administrator dari protokol nonce tiga-tahap yang dijelaskan lengkap di
 [Enrolmen Perangkat Keras § Enrolmen perangkat keras kriptografis (protokol
-nonce)](/id/development/webui/accounts/enrolment#cryptographic-hardware-enrolment-the-nonce-protocol).
+nonce)](/id/development/webui/accounts/enrolment#pendaftaran-perangkat-keras-kriptografis-protokol-nonce).
 Halaman ini tidak mengulang jabat tangan itu; peran konsol admin di dalamnya adalah satu langkah
 di tengah: mengubah baris `pending_units` dengan `status: pending` menjadi `approved`, terikat ke
 baris `units` tertentu.
@@ -41,7 +41,7 @@ robot yang kembali:
 > keras diadopsi ke unit yang berbeda, **atau seorang admin melepas ikatannya dengan sengaja**).
 >
 > — [Enrolmen Perangkat Keras § Pemulihan
-> self-heal](/id/development/webui/accounts/enrolment#self-heal-recovery-a-lost-device-json-without-a-new-approval)
+> self-heal](/id/development/webui/accounts/enrolment#pemulihan-self-heal-device-json-yang-hilang-tanpa-persetujuan-baru)
 
 Dengan kata lain, melepas ikatan tidak sekadar menghapus baris basis data: ia dengan sengaja
 mematahkan kondisi ketiga dari tiga kondisi yang diperiksa pemulihan self-heal ("baris
@@ -58,7 +58,7 @@ penugasan penyewaan unit tersebut semuanya bertahan; hanya kredensial perangkatn
 Tidak ada satu pun aksi tab Unit yang memulai atau menghentikan kontainer relay milik sebuah
 robot. Siklus hidup kontainer — mesin status `Absent → Starting → Running → Retained → Stopped`
 di [Siklus Hidup Kontainer Unit § Mesin Status Siklus Hidup
-Kontainer](/id/development/unit-container-lifecycle#container-lifecycle-state-machine) —
+Kontainer](/id/development/unit-container-lifecycle#state-machine-siklus-hidup-kontainer) —
 sepenuhnya didorong oleh aktivitas operator (membuka dashboard sebuah unit, detak jantung ping,
 status Autopilot), bukan oleh apa pun yang diklik admin di sini. Yang *memang* diubah oleh aksi
 admin adalah data yang dijembatani kontainer bersama tunggal milik relay armada, dan koneksi itu
@@ -68,16 +68,16 @@ nyata:
   armada. `fleet_roster.js` "membaca setiap baris tabel `units` dan mendekode setiap id
   `BINARY(16)` menjadi ULID-nya," sesuai
   [Siklus Hidup Kontainer Unit § Roster berasal dari basis
-  data](/id/development/unit-container-lifecycle#the-roster-comes-from-the-database); mendaftarkan
+  data](/id/development/unit-container-lifecycle#roster-berasal-dari-database); mendaftarkan
   atau menghapus sebuah unit adalah keseluruhan mekanismenya, tanpa langkah terpisah untuk
   "menyalakan bridging" untuknya.
 - **`startRosterReconciler()`** membaca ulang roster itu setiap `FLEET_ROSTER_POLL_MS` (default
   60 dtk) dan me-restart kontainer relay jika berubah — lihat
   [Siklus Hidup Kontainer Unit § Enrolmen me-restart relay secara
-  otomatis](/id/development/unit-container-lifecycle#enrolment-restarts-the-relay-automatically).
+  otomatis](/id/development/unit-container-lifecycle#pendaftaran-me-restart-relay-secara-otomatis).
   Sebuah unit yang didaftarkan atau dihapus dari konsol ini mencapai relay hidup dalam satu
   interval polling, bukan seketika, itulah yang mendasari konfirmasi hapus yang sadar-kebasian di
-  [Unit & Armada](/id/development/webui/admin-console/units-and-fleet#delete-a-unit).
+  [Unit & Armada](/id/development/webui/admin-console/units-and-fleet#hapus-unit).
 - Roster tersebut dengan sengaja adalah **setiap** unit di tabel, tidak disaring berdasarkan
   status penyewaan: "sebuah robot yang penyewaannya kedaluwarsa tetap robot yang dapat menyala
   dan mempublikasikan." Menangguhkan atau menugaskan ulang sebuah profil penyewaan di
@@ -89,12 +89,12 @@ nyata:
 `rosweb_unit_relays`, menjembatani setiap unit. Menetapkannya `true` mengembalikan ke kontainer
 `rosweb_unit_<ULID>` khusus per robot, arsitektur di
 [Siklus Hidup Kontainer Unit § Ikhtisar Arsitektur Kontainer
-(Legacy)](/id/development/unit-container-lifecycle#container-architecture-overview-legacy). Tidak
+(Legacy)](/id/development/unit-container-lifecycle#ikhtisar-arsitektur-kontainer-legacy). Tidak
 ada apa pun di konsol admin yang berbeda antara kedua mode tersebut: tabel `units` yang sama
 mendorong keduanya, baik sebagai roster armada maupun sebagai kumpulan kontainer yang
 diinstansiasi `unit_manager.js` sesuai permintaan. Lihat
 [Siklus Hidup Kontainer Unit § Kembali ke satu kontainer per
-robot](/id/development/unit-container-lifecycle#reverting-to-one-container-per-robot) untuk
+robot](/id/development/unit-container-lifecycle#kembali-ke-satu-kontainer-per-robot) untuk
 bahaya menjalankan keduanya sekaligus.
 :::
 
@@ -103,7 +103,7 @@ bahaya menjalankan keduanya sekaligus.
 `backend_node` — proses tempat seluruh konsol ini berjalan — berkomunikasi dengan mesin Docker
 host lewat bind mount `/var/run/docker.sock`. Sesuai
 [Siklus Hidup Kontainer Unit § Keamanan Soket
-Docker](/id/development/unit-container-lifecycle#docker-socket-security), eksekusi kontainer lewat
+Docker](/id/development/unit-container-lifecycle#keamanan-docker-socket), eksekusi kontainer lewat
 soket itu dibatasi hanya untuk mengelola kontainer yang cocok dengan namespace `rosweb_unit_*`,
 mencegah manipulasi kontainer sembarangan pada host. Setiap aksi admin yang pada akhirnya
 menyentuh sebuah kontainer — memulai, menghentikan, atau me-restart sebuah relay sebagai efek

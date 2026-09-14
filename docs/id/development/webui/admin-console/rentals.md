@@ -11,14 +11,14 @@ Tab Penyewaan (`ProfilesPanel.tsx`) mengelola `rental_profiles`: **siapa yang me
 robot**, pertanyaan yang sengaja dijaga terpisah dari `users`, **siapa yang mengemudikannya**.
 Akun operator dan profil penyewaan adalah tabel berbeda karena suatu alasan — lihat
 [Ikhtisar § Tiga ruang identitas, tiga
-tab](/id/development/webui/admin-console/overview#three-identity-spaces-three-tabs) — dan tab ini
+tab](/id/development/webui/admin-console/overview#tiga-ruang-identitas-tiga-tab) — dan tab ini
 adalah tempat keduanya, ditambah sebuah unit, sungguhan dihubungkan. Untuk sisi akun-operator,
 lihat [Operator](/id/development/webui/admin-console/operators); untuk sisi unit, lihat
 [Unit & Armada](/id/development/webui/admin-console/units-and-fleet).
 
 ## Tabel di balik tab ini
 
-Dari [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access):
+Dari [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses):
 
 | Tabel | Tujuan | Kolom kunci |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Dari [Skema Basis Data § Identitas dan akses](/id/development/database-schema#i
 
 Sebuah profil membawa `tenant_name` dan catatan bebas. Menghapus satu profil tidak selalu
 destruktif secara seragam: sesuai [Skema Basis Data § Foreign key,
-lengkap](/id/development/database-schema#foreign-keys-in-full), `rental_profiles` berhubungan
+lengkap](/id/development/database-schema#foreign-key-secara-lengkap), `rental_profiles` berhubungan
 dengan turunannya dalam tiga cara berbeda, dan hanya satu di antaranya yang benar-benar
 memblokir penghapusan.
 
@@ -42,10 +42,10 @@ memblokir penghapusan.
 - `profile_id SET NULL` pada `profile_backups` — arsip yang sudah ada dari profil ini tetap
   bertahan setelah profil itu sendiri dihapus, sesuai aturan "sebuah arsip harus bertahan lebih
   lama dari yang diarsipkannya" yang sama seperti dijelaskan di
-  [Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#backup-and-sync).
+  [Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#cadangan-dan-sinkronisasi).
 
 Menangguhkan sebuah profil, alih-alih menghapusnya, adalah tuas yang lebih lunak: sesuai
-[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identity-and-access),
+[Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses),
 "menangguhkannya menyembunyikan baik unit maupun datanya dari anggota, tanpa menyentuh salah
 satunya." Tidak ada yang dihapus atau ditugaskan ulang, dan mengaktifkan kembali profil
 memulihkan persis apa yang ada di sana. Ini adalah mekanisme yang berbeda dari menangguhkan akun
@@ -70,7 +70,7 @@ tidak memberikan apa pun dari itu dengan sendirinya.
 ::: warning Sebuah unit hanya dapat ditugaskan ke satu profil dalam satu waktu
 `profile_units.unique_rented_unit (unit_id)` ada khusus agar "penugasan ganda gagal secara jelas
 alih-alih diam-diam menimpa yang sudah ada" (lihat
-[Skema Basis Data § Indeks yang layak diketahui alasannya](/id/development/database-schema#indexes-worth-knowing-the-reason-for)).
+[Skema Basis Data § Indeks yang layak diketahui alasannya](/id/development/database-schema#indeks-yang-perlu-diketahui-alasannya)).
 Menugaskan ulang sebuah unit yang sudah ditugaskan ke profil lain ditolak sepenuhnya; ia tidak
 diam-diam memindahkan unit tersebut dari bawah penyewa saat ini. Melepaskan unit dari profilnya
 saat ini terlebih dahulu adalah yang membuatnya dapat ditugaskan di tempat lain.

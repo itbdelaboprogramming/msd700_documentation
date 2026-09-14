@@ -18,7 +18,7 @@ search: false
 
 ## 2つのスコープ、プロファイル側の1つのタブ
 
-[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#dual-scope-backup-architecture)
+[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#_2軸バックアップアーキテクチャ)
 は、`scope: 'profile'` または `scope: 'unit'` でキー付けされた2つの独立したバックアップスコープを
 定義している。このタブはプロファイルスコープ側を扱う。テナント中心のアーカイブであり、「レンタル
 プロファイルが所有するすべてのマップ、ルート、エリア、プレイリスト」を、そのプロファイルが使用した
@@ -28,7 +28,7 @@ search: false
 
 ## プロファイルのアーカイブを作成する
 
-[バックアップとリストア § アーカイブ構造](/ja/development/backup-and-restore#archive-structure-tar-gz)
+[バックアップとリストア § アーカイブ構造](/ja/development/backup-and-restore#アーカイブ構造-tar-gz)
 で文書化されている構造を持つ `.tar.gz` アーカイブを生成する。すなわち `manifest.json`、スコープ
 された SQL insert 文の `database_dump.sql`、そしてそれらに紐づくバイナリマップファイル(`.pgm`、
 `.yaml`、`.png`)の `maps/` ディレクトリである。
@@ -39,7 +39,7 @@ search: false
 オペレーターアカウント。** マニフェストと `database_dump.sql` は個々の行に帰属のための
 `created_by` ユーザー ULID をスタンプする(Backup and Restore にある同じ `manifest.json` の例では
 トップレベルの `created_by` フィールドが示されている)が、それは
-[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#foreign-keys-in-full)
+[データベーススキーマ § 外部キー一覧](/ja/development/database-schema#外部キー、完全版)
 で言及されているのと同じ「帰属は決して認可ではない」というルールに従った帰属情報にすぎない。
 アーカイブの復元が `users` テーブルの何かを作成、変更、削除することは決してない。
 :::
@@ -47,7 +47,7 @@ search: false
 ## アーカイブを削除する
 
 そのアーカイブを削除する。
-[データベーススキーマ § バックアップと同期](/ja/development/database-schema#backup-and-sync)
+[データベーススキーマ § バックアップと同期](/ja/development/database-schema#バックアップと同期)
 によれば、`profile_backups` の行は、それが取られた元のプロファイルから独立している(`profile_id`
 は `ON DELETE SET NULL` であり、「アーカイブはアーカイブされたものより長生きしなければならない」)。
 しかしその逆は真ではない。アーカイブ自体を削除することは単にアーカイブを削除するだけであり、
@@ -56,11 +56,11 @@ search: false
 ## ダウンロード / アップロード
 
 - **ダウンロード**は
-  [バックアップとリストア § アーカイブのエクスポート](/ja/development/backup-and-restore#_1-export-archive)、
+  [バックアップとリストア § アーカイブのエクスポート](/ja/development/backup-and-restore#_1-アーカイブのエクスポート)、
   `POST /api/backup/export` に対応し、指定された `{ scope, profile_id }` に対する `.tar.gz` を
   生成してダウンロードする。
 - **アップロード**は
-  [バックアップとリストア § アーカイブのインポートと復元](/ja/development/backup-and-restore#_2-import-and-restore-archive)、
+  [バックアップとリストア § アーカイブのインポートと復元](/ja/development/backup-and-restore#_2-アーカイブのインポートとリストア)、
   `POST /api/backup/import` に対応する。アーカイブファイルと対象の `profile_id` を運ぶ
   マルチパートリクエストである。
 
@@ -80,7 +80,7 @@ search: false
 ## リストアを実行する
 
 ::: warning リストアは常に追加的である
-[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#dual-scope-backup-architecture)
+[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#_2軸バックアップアーキテクチャ)
 によれば、プロファイルスコープのリストアは「対象プロファイルへの追加的なリストア」であり、
 インポートエンドポイント自体が「それを追加的に適用する」。リストアの実行が既存プロファイルの
 データを上書きすることは決してない。最悪の場合でも、すでにそこにあるものの横に行が追加される
@@ -88,7 +88,7 @@ search: false
 :::
 
 バックアップが触れるテーブル(`profile_backups.scope`、同期テーブルなど)のスキーマ進化は、
-[バックアップとリストア § スキーマ移行スクリプト](/ja/development/backup-and-restore#schema-migration-scripts)
+[バックアップとリストア § スキーマ移行スクリプト](/ja/development/backup-and-restore#スキーママイグレーションスクリプト)
 にある移行スクリプトによって処理され、このタブの何かによるものではない。それらはデータベースに
 対して直接実行され、`BackupsPanel.tsx` の対象外である。
 

@@ -152,7 +152,7 @@ flowchart TB
 `migrate_backup_scope.js` はこの組み合わせをハードコードしており、フォールバックのデフォルトが
 誤ったデータベースをメンテナンススクリプトの対象にすることが決してないよう、明示的な `--profile`
 フラグなしでは**実行を拒否します**。これらのポートが compose プロファイルの他の部分とどう組み合わさるか
-については、[Docker リファレンス § サービスとポートのマッピング](/ja/setup/docker-reference#service-and-port-map)
+については、[Docker リファレンス § サービスとポートのマッピング](/ja/setup/docker-reference#サービスとポートの対応表)
 を参照してください。
 
 ## 知っておく価値のあるインデックス

@@ -188,7 +188,7 @@ Docker atau `docker-manager.sh`.
 Tanpa TTY (atau dengan `MSD700_NONINTERACTIVE=1`), prompt akan dilewati dan `--provision-network`
 menggunakan `docker/.env` beserta environment apa adanya, sehingga `AP_PASSWORD_LOCAL='your-hotspot-password'
 ./setup.sh --provision-network` tetap berfungsi untuk otomasi. Lihat
-[Hotspot Wi-Fi + Klien](/id/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit) untuk panduan
+[Hotspot Wi-Fi + Klien](/id/setup/wifi-hotspot#provisioning-hotspot-satu-kali-per-unit) untuk panduan
 provisioning lengkap, perangkat keras dongle yang tervalidasi, dan pemecahan masalah.
 :::
 

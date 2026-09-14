@@ -124,7 +124,7 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
 わずに反映される。対照的に `signalling_server` は、`Dockerfile.webui-local` がユニット自身のローカル
 スタックイメージへと**`COPY`**する複数のサービスの一つであり、そこでの変更には、`docker-manager.sh` が
 ダッシュボードとバックエンドのイメージに対してすでにチェックしているのと同じ再ビルドが必要になる(
-[Docker Reference § `up` が行うこと、その順序](/ja/setup/docker-reference#what-up-does-in-order)を参
+[Docker Reference § `up` が行うこと、その順序](/ja/setup/docker-reference#up-が行うこと-順番)を参
 照)。これを忘れると、そこで文書化されている陳腐化(staleness)の失敗とまったく同じように見える。スタッ
 クは何事もなく正常に起動し、編集前のシグナリングロジックをそのまま提供し続けてしまう。
 
@@ -136,5 +136,5 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
   中でどこに位置するか、そしてここで使われるトークンに対する信頼ドメイン
 - [Server Setup § TURNリレー](/ja/setup/server-setup#_6-the-turn-relay-production-only): 本番のTURN
   リレー自体の設定
-- [Docker Reference § Unit: run_msd.sh](/ja/setup/docker-reference#unit-run-msd-sh): `camera_client`
+- [Docker Reference § Unit: run_msd.sh](/ja/setup/docker-reference#ユニット-run-msd-sh): `camera_client`
   のtmuxウィンドウが起動される場所

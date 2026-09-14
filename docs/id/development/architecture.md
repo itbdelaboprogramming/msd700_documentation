@@ -165,7 +165,7 @@ sequenceDiagram
 ## Siklus Hidup Kontainer Per-Unit
 
 ::: info Fleet relay adalah default
-Telemetri multi-unit diproses oleh satu kontainer **fleet relay** yang melayani seluruh fleet lewat topik bernamespace (`/unit_<ULID>/...`) dan relay bertemplate (`multi_unit.py` / `cloud_multi.launch`, ditambah `nakayama_cloud_multi.launch` untuk paruh MQTT-nya). Roster-nya berasal dari tabel `units`, sehingga mendaftarkan sebuah robot adalah satu-satunya hal yang diperlukan agar bisa dijangkau. Jalur per-unit di bawah ini masih tersedia dan hanya berjarak satu environment variable, tetapi keduanya tidak boleh pernah berjalan untuk unit yang sama. Lihat [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle#fleet-relay-one-container-for-every-unit).
+Telemetri multi-unit diproses oleh satu kontainer **fleet relay** yang melayani seluruh fleet lewat topik bernamespace (`/unit_<ULID>/...`) dan relay bertemplate (`multi_unit.py` / `cloud_multi.launch`, ditambah `nakayama_cloud_multi.launch` untuk paruh MQTT-nya). Roster-nya berasal dari tabel `units`, sehingga mendaftarkan sebuah robot adalah satu-satunya hal yang diperlukan agar bisa dijangkau. Jalur per-unit di bawah ini masih tersedia dan hanya berjarak satu environment variable, tetapi keduanya tidak boleh pernah berjalan untuk unit yang sama. Lihat [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle#fleet-relay-satu-kontainer-untuk-setiap-unit).
 :::
 
 Pada jalur per-unit, `unit_manager.js` di dalam `backend_node` secara dinamis mengelola satu kontainer per unit aktif lewat `/var/run/docker.sock`:

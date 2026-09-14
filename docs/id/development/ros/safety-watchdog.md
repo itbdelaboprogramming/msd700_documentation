@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Software onboard memantau kesehatan komunikasi melalui watchdog sliding-window kontinu, berjalan di dalam `system_command.py`. Ini adalah mekanisme keselamatan internal robot tanpa UI dashboard sendiri; untuk bagaimana operator melihat efeknya (field `in_use`/lease, activity state yang dapat dipaksakan), lihat [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#state-ownership-and-persistence-matrix) dan [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot).
+Software onboard memantau kesehatan komunikasi melalui watchdog sliding-window kontinu, berjalan di dalam `system_command.py`. Ini adalah mekanisme keselamatan internal robot tanpa UI dashboard sendiri; untuk bagaimana operator melihat efeknya (field `in_use`/lease, activity state yang dapat dipaksakan), lihat [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#matriks-kepemilikan-dan-persistensi-state) dan [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot).
 
 ```mermaid
 flowchart TB
@@ -33,7 +33,7 @@ Ketika Mode Autopilot aktif, pause komunikasi 10 detik ditangguhkan. Robot melan
 
 ## Terkait
 
-- [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#state-ownership-and-persistence-matrix)
+- [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#matriks-kepemilikan-dan-persistensi-state)
 - [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot)
 - [Mapping: Manual Override & Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous)
 - [Daftar Paket ROS](/id/development/ros/ros-packages)

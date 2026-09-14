@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-オンボードソフトウェアは、`system_command.py`内で動作する連続的なスライディングウィンドウウォッチドッグを通じて通信の健全性を監視する。これはロボット内部の安全機構であり、それ自体にはダッシュボードUIを持たない。オペレーターからその効果(`in_use`/リースフィールド、強制されうるアクティビティ状態)がどう見えるかについては、[アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#state-ownership-and-persistence-matrix)と[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)を参照。
+オンボードソフトウェアは、`system_command.py`内で動作する連続的なスライディングウィンドウウォッチドッグを通じて通信の健全性を監視する。これはロボット内部の安全機構であり、それ自体にはダッシュボードUIを持たない。オペレーターからその効果(`in_use`/リースフィールド、強制されうるアクティビティ状態)がどう見えるかについては、[アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#状態の所有権と永続化のマトリクス)と[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)を参照。
 
 ```mermaid
 flowchart TB
@@ -33,7 +33,7 @@ Autopilotモードが有効な間、10秒の通信一時停止は抑制される
 
 ## 関連
 
-- [アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#state-ownership-and-persistence-matrix)
+- [アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#状態の所有権と永続化のマトリクス)
 - [ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)
 - [マッピング: 手動オーバーライド & 自律探索](/ja/development/webui/mapping/manual-and-autonomous)
 - [ROSパッケージ一覧](/ja/development/ros/ros-packages)

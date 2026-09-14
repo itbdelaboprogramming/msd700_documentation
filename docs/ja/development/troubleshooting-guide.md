@@ -67,7 +67,7 @@ flowchart TD
 
 ### 6. ローカル同期が "Access Denied" を報告する(ローカルデータベース資格情報のドリフト)
 - **症状**: Local Mode の同期ログに `Access denied for user '<MYSQL_USER>'@'127.0.0.1' (using password: YES)` と表示される。これは歴史的に、クラウドに到達可能であるにもかかわらず `handshake` フェーズで失敗していると誤ってラベル付けされてきた。
-- **根本原因**: ユニット上の `docker/.env` は git 管理下にあり、ホストごとに異なる。ユニットの `mysql_data_local` ボリュームが既に初期化された後に、そこで `MYSQL_USER`/`MYSQL_PASSWORD` が変更されると(`git pull`、または手動編集)、MySQL はデータディレクトリに焼き込まれた古いパスワードを保持し続け、遡って新しいパスワードを採用することはない。その結果 `sync_agent.js` は自身の最初のローカル `sync_state` 読み取りで、クラウド接続エラーではなく `ER_ACCESS_DENIED_ERROR` で失敗する。これが現在、実際のクラウド障害とどう区別されているかについては [データ同期: 障害分類](/ja/development/data-sync#failure-classification) を参照。
+- **根本原因**: ユニット上の `docker/.env` は git 管理下にあり、ホストごとに異なる。ユニットの `mysql_data_local` ボリュームが既に初期化された後に、そこで `MYSQL_USER`/`MYSQL_PASSWORD` が変更されると(`git pull`、または手動編集)、MySQL はデータディレクトリに焼き込まれた古いパスワードを保持し続け、遡って新しいパスワードを採用することはない。その結果 `sync_agent.js` は自身の最初のローカル `sync_state` 読み取りで、クラウド接続エラーではなく `ER_ACCESS_DENIED_ERROR` で失敗する。これが現在、実際のクラウド障害とどう区別されているかについては [データ同期: 障害分類](/ja/development/data-sync#障害の分類) を参照。
 - **診断手順**:
   1. ユニット上で: `cat docker/.env | grep MYSQL_` を実行し、値が最近変更されたように見えるか確認する(`git pull` 直後など)。
   2. 不一致を直接確認する: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — 手動での `Access denied` は、一時的な不具合ではなくドリフトを裏付ける。

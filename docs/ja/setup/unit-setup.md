@@ -189,7 +189,7 @@ TTY がない場合(または `MSD700_NONINTERACTIVE=1` が設定されている
 `--provision-network` は `docker/.env` と環境変数をそのまま使用します。そのため、
 `AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network` は自動化にもそのまま
 使用できます。完全なプロビジョニング手順、検証済みドングルハードウェア、トラブルシューティングに
-ついては [Wi-Fi ホットスポット + クライアント](/ja/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit)
+ついては [Wi-Fi ホットスポット + クライアント](/ja/setup/wifi-hotspot#ホットスポットのプロビジョニング-ユニットごとに一度)
 を参照してください。
 :::
 

@@ -19,10 +19,10 @@ Autopilot, lihat [Manual & Autopilot](/id/development/webui/navigation/manual-an
 Setiap mode di halaman ini yang menjatuhkan marker (satu pinpoint tunggal, satu waypoint dalam
 rute multi-titik, atau posisi home base baru) melewati konversi klik-ke-metrik yang sama seperti
 yang dijelaskan di
-[Ikhtisar § Transformasi koordinat](/id/development/webui/navigation/overview#coordinate-transforms-metric-space-to-screen-pixels):
+[Ikhtisar § Transformasi koordinat](/id/development/webui/navigation/overview#transformasi-koordinat-ruang-metrik-ke-piksel-layar):
 sebuah klik pada canvas dikonversi dari koordinat piksel ke koordinat metrik ROS lewat
 `stage.globalToRos`, yang di-patch ke `createjs.Stage.prototype` seperti dijelaskan di
-[Ikhtisar § Patch `createjs.Stage.prototype`](/id/development/webui/navigation/overview#the-createjs-stage-prototype-patch).
+[Ikhtisar § Patch `createjs.Stage.prototype`](/id/development/webui/navigation/overview#patch-createjs-stage-prototype).
 
 Ini adalah penggunaan mesin penggambaran interaktif canvas yang lebih ringan dibandingkan
 penggambaran polygon loop-tertutup yang dipakai untuk zona keep-out dan area cakupan (menarik
@@ -46,7 +46,7 @@ yang kemudian dilintasi robot secara berurutan.
 Urutan Multiple Pinpoint dapat diberi nama dan disimpan lewat `SaveRouteModal.tsx`, lalu dipanggil
 kembali kemudian lewat `LoadRouteModal.tsx`, yang mengisi ulang canvas dengan urutan waypoint yang
 tersimpan. Kegagalan pada salah satu jalur ini ditampilkan lewat komponen `TopToast` yang
-dijelaskan di [Ikhtisar § UI pendukung](/id/development/webui/navigation/overview#supporting-ui).
+dijelaskan di [Ikhtisar § UI pendukung](/id/development/webui/navigation/overview#ui-pendukung).
 
 ### Round Trip / Loop Route
 
@@ -59,9 +59,9 @@ kontrol Save/Load Route di atas.
 Menempatkan atau memperbarui posisi home robot dengan mengklik canvas, memanggil `updateHomebase`
 di lapisan layanan database. Ini adalah posisi home base yang sama yang ditampilkan di layar
 Database (kolom `homebase_x`/`homebase_y`; lihat
-[Ikhtisar Database § Daftar peta](/id/development/webui/database/overview#map-list)), dan tujuan
+[Ikhtisar Database § Daftar peta](/id/development/webui/database/overview#daftar-peta)), dan tujuan
 yang dipakai oleh aksi Return to Home Base pada Action Bar
-(lihat [Ikhtisar § Satu halaman, banyak mode](/id/development/webui/navigation/overview#one-page-many-modes)).
+(lihat [Ikhtisar § Satu halaman, banyak mode](/id/development/webui/navigation/overview#satu-halaman-banyak-mode)).
 
 ## Delete All Pinpoints
 

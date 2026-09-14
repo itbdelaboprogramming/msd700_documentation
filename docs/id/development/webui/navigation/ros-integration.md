@@ -35,7 +35,7 @@ fitur lain dan dibahas lengkap di dokumen referensi bersama yang ditautkan di at
 ## Perintah MQTT: subsistem Navigasi
 
 Bentuk envelope lengkap, parameter retry/timeout, dan subsistem `hardware`/`mapping` ada di
-[Kontrak Pesan § Katalog Referensi Perintah](/id/development/message-contracts#command-reference-catalogue).
+[Kontrak Pesan § Katalog Referensi Perintah](/id/development/message-contracts#katalog-referensi-perintah).
 Perintah yang relevan dengan Navigasi (`header: "navigation"`) adalah:
 
 | Perintah | Payload | Tujuan |
@@ -67,7 +67,7 @@ dan di luar cakupan di sini.
 
 Setiap load halaman Navigasi dan pergantian mode menumpang kontrak heartbeat yang sama yang
 didokumentasikan lengkap di
-[Kontrak Pesan § Kontrak Ping Heartbeat dan Lease](/id/development/message-contracts#heartbeat-ping-and-lease-contract).
+[Kontrak Pesan § Kontrak Ping Heartbeat dan Lease](/id/development/message-contracts#kontrak-ping-heartbeat-dan-lease).
 Field yang paling relevan dengan halaman ini:
 
 - **Request**: `page: "navigation"` dan `claim: true` adalah yang dikirim sesi Navigasi
@@ -79,7 +79,7 @@ Field yang paling relevan dengan halaman ini:
   atas.
 
 Bentuk sisi-REST dari ping yang sama adalah `POST /api/units/ping`, didokumentasikan di
-[Referensi API § Robot Heartbeat Ping](/id/development/api-reference#_2-robot-heartbeat-ping);
+[Referensi API § Robot Heartbeat Ping](/id/development/api-reference#_2-ping-heartbeat-robot);
 blok `data`-nya cocok dengan kontrak MQTT field demi field.
 
 ## Sinkronisasi Operation Supervisor
@@ -87,7 +87,7 @@ blok `data`-nya cocok dengan kontrak MQTT field demi field.
 `operation_supervisor.py` mencerminkan apa pun yang dikirim browser di `/string/operation_sync`
 sehingga sebuah misi Navigasi, baik multi-pinpoint maupun cakupan, tetap berjalan meski tab
 browser ditutup; protokol lengkap dan diagram urutannya ada di
-[Kontrak Pesan § Sinkronisasi Operation Supervisor](/id/development/message-contracts#operation-supervisor-synchronization).
+[Kontrak Pesan § Sinkronisasi Operation Supervisor](/id/development/message-contracts#sinkronisasi-operation-supervisor).
 Khusus untuk Navigasi:
 
 - Memulai Auto Coverage, Custom Range Coverage, atau run Playlist masing-masing mengirim sinkron
@@ -106,7 +106,7 @@ Khusus untuk Navigasi:
 Canvas Navigasi dibangun sepenuhnya dari topic yang diserialisasi di unit lewat `topic2string`,
 dibawa lewat MQTT, dan dihidrasi ulang menjadi pesan ROS bertipe di server cloud untuk
 `rosbridge`. Detail lengkap hop-demi-hop ada di
-[Kontrak Pesan § Topic Telemetri Streaming](/id/development/message-contracts#streaming-telemetry-topics);
+[Kontrak Pesan § Topic Telemetri Streaming](/id/development/message-contracts#topik-telemetri-streaming);
 topic yang memasok canvas Navigasi secara spesifik:
 
 | Topic Robot | Topic Server Cloud | Rate | Peran di canvas |
@@ -116,13 +116,13 @@ topic yang memasok canvas Navigasi secara spesifik:
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Titik-titik laser scan merah di sekitar robot. |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | Saat ada plan | Garis biru global-plan untuk navigasi pinpoint/rute. |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Kontinu | Garis lintasan lokal. |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | Saat ada plan | [Overlay jalur-cakupan](/id/development/webui/navigation/coverage-cleaning#the-coverage-path-overlay) berwarna oranye. |
+| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | Saat ada plan | [Overlay jalur-cakupan](/id/development/webui/navigation/coverage-cleaning#overlay-jalur-cakupan) berwarna oranye. |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Snapshot misi lengkap yang dipakai untuk memulihkan state Navigasi saat rekoneksi/reload. |
 
 ## Endpoint REST
 
 Dari
-[Referensi API § Navigasi dan Pengiriman Misi](/id/development/api-reference#navigation-and-mission-dispatch):
+[Referensi API § Navigasi dan Pengiriman Misi](/id/development/api-reference#navigasi-dan-dispatch-misi):
 
 ### Inisialisasi Mode Navigasi: `POST /api/navigation/init`
 
@@ -131,7 +131,7 @@ tempat pemanggil berada; peta yang terlihat oleh pemanggil tetapi direkam oleh r
 rental yang sama akan ditolak dengan `404` alih-alih diteruskan. Meneruskannya dulu membiarkan
 request lolos sementara robot diam-diam gagal menemukan file peta yang tidak pernah direkamnya
 (lihat
-[Referensi API § Inisialisasi Mode Navigasi](/id/development/api-reference#_1-initialize-navigation-mode)
+[Referensi API § Inisialisasi Mode Navigasi](/id/development/api-reference#_1-inisialisasi-mode-navigasi)
 untuk insiden yang diperbaiki oleh perubahan ini).
 
 ### Kirim Goal Waypoint: `POST /api/navigation/pointstamped`
@@ -159,7 +159,7 @@ karena berada di bagian Referensi API yang sama.
 ### Sistem Auto Align: `POST /api/autoalign/start`
 
 Dari
-[Referensi API § Sistem Auto Align](/id/development/api-reference#auto-align-system): memulai
+[Referensi API § Sistem Auto Align](/id/development/api-reference#sistem-auto-align): memulai
 pemeriksaan konvergensi particle-filter/scan-match. `api-reference.md` hanya mendokumentasikan
 `start`; rekan-rekannya `status` dan `reset` yang juga dipanggil frontend
 (`src/components/navigationMap/autoAlignApi.ts`) didokumentasikan dari sumber di
@@ -175,7 +175,7 @@ healing frontend (patch prototype `createjs.Stage` milik EaselJS dan debounce re
 tiga-kali-percobaan) semuanya berlaku sama untuk Navigasi dan tidak diulang di sini.
 
 Subset dari
-[Subscription Canvas Web Utama](/id/development/rosbridge-protocol#primary-web-canvas-subscriptions)
+[Subscription Canvas Web Utama](/id/development/rosbridge-protocol#subscription-canvas-web-utama)
 yang benar-benar di-render Navigasi adalah kumpulan topic yang sama yang terdaftar di
 [Telemetri Streaming](#streaming-telemetry) di atas, dialamatkan dengan nama sisi-rosbridge-nya
 (misalnya `/server/robot_pose`, `/server/boustrophedon_path`) alih-alih bentuk sisi-MQTT

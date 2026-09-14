@@ -16,7 +16,7 @@ serta di jaringan saat sebuah peta disimpan. Untuk perilaku layar itu sendiri, l
 
 ## Memulai dan menghentikan sesi pemetaan
 
-Dari [Referensi API § Operasi Pemetaan (SLAM)](/id/development/api-reference#mapping-slam-operations):
+Dari [Referensi API § Operasi Pemetaan (SLAM)](/id/development/api-reference#operasi-mapping-slam):
 
 ### Start
 
@@ -43,13 +43,13 @@ nama peta:
 
 `homebase_x` / `homebase_y` di sini adalah pose yang ditangkap secara otomatis saat pemetaan
 dimulai (lihat
-[Ikhtisar § Menyimpan peta](/id/development/webui/mapping/overview#saving-the-map-stop-flow)),
+[Ikhtisar § Menyimpan peta](/id/development/webui/mapping/overview#menyimpan-peta-alur-stop)),
 bukan nilai yang dimasukkan operator.
 
 ::: info Penyimpanan bersifat asinkron
 Menyimpan peta SLAM memakan waktu lebih lama daripada budget timeout HTTP standar 30 detik yang
 dipakai di tempat lain pada platform ini (lihat
-[Kontrak Pesan § Arsitektur Korelasi dan Retry Perintah](/id/development/message-contracts#command-correlation-and-retry-architecture)).
+[Kontrak Pesan § Arsitektur Korelasi dan Retry Perintah](/id/development/message-contracts#arsitektur-korelasi-dan-retry-perintah)).
 `POST /api/mapping/stop` karena itu langsung mengembalikan `200 OK` beserta `request_id` dan
 `map_ulid`:
 
@@ -64,16 +64,16 @@ dipakai di tempat lain pada platform ini (lihat
 Frontend kemudian terhubung ke stream SSE di `GET /api/mapping/progress/:request_id` untuk
 mengikuti penyimpanan hingga selesai. Inilah yang kemungkinan besar menjadi dasar overlay progres
 `MapSaving` yang dijelaskan di
-[Ikhtisar](/id/development/webui/mapping/overview#saving-the-map-stop-flow); kode subscription
+[Ikhtisar](/id/development/webui/mapping/overview#menyimpan-peta-alur-stop); kode subscription
 sisi klien yang persis tidak dibahas dalam materi sumber yang tersedia untuk halaman ini. Lihat
-[Kontrak Pesan § Subsistem Pemetaan](/id/development/message-contracts#_3-mapping-subsystem-header-mapping).
+[Kontrak Pesan § Subsistem Pemetaan](/id/development/message-contracts#_3-subsistem-mapping-header-mapping).
 :::
 
 ## Envelope perintah MQTT (`header: "mapping"`)
 
 Request stop HTTP di atas diteruskan ke robot sebagai perintah `mapping` / `stop` pada
 `/unit_<ULID>/system_command`, memakai
-[envelope perintah](/id/development/message-contracts#command-payload-envelope) bersama:
+[envelope perintah](/id/development/message-contracts#amplop-payload-perintah) bersama:
 
 ```json
 {
@@ -101,7 +101,7 @@ Request stop HTTP di atas diteruskan ke robot sebagai perintah `mapping` / `stop
 Perhatikan bahwa pose homebase lengkap di sini membawa quaternion orientasi (`homebase_o{x,y,z,w}`)
 selain posisi `x`/`y` yang dibawa body REST dan tabel `maps_data`. Ini adalah bentuk yang sama
 yang kemudian dibaca kembali oleh `navigation` / `init` saat peta dimuat (lihat
-[Kontrak Pesan § Subsistem Navigasi](/id/development/message-contracts#_2-navigation-subsystem-header-navigation)),
+[Kontrak Pesan § Subsistem Navigasi](/id/development/message-contracts#_2-subsistem-navigasi-header-navigation)),
 yang di luar cakupan halaman ini.
 
 ::: warning Hanya `stop` yang didokumentasikan di katalog perintah
@@ -144,7 +144,7 @@ dengan `request_id` dari perintah stop:
 | `failed` | Penyimpanan pemetaan gagal. Sesi tetap terbuka untuk dicoba ulang (aktivitas robot melaporkan `mapping_stop_failed`). |
 
 Lihat
-[Kontrak Pesan § Feedback Progres Pemetaan](/id/development/message-contracts#mapping-progress-feedback-header-mapping-progress)
+[Kontrak Pesan § Feedback Progres Pemetaan](/id/development/message-contracts#feedback-progres-mapping-header-mapping-progress)
 untuk sumber tabel ini.
 
 ## Penyimpanan sisi robot: `map_saver` dan pemeriksaan preflight
