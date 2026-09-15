@@ -25,12 +25,7 @@ Setiap prosedur menyertakan perintah shell langkah demi langkah, output yang dih
 
 Platform MSD700 menggunakan model dua mesin (Server + Unit Fisik). Ikuti urutan berikut untuk instalasi baru:
 
-```mermaid
-flowchart LR
-  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
-  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
-  U --> SYS["4. System Setup<br/>End-to-end communication test"]
-```
+![Setup Pipeline](/images/MSD700-SetupFlow.jpg)
 
 1. [Prasyarat](/id/setup/prerequisites): Verifikasi ukuran komputasi, perangkat periferal Jetson, dan aturan firewall jaringan.
 2. [Penyiapan Server](/id/setup/server-setup): Aktifkan tumpukan (stack) server cloud terlebih dahulu agar unit fisik memiliki endpoint pusat untuk melakukan enrolment.

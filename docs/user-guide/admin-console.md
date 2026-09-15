@@ -1,0 +1,53 @@
+---
+search: false
+---
+
+# Admin Console
+
+<RoleBadge role="admin" />
+
+The Admin Console is only visible to accounts with **Administrator** access. It's used to manage operators, robots, and rental profiles across your fleet.
+
+## Operators
+
+1. Go to **Admin Console → Operators**.
+2. Here you can see every operator account, invite new ones, and adjust their role or which rentals they can access.
+3. To remove access, click **Remove** next to the operator's name.
+
+## Units & Fleet
+
+The **Units** tab lists every physical MSD700 robot registered to your organization.
+
+- **Status**: Online, Offline, or In Use, updated live.
+- **Battery**: Current charge level.
+- Click a unit to see its details, including which rental it currently belongs to.
+
+## Rentals
+
+A **rental** groups together the maps, routes, and operators associated with a specific site or contract.
+
+1. Go to **Rentals** to see all active rental profiles.
+2. Click **New Rental** to set up a new site, then assign robots and operators to it.
+3. Use **Backup** on a rental to archive all of its maps and routes: useful before making major changes or ending a contract.
+
+## Backups
+
+1. Go to **Admin Console → Backups**.
+2. Choose to back up an entire **rental** or a single **unit's** data.
+3. Click **Create Backup**: this downloads or stores an archive you can restore from later if needed.
+4. To restore, select a backup file and click **Restore**. Restoring adds data back in; it won't overwrite maps that already exist under a different name.
+
+## Admins (Superadmin Only)
+
+If your account has superadmin privileges, the **Admins** tab lets you promote other operators to administrator, or revoke that access.
+
+## Troubleshooting
+
+**I don't see the Admin Console**
+: Your account is set as an Operator, not an Administrator. Ask an existing administrator to upgrade your role.
+
+**A robot disappeared from the Units list**
+: It may have been moved to a different rental, or is temporarily offline. Check its last-seen status.
+
+**Restoring a backup didn't bring back a deleted robot's data**
+: If the original robot no longer exists, the restore process will prompt you to remap the data to a different unit: follow the on-screen instructions to complete the transfer.

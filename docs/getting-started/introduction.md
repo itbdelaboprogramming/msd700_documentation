@@ -9,7 +9,7 @@ search: false
 
 ## What is MSD700?
 
-The **MSD700** is an industrial-grade autonomous mobile robot developed by **ITB de Labo Research Lab**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
+The **MSD700** is an industrial-grade autonomous mobile robot designed and manufactured by **Nakayama Iron Works Ltd.** The **ROS Web UI** dashboard used to operate it is developed by **ITB de Labo**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
 
 Equipped with 360-degree 3D LiDAR sensors, inertial measurement units (IMUs), and high-resolution optical cameras, the robot builds centimeter-accurate occupancy grid maps in real time using Simultaneous Localization and Mapping (SLAM).
 

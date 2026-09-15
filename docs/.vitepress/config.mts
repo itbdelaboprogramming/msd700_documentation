@@ -1,7 +1,23 @@
 import { defineConfig } from 'vitepress'
+import mathjax3 from 'markdown-it-mathjax3'
 
 // ==================== EN SIDEBARS ====================
 const enSidebar = {
+  '/user-guide/': [
+    {
+      text: 'ROS Web UI User Guide',
+      items: [
+        { text: 'Overview', link: '/user-guide/' },
+        { text: 'Accounts & Access', link: '/user-guide/accounts' },
+        { text: 'Navigation', link: '/user-guide/navigation' },
+        { text: 'Mapping', link: '/user-guide/mapping' },
+        { text: 'Maps & Database', link: '/user-guide/database' },
+        { text: 'Routes & Coverage', link: '/user-guide/routes-coverage' },
+        { text: 'Live Camera', link: '/user-guide/camera' },
+        { text: 'Admin Console', link: '/user-guide/admin-console' },
+      ]
+    }
+  ],
   '/getting-started/': [
     {
       text: 'Getting Started',
@@ -191,6 +207,21 @@ const enSidebar = {
 
 // ==================== ID SIDEBARS (BAHASA INDONESIA) ====================
 const idSidebar = {
+  '/id/user-guide/': [
+    {
+      text: 'Panduan Pengguna ROS Web UI',
+      items: [
+        { text: 'Ikhtisar', link: '/id/user-guide/' },
+        { text: 'Akun & Akses', link: '/id/user-guide/accounts' },
+        { text: 'Navigasi', link: '/id/user-guide/navigation' },
+        { text: 'Pemetaan', link: '/id/user-guide/mapping' },
+        { text: 'Peta & Database', link: '/id/user-guide/database' },
+        { text: 'Rute & Cakupan', link: '/id/user-guide/routes-coverage' },
+        { text: 'Kamera Langsung', link: '/id/user-guide/camera' },
+        { text: 'Konsol Admin', link: '/id/user-guide/admin-console' },
+      ]
+    }
+  ],
   '/id/getting-started/': [
     {
       text: 'Panduan Memulai',
@@ -380,6 +411,21 @@ const idSidebar = {
 
 // ==================== JA SIDEBARS (JAPANESE) ====================
 const jaSidebar = {
+  '/ja/user-guide/': [
+    {
+      text: 'ROS Web UI ユーザーガイド',
+      items: [
+        { text: '概要', link: '/ja/user-guide/' },
+        { text: 'アカウントとアクセス', link: '/ja/user-guide/accounts' },
+        { text: 'ナビゲーション', link: '/ja/user-guide/navigation' },
+        { text: 'マッピング', link: '/ja/user-guide/mapping' },
+        { text: 'マップとデータベース', link: '/ja/user-guide/database' },
+        { text: 'ルートとカバレッジ', link: '/ja/user-guide/routes-coverage' },
+        { text: 'ライブカメラ', link: '/ja/user-guide/camera' },
+        { text: '管理コンソール', link: '/ja/user-guide/admin-console' },
+      ]
+    }
+  ],
   '/ja/getting-started/': [
     {
       text: '導入ガイド',
@@ -582,6 +628,7 @@ export default defineConfig({
   },
   markdown: {
     config(md) {
+      md.use(mathjax3)
       const defaultFence = md.renderer.rules.fence!
       md.renderer.rules.fence = (tokens, idx, options, env, self) => {
         const token = tokens[idx]
@@ -603,6 +650,7 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/' },
           { text: 'Getting Started', link: '/getting-started/' },
+          { text: 'User Guide', link: '/user-guide/' },
           { text: 'Setup', link: '/setup/' },
           { text: 'Developer Docs', link: '/development/' }
         ],
@@ -628,6 +676,7 @@ export default defineConfig({
         nav: [
           { text: 'Beranda', link: '/id/' },
           { text: 'Panduan Operator', link: '/id/getting-started/' },
+          { text: 'Panduan Pengguna', link: '/id/user-guide/' },
           { text: 'Setup', link: '/id/setup/' },
           { text: 'Dokumentasi Developer', link: '/id/development/' }
         ],
@@ -662,6 +711,7 @@ export default defineConfig({
         nav: [
           { text: 'ホーム', link: '/ja/' },
           { text: '導入ガイド', link: '/ja/getting-started/' },
+          { text: 'ユーザーガイド', link: '/ja/user-guide/' },
           { text: 'セットアップ', link: '/ja/setup/' },
           { text: '開発ドキュメント', link: '/ja/development/' }
         ],

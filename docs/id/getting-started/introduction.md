@@ -9,7 +9,7 @@ search: false
 
 ## Apa itu MSD700?
 
-**MSD700** adalah robot mobile otonom kelas industri yang dikembangkan oleh **ITB de Labo Research Lab**. Robot ini dirancang khusus untuk melakukan pemetaan lingkungan otonom, navigasi titik-ke-titik, dan cakupan area sistematis di lingkungan indoor yang kompleks seperti gudang, koridor kantor, terowongan, dan lantai industri terbuka.
+**MSD700** adalah robot mobile otonom kelas industri yang dirancang dan diproduksi oleh **Nakayama Iron Works Ltd.** Dashboard **ROS Web UI** yang digunakan untuk mengoperasikannya dikembangkan oleh **ITB de Labo**. Robot ini dirancang khusus untuk melakukan pemetaan lingkungan otonom, navigasi titik-ke-titik, dan cakupan area sistematis di lingkungan indoor yang kompleks seperti gudang, koridor kantor, terowongan, dan lantai industri terbuka.
 
 Dilengkapi dengan sensor LiDAR 3D 360 derajat, inertial measurement unit (IMU), dan kamera optik beresolusi tinggi, robot ini membangun peta occupancy grid dengan akurasi sentimeter secara real time menggunakan Simultaneous Localization and Mapping (SLAM).
 

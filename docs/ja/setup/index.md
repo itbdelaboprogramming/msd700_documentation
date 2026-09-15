@@ -25,12 +25,7 @@ search: false
 
 MSD700 プラットフォームは 2 台構成モデル(サーバー + 物理ユニット)を採用しています。新規インストールでは以下の順序に従ってください。
 
-```mermaid
-flowchart LR
-  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
-  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
-  U --> SYS["4. System Setup<br/>End-to-end communication test"]
-```
+![Setup Pipeline](/images/MSD700-SetupFlow.jpg)
 
 1. [前提条件](/ja/setup/prerequisites): コンピューティング規模、Jetson ハードウェア周辺機器、ネットワークファイアウォールルールを確認します。
 2. [サーバーセットアップ](/ja/setup/server-setup): 物理ユニットが登録先とする中央エンドポイントを用意するため、最初にクラウドサーバースタックを起動します。

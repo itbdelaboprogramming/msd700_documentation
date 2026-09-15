@@ -25,12 +25,7 @@ Every procedure includes step-by-step shell commands, expected outputs, configur
 
 The MSD700 platform uses a two-machine model (Server + Physical Units). Follow this sequence for new installations:
 
-```mermaid
-flowchart LR
-  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
-  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
-  U --> SYS["4. System Setup<br/>End-to-end communication test"]
-```
+![Setup Pipeline](/images/MSD700-SetupFlow.jpg)
 
 1. [Prerequisites](/setup/prerequisites): Verify compute sizing, Jetson hardware peripherals, and network firewall rules.
 2. [Server Setup](/setup/server-setup): Bring up the cloud server stack first so physical units have a central endpoint to enrol against.
