@@ -7,12 +7,21 @@ outline: deep
 <RoleBadge role="technician" />
 
 Bagian standar dari penyiapan mode lokal setiap unit ([Penyiapan Unit](/id/setup/unit-setup) Langkah 6):
-Unit menjalankan hotspot WiFi-nya sendiri agar operator dapat bergabung, secara otomatis "ditangkap"
-ke dashboard-nya begitu mereka membuka halaman HTTP apa pun (captive portal, mekanisme yang sama
-dengan yang dipakai bandara dan kafe), dan, jika ada radio kedua yang tersedia, tetap terhubung
-sebagai **klien** WiFi ke jaringan lain sebagai fallback internet/sinkronisasi cloud. Status kedua
-radio ditampilkan pada [badge Mode Lokal](/id/development/data-sync#the-local-mode-badge), badge yang
-sama, dropdown yang sama, dan operator dapat terhubung ke jaringan lain dari sana.
+Unit menjalankan hotspot WiFi-nya sendiri agar operator dapat bergabung, bisa dijangkau di
+`http://mymsd.jp`, dan tetap menjaga koneksi **klien** WiFi normal ke jaringan lain sebagai fallback
+internet/sinkronisasi cloud, pada radio yang sama persis saat perangkat kerasnya mendukung. Pada
+setiap kali hotspot dimulai, `msd700-hotspot-select-iface.sh` memilih antara dua jalur:
+
+- **Primary**: sebuah virtual AP interface (`msd700-ap0`) yang dibuat pada phy milik radio bawaan
+  itu sendiri, berdampingan dengan koneksi klien (STA) normalnya. Kartu kelas MediaTek MT7922
+  mendukung mode STA+AP konkuren ini pada satu radio fisik, lihat
+  [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922).
+- **Backup**: sebuah dongle WiFi USB, dinyalakan secara otomatis kapan pun jalur primary tidak
+  tersedia pada boot tersebut (kartu onboard berbeda, regresi driver, tidak ada dukungan kombo).
+  Sama sekali tidak dibutuhkan pada perangkat keras yang jalur primary-nya berfungsi.
+
+Status kedua radio ditampilkan pada [badge Mode Lokal](/id/development/data-sync#the-local-mode-badge),
+badge yang sama, dropdown yang sama, dan operator dapat terhubung ke jaringan lain dari sana.
 
 Unit yang tidak pernah menjalankan langkah provisioning di bawah ini tetap berfungsi persis seperti
 yang dijelaskan [Penyiapan Unit](/id/setup/unit-setup); badge hanya akan melaporkan "no hotspot radio"
@@ -20,72 +29,86 @@ dan tidak ada yang lain yang terpengaruh.
 
 ## Alur penyiapan
 
-Ikuti urutan ini pada unit baru, kebanyakan unit hanya perlu langkah 2 sampai 4:
+Ikuti urutan ini pada unit baru, kebanyakan unit hanya perlu langkah 2 dan 3:
 
-1. **Radio onboard-nya MediaTek MT7922, bukan RTL8822CE default?** Perbaiki dulu firmware-nya,
-   lihat [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922). Pada kernel Tegra, kartu ini bisa
-   melaporkan error firmware-not-found dan sama sekali tidak muncul ke NetworkManager, yang akan
-   diam-diam merusak auto-deteksi di langkah 3 di bawah. Lewati langkah ini sepenuhnya pada
-   perangkat keras RTL8822CE default.
-2. [Instal driver dongle](#menginstal-driver-dongle) (dongle USB berbasis RTL8188EUS,
-   sekali per unit).
-3. [Provisioning hotspot](#provisioning-hotspot-satu-kali-per-unit)
-   (`./setup.sh --provision-network`).
-4. [Verifikasi berjalan dengan benar](#memverifikasi-bahwa-ini-berfungsi).
+1. **Nyalakan dulu radio bawaan, itu adalah jalur primary.** Jika kartunya MediaTek MT7922,
+   perbaiki dulu firmware-nya, lihat [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922): pada kernel
+   Tegra, kartu ini bisa melaporkan error firmware-not-found dan sama sekali tidak muncul ke
+   NetworkManager, yang diam-diam mengirim hotspot ke backup dongle di bawah alih-alih jalur onboard
+   konkuren yang seharusnya dipakai. Jika radio bawaan sudah muncul dengan baik (`nmcli device
+   status`), tidak ada yang perlu diperbaiki di sini.
+2. [Provisioning hotspot](#provisioning-hotspot-satu-kali-per-unit)
+   (`./setup.sh --provision-network`). Preflight-nya sendiri memeriksa radio bawaan dan memberi
+   peringatan jika tidak bisa menjalankan jalur primary, otomatis jatuh ke dongle jika ada yang
+   dikonfigurasi.
+3. [Verifikasi berjalan dengan benar](#memverifikasi-bahwa-ini-berfungsi).
+4. **(Opsional) [Instal driver backup dongle](#menginstal-driver-dongle)**, hanya jika preflight di
+   langkah 2 melaporkan radio bawaan tidak bisa menjalankan jalur primary, atau sebagai redundansi
+   yang disengaja. Sama sekali tidak dibutuhkan pada perangkat keras yang jalur primary-nya sudah
+   berfungsi.
 
-Langkah 1 dan 2 adalah bring-up perangkat keras sekali jalan, diulang hanya jika perangkat
-kerasnya sendiri berubah (kartu onboard berbeda, dongle yang diganti). Langkah 3 adalah satu-satunya
-yang interaktif dan spesifik per unit (SSID, password).
+Hanya langkah 2 yang interaktif dan spesifik per unit (SSID, password); yang lain adalah bring-up
+perangkat keras sekali jalan, diulang hanya jika perangkat kerasnya sendiri berubah.
 
-## Mengapa dua radio, bukan satu
+## Radio primary vs. backup dongle
 
-WiFi onboard milik Jetson (Realtek RTL8822CE pada perangkat keras proyek ini) adalah **satu radio
-fisik**. Ia dapat bergabung ke jaringan sebagai klien (STA) *atau* menyiarkan hotspot (AP), tidak
-pernah keduanya sekaligus; ini bukan keterbatasan driver, melainkan perangkat kerasnya: `iw phy`
-menunjukkan tepat satu `phy` untuk kartu onboard, dan satu radio hanya bisa disetel ke satu channel
-pada satu waktu.
+Kartu kelas MediaTek MT7922 dapat berjalan sebagai klien WiFi (STA) dan menyiarkan access point
+(AP) secara bersamaan, pada radio fisik yang sama: `msd700-hotspot-select-iface.sh` membuat sebuah
+virtual interface (`msd700-ap0`) pada phy yang sama dengan interface STA pada setiap kali hotspot
+dimulai, virtual interface tidak bertahan lewat reboot sehingga tidak bisa dibuat sekali saja.
+"Valid interface combinations" milik `iw phy <phy> info` yang melaporkan `{ managed, AP } <= 2`
+pada perangkat keras ini adalah yang mengonfirmasi drivernya sungguh mendukung ini,
+`--provision-network` memeriksa persis ini pada saat provisioning.
 
-::: info Unit yang dibangun dengan MediaTek MT7922
-Sebagian unit membawa kartu MT7922, bukan RTL8822CE. Pada kernel Tegra, kartu ini bisa muncul dengan
-error firmware-not-found padahal drivernya sudah ada; lihat
-[Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922) untuk perbaikan spesifiknya sebelum menganggapnya
-kerusakan hardware.
+::: warning Perangkat keras lama atau yang ditukar jatuh ke backup secara otomatis, tapi tidak diam-diam
+Radio bawaan proyek ini sebelumnya, Realtek RTL8822CE, adalah **satu radio fisik** yang bisa menjadi
+klien *atau* AP, tidak pernah keduanya sekaligus; ini adalah perangkat kerasnya, bukan keterbatasan
+driver: `iw phy` menunjukkan tepat satu `phy`, dan satu radio hanya bisa disetel ke satu channel
+pada satu waktu. Preflight `setup.sh --provision-network` memberi peringatan keras begitu ia
+melihat ini, alih-alih membiarkannya ditemukan belakangan sebagai "kenapa hotspot selalu di dongle?".
 :::
 
-| Topologi | Kelayakan |
-| --- | --- |
-| Sebuah dongle menjalankan hotspot, radio bawaan tetap menjadi klien WiFi | Kepercayaan tinggi, tanpa risiko chipset. AP dan klien berada pada dua radio yang secara fisik terpisah, sehingga tidak ada pertanyaan "mode konkuren" sama sekali: dua proses independen (hostapd pada dongle, NetworkManager pada radio bawaan), masing-masing terikat ke interface-nya sendiri. |
-| Satu radio menangani AP dan klien sekaligus (tanpa dongle) | Bergantung pada chipset. Hanya berfungsi jika driver melaporkan kombinasi interface `iw list` yang valid termasuk `{ AP, managed } <= 2` pada satu wiphy. Tidak dijamin, dan bukan sesuatu yang bisa dipastikan proyek ini secara umum; periksa pada perangkat keras sesungguhnya. |
+| Jalur | Kapan dipakai | Kelayakan |
+| --- | --- | --- |
+| **Primary**: AP virtual pada radio bawaan | Setiap kali hotspot dimulai, kapan pun radio bawaan (`STA_INTERFACE_LOCAL`) melaporkan kombinasi interface yang mendukung | Kepercayaan tinggi pada perangkat keras kelas MT7922, tervalidasi pada proyek ini. Tidak ada yang perlu dicolok. |
+| **Backup**: dongle USB (`AP_INTERFACE_LOCAL`) | Otomatis, hanya saat jalur primary tidak tersedia pada boot tersebut (kartu hilang, driver/firmware rusak, tidak ada dukungan kombo, atau radio kelas RTL8822CE) | Kepercayaan tinggi, tanpa risiko chipset, AP dan klien berada pada dua radio yang secara fisik terpisah sehingga tidak ada pertanyaan "mode konkuren" sama sekali. Membutuhkan dongle yang tercolok dengan drivernya terinstal, lihat [Menginstal driver dongle](#menginstal-driver-dongle). |
 
-::: info Windows melakukan keduanya sekaligus bukan bukti Linux juga bisa
+::: info Windows melakukan keduanya sekaligus bukan bukti driver Linux mana pun juga bisa
 Laptop yang menjalankan fitur Mobile Hotspot milik Microsoft berdampingan dengan koneksi WiFi normal
 menggunakan stack driver yang sama sekali berbeda (adaptor WiFi virtual yang dikelola Windows sendiri)
 dari kombinasi AP-dan-managed konkuren `mac80211`/`nl80211` milik Linux. Ini adalah petunjuk yang masuk
 akal bahwa *perangkat keras*-nya secara fundamental tidak sepenuhnya tidak mampu, tetapi itu tidak
-mengatakan apa pun tentang apakah driver Linux untuk chip yang sama tersebut melaporkan kombinasi
-interface yang mendukungnya. Verifikasi dengan `iw list` pada host sesungguhnya.
+mengatakan apa pun tentang kombinasi interface milik driver Linux tertentu. Verifikasi dengan
+`iw phy <phy> info` pada host sesungguhnya, persis yang sudah dilakukan otomatis oleh preflight
+`--provision-network`.
 :::
 
-**Perangkat keras tervalidasi pada proyek ini**: TP-Link TL-WN722N v2/v3, chipset Realtek
-**RTL8188EUS** (USB ID `2357:010c`). Dongle berbasis RTL8188EUS apa pun seharusnya berfungsi dengan
-driver yang sama, lihat `KNOWN_IDS` di `scripts/install-wifi-dongle-driver.sh` untuk USB ID lain dari
-chipset yang sama. Tidak ada driver untuk chipset ini yang tersedia bawaan pada kernel Jetson (baik
-`rtl8xxxu` in-tree maupun modul out-of-tree), harus dibangun dari source lewat DKMS, lihat
-[Menginstal driver dongle](#installing-the-dongle-driver) di bawah.
+**Perangkat keras backup dongle tervalidasi pada proyek ini**: TP-Link TL-WN722N v2/v3, chipset
+Realtek **RTL8188EUS** (USB ID `2357:010c`). Dongle berbasis RTL8188EUS apa pun seharusnya berfungsi
+dengan driver yang sama, lihat `KNOWN_IDS` di `scripts/install-wifi-dongle-driver.sh` untuk USB ID
+lain dari chipset yang sama. Tidak ada driver untuk chipset ini yang tersedia bawaan pada kernel
+Jetson (baik `rtl8xxxu` in-tree maupun modul out-of-tree), harus dibangun dari source lewat DKMS,
+lihat [Menginstal driver dongle](#menginstal-driver-dongle) di bawah.
 
 ## Bagaimana semuanya terhubung
 
 ```mermaid
 flowchart TB
   subgraph HOST["Host (Jetson or dev laptop), Linux"]
-    HAP["hostapd<br/>msd700-hotspot.service, owns the AP interface"]
-    UNMANAGED["/etc/NetworkManager/conf.d/<br/>msd700-unmanaged-ap.conf"]
-    DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + selective captive DNS"]
-    FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect,<br/>DOCKER-USER NAT relay"]
+    SEL["msd700-hotspot-select-iface.sh<br/>ExecStartPre: memilih primary vs backup,<br/>menulis /run/msd700-hotspot-active"]
+    APIF["msd700-ap0 (primary)<br/>virtual iface pada phy radio bawaan"]
+    DONGLE["Dongle USB (backup)<br/>AP_INTERFACE_LOCAL"]
+    HAP["hostapd<br/>msd700-hotspot.service<br/>-i $IFACE $CONF, dari state file"]
+    UNMANAGED["/etc/NetworkManager/conf.d/<br/>msd700-unmanaged-ap.conf<br/>(msd700-ap0 dan dongle, keduanya unmanaged)"]
+    DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + satu hostname"]
+    FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect (hanya alamat unit ini),<br/>DOCKER-USER NAT relay"]
     NM["NetworkManager<br/>STA profile only, autoconnect"]
+    SEL -->|"membuat + menyalakan pemenangnya"| APIF
+    SEL -.->|"atau"| DONGLE
+    SEL -->|"menulis IFACE=.../CONF=..."| HAP
     HAP -->|"ExecStartPost/ExecStopPost"| FW
-    HAP -.->|"interface marked unmanaged"| UNMANAGED
-    DNSM -->|"BindsTo="| HAP
+    HAP -.->|"interface ditandai unmanaged"| UNMANAGED
+    DNSM -->|"BindsTo=, membaca state file yang sama"| HAP
   end
 
   subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
@@ -99,10 +122,10 @@ flowchart TB
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
   BADGE["Local Mode badge, WiFi section<br/>(dashboard, top-right)"] --> FE
 
-  CLIENT["Device joining the hotspot"] -->|"DNS: captive-probe domains only -> 192.168.4.1"| DNSM
-  CLIENT -->|"HTTP :80, redirected"| FW
+  CLIENT["Perangkat yang bergabung ke hotspot"] -->|"DNS: hanya PORTAL_HOSTNAME_LOCAL -> alamat unit ini"| DNSM
+  CLIENT -->|"HTTP :80 ke alamat unit ini, di-redirect"| FW
   FW --> FE
-  FW -->|"MASQUERADE, only if STA_INTERFACE_LOCAL set"| STA["onboard radio's own uplink"]
+  FW -->|"MASQUERADE, hanya jika STA_INTERFACE_LOCAL diatur"| STA["uplink milik radio bawaan sendiri"]
 ```
 
 Keberadaan hotspot **tidak** bergantung pada Docker. `hostapd` dan `dnsmasq` berjalan sebagai service
@@ -128,24 +151,26 @@ tampaknya menunggu event tersebut; `hostapd` tidak memblokir untuk itu dan langs
 
 Perbaikannya: jalankan `hostapd` langsung sebagai service systemd-nya sendiri, dan beri tahu
 NetworkManager untuk sepenuhnya membiarkan interface tersebut (`unmanaged-devices` dalam sebuah
-drop-in `conf.d`) sehingga keduanya tidak pernah saling berebut. Sisi STA (jaringan upstream untuk
-bergabung sebagai klien) tidak memiliki masalah seperti itu dan tetap melalui profil koneksi NM
-normal.
+drop-in `conf.d`) sehingga keduanya tidak pernah saling berebut, dipakai seragam untuk interface
+primary maupun backup. Sisi STA (jaringan upstream untuk bergabung sebagai klien) tidak memiliki
+masalah seperti itu dan tetap melalui profil koneksi NM normal.
 
 ### Komponen
 
 | Komponen | Yang dilakukannya | Siklus hidup |
 | --- | --- | --- |
-| `msd700-hotspot.service` | Menetapkan IP statis `192.168.4.1/24`, menjalankan `hostapd -i <ap-iface> /etc/hostapd/hostapd-msd700.conf`, memanggil `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, diaktifkan saat boot, `Restart=on-failure` |
-| `msd700-hotspot-firewall.sh` | Redirect HTTP captive-portal (port 80 pada interface AP, selalu) ditambah NAT relay internet (chain `DOCKER-USER`, hanya saat `STA_INTERFACE_LOCAL` diatur) | Dipanggil dari `ExecStartPost`/`ExecStopPost` service di atas, idempoten (periksa-lalu-bertindak) |
-| `msd700-hotspot-dhcp.service` | Menjalankan instance `dnsmasq` khusus: server DHCP (`192.168.4.10`-`192.168.4.200`) + DNS captive-portal selektif | systemd, `BindsTo=msd700-hotspot.service` |
-| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Memberi tahu NM untuk tidak pernah menyentuh interface milik dongle | Dibaca oleh NetworkManager saat restart |
+| `msd700-hotspot-select-iface.sh` | `ExecStartPre`: membuat/menyalakan AP virtual primary (`msd700-ap0`) jika radio bawaan mendukungnya, jika tidak menyalakan interface dongle backup; menulis pemenangnya (`IFACE`, `CONF`) ke `/run/msd700-hotspot-active` | Dijalankan oleh `ExecStartPre` milik `msd700-hotspot.service`, setiap kali start (virtual interface tidak bertahan lewat reboot) |
+| `msd700-hotspot.service` | Menetapkan IP statis `192.168.4.1/24` ke interface mana pun yang menang, menjalankan `hostapd -i $IFACE $CONF`, memanggil `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, diaktifkan saat boot, `Restart=on-failure` |
+| `msd700-hotspot-firewall.sh` | Redirect HTTP ke dashboard, dibatasi hanya pada port 80 yang ditujukan ke alamat unit ini sendiri (bukan captive portal, trafik port 80 lainnya lewat langsung) ditambah NAT relay internet (chain `DOCKER-USER`, hanya saat `STA_INTERFACE_LOCAL` diatur) | Dipanggil dari `ExecStartPost`/`ExecStopPost` service di atas, idempoten (periksa-lalu-bertindak) |
+| `msd700-hotspot-dhcp.service` | Menjalankan instance `dnsmasq` khusus terhadap interface mana pun yang aktif: server DHCP (`192.168.4.10`-`192.168.4.200`) + me-resolve `PORTAL_HOSTNAME_LOCAL` ke alamat unit ini | systemd, `BindsTo=msd700-hotspot.service` |
+| `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | SSID/password yang sama dirender dua kali, sekali per interface, sehingga klien melihat satu identitas terlepas dari radio mana yang sebenarnya menjawab | Dirender oleh `--provision-network`, `chmod 0600` |
+| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Memberi tahu NM untuk tidak pernah menyentuh `msd700-ap0` atau interface milik dongle | Dibaca oleh NetworkManager saat restart |
 | `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Memberikan aksi `org.freedesktop.NetworkManager.*` tanpa syarat, sehingga panggilan `nmcli` milik `network_local` (scan, connect, forget) berfungsi tanpa prompt polkit interaktif yang tidak pernah bisa dijawab container | Dibaca oleh `polkit` saat restart |
 | Profil koneksi NM (hanya radio bawaan) | Koneksi klien normal ke WiFi operator | Dikelola oleh NetworkManager seperti biasa, `autoconnect: yes` |
 
-Kedua service systemd sisi-hotspot memiliki `Restart=on-failure`, jadi mencabut lalu memasang kembali
-dongle yang *sama* saat unit sedang berjalan pulih dengan sendirinya (nama interface diturunkan dari
-MAC dan stabil per dongle fisik).
+Kedua service systemd sisi-hotspot memiliki `Restart=on-failure`, jadi kehilangan dan mendapatkan
+kembali interface yang aktif, mencabut dan memasang kembali backup dongle, atau driver radio bawaan
+pulih dari sebuah fault, membuat hotspot kembali menyala dengan sendirinya tanpa intervensi manual.
 
 ::: info Mengapa `network_local` bukan `privileged: true`
 `network_local` membutuhkan beberapa hal yang spesifik, tidak satu pun dari itu adalah grant luas yang
@@ -165,7 +190,9 @@ aturan profil default satu per satu.
 
 ## Menginstal driver dongle
 
-Satu kali, per unit, sebelum provisioning:
+Hanya dibutuhkan untuk jalur **backup**, baik karena radio bawaan tidak bisa menjalankan jalur
+primary (AP+STA konkuren), atau sebagai redundansi yang disengaja, sama sekali tidak dibutuhkan pada
+perangkat keras yang jalur primary-nya sudah berfungsi. Satu kali, per unit, sebelum provisioning:
 
 ```bash
 ./scripts/install-wifi-dongle-driver.sh
@@ -195,7 +222,11 @@ Semua yang ada di bawah ini secara sengaja hidup **di luar Docker**: ia harus te
 `local_dev` sedang mati, dan ia harus menyala seketika dongle dipasang ke unit yang bahkan belum
 pernah menjalankan `docker-manager.sh` sama sekali.
 
-### 1. Pasang dongle
+### 1. (Opsional) Pasang backup dongle
+
+Hanya dibutuhkan jika radio bawaan tidak bisa menjalankan jalur primary (AP+STA konkuren), atau
+untuk redundansi yang disengaja, lihat [Radio primary vs. backup dongle](#radio-primary-vs-backup-dongle)
+di atas. Lewati langkah ini sepenuhnya pada perangkat keras yang jalur primary-nya sudah berfungsi.
 
 Tidak ada yang perlu diatur di `docker/.env` secara manual terlebih dahulu, pasang saja dongle WiFi
 USB yang telah tervalidasi dan lanjutkan ke provisioning di bawah; password dan semua pengaturan lain
@@ -217,13 +248,18 @@ Jalankan dari terminal interaktif (manusia di keyboard, bukan sesi pipa atau non
 
 Dengan gaya create-next-app, ia menuntun Anda melalui setiap pengaturan, nama interface, SSID, dan
 password hotspot, menampilkan nilai yang terdeteksi otomatis atau saat ini sebagai `[default]`, tekan
-Enter untuk menerimanya atau ketik nilai baru. Password hotspot diketik dua kali untuk konfirmasi dan,
-bersama password WiFi upstream apa pun yang dimasukkan untuk sisi STA, secara sengaja **tidak pernah**
-dituliskan ke `docker/.env` atau file apa pun lainnya di disk; NetworkManager menyimpan sendiri key
-STA-nya dan file konfigurasi hostapd sendiri (`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`)
-menyimpan yang AP. Setiap jawaban lainnya (nama interface, SSID) disimpan kembali ke `docker/.env`
-sehingga run ulang, atau manusia yang membaca sekilas file tersebut, melihat nilai yang sebenarnya,
-lihat [Referensi konfigurasi](#configuration-reference-docker-env) di bawah.
+Enter untuk menerimanya atau ketik nilai baru. Setiap prompt menyatakan perannya secara eksplisit,
+`Backup hotspot interface (USB dongle...)` dan `Uplink Wi-Fi interface (onboard radio -- also backs
+the primary hotspot)`, jadi radio mana yang berfungsi sebagai apa tidak pernah ambigu saat mengetik.
+Password hotspot diketik dua kali untuk konfirmasi dan, bersama password WiFi upstream apa pun yang
+dimasukkan untuk sisi STA, secara sengaja **tidak pernah** dituliskan ke `docker/.env` atau file apa
+pun lainnya di disk; NetworkManager menyimpan sendiri key STA-nya dan file konfigurasi hostapd
+sendiri (`/etc/hostapd/hostapd-msd700-primary.conf` dan, jika dongle dikonfigurasi,
+`hostapd-msd700-backup.conf`, keduanya `chmod 0600`) menyimpan yang AP, SSID/password yang sama
+dirender ke keduanya sehingga klien melihat satu identitas terlepas dari radio mana yang menjawab.
+Setiap jawaban lainnya (nama interface, SSID) disimpan kembali ke `docker/.env` sehingga run ulang,
+atau manusia yang membaca sekilas file tersebut, melihat nilai yang sebenarnya, lihat
+[Referensi konfigurasi](#referensi-konfigurasi-docker-env) di bawah.
 
 ::: info Provisioning tanpa pengawasan / via skrip
 Tanpa TTY, atau dengan `MSD700_NONINTERACTIVE=1`, prompt di atas dilewati sepenuhnya dan
@@ -247,24 +283,35 @@ perintah ini:
    ini ada.
 2. **Menginstal aturan PolicyKit** (`/etc/polkit-1/rules.d/50-msd700-network-manager.rules`) sehingga
    panggilan `nmcli` milik `network_local` tidak menggantung pada prompt otentikasi interaktif.
-3. **Mendeteksi otomatis interface AP**: jika dongle RTL8188EUS yang dikenal terpasang tetapi
+3. **Mendeteksi otomatis interface backup**: jika dongle RTL8188EUS yang dikenal terpasang tetapi
    `AP_INTERFACE_LOCAL` kosong, terlebih dahulu menginstal drivernya (lihat di atas) jika perlu, lalu
    menemukan interface-nya dengan menelusuri `/sys/class/net/*/device/driver` untuk mana pun yang
    dimiliki oleh driver kernel `8188eu`, deterministik, independen dari alamat MAC atau urutan colok.
-4. **Mendeteksi otomatis interface STA**: perangkat WiFi *lain* mana pun yang ada, jika hanya ada
-   tepat satu. Kedua nilai yang terdeteksi dituliskan kembali ke `docker/.env` sehingga run
-   berikutnya, dan manusia yang membaca sekilas file tersebut, melihat nilai sebenarnya. Kasus ambigu
-   (misalnya dua radio bawaan) dibiarkan untuk diatur secara eksplisit oleh manusia.
-5. **Menginstal `hostapd`** jika belum ada, menghapus profil koneksi NetworkManager
+4. **Mendeteksi otomatis interface onboard (primary)**: perangkat WiFi *lain* mana pun yang ada,
+   jika hanya ada tepat satu. Kedua nilai yang terdeteksi dituliskan kembali ke `docker/.env`
+   sehingga run berikutnya, dan manusia yang membaca sekilas file tersebut, melihat nilai sebenarnya.
+   Kasus ambigu (misalnya dua radio bawaan) dibiarkan untuk diatur secara eksplisit oleh manusia.
+5. **Memeriksa kesiapan jalur primary radio bawaan.** Jika `STA_INTERFACE_LOCAL` diatur tapi
+   interface-nya sama sekali tidak muncul, mencoba perbaikan sekali jalan (`sudo apt-get install -y
+   linux-firmware`, lalu memicu ulang udev), memberi peringatan dan tetap di backup dongle jika itu
+   tidak cukup; kegagalan persis ini adalah yang diperbaiki secara manual oleh
+   [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922) saat percobaan otomatis tidak berhasil. Jika
+   interface-nya ada tapi `iw phy` tidak melaporkan dukungan AP di kombinasi interface-nya, memberi
+   peringatan bahwa jalur primary akan terus jatuh ke dongle, sebuah keterbatasan driver/perangkat
+   keras, bukan sesuatu yang bisa diperbaiki skrip ini.
+6. **Menginstal `hostapd`** jika belum ada, menghapus profil koneksi NetworkManager
    `msd700-hotspot` yang tersisa dari sebelum proyek ini beralih dari mode AP milik NM sendiri, dan
-   menulis `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` (me-restart NetworkManager
-   *sebelum* hostapd mengambil alih interface-nya, sehingga NM tidak lagi memegangnya).
-6. **Merender dan menginstal** `/etc/hostapd/hostapd-msd700.conf`,
-   `/etc/dnsmasq-msd700-hotspot.conf`, `/usr/local/sbin/msd700-hotspot-firewall.sh`, dan kedua file
-   unit systemd, lalu mengaktifkan dan **me-restart** (bukan `enable --now`, yang menjadi no-op pada
-   service yang sudah berjalan dan akan meninggalkan konfigurasi yang berubah tanpa pernah benar-benar
-   diterapkan ulang) `msd700-hotspot.service` dan `msd700-hotspot-dhcp.service`.
-7. **Membuat profil klien STA**, jika `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` telah diisi, dibiarkan
+   menulis `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` yang mencakup baik `msd700-ap0`
+   maupun interface dongle (me-restart NetworkManager *sebelum* hostapd mengambil alih salah satu
+   interface-nya, sehingga NM tidak lagi memegangnya).
+7. **Merender dan menginstal** `hostapd-msd700-primary.conf` (selalu) dan `hostapd-msd700-backup.conf`
+   (hanya jika interface dongle dikonfigurasi), `/etc/dnsmasq-msd700-hotspot.conf`,
+   `/usr/local/sbin/msd700-hotspot-firewall.sh`, `/usr/local/sbin/msd700-hotspot-select-iface.sh`,
+   dan kedua file unit systemd, lalu mengaktifkan dan **me-restart** (bukan `enable --now`, yang
+   menjadi no-op pada service yang sudah berjalan dan akan meninggalkan konfigurasi yang berubah
+   tanpa pernah benar-benar diterapkan ulang) `msd700-hotspot.service` dan
+   `msd700-hotspot-dhcp.service`.
+8. **Membuat profil klien STA**, jika `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` telah diisi, dibiarkan
    apa adanya jika profil dengan nama tersebut sudah ada.
 
 Menjalankan ulang perintah ini selalu aman: setiap langkah idempoten dan hanya menyentuh apa yang
@@ -282,62 +329,58 @@ akan berarti setiap `docker-manager.sh build`, termasuk pada laptop dev yang men
 sebelumnya tidak pernah dibutuhkan. Menjaga kedua perintah tetap terpisah menjaga kejutan itu tetap
 di luar kasus umum.
 
-## Captive portal
+## Redirect dashboard
 
-**DNS bersifat selektif, bukan wildcard.** `/etc/dnsmasq-msd700-hotspot.conf` (dirender dari
-`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) hanya me-resolve hostname spesifik yang dikueri
-masing-masing dari iOS/macOS, Android, Windows, Ubuntu/GNOME, dan Firefox untuk mendeteksi "apakah
-jaringan ini berada di balik captive portal" (`captive.apple.com`,
-`connectivitycheck.gstatic.com`, `www.msftconnecttest.com`, `detectportal.firefox.com`,
-`nmcheck.gnome.org`, dan beberapa lainnya, lihat template untuk daftar lengkap) ke `192.168.4.1`.
-Setiap hostname lainnya jatuh ke resolver upstream milik dnsmasq ini sendiri (`/etc/resolv.conf`,
-biasanya systemd-resolved, yang meminta DNS apa pun yang diberikan jaringan upstream milik radio
-bawaan). Ini menggantikan versi sebelumnya dari fitur ini yang mewildcard *setiap* hostname ke alamat
-unit itu sendiri; wildcard secara efektif masih terjadi pada **unit AP-only** tanpa
-`STA_INTERFACE_LOCAL` yang dikonfigurasi (tidak ada apa pun untuk di-relay apa pun kata DNS-nya),
-tetapi begitu ada uplink bawaan, me-resolve domain sungguhan ke alamat sungguhannya adalah yang
-memungkinkan trafik HTTPS (port 443) lewat langsung melalui NAT relay di bawah tanpa disentuh.
+**Bukan captive portal, dengan sengaja, sejak 2026-09-01.** Versi fitur ini sebelumnya membajak
+hostname-hostname spesifik yang dikueri masing-masing oleh iOS/macOS, Android, Windows, Ubuntu/GNOME,
+dan Firefox untuk mendeteksi "apakah jaringan ini berada di balik captive portal"
+(`captive.apple.com`, `connectivitycheck.gstatic.com`, dan lain-lain), mengarahkan semuanya ke
+alamat hotspot itu sendiri. Ini secara teknis menghasilkan prompt "Sign in to WiFi", tetapi itu juga
+berarti setiap satu dari pemeriksaan konektivitas OS tersebut menerima dashboard alih-alih jawaban
+"kamu punya internet sungguhan" yang diharapkannya, sehingga OS menyimpulkan jaringan tersebut
+**tidak** punya internet yang berfungsi (menandainya, dan pada Android jatuh ke data seluler),
+padahal relay uplink bawaan di baliknya sudah berfungsi sepanjang waktu. Portalnya sendiri yang
+menyembunyikan koneksinya yang sebenarnya bekerja.
 
-**Redirect ini berbasis interface, bukan berbasis hostname.** `msd700-hotspot-firewall.sh` menginstal
-satu aturan iptables:
+**Yang terjadi sekarang**: `/etc/dnsmasq-msd700-hotspot.conf` (dirender dari
+`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) me-resolve tepat satu hostname,
+`PORTAL_HOSTNAME_LOCAL` (default `mymsd.jp`) beserta subdomainnya, ke alamat unit ini sendiri. Setiap
+hostname lainnya, termasuk domain connectivity-check milik setiap OS, jatuh ke resolver upstream
+milik dnsmasq ini sendiri (`/etc/resolv.conf`, biasanya systemd-resolved, yang meminta DNS apa pun
+yang diberikan uplink bawaan), sehingga pemeriksaan tersebut melihat internet sungguhan dan lolos
+normal begitu ada uplink yang me-relay trafik. Satu konsekuensi praktis: dengan uplink yang
+berfungsi, kebanyakan OS sekarang dengan benar memutuskan tidak ada yang perlu di-sign-in dan
+**tidak pernah menampilkan prompt "Sign in to WiFi" sama sekali**, operator mencapai dashboard
+dengan menavigasi langsung ke `http://mymsd.jp` (atau alamat mentah hotspot), bukan menunggu popup.
+
+**Redirect ini berbasis alamat, bukan berbasis hostname.** `msd700-hotspot-firewall.sh` menginstal:
 
 ```
-iptables -t nat -A PREROUTING -i <ap-interface> -p tcp --dport 80 -j REDIRECT --to-port <captive-port>
+iptables -t nat -A PREROUTING -i <ap-interface> -d <ap-address> -p tcp --dport 80 -j REDIRECT --to-port <dashboard-port>
 ```
 
-Ini me-redirect **setiap** permintaan HTTP polos (port 80) yang tiba pada interface AP ke dashboard,
-tidak peduli hostname mana yang dituju; iptables bertindak berdasarkan interface dan port, bukan
-berdasarkan jawaban DNS yang sudah di-resolve klien. Ini sengaja dilakukan untuk probe captive-portal
-itu sendiri (DNS mereka sudah diarahkan ke `192.168.4.1` di atas, jadi mereka akan mendarat di sini
-bagaimanapun), tetapi ini juga berarti permintaan HTTP polos klien ke situs lain yang tidak terkait
-(yang di-resolve ke IP sungguhan situs tersebut) tetap di-redirect ke sini alih-alih benar-benar
-mencapai situs tersebut. `ROS-dashboard-next-ts/middleware.ts` menangani kasus itu secara eksplisit:
-ia menjawab setiap host+path probe spesifik milik masing-masing OS dengan sesuatu yang *bukan* yang
-diharapkan OS tersebut (302 untuk Apple, halaman 200 polos untuk yang lain, hanya saat
-`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), dan untuk hostname asing yang bukan salah satu dari probe
-tersebut, me-redirect 302 kembali ke alamat kanonis dashboard sendiri alih-alih mencoba mem-proxy-nya.
-Trafik HTTPS tidak pernah menyentuh aturan ini sama sekali (hanya `--dport 80` yang di-redirect), jadi
-browsing biasa lewat HTTPS tidak terpengaruh begitu ada uplink bawaan yang me-relay-nya.
+Klausa `-d <ap-address>` inilah yang berubah: hanya trafik HTTP polos yang benar-benar dialamatkan
+ke IP hotspot unit ini sendiri yang di-redirect ke dashboard. Port 80 ke tempat lain, browsing biasa
+klien yang di-resolve ke IP sungguhan situs tersebut, lewat langsung tanpa disentuh, berbeda dari
+redirect lama yang berlaku untuk seluruh interface. HTTPS (port 443) tidak pernah disentuh aturan
+ini baik sebelum maupun sesudahnya, jadi browsing biasa lewat HTTPS tidak terpengaruh begitu ada
+uplink bawaan yang me-relay-nya. Unit yang sudah di-provision sebelum perubahan ini masih membawa
+aturan blanket lama di tabel `nat`-nya; `apply` dan `teardown` keduanya secara eksplisit mencari dan
+menghapusnya (`drop_legacy_blanket_redirect`) sehingga unit yang di-provision ulang tidak pernah
+menjalankan keduanya sekaligus.
+
+::: warning Penanganan probe OS di `middleware.ts` mendahului perubahan ini dan kini tidak pernah tercapai
+`ROS-dashboard-next-ts/middleware.ts` masih menjawab host+path probe captive-portal spesifik
+masing-masing OS (Apple, Android, Windows, Firefox, Ubuntu/GNOME) dengan respons yang dirancang
+khusus. Karena hostname-hostname tersebut tidak lagi di-resolve ke alamat unit ini, hanya
+`PORTAL_HOSTNAME_LOCAL` yang di-resolve, kueri DNS klien hotspot untuk misalnya `captive.apple.com`
+sekarang langsung menuju internet sungguhan lewat uplink bawaan, dan jalur kode ini tidak pernah
+tercapai dalam praktiknya. Belum dibersihkan.
+:::
 
 Diterapkan dan dihapus secara otomatis lewat `ExecStartPost`/`ExecStopPost` milik
 `msd700-hotspot.service`, terikat pada naik/turunnya hostapd itu sendiri, bukan pada siklus hidup
 container apa pun atau skrip dispatcher NetworkManager.
-
-::: danger HTTPS tidak pernah dicegat, dan itu bukan bug
-Me-redirect trafik TLS sepenuhnya merusak validasi sertifikat: klien mendapat error keamanan keras,
-bukan prompt sign-in. Ini adalah batasan protokol, sama seperti yang dihadapi setiap captive portal
-sungguhan. Yang sebenarnya memicu prompt "Sign in to network" adalah probe HTTP polos milik
-masing-masing OS:
-
-| OS | URL Probe | Mengharapkan |
-| --- | --- | --- |
-| Apple (iOS/macOS) | `http://captive.apple.com/hotspot-detect.html` | string literal "Success" |
-| Android | `http://connectivitycheck.gstatic.com/generate_204` | HTTP 204 |
-| Windows (NCSI) | `http://www.msftconnecttest.com/connecttest.txt` | "Microsoft Connect Test" |
-| Windows (legacy) | `http://www.msftncsi.com/ncsi.txt` | "Microsoft NCSI" |
-| Firefox | `http://detectportal.firefox.com/success.txt` | "success\n" |
-| Ubuntu/GNOME (NetworkManager) | `http://connectivity-check.ubuntu.com/` , `http://nmcheck.gnome.org/` | body 200 yang tidak kosong |
-:::
 
 **Relay internet.** Hanya saat `STA_INTERFACE_LOCAL` diatur, `msd700-hotspot-firewall.sh` juga
 menambahkan:
@@ -365,6 +408,17 @@ label pembaca layarnya, bukan sebagai teks tercetak; sebuah SSID bisa sampai 32 
 sembarang dan badge tersebut duduk di atas navbar, jadi kata-katanya berada satu klik jauhnya.
 Ketidakterjangkauan agent juga dinyatakan dalam kata-kata di bagian atas seksi tersebut, karena glyph
 merah saja bukan sesuatu yang bisa ditindaklanjuti operator.
+
+::: danger Buta terhadap jalur primary pada unit tanpa dongle yang dikonfigurasi
+`getApInfo()` milik `network-agent`
+(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`) membaca sebuah variabel environment
+tetap `AP_INTERFACE`, bersumber dari `AP_INTERFACE_LOCAL`, interface backup dongle, bukan dari
+`/run/msd700-hotspot-active`. Pada unit yang menjalankan hotspot sepenuhnya di jalur primary (tanpa
+dongle dikonfigurasi sama sekali), `AP_INTERFACE` kosong, `getApInfo('')` langsung mengembalikan
+`null`, dan badge melaporkan hotspot tidak ada padahal sebenarnya sedang menyala dan berfungsi di
+`msd700-ap0`. Belum diperbarui untuk arsitektur primary/backup. Membaca status klien (STA) tidak
+terpengaruh, ini hanya memengaruhi sisi AP.
+:::
 
 Ia melakukan polling `GET /local/wifi/status` setiap 30 detik, lebih cepat untuk jendela waktu singkat
 setelah sebuah aksi, dari badge yang selalu ter-mount alih-alih dari bagian tersebut, sehingga
@@ -423,10 +477,12 @@ tersebut jika ada; interface AP kini *unmanaged* dari sisi NM, `hostapd` memilik
 ada koneksi `msd700-hotspot` yang bisa dibaca `setHotspot()`, jadi ia langsung gagal dengan
 `not_provisioned` sebelum mencoba perubahan apa pun. Membaca status (`GET /local/wifi/hotspot`,
 `GET /local/wifi/status`) tidak terpengaruh; `getApInfo()` telah diperbarui untuk membaca interface
-secara langsung lewat `iw`, hanya jalur *tulis*-nya saja yang belum ikut dipindahkan. Memperbaiki ini
-berarti menulis ulang `setHotspot()` untuk mengedit `/etc/hostapd/hostapd-msd700.conf`
-(SSID/`wpa_passphrase`) dan `systemctl restart msd700-hotspot.service` alih-alih menyentuh profil
-NetworkManager yang sudah tidak ada lagi. Belum dilakukan.
+secara langsung lewat `iw`, hanya jalur *tulis*-nya saja yang belum ikut dipindahkan (meski lihat kotak
+kebasian badge di atas, `getApInfo()` masih hanya pernah melihat interface backup dongle, tidak pernah
+yang primary). Memperbaiki ini berarti menulis ulang `setHotspot()` untuk mengedit **keduanya**,
+`hostapd-msd700-primary.conf` dan, jika ada, `hostapd-msd700-backup.conf` (SSID/`wpa_passphrase`,
+nilai yang sama di keduanya), dan `systemctl restart msd700-hotspot.service`, alih-alih menyentuh
+profil NetworkManager yang sudah tidak ada lagi. Belum dilakukan.
 :::
 
 Setelah diperbaiki, ada dua perilaku yang layak diketahui sebelum menggunakannya, dan keduanya sudah
@@ -479,13 +535,14 @@ dashboard dari jaringan *sisi-klien*, yang tidak mengetahuinya. Form-nya meminta
 memperlakukan kosong sebagai "pertahankan yang sekarang".
 
 ::: warning `docker/.env` adalah benih (seed), bukan sumber kebenaran
-`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` hanya dibaca oleh `setup.sh --provision-network`, dan hanya
-saat `/etc/hostapd/hostapd-msd700.conf` belum ada (dalam praktiknya: hanya pada run provisioning
-pertama). Setelah itu, `/etc/hostapd/hostapd-msd700.conf` menjadi otoritatif dan kedua key tersebut
-menjadi basi; menjalankan ulang `--provision-network` akan merender ulang file yang sama dari
-`docker/.env` lagi, jadi edit `docker/.env` dan jalankan ulang provisioning untuk mengubah hotspot
-dari CLI, atau tunggu jalur dashboard di atas diperbaiki. Jawaban langsung yang jujur untuk SSID
-yang disiarkan adalah `iw dev <ap-interface> info`.
+`AP_PASSWORD_LOCAL` hanya dibaca oleh `setup.sh --provision-network`, dan hanya sebagai fallback:
+passphrase yang hidup dibaca kembali lebih dulu dari konfigurasi hostapd mana pun yang sudah ada
+(`hostapd-msd700-primary.conf`, lalu `-backup.conf`), sehingga run ulang mempertahankan password
+unit yang sedang berfungsi alih-alih diam-diam mereset dari `docker/.env` yang dilacak git. Ubah
+hotspot dari CLI dengan mengedit `docker/.env` dan menjalankan ulang provisioning, menjawab prompt
+password dengan nilai baru (atau `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network` secara
+non-interaktif), atau tunggu jalur dashboard di atas diperbaiki. Jawaban langsung yang jujur untuk
+SSID yang disiarkan adalah `iw dev <ap-interface> info`.
 :::
 
 Keterjangkauan internet sisi-klien (`full` / `limited` / `portal` / `none`) dibaca langsung dari
@@ -496,11 +553,12 @@ apa pun di sini yang mengimplementasikan probe kedua.
 
 | Variabel | Arti | Default |
 | --- | --- | --- |
-| `AP_INTERFACE_LOCAL` | Nama interface dongle | terdeteksi otomatis saat `--provision-network` |
-| `STA_INTERFACE_LOCAL` | Nama interface radio bawaan | terdeteksi otomatis saat `--provision-network` |
+| `AP_INTERFACE_LOCAL` | Nama interface **backup** dongle | terdeteksi otomatis saat `--provision-network` |
+| `STA_INTERFACE_LOCAL` | Nama interface radio bawaan, juga menopang jalur hotspot **primary** | terdeteksi otomatis saat `--provision-network` |
 | `AP_SSID_LOCAL` | Nama siaran hotspot | `MSD700-<hostname suffix>` jika dibiarkan kosong |
 | `AP_PASSWORD_LOCAL` | Password WPA2 hotspot (8+ karakter, wajib agar provisioning dapat membuat AP) | sengaja kosong di `docker/.env.example` |
 | `AP_CONNECTION_NAME_LOCAL` | Legacy, hanya digunakan untuk membersihkan profil NetworkManager pre-hostapd yang tersisa dengan nama ini selama provisioning | `msd700-hotspot` |
+| `PORTAL_HOSTNAME_LOCAL` | Hostname yang di-resolve dnsmasq ke alamat unit ini sendiri, satu-satunya alamat yang di-redirect firewall ke dashboard | `mymsd.jp` |
 | `NETWORK_AGENT_PORT_LOCAL` | Port tempat API loopback `network_local` mendengarkan | `5011` |
 | `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Opsional: jaringan upstream untuk auto-join sebagai klien pada provisioning pertama | kosong (tambahkan nanti lewat dropdown WiFi dashboard) |
 | `LOCAL_IP` | IP yang dituju build frontend dashboard | `192.168.4.1` (sesuai dengan IP statis hotspot) |
@@ -508,30 +566,34 @@ apa pun di sini yang mengimplementasikan probe kedua.
 ## Memverifikasi bahwa ini berfungsi
 
 ```bash
-# Services running?
+# Service berjalan?
 systemctl status msd700-hotspot.service msd700-hotspot-dhcp.service
 
-# Actually in AP mode, broadcasting?
-iw dev <AP_INTERFACE_LOCAL> info        # should show: type AP
+# Jalur mana yang menang, primary (msd700-ap0) atau backup (dongle)?
+cat /run/msd700-hotspot-active
 
-# NetworkManager correctly staying out of the way?
-nmcli device status                      # dongle should show "unmanaged"
+# Sungguh dalam mode AP, menyiarkan? (pakai IFACE dari file di atas)
+iw dev <IFACE> info                      # seharusnya menunjukkan: type AP
 
-# Captive-portal domains still redirected?
-dig +short @192.168.4.1 captive.apple.com       # should print 192.168.4.1
+# NetworkManager benar-benar membiarkan interface tersebut?
+nmcli device status                      # msd700-ap0 dan/atau dongle seharusnya "unmanaged"
 
-# Everything else resolving for real (only meaningful if STA_INTERFACE_LOCAL is set)?
-dig +short @192.168.4.1 github.com              # should print a real GitHub IP, not 192.168.4.1
+# Hostname dashboard me-resolve ke unit ini?
+dig +short @192.168.4.1 mymsd.jp                # seharusnya mencetak 192.168.4.1
 
-# NAT + relay rules present?
+# Semua yang lain me-resolve sungguhan (hanya bermakna jika STA_INTERFACE_LOCAL diatur)?
+dig +short @192.168.4.1 github.com              # seharusnya mencetak IP GitHub sungguhan, bukan 192.168.4.1
+
+# Aturan NAT + relay ada?
 sudo iptables -t nat -L POSTROUTING -n | grep 192.168.4.0
 sudo iptables -L DOCKER-USER -n
 ```
 
-Dari perangkat lain: hubungkan ke SSID-nya, prompt "Sign in to WiFi" milik OS itu sendiri seharusnya
-muncul dan mendarat di `http://192.168.4.1:3000` (atau port lain yang dituju redirect port 80, lihat
-`FRONTEND_PORT_LOCAL`). Semua yang lain seharusnya bisa browsing normal jika `STA_INTERFACE_LOCAL`
-dikonfigurasi.
+Dari perangkat lain: hubungkan ke SSID-nya dan navigasi ke `http://mymsd.jp` (atau alamat mentah
+hotspot pada port 80, lihat `FRONTEND_PORT_LOCAL`). Dengan uplink yang berfungsi, kebanyakan OS
+**tidak** akan menampilkan prompt "Sign in to WiFi" secara otomatis, perilaku itu sengaja dihapus,
+lihat [Redirect dashboard](#redirect-dashboard). Semua yang lain seharusnya bisa browsing normal jika
+`STA_INTERFACE_LOCAL` dikonfigurasi.
 
 ## Pemecahan Masalah
 
@@ -546,11 +608,28 @@ Coba ulang sekali, ada race condition yang diketahui antara `depmod` milik `dkms
 gagal, periksa `sudo dmesg | tail -40`.
 
 **Hotspot tidak mau menyiarkan / `iw dev` menunjukkan `type managed` alih-alih `AP`**
-Periksa `journalctl -u msd700-hotspot.service`. Jika Anda melihat kegagalan aktivasi berulang,
-pastikan NetworkManager benar-benar melepaskan interface tersebut (`nmcli device status` seharusnya
-mengatakan `unmanaged`, bukan `disconnected` atau `connecting`); `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf`
-yang basi dan mengarah ke nama interface yang salah adalah penyebab umum setelah berganti ke dongle
+Periksa `journalctl -u msd700-hotspot.service`, baris-baris awalnya adalah log keputusan milik
+`msd700-hotspot-select-iface.sh` sendiri (jalur mana yang dicoba, dan mengapa jatuh ke backup jika
+itu yang terjadi). Jika Anda melihat kegagalan aktivasi berulang, pastikan NetworkManager benar-benar
+melepaskan interface yang menang tersebut (`nmcli device status` seharusnya mengatakan `unmanaged`,
+bukan `disconnected` atau `connecting`); `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` yang
+basi dan mengarah ke nama interface yang salah adalah penyebab umum setelah berganti ke dongle
 yang berbeda.
+
+**Hotspot selalu berjalan di backup dongle padahal radio bawaan seharusnya mendukung jalur primary**
+Jalankan `iw phy <phy> info` (phy milik radio bawaan, dari
+`/sys/class/net/<sta-iface>/phy80211/name`) dan periksa "valid interface combinations" untuk
+`{ managed, AP } <= 2`. Jika tidak ada, ini adalah keterbatasan driver/perangkat keras yang sudah
+dideteksi dan diperingatkan `setup.sh` saat provisioning, bukan sesuatu untuk didebug lebih lanjut
+di sini. Jika ada tapi jalur primary tetap tidak dipilih, periksa `journalctl -u
+msd700-hotspot.service` untuk log milik `msd700-hotspot-select-iface.sh` sendiri tentang mengapa
+`try_primary` gagal pada boot tersebut.
+
+**Preflight `--provision-network` memperingatkan driver/firmware radio bawaan belum siap**
+Ini persis kegagalan yang diperbaiki secara manual oleh [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922),
+percobaan otomatis `apt-get install -y linux-firmware` saat provisioning tidak selalu cukup pada
+kernel Tegra proyek ini. Hotspot tetap berfungsi di backup dongle sementara itu, jika ada yang
+dikonfigurasi.
 
 **`--provision-network` gagal dengan "nmcli not found"**
 NetworkManager tidak terinstal pada host. `sudo apt install network-manager`.
@@ -567,28 +646,31 @@ msd700-hotspot-dhcp.service`. Pastikan `/etc/dnsmasq-msd700-hotspot.conf` memili
 yang benar (jalankan ulang `./setup.sh --provision-network` untuk merendernya ulang dari
 `docker/.env` saat ini).
 
-**Klien mendapat prompt "Sign in to WiFi" dan mencapai dashboard, tapi tidak ada yang lain yang
-dimuat**
+**Klien bisa mencapai `http://mymsd.jp` tapi tidak ada yang lain yang dimuat**
 `STA_INTERFACE_LOCAL` kemungkinan kosong di `docker/.env`, itu adalah mode AP-only, dashboard-only
 secara desain (tidak ada uplink bawaan untuk di-relay melaluinya). Jika seharusnya diatur, periksa
 dengan `nmcli device status`, atur, lalu jalankan ulang `./setup.sh --provision-network`.
 
 **`STA_INTERFACE_LOCAL` sudah diatur tapi klien masih tidak punya internet**
-Periksa apakah aturan NAT benar-benar ada (lihat [Memverifikasi bahwa ini berfungsi](#verifying-it-works)
-di atas). Jika hilang setelah provisioning ulang, pastikan `msd700-hotspot.service` benar-benar
-**di-restart** (bukan hanya di-`enable`, lihat langkah 6 provisioning), dan bahwa
-`net.ipv4.ip_forward` bernilai `1` (`sysctl net.ipv4.ip_forward`). Jika tidak, pastikan radio bawaan
-itu sendiri memiliki internet sungguhan (`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`), relay hanya
-meneruskan ke ke mana pun koneksi radio tersebut sendiri menuju.
+Periksa apakah aturan NAT benar-benar ada (lihat [Memverifikasi bahwa ini
+berfungsi](#memverifikasi-bahwa-ini-berfungsi) di atas). Jika hilang setelah provisioning ulang,
+pastikan `msd700-hotspot.service` benar-benar **di-restart** (bukan hanya di-`enable`, lihat langkah
+7 provisioning), dan bahwa `net.ipv4.ip_forward` bernilai `1` (`sysctl net.ipv4.ip_forward`). Jika
+tidak, pastikan radio bawaan itu sendiri memiliki internet sungguhan (`ping -I <STA_INTERFACE_LOCAL>
+8.8.8.8`), relay hanya meneruskan ke ke mana pun koneksi radio tersebut sendiri menuju.
 
 **Service lokal yang sudah ada (backend, media, MySQL) menjadi tak terjangkau setelah provisioning**
-Aturan redirect iptables tidak dibatasi dengan benar ke interface AP. Periksa apakah ia hanya
-menargetkan `<ap-interface>`, tidak pernah interface klien atau loopback:
-`sudo iptables -t nat -L PREROUTING -n`.
+Aturan redirect iptables tidak dibatasi dengan benar. Periksa apakah ia hanya menargetkan interface
+pemenang dari `/run/msd700-hotspot-active` dan hanya alamat unit ini sendiri (`-d`), tidak pernah
+interface klien, loopback, atau `0.0.0.0/0`: `sudo iptables -t nat -L PREROUTING -n`.
 
-**Menu badge mengatakan "Hotspot: no hotspot radio"**
-`AP_INTERFACE_LOCAL` kosong, atau `--provision-network` belum pernah dijalankan. Isi `docker/.env`
-dan jalankan `./setup.sh --provision-network`.
+**Menu badge mengatakan "Hotspot: no hotspot radio" padahal hotspot-nya sebenarnya menyala**
+Jika unit ini sama sekali tidak punya backup dongle yang dikonfigurasi, ini adalah kebasian
+`getApInfo()` yang sudah diketahui, lihat [Badge dashboard](#badge-dashboard) di atas, bukan
+pemadaman sungguhan: konfirmasi dengan `cat /run/msd700-hotspot-active` dan `iw dev <IFACE> info`
+pada host. Jika dongle **memang** dikonfigurasi, `AP_INTERFACE_LOCAL` bisa saja sungguhan kosong,
+atau `--provision-network` belum pernah dijalankan, isi `docker/.env` dan jalankan
+`./setup.sh --provision-network`.
 
 **Tidak ada glyph WiFi sama sekali pada badge**
 Tidak ada radio yang tersedia, tanpa interface AP dan STA tidak ada apa pun untuk dilaporkan.
@@ -606,16 +688,17 @@ secara langsung, ia membedakan password salah dari di luar jangkauan dari ditola
 
 **Mengubah nama/password hotspot dari dashboard tidak melakukan apa-apa / melaporkan
 `not_provisioned`**
-Bug yang diketahui, lihat [Mengubah hotspot milik unit sendiri](#changing-the-unit-s-own-hotspot)
-di atas, `setHotspot()` belum diperbarui untuk migrasi hostapd. Untuk saat ini, ubah
-`AP_SSID_LOCAL`/`AP_PASSWORD_LOCAL` di `docker/.env` dan jalankan ulang `--provision-network`
-sebagai gantinya (hanya berfungsi sebelum file konfigurasi hostapd sudah ada, lihat peringatan di
-bawah bagian itu).
+Bug yang diketahui, lihat [Mengubah hotspot milik unit sendiri](#mengubah-hotspot-milik-unit-sendiri)
+di atas, `setHotspot()` belum diperbarui untuk migrasi hostapd. Untuk saat ini, ubah dari CLI: edit
+`AP_SSID_LOCAL` di `docker/.env` untuk nama baru, dan jalankan ulang `--provision-network`, menjawab
+prompt password dengan nilai baru saat ditanya (atau secara non-interaktif dengan
+`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`), lihat peringatan di bawah bagian itu untuk
+alasan kenapa `AP_PASSWORD_LOCAL` sendiri di `docker/.env` saja tidak cukup.
 
 ## Terkait
 
 - [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922): langkah 1 dari [alur penyiapan](#alur-penyiapan)
-  di atas, hanya dibutuhkan jika radio onboard unit adalah MediaTek MT7922, bukan RTL8822CE default
+  di atas, kartu ini adalah radio primary proyek ini, tidak butuh dongle
 - [Penyiapan Unit](/id/setup/unit-setup): instalasi mode lokal dasar tempat fitur ini dibangun di
   atasnya
 - [Referensi Docker § network_mode: host](/id/setup/docker-reference#network-mode-host): mengapa

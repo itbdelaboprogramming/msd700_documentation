@@ -7,15 +7,20 @@ outline: deep
 <RoleBadge role="technician" />
 
 Ini adalah **langkah 1** dari [alur penyiapan Hotspot Wi-Fi + Klien](/id/setup/wifi-hotspot#alur-penyiapan):
-perbaiki dulu firmware radio onboard di sini, lalu kembali dan lanjutkan dengan instalasi driver
-dongle serta provisioning hotspot.
+perbaiki dulu firmware radio onboard di sini, lalu kembali dan lanjutkan dengan provisioning hotspot.
 
-Beberapa unit dikirim atau di-retrofit dengan kartu Wi-Fi **MediaTek MT7922** sebagai pengganti
-Realtek RTL8822CE bawaan proyek ini (lihat [Hotspot Wi-Fi & Klien](/id/setup/wifi-hotspot) untuk radio
-bawaan tersebut). Di kernel Tegra (Jetson), driver in-tree `mt7921e` sudah tersedia, tetapi paket
-firmware yang diinstal Ubuntu terkadang hanya menyediakan bentuk terkompresi `.zst` dari file firmware,
-sementara build kernel tertentu masih meminta bentuk polos tanpa kompresi. Akibatnya kartu terdeteksi
-tetapi tidak pernah menyala.
+**Kartu kelas MediaTek MT7922 adalah radio onboard primary proyek ini**: selain menjadi klien WiFi
+biasa, kartu ini bisa menjalankan access point hotspot secara konkuren pada radio fisik yang sama
+(lihat [Radio primary vs. backup dongle](/id/setup/wifi-hotspot#radio-primary-vs-backup-dongle)),
+tanpa perlu dongle USB. Unit yang dibangun dengan Realtek RTL8822CE yang lebih lama tidak mendukung
+mode konkuren tersebut, dan selalu butuh backup dongle untuk hotspot-nya, lihat
+[Hotspot Wi-Fi + Klien](/id/setup/wifi-hotspot) untuk jalur itu.
+
+Di kernel Tegra (Jetson), driver in-tree `mt7921e` sudah tersedia, tetapi paket firmware yang
+diinstal Ubuntu terkadang hanya menyediakan bentuk terkompresi `.zst` dari file firmware, sementara
+build kernel tertentu masih meminta bentuk polos tanpa kompresi. Akibatnya kartu terdeteksi tetapi
+tidak pernah menyala, dan hotspot diam-diam jatuh ke backup dongle (jika kebetulan ada yang
+dikonfigurasi) alih-alih memakai jalur primary yang seharusnya.
 
 ## Lingkungan yang tervalidasi
 
@@ -53,6 +58,35 @@ Kernel modules: mt7921e
 Jika `mt7921e` sudah muncul dan berfungsi, jangan pasang driver pihak ketiga: driver in-tree sudah
 benar, masalahnya (jika ada) ada di firmware, bukan drivernya.
 
+::: warning Jika kartunya sama sekali tidak muncul di sini, atau `mt7921e` bukan driver pada sistem ini
+Dua kegagalan berbeda, keduanya lebih jarang daripada masalah firmware yang menjadi topik panduan ini:
+
+- **Kartunya sama sekali tidak ada di `lspci`.** Periksa apakah kartunya benar-benar terpasang
+  (`lspci | grep -i network` seharusnya menampilkan *beberapa* perangkat wireless). Jika sama sekali
+  tidak ada apa pun, ini adalah masalah hardware (pasang ulang kartunya, periksa koneksi fisiknya),
+  bukan sesuatu yang bisa diperbaiki langkah-langkah di bawah.
+- **Kartunya terdaftar, tapi tanpa baris `Kernel driver in use`, atau dengan driver yang berbeda.**
+  Konfirmasi modulnya sendiri ada pada kernel ini:
+
+  ```bash
+  modinfo mt7921e
+  ```
+
+  `mt7921e` sudah termasuk dalam paket kernel L4T (Tegra) pada lingkungan tervalidasi proyek ini di
+  bawah, tidak ada yang perlu dibangun atau diunduh terpisah, berbeda dari driver backup dongle.
+  Jika `modinfo` melaporkan `ERROR: Module mt7921e not found`, pohon modul kernel yang sedang
+  berjalan itu sendiri kehilangan modul tersebut, masalah packaging kernel, bukan masalah firmware:
+
+  ```bash
+  uname -r
+  sudo apt install --reinstall "linux-modules-$(uname -r)"
+  ```
+
+  Jika paket tersebut tidak ada untuk build kernel ini, image L4T/JetPack yang dipakai untuk
+  mem-flash unit ini kehilangan modul tersebut sama sekali, perlakukan seperti masalah hardware:
+  me-reflash atau meng-upgrade L4T BSP adalah perbaikannya, bukan apa pun di panduan ini.
+:::
+
 ## 2. Cek firmware MT7922
 
 ```bash
@@ -89,6 +123,29 @@ mt7921e ... hardware init failed
 
 `error -2` adalah `ENOENT`: kernel tidak menemukan file dengan nama persis tersebut, dan tidak
 mendekompresi `.zst` secara otomatis pada build kernel ini.
+
+::: warning Jika `/lib/firmware/mediatek/` tidak ada, atau tidak punya file `.bin` maupun `.zst`
+Berbeda dari ketidakcocokan di atas, ini berarti paket firmware-nya sendiri tidak pernah terinstal,
+bukan cuma terinstal dalam format yang salah:
+
+```bash
+sudo apt update
+sudo apt install --reinstall linux-firmware
+ls -l /lib/firmware/mediatek/ | grep -i MT7922
+```
+
+`linux-firmware` adalah paket yang menyediakan file-file ini, `./setup.sh --provision-network`
+sudah mencoba reinstall persis ini secara otomatis sebagai preflight saat ia melihat interface radio
+onboard tidak pernah muncul, lihat [Hotspot Wi-Fi + Klien § Provisioning
+hotspot](/id/setup/wifi-hotspot#provisioning-hotspot-satu-kali-per-unit). Jika percobaan otomatis
+sudah berjalan dan interface-nya tetap tidak muncul, menjalankan ulang secara manual jarang membantu
+juga, periksa apa yang sebenarnya muncul di `/lib/firmware/mediatek/` dengan perintah di atas. Jika
+file-nya kembali sebagai `.zst` (kasus umum pada kernel proyek ini), lanjutkan ke langkah 3 dan 4 di
+bawah untuk mendekompresnya. Jika direktorinya masih kosong atau instalasi paketnya sendiri gagal,
+itu menunjuk ke package cache/mirror Ubuntu yang rusak atau tidak lengkap, bukan sesuatu yang
+spesifik untuk kartu ini, `apt-cache policy linux-firmware` dan `sudo apt update` polos adalah
+langkah berikutnya yang biasa diperiksa.
+:::
 
 ## 3. Pastikan `zstd` tersedia
 
@@ -216,7 +273,8 @@ nmcli device
 ## Terkait
 
 - [Hotspot Wi-Fi + Klien § Alur penyiapan](/id/setup/wifi-hotspot#alur-penyiapan): lanjutkan ke sini
-  setelah halaman ini, langkah 2 sampai 4 (driver dongle, provisioning hotspot, verifikasi).
-- [Hotspot Wi-Fi & Klien](/id/setup/wifi-hotspot): radio bawaan proyek ini (RTL8822CE) dan penyiapan
-  hotspot berbasis dongle yang menjadi alternatif dari kartu ini.
+  setelah halaman ini, langkah 2 dan 3 (provisioning hotspot, verifikasi), langkah 4 (backup dongle)
+  opsional.
+- [Hotspot Wi-Fi + Klien § Radio primary vs. backup dongle](/id/setup/wifi-hotspot#radio-primary-vs-backup-dongle):
+  kenapa kartu ini tidak butuh dongle, dan apa yang masih membutuhkannya.
 - [Pemecahan Masalah](/id/setup/troubleshooting): diagnostik teknisi secara umum.

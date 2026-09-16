@@ -7,12 +7,20 @@ outline: deep
 <RoleBadge role="technician" />
 
 A standard part of every unit's local-mode setup ([Unit Setup](/setup/unit-setup) Step 6): the Unit
-runs its own WiFi hotspot for an operator to join, gets automatically captured into its dashboard
-the moment they open any HTTP page (a captive portal, the same mechanism airports and cafes use),
-and, if a second radio is available, stays connected as a WiFi **client** to another network for
-internet/cloud-sync fallback. Both radios' state is shown on the
-[Local Mode badge](/development/data-sync#the-local-mode-badge), the same badge, the same dropdown,
-and an operator can connect to a different network from there.
+runs its own WiFi hotspot for an operator to join, reachable at `http://mymsd.jp`, and keeps a
+normal WiFi **client** connection to another network for internet/cloud-sync fallback, on the very
+same radio when the hardware supports it. At every hotspot start,
+`msd700-hotspot-select-iface.sh` picks between two paths:
+
+- **Primary**: a virtual AP interface (`msd700-ap0`) created on the onboard radio's own phy,
+  alongside its normal client (STA) connection. MediaTek MT7922-class cards support this
+  concurrent STA+AP mode on one physical radio, see [MT7922 Wi-Fi Setup](/setup/wifi-mt7922).
+- **Backup**: a USB WiFi dongle, brought up automatically whenever the primary path isn't
+  available this boot (a different onboard card, a driver regression, no combo support). Not
+  required at all on hardware where the primary path works.
+
+Both radios' state is shown on the [Local Mode badge](/development/data-sync#the-local-mode-badge),
+the same badge, the same dropdown, and an operator can connect to a different network from there.
 
 A unit that never runs the provisioning step below still works otherwise exactly as
 [Unit Setup](/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
@@ -20,53 +28,60 @@ else is affected.
 
 ## Setup flow
 
-Follow this order on a fresh unit, most units only need steps 2 to 4:
+Follow this order on a fresh unit, most units only need steps 2 and 3:
 
-1. **Onboard radio is a MediaTek MT7922, not the default RTL8822CE?** Fix its firmware first, see
-   [MT7922 Wi-Fi Setup](/setup/wifi-mt7922). On Tegra kernels the card can report a
-   firmware-not-found error and never show up to NetworkManager at all, which would silently break
-   the auto-detection in step 3 below. Skip this step entirely on the default RTL8822CE hardware.
-2. [Install the dongle driver](#installing-the-dongle-driver) (RTL8188EUS-based USB dongle,
-   one-time per unit).
-3. [Provision the hotspot](#provisioning-the-hotspot-once-per-unit)
-   (`./setup.sh --provision-network`).
-4. [Verify it works](#verifying-it-works).
+1. **Bring up the onboard radio first, it's the primary path.** If it's a MediaTek MT7922, fix its
+   firmware, see [MT7922 Wi-Fi Setup](/setup/wifi-mt7922): on Tegra kernels the card can report a
+   firmware-not-found error and never show up to NetworkManager at all, which silently sends the
+   hotspot to the dongle backup below instead of the concurrent onboard path it's meant to use. If
+   the onboard radio already shows up fine (`nmcli device status`), there is nothing to fix here.
+2. [Provision the hotspot](#provisioning-the-hotspot-once-per-unit)
+   (`./setup.sh --provision-network`). Its own preflight checks the onboard radio and warns if it
+   can't run the primary path, falling back to a dongle automatically if one is configured.
+3. [Verify it works](#verifying-it-works).
+4. **(Optional) [Install a backup dongle driver](#installing-the-dongle-driver)**, only if step 2's
+   preflight reported the onboard radio can't run the primary path, or as deliberate redundancy.
+   Not needed at all on hardware where the primary path already works.
 
-Steps 1 and 2 are one-time hardware bring-up, rerun only if the hardware itself changes (a
-different onboard card, a replaced dongle). Step 3 is the only one that is interactive and
-unit-specific (SSID, password).
+Only step 2 is interactive and unit-specific (SSID, password); the others are one-time hardware
+bring-up, redone only if the hardware itself changes.
 
-## Why two radios, not one
+## Primary radio vs. backup dongle
 
-The Jetson's onboard WiFi (a Realtek RTL8822CE on this project's hardware) is **one physical
-radio**. It can join a network as a client (STA) *or* broadcast a hotspot (AP), never both at the
-same time, this is not a driver limitation, it is the hardware: `iw phy` shows exactly one `phy` for
-the onboard card, and one radio can only be tuned to one channel at a time.
+MediaTek MT7922-class cards can run as a WiFi client (STA) and broadcast an access point (AP) at
+the same time, on the same physical radio: `msd700-hotspot-select-iface.sh` creates a virtual
+interface (`msd700-ap0`) on the same phy as the STA interface at every hotspot start, virtual
+interfaces don't survive a reboot, so it can't just be created once. `iw phy <phy> info`'s "valid
+interface combinations" reporting `{ managed, AP } <= 2` on this hardware is what confirms the
+driver actually supports it, `--provision-network` checks exactly this at provisioning time.
 
-::: info Unit built with a MediaTek MT7922 instead
-Some units carry a MT7922 card instead of the RTL8822CE. On Tegra kernels it can come up with a
-firmware-not-found error even though the driver is present, see
-[MT7922 Wi-Fi Setup](/setup/wifi-mt7922) for that specific fix before assuming it's a hardware fault.
+::: warning Older or swapped hardware falls back automatically, but isn't silent about it
+This project's earlier onboard radio, a Realtek RTL8822CE, is **one physical radio** that can be a
+client *or* an AP, never both at once, this is the hardware, not a driver limitation: `iw phy` shows
+exactly one `phy`, and one radio can only be tuned to one channel at a time. `setup.sh
+--provision-network`'s preflight warns loudly the moment it sees this, rather than leaving it to be
+discovered later as "why is the hotspot always on the dongle?".
 :::
 
-| Topology | Feasibility |
-| --- | --- |
-| A dongle runs the hotspot, the built-in radio stays a WiFi client | High confidence, no chipset risk. AP and client live on two physically separate radios, so there is no "concurrent mode" question at all: two independent processes (hostapd on the dongle, NetworkManager on the onboard radio), each bound to its own interface. |
-| One radio does both AP and client at once (no dongle) | Conditional on the chipset. Only works if the driver reports a valid `iw list` interface combination including `{ AP, managed } <= 2` on one wiphy. Not guaranteed, and not something this project can assert in general, check it on the actual hardware. |
+| Path | When it's used | Feasibility |
+| --- | --- | --- |
+| **Primary**: virtual AP on the onboard radio | Every hotspot start, whenever the onboard radio (`STA_INTERFACE_LOCAL`) reports a supporting interface combination | High confidence on MT7922-class hardware, validated on this project. Nothing to plug in. |
+| **Backup**: USB dongle (`AP_INTERFACE_LOCAL`) | Automatically, only when the primary path isn't available this boot (card missing, driver/firmware broken, no combo support, or an RTL8822CE-class radio) | High confidence, no chipset risk, AP and client live on two physically separate radios so there is no "concurrent mode" question at all. Requires a dongle plugged in with its driver installed, see [Installing the dongle driver](#installing-the-dongle-driver). |
 
-::: info Windows doing both at once is not proof Linux will
+::: info Windows doing both at once is not proof any given Linux driver will
 A laptop running Microsoft's Mobile Hotspot feature alongside a normal WiFi connection uses a
 completely different driver stack (a virtual WiFi adapter Windows manages itself) from Linux's
 `mac80211`/`nl80211` concurrent-AP-and-managed combination. It is a reasonable hint the *hardware*
-is not fundamentally incapable of it, but it says nothing about whether the Linux driver for that
-same chip reports a supporting interface combination. Verify with `iw list` on the actual host.
+is not fundamentally incapable of it, but it says nothing about a specific Linux driver's own
+interface combinations. Verify with `iw phy <phy> info` on the actual host, exactly what
+`--provision-network`'s preflight already does automatically.
 :::
 
-**Hardware validated on this project**: TP-Link TL-WN722N v2/v3, Realtek **RTL8188EUS** chipset
-(USB ID `2357:010c`). Any RTL8188EUS-based dongle should work with the same driver, see
-`KNOWN_IDS` in `scripts/install-wifi-dongle-driver.sh` for other USB IDs of the same chipset. No
-driver for this chipset ships with the Jetson's kernel out of the box (neither the in-tree
-`rtl8xxxu` nor an out-of-tree module), it has to be built from source via DKMS, see
+**Backup dongle hardware validated on this project**: TP-Link TL-WN722N v2/v3, Realtek
+**RTL8188EUS** chipset (USB ID `2357:010c`). Any RTL8188EUS-based dongle should work with the same
+driver, see `KNOWN_IDS` in `scripts/install-wifi-dongle-driver.sh` for other USB IDs of the same
+chipset. No driver for this chipset ships with the Jetson's kernel out of the box (neither the
+in-tree `rtl8xxxu` nor an out-of-tree module), it has to be built from source via DKMS, see
 [Installing the dongle driver](#installing-the-dongle-driver) below.
 
 ## How it is wired together
@@ -74,14 +89,20 @@ driver for this chipset ships with the Jetson's kernel out of the box (neither t
 ```mermaid
 flowchart TB
   subgraph HOST["Host (Jetson or dev laptop), Linux"]
-    HAP["hostapd<br/>msd700-hotspot.service, owns the AP interface"]
-    UNMANAGED["/etc/NetworkManager/conf.d/<br/>msd700-unmanaged-ap.conf"]
-    DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + selective captive DNS"]
-    FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect,<br/>DOCKER-USER NAT relay"]
+    SEL["msd700-hotspot-select-iface.sh<br/>ExecStartPre: picks primary vs backup,<br/>writes /run/msd700-hotspot-active"]
+    APIF["msd700-ap0 (primary)<br/>virtual iface on the onboard radio's phy"]
+    DONGLE["USB dongle (backup)<br/>AP_INTERFACE_LOCAL"]
+    HAP["hostapd<br/>msd700-hotspot.service<br/>-i $IFACE $CONF, from the state file"]
+    UNMANAGED["/etc/NetworkManager/conf.d/<br/>msd700-unmanaged-ap.conf<br/>(msd700-ap0 and the dongle, both unmanaged)"]
+    DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + one hostname"]
+    FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect (this unit's address only),<br/>DOCKER-USER NAT relay"]
     NM["NetworkManager<br/>STA profile only, autoconnect"]
+    SEL -->|"creates + brings up the winner"| APIF
+    SEL -.->|"or"| DONGLE
+    SEL -->|"writes IFACE=.../CONF=..."| HAP
     HAP -->|"ExecStartPost/ExecStopPost"| FW
-    HAP -.->|"interface marked unmanaged"| UNMANAGED
-    DNSM -->|"BindsTo="| HAP
+    HAP -.->|"interfaces marked unmanaged"| UNMANAGED
+    DNSM -->|"BindsTo=, reads the same state file"| HAP
   end
 
   subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
@@ -95,8 +116,8 @@ flowchart TB
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
   BADGE["Local Mode badge, WiFi section<br/>(dashboard, top-right)"] --> FE
 
-  CLIENT["Device joining the hotspot"] -->|"DNS: captive-probe domains only -> 192.168.4.1"| DNSM
-  CLIENT -->|"HTTP :80, redirected"| FW
+  CLIENT["Device joining the hotspot"] -->|"DNS: PORTAL_HOSTNAME_LOCAL only -> this unit's address"| DNSM
+  CLIENT -->|"HTTP :80 to this unit's address, redirected"| FW
   FW --> FE
   FW -->|"MASQUERADE, only if STA_INTERFACE_LOCAL set"| STA["onboard radio's own uplink"]
 ```
@@ -130,16 +151,18 @@ normal NM connection profile.
 
 | Component | What it does | Lifecycle |
 | --- | --- | --- |
-| `msd700-hotspot.service` | Assigns the static IP `192.168.4.1/24`, runs `hostapd -i <ap-iface> /etc/hostapd/hostapd-msd700.conf`, calls `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, enabled at boot, `Restart=on-failure` |
-| `msd700-hotspot-firewall.sh` | Captive-portal HTTP redirect (port 80 on the AP interface, always) plus internet-relay NAT (`DOCKER-USER` chain, only when `STA_INTERFACE_LOCAL` is set) | Called from the service above's `ExecStartPost`/`ExecStopPost`, idempotent (check-then-act) |
-| `msd700-hotspot-dhcp.service` | Runs a dedicated `dnsmasq` instance: DHCP server (`192.168.4.10`-`192.168.4.200`) + selective captive-portal DNS | systemd, `BindsTo=msd700-hotspot.service` |
-| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Tells NM to never touch the dongle's interface | Read by NetworkManager on restart |
+| `msd700-hotspot-select-iface.sh` | `ExecStartPre`: creates/brings up the primary virtual AP (`msd700-ap0`) if the onboard radio supports it, else brings up the backup dongle interface; writes the winner (`IFACE`, `CONF`) to `/run/msd700-hotspot-active` | Run by `msd700-hotspot.service`'s `ExecStartPre`, every start (virtual interfaces don't survive reboot) |
+| `msd700-hotspot.service` | Assigns the static IP `192.168.4.1/24` to whichever interface won, runs `hostapd -i $IFACE $CONF`, calls `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, enabled at boot, `Restart=on-failure` |
+| `msd700-hotspot-firewall.sh` | HTTP redirect to the dashboard, scoped to port 80 aimed at this unit's own address only (not a captive portal, other port-80 traffic passes straight through) plus internet-relay NAT (`DOCKER-USER` chain, only when `STA_INTERFACE_LOCAL` is set) | Called from the service above's `ExecStartPost`/`ExecStopPost`, idempotent (check-then-act) |
+| `msd700-hotspot-dhcp.service` | Runs a dedicated `dnsmasq` instance against whichever interface is active: DHCP server (`192.168.4.10`-`192.168.4.200`) + resolves `PORTAL_HOSTNAME_LOCAL` to this unit's address | systemd, `BindsTo=msd700-hotspot.service` |
+| `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | Same SSID/password rendered twice, once per interface, so clients see one identity regardless of which radio actually answers | Rendered by `--provision-network`, `chmod 0600` |
+| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Tells NM to never touch `msd700-ap0` or the dongle's interface | Read by NetworkManager on restart |
 | `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Grants `org.freedesktop.NetworkManager.*` actions unconditionally, so `network_local`'s `nmcli` calls (scan, connect, forget) work without an interactive polkit prompt the container can never answer | Read by `polkit` on restart |
 | NM connection profile (onboard radio only) | Normal client connection to the operator's WiFi | Managed by NetworkManager as usual, `autoconnect: yes` |
 
-Both hotspot-side systemd services `Restart=on-failure`, so unplugging and replugging the *same*
-dongle while the unit is running recovers on its own (the interface name is MAC-derived and stable
-per physical dongle).
+Both hotspot-side systemd services `Restart=on-failure`, so losing and regaining the active
+interface, unplugging and replugging the backup dongle, or the onboard radio's driver recovering
+from a fault, brings the hotspot back on its own without manual intervention.
 
 ::: info Why `network_local` is not `privileged: true`
 `network_local` needs a few distinct things, none of them the broad grant `msd700` already uses
@@ -157,7 +180,9 @@ rather than fighting the default profile rule by rule.
 
 ## Installing the dongle driver
 
-One-time, per unit, before provisioning:
+Only needed for the **backup** path, either because the onboard radio can't run the primary
+(concurrent AP+STA) path, or as deliberate redundancy, not required at all on hardware where the
+primary path works. One-time, per unit, before provisioning:
 
 ```bash
 ./scripts/install-wifi-dongle-driver.sh
@@ -186,7 +211,11 @@ Everything below lives **outside Docker** on purpose: it has to survive `local_d
 it has to come up the instant a dongle is plugged into a unit that has never run
 `docker-manager.sh` at all.
 
-### 1. Plug in the dongle
+### 1. (Optional) Plug in a backup dongle
+
+Only needed if the onboard radio can't run the primary (concurrent AP+STA) path, or for deliberate
+redundancy, see [Primary radio vs. backup dongle](#primary-radio-vs-backup-dongle) above. Skip this
+step entirely on hardware where the primary path already works.
 
 Nothing needs to be set in `docker/.env` by hand first, plug in the validated USB WiFi dongle and
 move on to provisioning below; the password and every other setting are asked for interactively at
@@ -208,12 +237,16 @@ Run from an interactive terminal (a human at the keyboard, not a piped or non-TT
 
 create-next-app style, it walks through every setting, interface names, SSID, and hotspot password,
 showing the auto-detected or current value as a `[default]`, press Enter to accept it or type a new
-one. The hotspot password is typed twice to confirm and, along with any upstream WiFi password
-entered for the STA side, is deliberately **never** written to `docker/.env` or any other file on
-disk, NetworkManager stores the STA key itself and hostapd's own config file
-(`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one. Every other answer (interface
-names, SSID) is saved back to `docker/.env` so a re-run, or a human skimming the file, sees the real
-values, see [Configuration reference](#configuration-reference-docker-env) below.
+one. Every prompt states the role explicitly, `Backup hotspot interface (USB dongle...)` and
+`Uplink Wi-Fi interface (onboard radio -- also backs the primary hotspot)`, so which radio does what
+is never ambiguous while typing. The hotspot password is typed twice to confirm and, along with any
+upstream WiFi password entered for the STA side, is deliberately **never** written to `docker/.env`
+or any other file on disk, NetworkManager stores the STA key itself and hostapd's own config files
+(`/etc/hostapd/hostapd-msd700-primary.conf` and, if a dongle is configured,
+`hostapd-msd700-backup.conf`, both `chmod 0600`) store the AP one, the same SSID/password rendered
+into both so clients see one identity regardless of which radio answers. Every other answer
+(interface names, SSID) is saved back to `docker/.env` so a re-run, or a human skimming the file,
+sees the real values, see [Configuration reference](#configuration-reference-docker-env) below.
 
 ::: info Unattended / scripted provisioning
 Without a TTY, or with `MSD700_NONINTERACTIVE=1`, the prompts above are skipped entirely and
@@ -236,24 +269,33 @@ No need to look up interface names by hand first either way. This one command:
    existed.
 2. **Installs a PolicyKit rule** (`/etc/polkit-1/rules.d/50-msd700-network-manager.rules`) so
    `network_local`'s `nmcli` calls do not hang on an interactive auth prompt.
-3. **Auto-detects the AP interface**: if a known RTL8188EUS dongle is plugged in but
+3. **Auto-detects the backup interface**: if a known RTL8188EUS dongle is plugged in but
    `AP_INTERFACE_LOCAL` is empty, installs its driver first (see above) if needed, then finds the
    interface by walking `/sys/class/net/*/device/driver` for whichever one is owned by the `8188eu`
    kernel driver, deterministic, independent of MAC address or plug order.
-4. **Auto-detects the STA interface**: whichever *other* WiFi device exists, if there's exactly one.
-   Both detected values are written back into `docker/.env` so future runs, and a human skimming the
-   file, see the real values. Ambiguous cases (e.g. two onboard radios) are left for a human to set
-   explicitly.
-5. **Installs `hostapd`** if missing, deletes any leftover `msd700-hotspot` NetworkManager
+4. **Auto-detects the onboard (primary) interface**: whichever *other* WiFi device exists, if
+   there's exactly one. Both detected values are written back into `docker/.env` so future runs,
+   and a human skimming the file, see the real values. Ambiguous cases (e.g. two onboard radios)
+   are left for a human to set explicitly.
+5. **Checks the onboard radio's primary-path readiness.** If `STA_INTERFACE_LOCAL` is set but the
+   interface doesn't show up at all, attempts a one-time fix (`sudo apt-get install -y
+   linux-firmware`, then re-triggers udev), warning and staying on the dongle backup if that isn't
+   enough, this exact failure mode is what [MT7922 Wi-Fi Setup](/setup/wifi-mt7922) fixes by hand
+   when the automatic attempt doesn't. If the interface exists but `iw phy` doesn't report AP
+   support in its interface combinations, warns that the primary path will keep falling back to the
+   dongle, a driver/hardware limitation, not something this script can fix.
+6. **Installs `hostapd`** if missing, deletes any leftover `msd700-hotspot` NetworkManager
    connection profile from before this project switched off NM's own AP mode, and writes
-   `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` (restarting NetworkManager *before* hostapd
-   claims the interface, so NM isn't still holding it).
-6. **Renders and installs** `/etc/hostapd/hostapd-msd700.conf`, `/etc/dnsmasq-msd700-hotspot.conf`,
-   `/usr/local/sbin/msd700-hotspot-firewall.sh`, and the two systemd unit files, then enables and
-   **restarts** (not `enable --now`, which is a no-op on an already-running service and would leave
-   a changed config never actually re-applied) `msd700-hotspot.service` and
-   `msd700-hotspot-dhcp.service`.
-7. **Creates the STA client profile**, if `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` are filled in,
+   `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` covering both `msd700-ap0` and the dongle
+   interface (restarting NetworkManager *before* hostapd claims either one, so NM isn't still
+   holding it).
+7. **Renders and installs** `hostapd-msd700-primary.conf` (always) and `hostapd-msd700-backup.conf`
+   (only if a dongle interface is configured), `/etc/dnsmasq-msd700-hotspot.conf`,
+   `/usr/local/sbin/msd700-hotspot-firewall.sh`, `/usr/local/sbin/msd700-hotspot-select-iface.sh`,
+   and the two systemd unit files, then enables and **restarts** (not `enable --now`, which is a
+   no-op on an already-running service and would leave a changed config never actually re-applied)
+   `msd700-hotspot.service` and `msd700-hotspot-dhcp.service`.
+8. **Creates the STA client profile**, if `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` are filled in,
    left alone if a profile of that name already exists.
 
 Re-running this command is always safe: every step is idempotent and only touches what actually
@@ -270,59 +312,54 @@ build`, including on a dev laptop running `--simulator` with no hotspot hardware
 prompting for a `sudo` password it never needed before. Keeping the two commands separate keeps that
 surprise out of the common case.
 
-## The captive portal
+## The dashboard redirect
 
-**DNS is selective, not a wildcard.** `/etc/dnsmasq-msd700-hotspot.conf` (rendered from
-`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) only resolves the specific hostnames
-iOS/macOS, Android, Windows, Ubuntu/GNOME, and Firefox each query to detect "is this network behind
-a captive portal" (`captive.apple.com`, `connectivitycheck.gstatic.com`,
-`www.msftconnecttest.com`, `detectportal.firefox.com`, `nmcheck.gnome.org`, and a few more, see the
-template for the full list) to `192.168.4.1`. Every other hostname falls through to this dnsmasq's
-own upstream resolver (`/etc/resolv.conf`, normally systemd-resolved, which asks whatever DNS the
-onboard radio's own upstream network handed out). This replaced an earlier version of this feature
-that wildcarded *every* hostname to the unit's own address, wildcarding is still effectively what
-happens on an **AP-only unit** with no `STA_INTERFACE_LOCAL` configured (nothing to relay through
-regardless of what DNS says), but once an onboard uplink exists, resolving real domains to their
-real addresses is what lets HTTPS (port 443) traffic pass straight through the NAT relay below
-untouched.
+**Not a captive portal, on purpose, since 2026-09-01.** An earlier version of this feature hijacked
+the specific hostnames iOS/macOS, Android, Windows, Ubuntu/GNOME, and Firefox each query to detect
+"is this network behind a captive portal" (`captive.apple.com`, `connectivitycheck.gstatic.com`,
+and others), pointing all of them at the hotspot's own address. That technically produced a "Sign
+in to WiFi" prompt, but it also meant every one of those OS connectivity checks received the
+dashboard instead of the "you have real internet" answer it expected, so the OS concluded the
+network had **no** working internet (flagging it, and on Android falling back to mobile data), even
+while the onboard uplink relay behind it had been working the whole time. The portal was hiding its
+own working connection.
 
-**The redirect is interface-scoped, not hostname-scoped.** `msd700-hotspot-firewall.sh` installs one
-iptables rule:
+**What happens now**: `/etc/dnsmasq-msd700-hotspot.conf` (rendered from
+`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) resolves exactly one hostname,
+`PORTAL_HOSTNAME_LOCAL` (default `mymsd.jp`) and its subdomains, to this unit's own address. Every
+other hostname, including every OS's own connectivity-check domain, falls through to this dnsmasq's
+own upstream resolver (`/etc/resolv.conf`, normally systemd-resolved, asking whatever DNS the
+onboard uplink handed out), so those checks see the real internet and pass normally once an uplink
+is relaying traffic. One practical consequence: with a working uplink, most OSes now correctly
+decide there is nothing to sign in to and **never show the "Sign in to WiFi" prompt at all**, an
+operator reaches the dashboard by navigating to `http://mymsd.jp` directly (or the raw hotspot
+address), not by waiting for a popup.
+
+**The redirect is address-scoped, not hostname-scoped.** `msd700-hotspot-firewall.sh` installs:
 
 ```
-iptables -t nat -A PREROUTING -i <ap-interface> -p tcp --dport 80 -j REDIRECT --to-port <captive-port>
+iptables -t nat -A PREROUTING -i <ap-interface> -d <ap-address> -p tcp --dport 80 -j REDIRECT --to-port <dashboard-port>
 ```
 
-This redirects **every** plain-HTTP (port 80) request arriving on the AP interface to the dashboard,
-regardless of which hostname it was headed for, iptables acts on interface and port, not on the DNS
-answer a client already resolved. That's deliberate for the captive-portal probes themselves (their
-DNS was already steered to `192.168.4.1` above, so they'd land here either way), but it also means a
-client's plain-HTTP request to some unrelated site (resolved to that site's real IP) still gets
-redirected here rather than actually reaching that site.
-`ROS-dashboard-next-ts/middleware.ts` handles that case explicitly: it answers each OS's specific
-probe host+path with something that *isn't* what the OS expects (a 302 for Apple, a plain 200 page
-for the rest, only when `NEXT_PUBLIC_DEPLOYMENT_MODE=local`), and for a foreign hostname that isn't
-one of those probes, 302-redirects back to the dashboard's own canonical address instead of trying
-to proxy it. HTTPS traffic never hits this rule at all (only `--dport 80` is redirected), so ordinary
-browsing over HTTPS is unaffected once an onboard uplink is relaying it.
+The `-d <ap-address>` clause is what changed: only plain-HTTP traffic actually addressed to this
+unit's own hotspot IP is redirected to the dashboard. Port 80 to anywhere else, a client's ordinary
+browsing, resolved to that site's real IP, passes straight through untouched, unlike the old
+blanket interface-wide redirect. HTTPS (port 443) was never touched by this rule either way, so
+ordinary browsing over HTTPS is unaffected once an onboard uplink is relaying it. Units provisioned
+before this change still carry the old blanket rule in their `nat` table; `apply` and `teardown`
+both explicitly look for and remove it (`drop_legacy_blanket_redirect`) so a re-provisioned unit
+never ends up running both at once.
+
+::: warning `middleware.ts`'s OS-probe handling predates this and is now unreachable
+`ROS-dashboard-next-ts/middleware.ts` still answers each OS's specific captive-portal probe
+host+path (Apple, Android, Windows, Firefox, Ubuntu/GNOME) with a crafted response. Since those
+hostnames are no longer resolved to this unit's address, only `PORTAL_HOSTNAME_LOCAL` is, a hotspot
+client's DNS query for e.g. `captive.apple.com` now goes straight to the real internet through the
+onboard uplink, and this code path is never reached in practice. Not yet cleaned up.
+:::
 
 Applied and removed automatically via `msd700-hotspot.service`'s `ExecStartPost`/`ExecStopPost`, tied
 to hostapd's own up/down, not to any container's lifecycle or a NetworkManager dispatcher script.
-
-::: danger HTTPS is never intercepted, and that is not a bug
-Redirecting TLS traffic breaks certificate validation outright: the client gets a hard security
-error, not a sign-in prompt. This is a protocol constraint, the same one every real captive portal
-runs into. What actually triggers the "Sign in to network" prompt is each OS's own plain-HTTP probe:
-
-| OS | Probe URL | Expects |
-| --- | --- | --- |
-| Apple (iOS/macOS) | `http://captive.apple.com/hotspot-detect.html` | the literal string "Success" |
-| Android | `http://connectivitycheck.gstatic.com/generate_204` | HTTP 204 |
-| Windows (NCSI) | `http://www.msftconnecttest.com/connecttest.txt` | "Microsoft Connect Test" |
-| Windows (legacy) | `http://www.msftncsi.com/ncsi.txt` | "Microsoft NCSI" |
-| Firefox | `http://detectportal.firefox.com/success.txt` | "success\n" |
-| Ubuntu/GNOME (NetworkManager) | `http://connectivity-check.ubuntu.com/` , `http://nmcheck.gnome.org/` | a non-empty 200 body |
-:::
 
 **Internet relay.** Only when `STA_INTERFACE_LOCAL` is set, `msd700-hotspot-firewall.sh` also adds:
 
@@ -348,6 +385,16 @@ screen-reader label rather than as printed text, an SSID is up to 32 bytes of ar
 and the badge sits over the navbar, so the words belong one click away instead. The agent being
 unreachable is also stated in words at the top of the section, since a red glyph on its own is not
 something an operator can act on.
+
+::: danger Blind to the primary path on a unit with no dongle configured
+`network-agent`'s `getApInfo()` (`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
+reads a fixed `AP_INTERFACE` environment variable, sourced from `AP_INTERFACE_LOCAL`, the backup
+dongle interface, not from `/run/msd700-hotspot-active`. On a unit running the hotspot entirely on
+the primary path (no dongle configured at all), `AP_INTERFACE` is empty, `getApInfo('')` returns
+`null` immediately, and the badge reports the hotspot as absent even while it is up and working on
+`msd700-ap0`. Not yet updated for the primary/backup architecture. Reading client (STA) status is
+unaffected, this only affects the AP side.
+:::
 
 It polls `GET /local/wifi/status` every 30 seconds, faster for a short window
 after an action, from the always-mounted badge rather than from the section, so the summary is
@@ -403,9 +450,11 @@ it directly via `msd700-hotspot.service`. On any unit provisioned under the curr
 there is no `msd700-hotspot` connection for `setHotspot()` to read, so it fails immediately with
 `not_provisioned` before attempting any change. Reading status (`GET /local/wifi/hotspot`,
 `GET /local/wifi/status`) is unaffected, `getApInfo()` was updated to read the interface directly
-via `iw`, only the *write* path was not carried over. Fixing this means rewriting `setHotspot()` to
-edit `/etc/hostapd/hostapd-msd700.conf` (SSID/`wpa_passphrase`) and `systemctl restart
-msd700-hotspot.service` instead of touching a NetworkManager profile that no longer exists. Not yet
+via `iw`, only the *write* path was not carried over (though see the badge staleness box above,
+`getApInfo()` still only ever looks at the backup dongle interface, never the primary one). Fixing
+this means rewriting `setHotspot()` to edit **both** `hostapd-msd700-primary.conf` and, if present,
+`hostapd-msd700-backup.conf` (SSID/`wpa_passphrase`, same values in both) and `systemctl restart
+msd700-hotspot.service`, instead of touching a NetworkManager profile that no longer exists. Not yet
 done.
 :::
 
@@ -452,12 +501,13 @@ anyone reaching the dashboard from the *client-side* network, who does not know 
 for a new password and treats blank as "keep the current one".
 
 ::: warning `docker/.env` is a seed, not the source of truth
-`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` are read **only** by `setup.sh --provision-network`, and only
-when `/etc/hostapd/hostapd-msd700.conf` does not already exist (in effect: only on the first
-provisioning run). After that, `/etc/hostapd/hostapd-msd700.conf` is authoritative and those two keys
-are stale, re-running `--provision-network` re-renders the same file from `docker/.env` again, so
-edit `docker/.env` and re-run provisioning to change the hotspot from the CLI, or wait for the
-dashboard path above to be fixed. The honest live answer for the broadcast SSID is
+`AP_PASSWORD_LOCAL` is read **only** by `setup.sh --provision-network`, and only as a fallback: the
+live passphrase is read back first from whichever hostapd config already exists
+(`hostapd-msd700-primary.conf`, then `-backup.conf`), so a re-run keeps a working unit's current
+password instead of silently resetting it from git-tracked `docker/.env`. Change the hotspot from
+the CLI by editing `docker/.env` and re-running provisioning, answering the password prompt with a
+new value (or `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network` non-interactively), or wait for
+the dashboard path above to be fixed. The honest live answer for the broadcast SSID is
 `iw dev <ap-interface> info`.
 :::
 
@@ -469,11 +519,12 @@ implements a second one.
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `AP_INTERFACE_LOCAL` | Dongle's interface name | auto-detected during `--provision-network` |
-| `STA_INTERFACE_LOCAL` | Onboard radio's interface name | auto-detected during `--provision-network` |
+| `AP_INTERFACE_LOCAL` | **Backup** dongle's interface name | auto-detected during `--provision-network` |
+| `STA_INTERFACE_LOCAL` | Onboard radio's interface name, also backs the **primary** hotspot path | auto-detected during `--provision-network` |
 | `AP_SSID_LOCAL` | Hotspot's broadcast name | `MSD700-<hostname suffix>` if left blank |
 | `AP_PASSWORD_LOCAL` | Hotspot's WPA2 password (8+ chars, required for provisioning to create the AP) | blank in `docker/.env.example` on purpose |
 | `AP_CONNECTION_NAME_LOCAL` | Legacy, only used to clean up a leftover pre-hostapd NetworkManager profile of this name during provisioning | `msd700-hotspot` |
+| `PORTAL_HOSTNAME_LOCAL` | Hostname dnsmasq resolves to this unit's own address, the one address the firewall redirects to the dashboard | `mymsd.jp` |
 | `NETWORK_AGENT_PORT_LOCAL` | Port `network_local`'s loopback API listens on | `5011` |
 | `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: an upstream network to auto-join as a client on first provisioning | empty (add later from the dashboard's WiFi dropdown instead) |
 | `LOCAL_IP` | IP the dashboard's frontend build points at | `192.168.4.1` (matches the hotspot's static IP) |
@@ -484,14 +535,17 @@ implements a second one.
 # Services running?
 systemctl status msd700-hotspot.service msd700-hotspot-dhcp.service
 
-# Actually in AP mode, broadcasting?
-iw dev <AP_INTERFACE_LOCAL> info        # should show: type AP
+# Which path won, primary (msd700-ap0) or backup (the dongle)?
+cat /run/msd700-hotspot-active
+
+# Actually in AP mode, broadcasting? (use the IFACE from the file above)
+iw dev <IFACE> info                      # should show: type AP
 
 # NetworkManager correctly staying out of the way?
-nmcli device status                      # dongle should show "unmanaged"
+nmcli device status                      # msd700-ap0 and/or the dongle should show "unmanaged"
 
-# Captive-portal domains still redirected?
-dig +short @192.168.4.1 captive.apple.com       # should print 192.168.4.1
+# Dashboard hostname resolving to this unit?
+dig +short @192.168.4.1 mymsd.jp                # should print 192.168.4.1
 
 # Everything else resolving for real (only meaningful if STA_INTERFACE_LOCAL is set)?
 dig +short @192.168.4.1 github.com              # should print a real GitHub IP, not 192.168.4.1
@@ -501,9 +555,11 @@ sudo iptables -t nat -L POSTROUTING -n | grep 192.168.4.0
 sudo iptables -L DOCKER-USER -n
 ```
 
-From another device: connect to the SSID, the OS's own "Sign in to WiFi" prompt should appear and
-land on `http://192.168.4.1:3000` (or whatever port 80 redirects to, see `FRONTEND_PORT_LOCAL`).
-Everything else should browse normally if `STA_INTERFACE_LOCAL` is configured.
+From another device: connect to the SSID and navigate to `http://mymsd.jp` (or the raw hotspot
+address on port 80, see `FRONTEND_PORT_LOCAL`). With a working uplink most OSes will **not** show a
+"Sign in to WiFi" prompt automatically, that behaviour was deliberately removed, see
+[The dashboard redirect](#the-dashboard-redirect). Everything else should browse normally if
+`STA_INTERFACE_LOCAL` is configured.
 
 ## Troubleshooting
 
@@ -518,10 +574,27 @@ The script already retries this internally (5 attempts); if it still fails, chec
 `sudo dmesg | tail -40`.
 
 **Hotspot won't broadcast / `iw dev` shows `type managed` instead of `AP`**
-Check `journalctl -u msd700-hotspot.service`. If you see repeated activation failures, confirm
-NetworkManager actually released the interface (`nmcli device status` should say `unmanaged`, not
-`disconnected` or `connecting`), a stale `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf`
-pointing at the wrong interface name is the usual cause after swapping to a different dongle.
+Check `journalctl -u msd700-hotspot.service`, its first lines are `msd700-hotspot-select-iface.sh`'s
+own decision log (which path it tried, and why it fell back if it did). If you see repeated
+activation failures, confirm NetworkManager actually released the winning interface (`nmcli device
+status` should say `unmanaged`, not `disconnected` or `connecting`), a stale
+`/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` pointing at the wrong interface name is the
+usual cause after swapping to a different dongle.
+
+**Hotspot always runs on the backup dongle even though the onboard radio should support the
+primary path**
+Run `iw phy <phy> info` (the onboard radio's phy, from `/sys/class/net/<sta-iface>/phy80211/name`)
+and check "valid interface combinations" for `{ managed, AP } <= 2`. If it's missing, this is a
+driver/hardware limitation `setup.sh` already detected and warned about at provisioning time, not
+something to debug further here. If it's present but the primary path still isn't chosen, check
+`journalctl -u msd700-hotspot.service` for `msd700-hotspot-select-iface.sh`'s own log of why
+`try_primary` failed that particular boot.
+
+**`--provision-network`'s preflight warns the onboard radio's driver/firmware isn't ready**
+This is exactly the failure [MT7922 Wi-Fi Setup](/setup/wifi-mt7922) fixes by hand, the automatic
+`apt-get install -y linux-firmware` attempt during provisioning isn't always enough on this
+project's Tegra kernel. The hotspot keeps working on the backup dongle in the meantime, if one is
+configured.
 
 **`--provision-network` fails with "nmcli not found"**
 NetworkManager is not installed on the host. `sudo apt install network-manager`.
@@ -537,7 +610,7 @@ Check `systemctl status msd700-hotspot-dhcp.service` and `journalctl -u msd700-h
 Confirm `/etc/dnsmasq-msd700-hotspot.conf` has the right `interface=` line (re-run
 `./setup.sh --provision-network` to re-render it from the current `docker/.env`).
 
-**Clients get the "Sign in to WiFi" prompt and reach the dashboard, but nothing else loads**
+**Clients can reach `http://mymsd.jp` but nothing else loads**
 `STA_INTERFACE_LOCAL` is probably empty in `docker/.env`, that's the AP-only mode, dashboard-only by
 design (no onboard uplink to relay through). If it should be set, check with `nmcli device status`,
 set it, and re-run `./setup.sh --provision-network`.
@@ -551,12 +624,16 @@ after a re-provision, confirm `msd700-hotspot.service` was actually **restarted*
 connection goes.
 
 **Existing local services (backend, media, MySQL) become unreachable after provisioning**
-The iptables redirect rule was not scoped correctly to the AP interface. Check it targets only
-`<ap-interface>`, never the client interface or loopback: `sudo iptables -t nat -L PREROUTING -n`.
+The iptables redirect rule was not scoped correctly. Check it targets only the winning interface
+from `/run/msd700-hotspot-active` and only this unit's own address (`-d`), never the client
+interface, loopback, or `0.0.0.0/0`: `sudo iptables -t nat -L PREROUTING -n`.
 
-**Badge menu says "Hotspot: no hotspot radio"**
-`AP_INTERFACE_LOCAL` is empty, or `--provision-network` was never run. Fill in `docker/.env` and run
-`./setup.sh --provision-network`.
+**Badge menu says "Hotspot: no hotspot radio" even though the hotspot is actually up**
+If this unit has no backup dongle configured at all, this is the known `getApInfo()` staleness, see
+[The dashboard badge](#the-dashboard-badge) above, not an actual outage: confirm with `cat
+/run/msd700-hotspot-active` and `iw dev <IFACE> info` on the host. If a dongle **is** configured,
+`AP_INTERFACE_LOCAL` may genuinely be empty, or `--provision-network` was never run, fill in
+`docker/.env` and run `./setup.sh --provision-network`.
 
 **No WiFi glyph on the badge at all**
 Neither radio is present, with no AP and no STA interface there is nothing to report. Expected on a
@@ -572,9 +649,11 @@ it distinguishes wrong password from out-of-range from refused.
 
 **Changing the hotspot name/password from the dashboard does nothing / reports `not_provisioned`**
 Known bug, see [Changing the unit's own hotspot](#changing-the-unit-s-own-hotspot) above, `setHotspot()`
-was not updated for the hostapd migration. Change `AP_SSID_LOCAL`/`AP_PASSWORD_LOCAL` in
-`docker/.env` and re-run `--provision-network` instead for now (only works before hostapd's config
-file already exists, see the warning under that section).
+was not updated for the hostapd migration. Change it from the CLI instead for now: edit
+`AP_SSID_LOCAL` in `docker/.env` for a new name, and re-run `--provision-network`, answering the
+password prompt with a new value when asked (or non-interactively with
+`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`), see the warning under that section for why
+`docker/.env`'s own `AP_PASSWORD_LOCAL` alone is not enough.
 
 ## Related
 
