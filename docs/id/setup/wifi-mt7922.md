@@ -6,6 +6,10 @@ outline: deep
 
 <RoleBadge role="technician" />
 
+Ini adalah **langkah 1** dari [alur penyiapan Hotspot Wi-Fi + Klien](/id/setup/wifi-hotspot#alur-penyiapan):
+perbaiki dulu firmware radio onboard di sini, lalu kembali dan lanjutkan dengan instalasi driver
+dongle serta provisioning hotspot.
+
 Beberapa unit dikirim atau di-retrofit dengan kartu Wi-Fi **MediaTek MT7922** sebagai pengganti
 Realtek RTL8822CE bawaan proyek ini (lihat [Hotspot Wi-Fi & Klien](/id/setup/wifi-hotspot) untuk radio
 bawaan tersebut). Di kernel Tegra (Jetson), driver in-tree `mt7921e` sudah tersedia, tetapi paket
@@ -211,6 +215,8 @@ nmcli device
 
 ## Terkait
 
+- [Hotspot Wi-Fi + Klien § Alur penyiapan](/id/setup/wifi-hotspot#alur-penyiapan): lanjutkan ke sini
+  setelah halaman ini, langkah 2 sampai 4 (driver dongle, provisioning hotspot, verifikasi).
 - [Hotspot Wi-Fi & Klien](/id/setup/wifi-hotspot): radio bawaan proyek ini (RTL8822CE) dan penyiapan
   hotspot berbasis dongle yang menjadi alternatif dari kartu ini.
 - [Pemecahan Masalah](/id/setup/troubleshooting): diagnostik teknisi secara umum.

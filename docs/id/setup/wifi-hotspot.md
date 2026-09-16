@@ -18,6 +18,25 @@ Unit yang tidak pernah menjalankan langkah provisioning di bawah ini tetap berfu
 yang dijelaskan [Penyiapan Unit](/id/setup/unit-setup); badge hanya akan melaporkan "no hotspot radio"
 dan tidak ada yang lain yang terpengaruh.
 
+## Alur penyiapan
+
+Ikuti urutan ini pada unit baru, kebanyakan unit hanya perlu langkah 2 sampai 4:
+
+1. **Radio onboard-nya MediaTek MT7922, bukan RTL8822CE default?** Perbaiki dulu firmware-nya,
+   lihat [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922). Pada kernel Tegra, kartu ini bisa
+   melaporkan error firmware-not-found dan sama sekali tidak muncul ke NetworkManager, yang akan
+   diam-diam merusak auto-deteksi di langkah 3 di bawah. Lewati langkah ini sepenuhnya pada
+   perangkat keras RTL8822CE default.
+2. [Instal driver dongle](#menginstal-driver-dongle) (dongle USB berbasis RTL8188EUS,
+   sekali per unit).
+3. [Provisioning hotspot](#provisioning-hotspot-satu-kali-per-unit)
+   (`./setup.sh --provision-network`).
+4. [Verifikasi berjalan dengan benar](#memverifikasi-bahwa-ini-berfungsi).
+
+Langkah 1 dan 2 adalah bring-up perangkat keras sekali jalan, diulang hanya jika perangkat
+kerasnya sendiri berubah (kartu onboard berbeda, dongle yang diganti). Langkah 3 adalah satu-satunya
+yang interaktif dan spesifik per unit (SSID, password).
+
 ## Mengapa dua radio, bukan satu
 
 WiFi onboard milik Jetson (Realtek RTL8822CE pada perangkat keras proyek ini) adalah **satu radio
@@ -595,6 +614,8 @@ bawah bagian itu).
 
 ## Terkait
 
+- [Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922): langkah 1 dari [alur penyiapan](#alur-penyiapan)
+  di atas, hanya dibutuhkan jika radio onboard unit adalah MediaTek MT7922, bukan RTL8822CE default
 - [Penyiapan Unit](/id/setup/unit-setup): instalasi mode lokal dasar tempat fitur ini dibangun di
   atasnya
 - [Referensi Docker § network_mode: host](/id/setup/docker-reference#network-mode-host): mengapa

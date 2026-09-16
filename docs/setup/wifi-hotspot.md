@@ -18,6 +18,24 @@ A unit that never runs the provisioning step below still works otherwise exactly
 [Unit Setup](/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
 else is affected.
 
+## Setup flow
+
+Follow this order on a fresh unit, most units only need steps 2 to 4:
+
+1. **Onboard radio is a MediaTek MT7922, not the default RTL8822CE?** Fix its firmware first, see
+   [MT7922 Wi-Fi Setup](/setup/wifi-mt7922). On Tegra kernels the card can report a
+   firmware-not-found error and never show up to NetworkManager at all, which would silently break
+   the auto-detection in step 3 below. Skip this step entirely on the default RTL8822CE hardware.
+2. [Install the dongle driver](#installing-the-dongle-driver) (RTL8188EUS-based USB dongle,
+   one-time per unit).
+3. [Provision the hotspot](#provisioning-the-hotspot-once-per-unit)
+   (`./setup.sh --provision-network`).
+4. [Verify it works](#verifying-it-works).
+
+Steps 1 and 2 are one-time hardware bring-up, rerun only if the hardware itself changes (a
+different onboard card, a replaced dongle). Step 3 is the only one that is interactive and
+unit-specific (SSID, password).
+
 ## Why two radios, not one
 
 The Jetson's onboard WiFi (a Realtek RTL8822CE on this project's hardware) is **one physical
@@ -560,6 +578,8 @@ file already exists, see the warning under that section).
 
 ## Related
 
+- [MT7922 Wi-Fi Setup](/setup/wifi-mt7922): step 1 of the [setup flow](#setup-flow) above, needed
+  only if the unit's onboard radio is a MediaTek MT7922 instead of the default RTL8822CE
 - [Unit Setup](/setup/unit-setup): the base local-mode installation this feature sits on top of
 - [Docker Reference § network_mode: host](/setup/docker-reference#network-mode-host): why some
   services share the host's network namespace

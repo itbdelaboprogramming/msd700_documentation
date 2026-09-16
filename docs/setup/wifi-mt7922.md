@@ -6,6 +6,10 @@ outline: deep
 
 <RoleBadge role="technician" />
 
+This is **step 1** of the [WiFi Hotspot + Client setup flow](/setup/wifi-hotspot#setup-flow): fix
+the onboard radio's firmware here first, then go back and continue with dongle driver installation
+and hotspot provisioning.
+
 Some units ship or get retrofitted with a **MediaTek MT7922** Wi-Fi card instead of the project's
 default Realtek RTL8822CE (see [WiFi Hotspot + Client](/setup/wifi-hotspot) for that default). On the
 Tegra (Jetson) kernel, the `mt7921e` in-tree driver is present, but the firmware package installed by
@@ -210,6 +214,8 @@ nmcli device
 
 ## Related
 
+- [WiFi Hotspot + Client § Setup flow](/setup/wifi-hotspot#setup-flow): continue here after this
+  page, steps 2 to 4 (dongle driver, hotspot provisioning, verification).
 - [WiFi Hotspot + Client](/setup/wifi-hotspot): the project's default onboard radio (RTL8822CE) and
   the dongle-based hotspot setup this card is an alternative to.
 - [Troubleshooting](/setup/troubleshooting): general technician diagnostics.
