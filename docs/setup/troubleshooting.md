@@ -100,6 +100,18 @@ at their cause:
   `/unit_<ULID>/string/operation_snapshot`. Confirm with `rostopic list | grep operation_` on the
   unit: the flat name present with no prefixed twin is the fingerprint. The cloud path was never
   affected, because MQTT bridges both directions.
+- **The map takes a very long time to appear when you open one from the Database, or the canvas
+  briefly shows the room from the *previous* session.** Since September 2026 the robot sends its
+  map only when the grid changes, plus a heartbeat, and in navigation mode the grid comes from
+  `map_server` and never changes at all. If the one send is missed the next chance used to be the
+  heartbeat: measured at one map per ~52 s on a watched unit. A dashboard on the fix asks for the
+  map on mount, retries until one is drawn, and shows "Loading map from robot..." meanwhile; the
+  robot repeats the first map after a reset, and `navigation.init` retires the stale one with a 0x0
+  grid (`/map/retire`; ending a run uses `/map/reset`, which leaves the canvas alone). If you see
+  the long wait, one of those is missing on one of the two halves: check for
+  `/unit_<ULID>/string/map_request` in the bridge on the cloud side, and for `Map resend requested`
+  in the robot's `map_compression_node` log. See
+  [Message Contracts § Map delivery](/development/message-contracts#map-delivery).
 - **A swept room still has an unswept strip along every wall.** Some of it is geometry and some of
   it was a bug. The floor is `wall_clearance - body_half_width` = 0.225 m per wall, and no plan can
   beat it. Anything wider means the clearance is being applied more than once: read the geometry

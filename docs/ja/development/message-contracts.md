@@ -356,12 +356,56 @@ flowchart LR
 | ロボット側トピック | クラウドサーバー側トピック | 更新レート | 内容の説明 |
 | --- | --- | --- | --- |
 | `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | `map` フレームにおけるロボットの位置と姿勢(`geometry_msgs/PoseStamped`)。 |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | 更新時 | 圧縮された占有グリッド(`base64(zlib(JSON))`)。 |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | 変化時 + ハートビート | 圧縮された占有グリッド。セルを生の int8 のまま詰めた `base64(zlib(M1))`。旧来の `base64(zlib(JSON))` 形式もデコーダは受け付ける。[マップの配送](#map-delivery)を参照。 |
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | 圧縮された2Dレーザースキャンデータ(`sensor_msgs/LaserScan`)。 |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | プラン時 | グローバルパスの座標(`nav_msgs/Path`)。 |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | 継続的 | ローカル軌跡(`nav_msgs/Path`)。 |
 | `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | プラン時 | カバレッジスイープラインの座標(`nav_msgs/Path`)。 |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | ラッチ | 再接続時の復旧のための、完全なアクティブミッションのスナップショット。 |
+
+### マップの配送 {#map-delivery}
+
+マップはこのリンク上で最大のペイロードであり、かつオペレーターがそれなしでは作業できない唯一の
+データです。そのため、単純に繰り返し送るということをしない唯一のストリームになっています。ロボッ
+トはグリッドをコンテンツハッシュし、実際に変化したときだけ送信します。加えて、誰かが見ている間は
+60 秒ごと、誰も見ていない間は 300 秒ごとのハートビートを送ります。ナビゲーションモードではグリッ
+ドは `map_server` 由来で一切変化しないため、実際にはハートビートごとに 1 通だけになります。
+
+つまり、ブラウザが絶対に必要とするものを、QoS 0 でブローカーの retain もないホップ上の 1 通の
+メッセージが運ぶことになります。それを成立させる仕組みが 3 つあり、どれも省略できません。
+
+| 仕組み | 場所 | カバーする範囲 |
+| --- | --- | --- |
+| クラウド側リレーが `/unit_<ULID>/string/map` をラッチする | `aws_mqtt/scripts/gen_bridge_params.py` | 2 回の送信の間に接続してきたブラウザ、およびリレーの再起動(フリートのロスターが変わるたびに発生します)。 |
+| マップのリセットまたはリタイア後に `burst_interval` 間隔で `burst_sends` 回繰り返す | `topic2string/scripts/map_compression_pipeline.py` | オペレーターが今開いたばかりのマップ。ちょうどロボットがナビゲーションスタックを再起動している最中に配送されます。新しいマッピングの開始もカバーされます。 |
+| プルチャネル `/string/map_request` | ブラウザからロボットへ、ACK トピックと同じ経路 | それ以外のすべて。パケット落ち、悪いタイミングでマウントしたダッシュボード、トピック型の学習中に最初のメッセージを飲み込んだローカルモードのリレーなど。 |
+
+ダッシュボードは Navigation キャンバスがマウントされた時点で `/unit_<ULID>/string/map_request` に
+`std_msgs/String` を publish し、マップが描画されるまで要求を繰り返します。ロボット側は要求をレート
+制限する(`request_min_interval`、既定 2 秒)ため、1 台のユニットに複数タブがあっても追加送信は
+タブごとではなく 1 通で済みます。
+
+**0x0 のグリッドは壊れたメッセージではありません。** ロボットは、リレーがラッチしているグリッドを
+引退させるためにこれを publish します。これがないと、たった今 *別の* マップを開いたダッシュボードに
+前のセッションの部屋が渡され、それを何の疑いもなく描画してしまいます。キャンバスはこれを「まだマッ
+プがない」として扱い、読み込み中であることを表示して新しいマップを要求します。
+
+コンプレッサーは 2 つのサービスを advertise します。両者の違いは、どちらの状況なのかという点です。
+
+| サービス | 呼び出し元 | 効果 |
+| --- | --- | --- |
+| `/map/reset` | マッピングの停止・破棄、ナビゲーションの停止、緊急停止 | ロボットが自分のマップを忘れます。ダッシュボードがすでに描画しているものには触れません。オペレーターはそのページから離れる途中であり、キャンバスを白紙にしても得るものがないためです。 |
+| `/map/retire` | `navigation.init` のみ | 上記に加えて 0x0 のセンチネルを送ります。ラッチされたコピーが実際に誤りであるのは、別のマップが開かれたこの 1 ケースだけです。 |
+
+どちらもバーストを armed にします。`/map/retire` を持たない古いロボットでは通常のリセットに
+フォールバックするため、ローリングデプロイで失われるのは古いマップの修正であって、リセット自体では
+ありません。
+
+::: warning
+上記 3 つの仕組みがすべて揃っていることを確認せずに、`topic2string/config/egress.yaml` の
+`change_heartbeat` を長くしないでください。変化時送信だけでどれも無い状態では、送信を逃した
+ダッシュボードは次の 1 通まで実測で約 52 秒待たされました。
+:::
 
 ## Operation Supervisor 同期
 

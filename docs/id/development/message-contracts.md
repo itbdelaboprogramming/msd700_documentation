@@ -356,12 +356,56 @@ flowchart LR
 | Topik Robot | Topik Server Cloud | Laju Update | Deskripsi Konten |
 | --- | --- | --- | --- |
 | `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Posisi dan orientasi robot dalam frame `map` (`geometry_msgs/PoseStamped`). |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | Saat update | Occupancy grid terkompresi (`base64(zlib(JSON))`). |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | Saat berubah, plus heartbeat | Occupancy grid terkompresi, `base64(zlib(M1))` dengan sel dikemas sebagai int8 mentah. Format lama `base64(zlib(JSON))` masih diterima decoder. Lihat [Pengiriman map](#map-delivery). |
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Data laser scan 2D terkompresi (`sensor_msgs/LaserScan`). |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | Saat plan | Koordinat path global (`nav_msgs/Path`). |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Kontinu | Trajektori lokal (`nav_msgs/Path`). |
 | `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | Saat plan | Koordinat garis sweep coverage (`nav_msgs/Path`). |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Snapshot misi aktif lengkap untuk pemulihan reconnect. |
+
+### Pengiriman map {#map-delivery}
+
+Map adalah payload terbesar di link ini dan satu-satunya yang membuat operator tidak bisa bekerja
+kalau tidak ada. Karena itu map adalah satu-satunya stream yang tidak sekadar mengulang dirinya.
+Robot meng-hash isi grid dan mengirimnya hanya saat grid benar-benar berubah, ditambah heartbeat
+tiap 60 detik selama ada yang menonton dan tiap 300 detik selama tidak ada. Di mode navigasi grid
+berasal dari `map_server` dan tidak pernah berubah sama sekali, jadi praktisnya satu pesan per
+heartbeat.
+
+Artinya satu pesan tunggal membawa sesuatu yang mutlak dibutuhkan browser, lewat hop QoS 0 tanpa
+retain di broker. Ada tiga mekanisme yang membuatnya selamat, dan tidak satu pun opsional:
+
+| Mekanisme | Lokasi | Yang dilindungi |
+| --- | --- | --- |
+| Relay cloud men-latch `/unit_<ULID>/string/map` | `aws_mqtt/scripts/gen_bridge_params.py` | Browser yang connect di antara dua pengiriman, dan relay yang restart (terjadi tiap kali roster fleet berubah). |
+| Burst `burst_sends` pengulangan berjarak `burst_interval` setelah reset atau retire map | `topic2string/scripts/map_compression_pipeline.py` | Map yang baru saja dibuka operator, yang dikirim tepat saat robot sedang me-restart seluruh stack navigasinya. Memulai run mapping baru ikut tercakup. |
+| Kanal tarik `/string/map_request` | Browser ke robot, jalur yang sama dengan topik ACK | Sisanya: paket yang drop, dashboard yang halamannya mount di saat yang salah, relay mode lokal yang menelan pesan pertama saat masih belajar tipe topiknya. |
+
+Dashboard mem-publish `std_msgs/String` ke `/unit_<ULID>/string/map_request` begitu kanvas
+Navigation mount, dan terus meminta sampai ada map yang tergambar. Robot membatasi laju permintaan
+(`request_min_interval`, default 2 detik), jadi beberapa tab pada satu unit hanya menambah satu
+pengiriman, bukan satu per tab.
+
+**Grid 0x0 bukan pesan rusak.** Robot mem-publish-nya untuk memensiunkan grid yang sedang di-latch
+relay: tanpa itu, dashboard yang baru saja membuka map *berbeda* akan disodori ruangan dari sesi
+sebelumnya dan menggambarnya dengan penuh percaya diri. Kanvas memperlakukannya sebagai "belum ada
+map", menampilkan status memuat, lalu meminta map yang baru.
+
+Compressor meng-advertise dua service, dan bedanya adalah situasi mana yang sedang terjadi:
+
+| Service | Dipanggil dari | Efek |
+| --- | --- | --- |
+| `/map/reset` | Mapping berhenti atau dibuang, navigasi dinonaktifkan, emergency stop | Robot melupakan map-nya. Apa pun yang sudah digambar dashboard dibiarkan. Operator sedang dalam perjalanan keluar dari halaman itu, jadi mengosongkan kanvasnya tidak memberi keuntungan apa pun. |
+| `/map/retire` | Hanya `navigation.init` | Sama, plus sentinel 0x0. Ini satu-satunya kasus di mana salinan yang di-latch benar-benar salah: map yang berbeda baru saja dibuka. |
+
+Keduanya meng-arm burst. Robot yang belum punya `/map/retire` jatuh ke reset biasa, jadi yang hilang
+saat rolling deploy adalah perbaikan map basi, bukan reset-nya.
+
+::: warning
+Jangan memperpanjang `change_heartbeat` di `topic2string/config/egress.yaml` tanpa memastikan
+ketiga mekanisme di atas masih terpasang. Dengan change-gating saja dan tanpa ketiganya, dashboard
+yang melewatkan satu pengiriman menunggu ~52 detik terukur untuk pengiriman berikutnya.
+:::
 
 ## Sinkronisasi Operation Supervisor
 

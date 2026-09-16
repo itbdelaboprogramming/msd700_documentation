@@ -98,7 +98,7 @@ Supervisor同期](/ja/development/message-contracts#operation-supervisor-同期)
 | --- | --- | --- | --- |
 | `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | ロボットアイコンの位置/向き、および[Show/Hide
   Trace](/ja/development/webui/navigation/coverage-cleaning#show-hide-trace)の元となるポーズストリーム。 |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | 更新時 | レンダーされる平面図ビットマップ。 |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | 変化時 + ハートビート | レンダーされる平面図ビットマップ。キャンバスは次の送信を待たずにマウント時点で要求し、描画されるまで「Loading map from robot...」を表示します。[メッセージ契約 § マップの配送](/ja/development/message-contracts#map-delivery)を参照。 |
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | ロボット周囲の赤いレーザースキャン点。 |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | プラン発生時 | ピンポイント/ルートナビゲーション用の青いグローバルプラン線。 |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | 継続的 | ローカル軌道線。 |

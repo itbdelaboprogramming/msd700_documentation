@@ -112,7 +112,7 @@ topic yang memasok canvas Navigasi secara spesifik:
 | Topic Robot | Topic Server Cloud | Rate | Peran di canvas |
 | --- | --- | --- | --- |
 | `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Posisi/arah hadap ikon robot, dan sumber stream pose untuk [Show/Hide Trace](/id/development/webui/navigation/coverage-cleaning#show-hide-trace). |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | Saat update | Bitmap denah peta yang di-render. |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | Saat berubah, plus heartbeat | Bitmap denah peta yang di-render. Kanvas memintanya saat mount, bukan menunggu pengiriman berikutnya, dan menampilkan "Loading map from robot..." sampai ada yang tergambar. Lihat [Kontrak Pesan § Pengiriman map](/id/development/message-contracts#map-delivery). |
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Titik-titik laser scan merah di sekitar robot. |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | Saat ada plan | Garis biru global-plan untuk navigasi pinpoint/rute. |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Kontinu | Garis lintasan lokal. |

@@ -91,6 +91,18 @@ at their cause:
   `/unit_<ULID>/string/operation_snapshot`. Konfirmasi dengan `rostopic list | grep operation_` di
   unit: nama datar yang ada tanpa awalan kembar adalah sidik jari. Jalur awan tidak pernah ada
   terpengaruh, karena MQTT menjembatani kedua arah.
+- **Map sangat lama muncul saat membuka peta dari Database, atau kanvas sempat menampilkan ruangan
+  dari sesi *sebelumnya*.** Sejak September 2026 robot mengirim map hanya saat grid berubah, plus
+  heartbeat, dan di mode navigasi grid berasal dari `map_server` sehingga tidak pernah berubah sama
+  sekali. Kalau satu pengiriman itu terlewat, dulu kesempatan berikutnya baru pada heartbeat: terukur
+  satu map per ~52 detik pada unit yang sedang ditonton. Dashboard yang sudah kena fix akan meminta
+  map saat mount, mengulang sampai ada yang tergambar, dan menampilkan "Loading map from robot..."
+  sementara itu; robot mengulang map pertama setelah reset, dan `navigation.init` memensiunkan map
+  basi dengan grid 0x0 (`/map/retire`; mengakhiri run memakai `/map/reset` yang membiarkan kanvas).
+  Kalau tunggu panjang itu masih terjadi, salah satu mekanisme hilang di salah satu sisi: cek
+  `/unit_<ULID>/string/map_request` di bridge sisi cloud, dan `Map resend requested` di log
+  `map_compression_node` robot. Lihat
+  [Kontrak Pesan § Pengiriman map](/id/development/message-contracts#map-delivery).
 - **Ruang yang disapu masih memiliki strip yang belum disapu di sepanjang dindingnya.** Beberapa di antaranya adalah geometri dan beberapa di antaranya
   itu adalah bug. Lantainya `wall_clearance - body_half_width` = 0,225 m per dinding, dan tidak ada denah yang bisa
   kalahkan itu. Semakin lebar berarti jarak bebas diterapkan lebih dari satu kali: baca geometrinya
