@@ -97,12 +97,16 @@ flowchart TB
     DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + one hostname"]
     FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect (this unit's address only),<br/>DOCKER-USER NAT relay"]
     NM["NetworkManager<br/>STA profile only, autoconnect"]
+    RPATH["msd700-hotspot-restart.path<br/>watches /run/msd700-hotspot-restart/requested"]
+    RSVC["msd700-hotspot-restart.service<br/>systemctl restart msd700-hotspot.service"]
     SEL -->|"creates + brings up the winner"| APIF
     SEL -.->|"or"| DONGLE
     SEL -->|"writes IFACE=.../CONF=..."| HAP
     HAP -->|"ExecStartPost/ExecStopPost"| FW
     HAP -.->|"interfaces marked unmanaged"| UNMANAGED
     DNSM -->|"BindsTo=, reads the same state file"| HAP
+    RPATH -->|"Unit="| RSVC
+    RSVC -.->|"restarts"| HAP
   end
 
   subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
@@ -111,6 +115,8 @@ flowchart TB
   AGENT -->|"D-Bus socket bind mount"| NM
   NA -.->|"iw dev <ap-iface> info / nmcli (STA)"| HAP
   NA -.->|"nmcli"| NM
+  NA -->|"edits SSID/passphrase lines, bind mount"| HAP
+  NA -->|"touches sentinel file, bind mount"| RPATH
 
   BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
@@ -158,6 +164,8 @@ normal NM connection profile.
 | `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | Same SSID/password rendered twice, once per interface, so clients see one identity regardless of which radio actually answers | Rendered by `--provision-network`, `chmod 0600` |
 | `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Tells NM to never touch `msd700-ap0` or the dongle's interface | Read by NetworkManager on restart |
 | `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Grants `org.freedesktop.NetworkManager.*` actions unconditionally, so `network_local`'s `nmcli` calls (scan, connect, forget) work without an interactive polkit prompt the container can never answer | Read by `polkit` on restart |
+| `msd700-hotspot-restart.path` / `-restart.service` | `network_local`'s only path to the host's systemd: watches a sentinel file `network_local` touches after editing the hostapd configs, then runs `systemctl restart msd700-hotspot.service`. Deliberately narrow, it can only ever trigger this one restart, nothing else | systemd, `path` unit enabled at boot, `service` triggered only by it |
+| `/etc/tmpfiles.d/msd700-hotspot.conf` | Guarantees `/run/msd700-hotspot-active` (a file) and `/run/msd700-hotspot-restart/` (a directory) exist as the right type on every boot, before Docker can bind-mount a stray directory over either | Applied by `systemd-tmpfiles` at boot and immediately during `--provision-network` |
 | NM connection profile (onboard radio only) | Normal client connection to the operator's WiFi | Managed by NetworkManager as usual, `autoconnect: yes` |
 
 Both hotspot-side systemd services `Restart=on-failure`, so losing and regaining the active
@@ -176,6 +184,12 @@ container even with the socket bind-mounted and `NET_ADMIN` granted, `nmcli`'s i
 the bus gets an `AccessDenied` before NetworkManager's own D-Bus policy is ever consulted. The
 container's only job is talking to the host's NetworkManager over that bus, so it runs unconfined
 rather than fighting the default profile rule by rule.
+
+Three more bind mounts, all plain files/directories rather than a socket: `/run/msd700-hotspot-active`
+(read-only, which interface actually won this boot), `/etc/hostapd` (read-write, `setHotspot()` edits
+the config files there directly), and `/run/msd700-hotspot-restart` (read-write, where `setHotspot()`
+touches the sentinel file `msd700-hotspot-restart.path` watches, see [Changing the unit's own
+hotspot](#changing-the-unit-s-own-hotspot)).
 :::
 
 ## Installing the dongle driver
@@ -348,15 +362,8 @@ blanket interface-wide redirect. HTTPS (port 443) was never touched by this rule
 ordinary browsing over HTTPS is unaffected once an onboard uplink is relaying it. Units provisioned
 before this change still carry the old blanket rule in their `nat` table; `apply` and `teardown`
 both explicitly look for and remove it (`drop_legacy_blanket_redirect`) so a re-provisioned unit
-never ends up running both at once.
-
-::: warning `middleware.ts`'s OS-probe handling predates this and is now unreachable
-`ROS-dashboard-next-ts/middleware.ts` still answers each OS's specific captive-portal probe
-host+path (Apple, Android, Windows, Firefox, Ubuntu/GNOME) with a crafted response. Since those
-hostnames are no longer resolved to this unit's address, only `PORTAL_HOSTNAME_LOCAL` is, a hotspot
-client's DNS query for e.g. `captive.apple.com` now goes straight to the real internet through the
-onboard uplink, and this code path is never reached in practice. Not yet cleaned up.
-:::
+never ends up running both at once. `ROS-dashboard-next-ts/middleware.ts`'s old per-OS captive-portal
+probe handling, which answered those now-unreached hostnames, was removed along with this.
 
 Applied and removed automatically via `msd700-hotspot.service`'s `ExecStartPost`/`ExecStopPost`, tied
 to hostapd's own up/down, not to any container's lifecycle or a NetworkManager dispatcher script.
@@ -386,14 +393,14 @@ and the badge sits over the navbar, so the words belong one click away instead. 
 unreachable is also stated in words at the top of the section, since a red glyph on its own is not
 something an operator can act on.
 
-::: danger Blind to the primary path on a unit with no dongle configured
+::: info Reads the actual winning interface, not just the backup dongle
 `network-agent`'s `getApInfo()` (`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-reads a fixed `AP_INTERFACE` environment variable, sourced from `AP_INTERFACE_LOCAL`, the backup
-dongle interface, not from `/run/msd700-hotspot-active`. On a unit running the hotspot entirely on
-the primary path (no dongle configured at all), `AP_INTERFACE` is empty, `getApInfo('')` returns
-`null` immediately, and the badge reports the hotspot as absent even while it is up and working on
-`msd700-ap0`. Not yet updated for the primary/backup architecture. Reading client (STA) status is
-unaffected, this only affects the AP side.
+resolves which interface to query from `/run/msd700-hotspot-active` first (the file
+`msd700-hotspot-select-iface.sh` writes, primary `msd700-ap0` or the backup dongle, whichever won
+that boot), falling back to the `AP_INTERFACE_LOCAL` dongle only if that file doesn't exist (an
+unprovisioned unit, or a dev/simulator host with no hotspot infrastructure at all). On a unit
+running the hotspot entirely on the primary path, with no dongle configured, this is what lets the
+badge see it at all.
 :::
 
 It polls `GET /local/wifi/status` every 30 seconds, faster for a short window
@@ -441,25 +448,20 @@ our own SSID costs a filtered entry, never the whole scan.
 
 The WiFi section of the badge's dropdown is meant to rename the hotspot and set a new password.
 
-::: danger Currently broken after the hostapd migration
+::: info Edits hostapd's config files directly, not a NetworkManager profile
 `network-agent`'s `setHotspot()` (`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-still reads and writes the AP side as an `nmcli connection modify msd700-hotspot ...` /
-`nmcli connection down`/`up msd700-hotspot` NetworkManager profile. Provisioning (above) explicitly
-**deletes** that exact profile if one exists, the AP interface is NM-*unmanaged* now, `hostapd` owns
-it directly via `msd700-hotspot.service`. On any unit provisioned under the current architecture
-there is no `msd700-hotspot` connection for `setHotspot()` to read, so it fails immediately with
-`not_provisioned` before attempting any change. Reading status (`GET /local/wifi/hotspot`,
-`GET /local/wifi/status`) is unaffected, `getApInfo()` was updated to read the interface directly
-via `iw`, only the *write* path was not carried over (though see the badge staleness box above,
-`getApInfo()` still only ever looks at the backup dongle interface, never the primary one). Fixing
-this means rewriting `setHotspot()` to edit **both** `hostapd-msd700-primary.conf` and, if present,
-`hostapd-msd700-backup.conf` (SSID/`wpa_passphrase`, same values in both) and `systemctl restart
-msd700-hotspot.service`, instead of touching a NetworkManager profile that no longer exists. Not yet
-done.
+edits the `ssid=`/`wpa_passphrase=` lines in place in whichever of `hostapd-msd700-primary.conf` and
+`hostapd-msd700-backup.conf` exist (the same values in both, so clients see one identity regardless
+of which radio answers), then asks for a restart. The container has no direct line to the host's
+systemd, unlike NetworkManager reached over the bind-mounted D-Bus socket, so the restart is
+requested indirectly: touching a sentinel file that a host-side systemd path unit
+(`msd700-hotspot-restart.path`, installed by `--provision-network`) watches, which runs `systemctl
+restart msd700-hotspot.service` itself. Since there is no synchronous "restart done" signal back,
+`setHotspot()` polls the actual radio state for up to 15 seconds afterward rather than trusting a
+fixed sleep.
 :::
 
-Once fixed, two behaviours are worth knowing before using it, and both are already reflected in the
-API's shape:
+Two behaviours are worth knowing before using it, and both are already reflected in the API's shape:
 
 ::: danger Saving disconnects every device on the hotspot, including yours
 This is unavoidable, not a rough edge: the hotspot is what serves the dashboard, so the request to
@@ -485,8 +487,9 @@ at the machine. The current implementation captures the previous SSID and key fi
 settings fail to come up, restores and reactivates them, with `last_change.rolled_back` set so a
 reconnecting operator can tell a rolled-back change from one that was never submitted, otherwise the
 two look identical, since in both cases the network in front of them is the one they started with.
-This logic still targets the deleted NetworkManager profile (see above), so it needs to move to
-editing/reverting the hostapd config file alongside the rest of the fix.
+"Failed to come up" here means the polled radio state never showed the expected SSID within the
+15-second window, not an error from an underlying command, since there is no synchronous restart
+result available (see above).
 :::
 
 **Validation** (enforced in the agent, not just the form): SSID is 1 to 32 **octets**, a name in a
@@ -506,8 +509,8 @@ live passphrase is read back first from whichever hostapd config already exists
 (`hostapd-msd700-primary.conf`, then `-backup.conf`), so a re-run keeps a working unit's current
 password instead of silently resetting it from git-tracked `docker/.env`. Change the hotspot from
 the CLI by editing `docker/.env` and re-running provisioning, answering the password prompt with a
-new value (or `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network` non-interactively), or wait for
-the dashboard path above to be fixed. The honest live answer for the broadcast SSID is
+new value (or `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network` non-interactively), or use the
+dashboard path above directly. The honest live answer for the broadcast SSID is
 `iw dev <ap-interface> info`.
 :::
 
@@ -629,11 +632,12 @@ from `/run/msd700-hotspot-active` and only this unit's own address (`-d`), never
 interface, loopback, or `0.0.0.0/0`: `sudo iptables -t nat -L PREROUTING -n`.
 
 **Badge menu says "Hotspot: no hotspot radio" even though the hotspot is actually up**
-If this unit has no backup dongle configured at all, this is the known `getApInfo()` staleness, see
-[The dashboard badge](#the-dashboard-badge) above, not an actual outage: confirm with `cat
-/run/msd700-hotspot-active` and `iw dev <IFACE> info` on the host. If a dongle **is** configured,
-`AP_INTERFACE_LOCAL` may genuinely be empty, or `--provision-network` was never run, fill in
-`docker/.env` and run `./setup.sh --provision-network`.
+Confirm `/run/msd700-hotspot-active` is actually mounted into `network_local` (`docker compose
+exec network_local cat /run/msd700-hotspot-active`, should match `cat /run/msd700-hotspot-active`
+on the host). If it reads empty or missing inside the container, the compose bind mount isn't
+wired up on this unit yet, see [The dashboard badge](#the-dashboard-badge) above. If the mount is
+fine and the file matches, `--provision-network` may never have been run at all, or `AP_INTERFACE_LOCAL`/`STA_INTERFACE_LOCAL`
+are both genuinely empty, fill in `docker/.env` and run `./setup.sh --provision-network`.
 
 **No WiFi glyph on the badge at all**
 Neither radio is present, with no AP and no STA interface there is nothing to report. Expected on a
@@ -647,13 +651,18 @@ unit built without WiFi; otherwise check `nmcli device` / `lsusb` for the interf
 nmcli's own stderr is passed through verbatim rather than reworded. Read the reason text directly,
 it distinguishes wrong password from out-of-range from refused.
 
-**Changing the hotspot name/password from the dashboard does nothing / reports `not_provisioned`**
-Known bug, see [Changing the unit's own hotspot](#changing-the-unit-s-own-hotspot) above, `setHotspot()`
-was not updated for the hostapd migration. Change it from the CLI instead for now: edit
-`AP_SSID_LOCAL` in `docker/.env` for a new name, and re-run `--provision-network`, answering the
-password prompt with a new value when asked (or non-interactively with
-`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`), see the warning under that section for why
-`docker/.env`'s own `AP_PASSWORD_LOCAL` alone is not enough.
+**Changing the hotspot name/password from the dashboard reports `not_provisioned`**
+Neither `hostapd-msd700-primary.conf` nor `-backup.conf` exists yet, or `network_local` can't read
+them (confirm the `/etc/hostapd` bind mount from [How it is wired
+together](#how-it-is-wired-together) is actually present: `docker compose exec network_local ls -l
+/etc/hostapd`). `--provision-network` may never have been run at all.
+
+**Changing the hotspot name/password from the dashboard times out / never confirms**
+`setHotspot()` touches a sentinel file and waits up to 15 seconds for the radio to come back up
+broadcasting the new SSID; see [Changing the unit's own hotspot](#changing-the-unit-s-own-hotspot)
+above. Check `systemctl status msd700-hotspot-restart.path msd700-hotspot-restart.service` on the
+host, confirm `/run/msd700-hotspot-restart` is bind-mounted read-write into `network_local`, and
+`journalctl -u msd700-hotspot-restart.service` for whether the restart actually ran.
 
 ## Related
 

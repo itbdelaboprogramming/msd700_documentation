@@ -103,12 +103,16 @@ flowchart TB
     DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + satu hostname"]
     FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect (hanya alamat unit ini),<br/>DOCKER-USER NAT relay"]
     NM["NetworkManager<br/>STA profile only, autoconnect"]
+    RPATH["msd700-hotspot-restart.path<br/>mengawasi /run/msd700-hotspot-restart/requested"]
+    RSVC["msd700-hotspot-restart.service<br/>systemctl restart msd700-hotspot.service"]
     SEL -->|"membuat + menyalakan pemenangnya"| APIF
     SEL -.->|"atau"| DONGLE
     SEL -->|"menulis IFACE=.../CONF=..."| HAP
     HAP -->|"ExecStartPost/ExecStopPost"| FW
     HAP -.->|"interface ditandai unmanaged"| UNMANAGED
     DNSM -->|"BindsTo=, membaca state file yang sama"| HAP
+    RPATH -->|"Unit="| RSVC
+    RSVC -.->|"me-restart"| HAP
   end
 
   subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
@@ -117,6 +121,8 @@ flowchart TB
   AGENT -->|"D-Bus socket bind mount"| NM
   NA -.->|"iw dev <ap-iface> info / nmcli (STA)"| HAP
   NA -.->|"nmcli"| NM
+  NA -->|"edit baris SSID/passphrase, bind mount"| HAP
+  NA -->|"sentuh sentinel file, bind mount"| RPATH
 
   BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
@@ -166,6 +172,8 @@ masalah seperti itu dan tetap melalui profil koneksi NM normal.
 | `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | SSID/password yang sama dirender dua kali, sekali per interface, sehingga klien melihat satu identitas terlepas dari radio mana yang sebenarnya menjawab | Dirender oleh `--provision-network`, `chmod 0600` |
 | `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Memberi tahu NM untuk tidak pernah menyentuh `msd700-ap0` atau interface milik dongle | Dibaca oleh NetworkManager saat restart |
 | `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Memberikan aksi `org.freedesktop.NetworkManager.*` tanpa syarat, sehingga panggilan `nmcli` milik `network_local` (scan, connect, forget) berfungsi tanpa prompt polkit interaktif yang tidak pernah bisa dijawab container | Dibaca oleh `polkit` saat restart |
+| `msd700-hotspot-restart.path` / `-restart.service` | Satu-satunya jalur `network_local` ke systemd host: mengawasi sentinel file yang disentuh `network_local` setelah mengedit config hostapd, lalu menjalankan `systemctl restart msd700-hotspot.service`. Sengaja dibuat sempit, hanya bisa memicu satu restart ini saja, tidak ada yang lain | systemd, unit `path` aktif saat boot, `service` hanya dipicu olehnya |
+| `/etc/tmpfiles.d/msd700-hotspot.conf` | Menjamin `/run/msd700-hotspot-active` (sebuah file) dan `/run/msd700-hotspot-restart/` (sebuah direktori) ada dengan tipe yang benar di setiap boot, sebelum Docker bisa bind-mount folder stray di atas salah satunya | Diterapkan oleh `systemd-tmpfiles` saat boot dan segera saat `--provision-network` |
 | Profil koneksi NM (hanya radio bawaan) | Koneksi klien normal ke WiFi operator | Dikelola oleh NetworkManager seperti biasa, `autoconnect: yes` |
 
 Kedua service systemd sisi-hotspot memiliki `Restart=on-failure`, jadi kehilangan dan mendapatkan
@@ -186,6 +194,12 @@ diberikan; `Hello()` awal `nmcli` ke bus mendapat `AccessDenied` bahkan sebelum 
 NetworkManager sendiri sempat dikonsultasikan. Satu-satunya tugas container ini adalah berbicara
 dengan NetworkManager milik host lewat bus tersebut, jadi ia berjalan unconfined alih-alih melawan
 aturan profil default satu per satu.
+
+Tiga bind mount lagi, semuanya file/direktori biasa alih-alih socket: `/run/msd700-hotspot-active`
+(read-only, interface mana yang menang pada boot ini), `/etc/hostapd` (read-write, `setHotspot()`
+mengedit langsung file config di sana), dan `/run/msd700-hotspot-restart` (read-write, tempat
+`setHotspot()` menyentuh sentinel file yang diawasi `msd700-hotspot-restart.path`, lihat
+[Mengubah hotspot milik unit sendiri](#mengubah-hotspot-milik-unit-sendiri)).
 :::
 
 ## Menginstal driver dongle
@@ -367,16 +381,9 @@ ini baik sebelum maupun sesudahnya, jadi browsing biasa lewat HTTPS tidak terpen
 uplink bawaan yang me-relay-nya. Unit yang sudah di-provision sebelum perubahan ini masih membawa
 aturan blanket lama di tabel `nat`-nya; `apply` dan `teardown` keduanya secara eksplisit mencari dan
 menghapusnya (`drop_legacy_blanket_redirect`) sehingga unit yang di-provision ulang tidak pernah
-menjalankan keduanya sekaligus.
-
-::: warning Penanganan probe OS di `middleware.ts` mendahului perubahan ini dan kini tidak pernah tercapai
-`ROS-dashboard-next-ts/middleware.ts` masih menjawab host+path probe captive-portal spesifik
-masing-masing OS (Apple, Android, Windows, Firefox, Ubuntu/GNOME) dengan respons yang dirancang
-khusus. Karena hostname-hostname tersebut tidak lagi di-resolve ke alamat unit ini, hanya
-`PORTAL_HOSTNAME_LOCAL` yang di-resolve, kueri DNS klien hotspot untuk misalnya `captive.apple.com`
-sekarang langsung menuju internet sungguhan lewat uplink bawaan, dan jalur kode ini tidak pernah
-tercapai dalam praktiknya. Belum dibersihkan.
-:::
+menjalankan keduanya sekaligus. Penanganan probe captive-portal per-OS lama di
+`ROS-dashboard-next-ts/middleware.ts`, yang menjawab hostname-hostname yang kini tidak pernah
+tercapai itu, ikut dihapus bersamaan dengan ini.
 
 Diterapkan dan dihapus secara otomatis lewat `ExecStartPost`/`ExecStopPost` milik
 `msd700-hotspot.service`, terikat pada naik/turunnya hostapd itu sendiri, bukan pada siklus hidup
@@ -409,15 +416,15 @@ sembarang dan badge tersebut duduk di atas navbar, jadi kata-katanya berada satu
 Ketidakterjangkauan agent juga dinyatakan dalam kata-kata di bagian atas seksi tersebut, karena glyph
 merah saja bukan sesuatu yang bisa ditindaklanjuti operator.
 
-::: danger Buta terhadap jalur primary pada unit tanpa dongle yang dikonfigurasi
+::: info Membaca interface pemenang sebenarnya, bukan cuma backup dongle
 `getApInfo()` milik `network-agent`
-(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`) membaca sebuah variabel environment
-tetap `AP_INTERFACE`, bersumber dari `AP_INTERFACE_LOCAL`, interface backup dongle, bukan dari
-`/run/msd700-hotspot-active`. Pada unit yang menjalankan hotspot sepenuhnya di jalur primary (tanpa
-dongle dikonfigurasi sama sekali), `AP_INTERFACE` kosong, `getApInfo('')` langsung mengembalikan
-`null`, dan badge melaporkan hotspot tidak ada padahal sebenarnya sedang menyala dan berfungsi di
-`msd700-ap0`. Belum diperbarui untuk arsitektur primary/backup. Membaca status klien (STA) tidak
-terpengaruh, ini hanya memengaruhi sisi AP.
+(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`) menentukan interface mana yang
+mau ditanya dari `/run/msd700-hotspot-active` dulu (file yang ditulis
+`msd700-hotspot-select-iface.sh`, primary `msd700-ap0` atau backup dongle, mana pun yang menang
+pada boot itu), baru fallback ke dongle `AP_INTERFACE_LOCAL` kalau file itu tidak ada (unit belum
+di-provision, atau host dev/simulator tanpa infrastruktur hotspot sama sekali). Pada unit yang
+menjalankan hotspot sepenuhnya di jalur primary, tanpa dongle dikonfigurasi, inilah yang membuat
+badge tetap bisa melihatnya.
 :::
 
 Ia melakukan polling `GET /local/wifi/status` setiap 30 detik, lebih cepat untuk jendela waktu singkat
@@ -467,26 +474,22 @@ seluruh pemindaian.
 
 Bagian WiFi pada dropdown badge dimaksudkan untuk mengganti nama hotspot dan mengatur password baru.
 
-::: danger Saat ini rusak setelah migrasi hostapd
+::: info Mengedit langsung file config hostapd, bukan profil NetworkManager
 `setHotspot()` milik `network-agent`
-(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`) masih membaca dan menulis sisi AP
-sebagai profil NetworkManager `nmcli connection modify msd700-hotspot ...` / `nmcli connection
-down`/`up msd700-hotspot`. Provisioning (di atas) secara eksplisit **menghapus** profil persis
-tersebut jika ada; interface AP kini *unmanaged* dari sisi NM, `hostapd` memilikinya langsung lewat
-`msd700-hotspot.service`. Pada unit mana pun yang di-provision di bawah arsitektur saat ini, tidak
-ada koneksi `msd700-hotspot` yang bisa dibaca `setHotspot()`, jadi ia langsung gagal dengan
-`not_provisioned` sebelum mencoba perubahan apa pun. Membaca status (`GET /local/wifi/hotspot`,
-`GET /local/wifi/status`) tidak terpengaruh; `getApInfo()` telah diperbarui untuk membaca interface
-secara langsung lewat `iw`, hanya jalur *tulis*-nya saja yang belum ikut dipindahkan (meski lihat kotak
-kebasian badge di atas, `getApInfo()` masih hanya pernah melihat interface backup dongle, tidak pernah
-yang primary). Memperbaiki ini berarti menulis ulang `setHotspot()` untuk mengedit **keduanya**,
-`hostapd-msd700-primary.conf` dan, jika ada, `hostapd-msd700-backup.conf` (SSID/`wpa_passphrase`,
-nilai yang sama di keduanya), dan `systemctl restart msd700-hotspot.service`, alih-alih menyentuh
-profil NetworkManager yang sudah tidak ada lagi. Belum dilakukan.
+(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`) mengedit baris `ssid=`/`wpa_passphrase=`
+langsung di tempat pada `hostapd-msd700-primary.conf` dan `hostapd-msd700-backup.conf`, mana pun
+yang ada (nilai yang sama di keduanya, sehingga klien melihat satu identitas terlepas dari radio
+mana yang menjawab), lalu meminta restart. Container ini tidak punya jalur langsung ke systemd
+host, berbeda dari NetworkManager yang dijangkau lewat socket D-Bus yang di-bind-mount, jadi restart
+diminta secara tidak langsung: menyentuh sentinel file yang diawasi unit systemd path di sisi host
+(`msd700-hotspot-restart.path`, dipasang oleh `--provision-network`), yang lalu menjalankan
+`systemctl restart msd700-hotspot.service` sendiri. Karena tidak ada sinyal "restart selesai" yang
+sinkron, `setHotspot()` mem-poll state radio sungguhan sampai 15 detik setelahnya alih-alih
+mengandalkan sleep tetap.
 :::
 
-Setelah diperbaiki, ada dua perilaku yang layak diketahui sebelum menggunakannya, dan keduanya sudah
-tercermin dalam bentuk API-nya:
+Ada dua perilaku yang layak diketahui sebelum menggunakannya, dan keduanya sudah tercermin dalam
+bentuk API-nya:
 
 ::: danger Menyimpan memutus semua perangkat di hotspot, termasuk milik Anda
 Ini tidak terhindarkan, bukan sisi kasar: hotspot itulah yang menyajikan dashboard, jadi permintaan
@@ -516,9 +519,9 @@ menangkap SSID dan key sebelumnya terlebih dahulu dan, jika pengaturan baru gaga
 dan mengaktifkan kembali keduanya, dengan `last_change.rolled_back` diatur sehingga operator yang
 menyambung kembali bisa membedakan perubahan yang di-roll-back dari yang tidak pernah diajukan sama
 sekali; jika tidak, keduanya akan tampak identik, karena dalam kedua kasus jaringan di depan mereka
-adalah jaringan yang sama seperti saat mereka mulai. Logika ini masih menargetkan profil
-NetworkManager yang sudah dihapus (lihat di atas), jadi ia perlu dipindahkan ke pengeditan/pembatalan
-file konfigurasi hostapd bersama sisa perbaikan lainnya.
+adalah jaringan yang sama seperti saat mereka mulai. "Gagal aktif" di sini berarti state radio yang
+di-poll tidak pernah menunjukkan SSID yang diharapkan dalam jendela 15 detik, bukan error dari
+sebuah perintah, karena tidak ada hasil restart sinkron yang tersedia (lihat di atas).
 :::
 
 **Validasi** (diberlakukan di agent, bukan hanya di form): SSID adalah 1 sampai 32 **oktet**, sebuah
@@ -541,7 +544,7 @@ passphrase yang hidup dibaca kembali lebih dulu dari konfigurasi hostapd mana pu
 unit yang sedang berfungsi alih-alih diam-diam mereset dari `docker/.env` yang dilacak git. Ubah
 hotspot dari CLI dengan mengedit `docker/.env` dan menjalankan ulang provisioning, menjawab prompt
 password dengan nilai baru (atau `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network` secara
-non-interaktif), atau tunggu jalur dashboard di atas diperbaiki. Jawaban langsung yang jujur untuk
+non-interaktif), atau pakai langsung jalur dashboard di atas. Jawaban langsung yang jujur untuk
 SSID yang disiarkan adalah `iw dev <ap-interface> info`.
 :::
 
@@ -665,12 +668,13 @@ pemenang dari `/run/msd700-hotspot-active` dan hanya alamat unit ini sendiri (`-
 interface klien, loopback, atau `0.0.0.0/0`: `sudo iptables -t nat -L PREROUTING -n`.
 
 **Menu badge mengatakan "Hotspot: no hotspot radio" padahal hotspot-nya sebenarnya menyala**
-Jika unit ini sama sekali tidak punya backup dongle yang dikonfigurasi, ini adalah kebasian
-`getApInfo()` yang sudah diketahui, lihat [Badge dashboard](#badge-dashboard) di atas, bukan
-pemadaman sungguhan: konfirmasi dengan `cat /run/msd700-hotspot-active` dan `iw dev <IFACE> info`
-pada host. Jika dongle **memang** dikonfigurasi, `AP_INTERFACE_LOCAL` bisa saja sungguhan kosong,
-atau `--provision-network` belum pernah dijalankan, isi `docker/.env` dan jalankan
-`./setup.sh --provision-network`.
+Konfirmasi `/run/msd700-hotspot-active` benar-benar ter-mount ke `network_local`
+(`docker compose exec network_local cat /run/msd700-hotspot-active`, harus cocok dengan
+`cat /run/msd700-hotspot-active` di host). Jika di dalam container terbaca kosong atau tidak ada,
+bind mount compose belum terpasang di unit ini, lihat [Badge dashboard](#badge-dashboard) di atas.
+Jika mount-nya beres dan filenya cocok, bisa jadi `--provision-network` belum pernah dijalankan
+sama sekali, atau `AP_INTERFACE_LOCAL`/`STA_INTERFACE_LOCAL` sungguhan kosong keduanya, isi
+`docker/.env` dan jalankan `./setup.sh --provision-network`.
 
 **Tidak ada glyph WiFi sama sekali pada badge**
 Tidak ada radio yang tersedia, tanpa interface AP dan STA tidak ada apa pun untuk dilaporkan.
@@ -686,14 +690,19 @@ untuk `network_local`; pastikan `NETWORK_AGENT_PORT_LOCAL` cocok pada kedua serv
 stderr milik nmcli sendiri diteruskan apa adanya alih-alih diubah kata-katanya. Baca teks alasannya
 secara langsung, ia membedakan password salah dari di luar jangkauan dari ditolak.
 
-**Mengubah nama/password hotspot dari dashboard tidak melakukan apa-apa / melaporkan
-`not_provisioned`**
-Bug yang diketahui, lihat [Mengubah hotspot milik unit sendiri](#mengubah-hotspot-milik-unit-sendiri)
-di atas, `setHotspot()` belum diperbarui untuk migrasi hostapd. Untuk saat ini, ubah dari CLI: edit
-`AP_SSID_LOCAL` di `docker/.env` untuk nama baru, dan jalankan ulang `--provision-network`, menjawab
-prompt password dengan nilai baru saat ditanya (atau secara non-interaktif dengan
-`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`), lihat peringatan di bawah bagian itu untuk
-alasan kenapa `AP_PASSWORD_LOCAL` sendiri di `docker/.env` saja tidak cukup.
+**Mengubah nama/password hotspot dari dashboard melaporkan `not_provisioned`**
+Baik `hostapd-msd700-primary.conf` maupun `-backup.conf` belum ada, atau `network_local` tidak
+bisa membacanya (konfirmasi bind mount `/etc/hostapd` dari [Bagaimana semuanya
+terhubung](#bagaimana-semuanya-terhubung) benar-benar ada:
+`docker compose exec network_local ls -l /etc/hostapd`). Bisa jadi `--provision-network` belum
+pernah dijalankan sama sekali.
+
+**Mengubah nama/password hotspot dari dashboard timeout / tidak pernah terkonfirmasi**
+`setHotspot()` menyentuh sentinel file dan menunggu sampai 15 detik radio kembali menyiarkan SSID
+baru; lihat [Mengubah hotspot milik unit sendiri](#mengubah-hotspot-milik-unit-sendiri) di atas.
+Periksa `systemctl status msd700-hotspot-restart.path msd700-hotspot-restart.service` di host,
+konfirmasi `/run/msd700-hotspot-restart` ter-bind-mount read-write ke `network_local`, dan
+`journalctl -u msd700-hotspot-restart.service` untuk memastikan restart-nya benar-benar jalan.
 
 ## Terkait
 

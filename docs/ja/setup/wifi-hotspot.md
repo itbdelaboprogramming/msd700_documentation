@@ -104,12 +104,16 @@ flowchart TB
     DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + 1 つのホスト名"]
     FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect (このユニットのアドレスのみ),<br/>DOCKER-USER NAT relay"]
     NM["NetworkManager<br/>STA profile only, autoconnect"]
+    RPATH["msd700-hotspot-restart.path<br/>/run/msd700-hotspot-restart/requested を監視"]
+    RSVC["msd700-hotspot-restart.service<br/>systemctl restart msd700-hotspot.service"]
     SEL -->|"勝者を作成+起動"| APIF
     SEL -.->|"または"| DONGLE
     SEL -->|"IFACE=.../CONF=... を書き込む"| HAP
     HAP -->|"ExecStartPost/ExecStopPost"| FW
     HAP -.->|"インターフェースを unmanaged にマーク"| UNMANAGED
     DNSM -->|"BindsTo=, 同じ state file を読む"| HAP
+    RPATH -->|"Unit="| RSVC
+    RSVC -.->|"再起動"| HAP
   end
 
   subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
@@ -118,6 +122,8 @@ flowchart TB
   AGENT -->|"D-Bus socket bind mount"| NM
   NA -.->|"iw dev <ap-iface> info / nmcli (STA)"| HAP
   NA -.->|"nmcli"| NM
+  NA -->|"SSID/passphrase 行を編集, bind mount"| HAP
+  NA -->|"sentinel file にタッチ, bind mount"| RPATH
 
   BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
   FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
@@ -168,6 +174,8 @@ NetworkManager は自身で AP モードの接続を作成できます(`nmcli co
 | `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | 同じ SSID/パスワードをインターフェースごとに 2 回レンダリング。どちらの無線機が実際に応答しても、クライアントには 1 つの同じアイデンティティに見える | `--provision-network` によってレンダリング、`chmod 0600` |
 | `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | `msd700-ap0` にもドングルのインターフェースにも決して触れないよう NM に指示する | 再起動時に NetworkManager が読み込む |
 | `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | `org.freedesktop.NetworkManager.*` アクションを無条件に許可し、`network_local` の `nmcli` 呼び出し(スキャン、接続、削除)がコンテナには決して応答できない対話的な polkit プロンプトなしに動作するようにする | 再起動時に `polkit` が読み込む |
+| `msd700-hotspot-restart.path` / `-restart.service` | `network_local` が持つホストの systemd への唯一の経路: `network_local` が hostapd の設定を編集した後にタッチする sentinel file を監視し、`systemctl restart msd700-hotspot.service` を実行する。意図的に狭く絞られており、このただ 1 つの再起動しかトリガーできない | systemd、`path` ユニットはブート時に有効化、`service` はそれからのみトリガーされる |
+| `/etc/tmpfiles.d/msd700-hotspot.conf` | `/run/msd700-hotspot-active`(ファイル)と `/run/msd700-hotspot-restart/`(ディレクトリ)が、Docker がどちらかの上に stray なディレクトリを bind mount してしまう前に、毎回のブートで正しい種類として存在することを保証する | ブート時に `systemd-tmpfiles` が適用し、`--provision-network` 実行時にも即座に適用される |
 | NM 接続プロファイル(オンボード無線機のみ) | オペレーターの WiFi への通常のクライアント接続 | 通常どおり NetworkManager が管理、`autoconnect: yes` |
 
 ホットスポット側の両方の systemd サービスは `Restart=on-failure` であるため、アクティブなインター
@@ -187,6 +195,13 @@ apparmor プロファイルは、ソケットがバインドマウントされ `
 自身の D-Bus ポリシーが参照される前に `AccessDenied` になってしまいます。このコンテナの唯一の仕事は
 そのバス経由でホストの NetworkManager と話すことなので、デフォルトプロファイルのルールと一つ一つ
 戦うのではなく、unconfined で実行しています。
+
+さらに 3 つの bind mount があり、いずれもソケットではなく普通のファイル/ディレクトリです:
+`/run/msd700-hotspot-active`(読み取り専用、このブートで実際に勝ったインターフェース)、
+`/etc/hostapd`(読み書き可能、`setHotspot()` がここの設定ファイルを直接編集する)、
+`/run/msd700-hotspot-restart`(読み書き可能、`setHotspot()` が `msd700-hotspot-restart.path` の
+監視する sentinel file にタッチする場所、[ユニット自身のホットスポットを変更する](#ユニット自身のホットスポットを変更する)
+を参照)。
 :::
 
 ## ドングルドライバのインストール
@@ -371,16 +386,8 @@ iptables -t nat -A PREROUTING -i <ap-interface> -d <ap-address> -p tcp --dport 8
 プロビジョニングされたユニットは、その `nat` テーブルに古い一律リダイレクトルールをまだ持っています。
 `apply` と `teardown` はどちらも明示的にそれを探して削除するため
 (`drop_legacy_blanket_redirect`)、再プロビジョニングされたユニットが両方を同時に実行してしまう
-ことはありません。
-
-::: warning `middleware.ts` の OS プローブ処理はこの変更より前のもので、現在は到達不能です
-`ROS-dashboard-next-ts/middleware.ts` は依然として、各 OS の特定のキャプティブポータルプローブの
-ホスト+パス(Apple、Android、Windows、Firefox、Ubuntu/GNOME)に対して、作り込まれた応答を返して
-います。それらのホスト名はもはやこのユニットのアドレスに解決されず、`PORTAL_HOSTNAME_LOCAL` だけが
-解決されるため、ホットスポットのクライアントによる例えば `captive.apple.com` への DNS クエリは、今
-やオンボードアップリンク経由でそのまま本物のインターネットへ向かい、このコードパスは実際には到達
-されません。まだ整理されていません。
-:::
+ことはありません。今ではもう到達しないホスト名に応答していた `ROS-dashboard-next-ts/middleware.ts`
+の古い OS 別キャプティブポータルプローブ処理も、これに合わせて削除されました。
 
 `msd700-hotspot.service` の `ExecStartPost`/`ExecStopPost` によって自動的に適用・削除され、
 コンテナのライフサイクルや NetworkManager のディスパッチャスクリプトではなく、hostapd 自身の起動/
@@ -413,15 +420,14 @@ iptables -t nat -A PREROUTING -i <ap-interface> -d <ap-address> -p tcp --dport 8
 セクションの上部に言葉で明示されています。赤いグリフだけでは、オペレーターが何をすべきか分からない
 ためです。
 
-::: danger バックアップドングルが設定されていないユニットではプライマリ経路が見えていない
+::: info バックアップドングルだけでなく、実際に勝ったインターフェースを読み取る
 `network-agent` の `getApInfo()`(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-は、`/run/msd700-hotspot-active` からではなく、`AP_INTERFACE_LOCAL`(バックアップドングルの
-インターフェース)から取られる固定の環境変数 `AP_INTERFACE` を読み取ります。プライマリ経路だけで
-ホットスポットを完全に運用しているユニット(ドングルがまったく設定されていない)では、
-`AP_INTERFACE` は空になり、`getApInfo('')` は即座に `null` を返し、バッジは `msd700-ap0` で実際には
-稼働・機能しているにもかかわらずホットスポットが存在しないと報告してしまいます。プライマリ/バック
-アップのアーキテクチャに対してまだ更新されていません。クライアント(STA)側のステータス読み取りは
-影響を受けません。これは AP 側にのみ影響します。
+は、まず `/run/msd700-hotspot-active`(`msd700-hotspot-select-iface.sh` が書き込む、そのブートで
+勝ったのがプライマリ `msd700-ap0` かバックアップドングルかを示すファイル)からどのインターフェース
+を問い合わせるか決定し、そのファイルが存在しない場合(未プロビジョニングのユニット、あるいは
+ホットスポット基盤が一切ない開発/シミュレーター用ホスト)にのみ `AP_INTERFACE_LOCAL` のドングルに
+フォールバックします。ドングルをまったく設定せず、プライマリ経路だけでホットスポットを運用してい
+るユニットでも、これによってバッジがそれを見えるようになっています。
 :::
 
 これはセクションからではなく、常にマウントされているバッジから、30 秒ごとに `GET /local/wifi/status`
@@ -472,26 +478,21 @@ NetworkManager であれ報告します。そして NM プロファイルの `80
 バッジのドロップダウンの WiFi セクションは、ホットスポットの名前変更と新しいパスワードの設定を意図
 したものです。
 
-::: danger hostapd への移行後、現在は壊れています
+::: info NetworkManager プロファイルではなく、hostapd の設定ファイルを直接編集する
 `network-agent` の `setHotspot()`(`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-は依然として、AP 側を `nmcli connection modify msd700-hotspot ...` / `nmcli connection down`/`up
-msd700-hotspot` という NetworkManager プロファイルとして読み書きしています。上記のプロビジョニン
-グは、その名前のプロファイルが存在する場合、それを明示的に**削除**します。AP インターフェースは今
-や NM に*管理されておらず*、`hostapd` が `msd700-hotspot.service` を通じて直接それを所有していま
-す。現在のアーキテクチャでプロビジョニングされたどのユニットにも、`setHotspot()` が読み取れる
-`msd700-hotspot` 接続は存在しないため、何らかの変更を試みる前に即座に `not_provisioned` で失敗し
-ます。ステータスの読み取り(`GET /local/wifi/hotspot`、`GET /local/wifi/status`)は影響を受けません。
-`getApInfo()` は `iw` を使ってインターフェースを直接読み取るよう更新されましたが、*書き込み*パスだ
-けが移植されていません(上記のバッジの陳腐化に関するボックスも参照してください。`getApInfo()` は
-依然としてバックアップドングルのインターフェースしか見ておらず、プライマリの方は見ていません)。
-これを修正するには、もはや存在しない NetworkManager プロファイルに触れるのではなく、
-`hostapd-msd700-primary.conf` と、存在すれば `hostapd-msd700-backup.conf` の**両方**を編集し
-(SSID/`wpa_passphrase`、両方に同じ値)、`systemctl restart msd700-hotspot.service` するよう
-`setHotspot()` を書き直す必要があります。まだ実施されていません。
+は、存在する `hostapd-msd700-primary.conf` と `hostapd-msd700-backup.conf` の両方(あれば)の
+`ssid=`/`wpa_passphrase=` 行をその場で編集し(どちらの無線機が応答してもクライアントには 1 つの
+同じアイデンティティに見えるよう両方に同じ値を書く)、それから再起動を要求します。このコンテナは
+ホストの systemd への直接の経路を持ちません(バインドマウントされた D-Bus ソケット経由で到達する
+NetworkManager とは異なります)。そのため再起動は間接的に要求されます: ホスト側の systemd path
+ユニット(`msd700-hotspot-restart.path`、`--provision-network` によってインストールされる)が
+監視する sentinel file にタッチし、そのユニットが自身で `systemctl restart
+msd700-hotspot.service` を実行します。同期的な「再起動完了」の合図が返ってこないため、
+`setHotspot()` は固定の sleep に頼るのではなく、その後最大 15 秒間、実際の無線状態をポーリングし
+ます。
 :::
 
-修正された後、使用前に知っておく価値のある 2 つの挙動があり、どちらも既に API の形状に反映されて
-います。
+使用前に知っておく価値のある 2 つの挙動があり、どちらも既に API の形状に反映されています。
 
 ::: danger 保存すると、あなた自身のものを含め、ホットスポット上のすべてのデバイスが切断される
 これは避けられないものであり、粗さの問題ではありません。ホットスポットこそがダッシュボードを配信
@@ -519,9 +520,9 @@ msd700-hotspot` という NetworkManager プロファイルとして読み書き
 キャプチャしておき、新しい設定が有効化に失敗した場合はそれらを復元・再有効化し、`last_change.rolled_back`
 を設定します。これにより、再接続してきたオペレーターは、ロールバックされた変更なのか、そもそも
 一度も送信されなかった変更なのかを区別できます。そうしないと両者は見分けがつきません。どちらの場合
-も、目の前にあるネットワークは彼らが開始した時と同じものだからです。このロジックは依然として削除
-された NetworkManager プロファイルを対象としているため(上記参照)、修正の残り部分と一緒に、
-hostapd の設定ファイルの編集/復元へ移行させる必要があります。
+も、目の前にあるネットワークは彼らが開始した時と同じものだからです。ここでの「有効化に失敗」とは、
+同期的な再起動結果が得られないため(上記参照)、何らかのコマンドのエラーではなく、ポーリングした
+無線状態が 15 秒のウィンドウ内に期待した SSID を一度も示さなかったことを意味します。
 :::
 
 **検証**(フォームだけでなくエージェント側でも強制されます): SSID は 1〜32 **オクテット**で、非
@@ -543,8 +544,8 @@ hostapd の設定ファイルの編集/復元へ移行させる必要があり�
 `docker/.env` から黙ってリセットされることなく、稼働中のユニットの現在のパスワードが維持されます。
 CLI からホットスポットを変更するには、`docker/.env` を編集してプロビジョニングを再実行し、尋ねられ
 たらパスワードプロンプトに新しい値を答えてください(あるいは非対話的に
-`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`)。もしくは、上記のダッシュボード側の修正を
-待ってください。ブロードキャストされている SSID についての誠実でライブな答えは
+`AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`)。もしくは、上記のダッシュボード側の経路を
+そのまま使ってください。ブロードキャストされている SSID についての誠実でライブな答えは
 `iw dev <ap-interface> info` です。
 :::
 
@@ -672,11 +673,13 @@ iptables のリダイレクトルールが正しくスコープされていま�
 
 **バッジのメニューが "Hotspot: no hotspot radio" と表示するが、ホットスポット自体は実際には稼働して
 いる**
-このユニットにバックアップドングルがまったく設定されていない場合、これは既知の `getApInfo()` の
-陳腐化です。上記の[ダッシュボードのバッジ](#ダッシュボードのバッジ)を参照してください。実際の停止
-ではありません。`cat /run/msd700-hotspot-active` と、ホスト上での `iw dev <IFACE> info` で確認して
-ください。ドングルが**実際に**設定されている場合は、`AP_INTERFACE_LOCAL` が本当に空か、
-`--provision-network` が一度も実行されていない可能性があります。`docker/.env` を入力し、
+`/run/msd700-hotspot-active` が実際に `network_local` にマウントされているか確認してください
+(`docker compose exec network_local cat /run/msd700-hotspot-active` が、ホスト上の
+`cat /run/msd700-hotspot-active` と一致するはずです)。コンテナ内で空またはファイルなしと表示され
+る場合、このユニットではまだ compose の bind mount が配線されていません。上記の
+[ダッシュボードのバッジ](#ダッシュボードのバッジ)を参照してください。マウントが正しくファイルも
+一致する場合、`--provision-network` が一度も実行されていない、あるいは `AP_INTERFACE_LOCAL`/
+`STA_INTERFACE_LOCAL` の両方が本当に空である可能性があります。`docker/.env` を入力し、
 `./setup.sh --provision-network` を実行してください。
 
 **バッジに WiFi のグリフがまったく表示されない**
@@ -694,14 +697,19 @@ unit" と表示する**
 nmcli 自身の stderr が、言い換えられることなくそのまま渡されています。理由のテキストを直接読んで
 ください。パスワード間違い、範囲外、拒否のいずれかが区別されています。
 
-**ダッシュボードからホットスポットの名前/パスワードを変更しても何も起きない / `not_provisioned`
-と表示される**
-既知のバグです。上記の[ユニット自身のホットスポットを変更する](#ユニット自身のホットスポットを変更する)
-を参照してください。`setHotspot()` は hostapd への移行に対応して更新されていません。今のところは
-CLI から変更してください。新しい名前にするには `docker/.env` の `AP_SSID_LOCAL` を編集し、
-`--provision-network` を再実行して、尋ねられたらパスワードプロンプトに新しい値を答えてください
-(あるいは非対話的に `AP_PASSWORD_LOCAL=... ./setup.sh --provision-network`)。`docker/.env` の
-`AP_PASSWORD_LOCAL` だけでは不十分な理由については、そのセクション下の警告を参照してください。
+**ダッシュボードからホットスポットの名前/パスワードを変更すると `not_provisioned` と表示される**
+`hostapd-msd700-primary.conf` も `-backup.conf` もまだ存在しないか、`network_local` がそれらを
+読み取れません([どのように結線されているか](#どのように結線されているか)の `/etc/hostapd` の
+bind mount が実際に存在するか確認してください: `docker compose exec network_local ls -l
+/etc/hostapd`)。`--provision-network` が一度も実行されていない可能性があります。
+
+**ダッシュボードからホットスポットの名前/パスワードを変更するとタイムアウトする / 確定しない**
+`setHotspot()` は sentinel file にタッチして、無線が新しい SSID をブロードキャストして戻ってくる
+のを最大 15 秒待ちます。上記の[ユニット自身のホットスポットを変更する](#ユニット自身のホットスポットを変更する)
+を参照してください。ホスト上で `systemctl status msd700-hotspot-restart.path
+msd700-hotspot-restart.service` を確認し、`/run/msd700-hotspot-restart` が `network_local` に
+読み書き可能でマウントされているか確認し、`journalctl -u msd700-hotspot-restart.service` で実際
+に再起動が実行されたか確認してください。
 
 ## 関連項目
 
