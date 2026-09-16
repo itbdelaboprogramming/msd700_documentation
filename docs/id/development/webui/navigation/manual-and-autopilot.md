@@ -29,6 +29,52 @@ Panel yang sama juga muncul di sidebar halaman Mapping, di mana kedua toggle men
 yang aktif alih-alih run navigasi; tulisan tersendiri untuk halaman itu membahas apa arti Manual
 Override dan Autopilot di sana.
 
+## Menyerahkan sapuan coverage ke operator dan mengambilnya kembali
+
+Manual Override **menjeda** run boustrophedon, bukan mengakhirinya: melepas setir mengembalikan
+sapuan yang sama ke robot, di jalur yang tadi sedang ditempuh. Tiga aturan harus dipegang agar itu
+bekerja, dan masing-masing ada karena jalan pintas yang tampak wajar ternyata salah.
+
+**Menghentikan sapuan lewat `/path_coverage/pause`, tidak pernah lewat `/move_base/cancel` telanjang.**
+`path_coverage_node` ikut berlangganan `/move_base/cancel`, dan cancel yang bukan terbitannya sendiri
+dibaca di sana sebagai "misi sudah selesai": flag terminal `cancelled` diset dan thread run
+dibubarkan. `system_command.py` dulu menerbitkan `GoalID` kosong ke situ saat Manual Override
+dinyalakan, jadi mengambil setir membunuh sapuan secara diam-diam. Service pause milik node coverage
+membatalkan goal-nya secara internal tanpa efek samping itu, jadi `_enable_manual` bertanya ke node
+coverage lebih dulu dan menyimpan cancel menyeluruh untuk kasus yang tidak punya node coverage untuk
+ditanya: point nav dari browser, rute autopilot, atau node coverage yang terlalu lama dan belum
+punya service tersebut.
+
+**Cancel yang datang saat run sedang paused diabaikan.** Run yang paused sudah membatalkan goal-nya
+sendiri, jadi apa pun yang datang sesudahnya adalah pihak lain yang menghentikan chassis, bukan
+mengakhiri misi. Mengakhiri run untuk selamanya lewat `/path_coverage/cancel`, dan itulah yang
+dipanggil `boustrophedon.deactivate`.
+
+**Siapa yang menjeda menentukan siapa yang boleh melanjutkan.** `system_command.py` mencatat pemilik
+pause coverage: `manual` kalau Manual Override yang mengambilnya, `operator` kalau tombol Pause.
+Melepas Manual Override hanya melanjutkan pause yang diambilnya sendiri, jadi Pause yang ditekan
+selagi operator memegang setir tetap bertahan sesudah setir dilepas. Dulu ini disimpulkan dari label
+activity, dan label itu salah di dua arah: `stuck` dipulihkan menjadi `navigation_ready`, dan Pause
+operator saat manual meninggalkan activity di `paused`, jadi tidak satu pun melanjutkan sapuan.
+
+| Kejadian | Node coverage | Activity robot sesudahnya |
+| --- | --- | --- |
+| Manual Override ON saat sapuan berjalan | `~pause` | `manual` |
+| Manual Override OFF | `~resume` | `boustrophedon_ready` |
+| Manual Override OFF, resume ditolak | tidak ada yang bisa dilanjutkan | `coverage_failed` |
+| Pause ditekan, kapan pun | `~pause` | `paused` |
+| Manual Override OFF sesudah Pause itu | tidak disentuh | `paused` |
+| Cancel Coverage | `~cancel` | `idle` |
+
+::: warning Jangan pernah melaporkan run yang tidak bisa kamu jalankan lagi
+Saat resume ditolak, activity menjadi `coverage_failed`, bukan `boustrophedon_ready`. Dashboard
+membaca `boustrophedon_ready` sebagai "sedang jalan" dan berhenti di **On Progress** di atas robot
+yang tidak akan pernah bergerak, dan justru itulah kegagalan yang jalur ini ada untuk mencegahnya.
+Dengan alasan yang sama, run yang dibunuh cancel eksternal kini menerbitkan `aborted` di
+`/msd700/coverage_status`: run yang dibatalkan tidak menerbitkan status terminal apa pun sendiri,
+jadi tanpa itu sapuan mati sementara semua lapisan di atasnya masih melaporkan run yang hidup.
+:::
+
 ## Mesin state aktivitas: perutean ke tab dashboard
 
 String aktivitas robot, yang dilacak oleh `RobotStateTracker` dan dilaporkan pada setiap ping

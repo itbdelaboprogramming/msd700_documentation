@@ -103,6 +103,20 @@ at their cause:
   `/unit_<ULID>/string/map_request` di bridge sisi cloud, dan `Map resend requested` di log
   `map_compression_node` robot. Lihat
   [Kontrak Pesan § Pengiriman map](/id/development/message-contracts#map-delivery).
+- **Setelah menyetir dengan WASD di tengah run coverage, dashboard kembali ke "On Progress" tapi
+  robot tidak pernah bergerak, dan Pause perlu dua klik.** Sebelum 2026-09-16, menyalakan Manual
+  Override menerbitkan `GoalID` telanjang ke `/move_base/cancel` untuk menghentikan gerak otonom.
+  `path_coverage_node` ikut berlangganan topik itu dan membaca cancel yang bukan terbitannya sendiri
+  sebagai "misi sudah selesai", jadi flag terminal `cancelled` diset dan thread sapuan keluar. Run
+  yang dibatalkan tidak menerbitkan status terminal apa pun, jadi tak ada lapisan di atasnya yang
+  tahu area itu ditinggalkan: melepas setir memulihkan label `boustrophedon_ready` dan melanjutkan
+  run yang sudah tidak ada. Klik ganda pada Pause adalah separuh keduanya, di dashboard: effect yang
+  mengangkat 'Paused' hasil pelepasan manual hanya berpatokan pada robot yang melaporkan
+  `boustrophedon_ready`, dan laporan itu masih tersisa di ping terakhir sekitar satu detik sesudah
+  Pause milik operator, jadi Pause tersebut dibatalkan di layar. Konfirmasi di unit lewat
+  `External cancel received on /move_base/cancel` di log `path_coverage` tepat saat Manual Override
+  menyala. Robot yang sudah telanjur begini hanya pulih dengan init coverage baru. Lihat
+  [Manual & Autopilot § Menyerahkan sapuan coverage ke operator dan mengambilnya kembali](/id/development/webui/navigation/manual-and-autopilot#menyerahkan-sapuan-coverage-ke-operator-dan-mengambilnya-kembali).
 - **Ruang yang disapu masih memiliki strip yang belum disapu di sepanjang dindingnya.** Beberapa di antaranya adalah geometri dan beberapa di antaranya
   itu adalah bug. Lantainya `wall_clearance - body_half_width` = 0,225 m per dinding, dan tidak ada denah yang bisa
   kalahkan itu. Semakin lebar berarti jarak bebas diterapkan lebih dari satu kali: baca geometrinya

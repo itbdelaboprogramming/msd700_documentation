@@ -102,6 +102,21 @@ at their cause:
   ブリッジに `/unit_<ULID>/string/map_request` があるか、ロボット側は `map_compression_node` のログに
   `Map resend requested` があるかを確認してください。
   [メッセージ契約 § マップの配送](/ja/development/message-contracts#map-delivery)を参照。
+- **カバレッジ走行中にWASDで運転したあと、ダッシュボードは「On Progress」に戻るのにロボットが
+  まったく動かず、Pauseに2回クリックが必要。** 2026-09-16以前、Manual Overrideの有効化は自律走行を
+  止めるために素の`GoalID`を`/move_base/cancel`へ発行していました。`path_coverage_node`はこの
+  トピックを購読しており、自分が発行していないキャンセルを「ミッション終了」と読むため、終端フラグ
+  `cancelled`が立ち掃引スレッドが終了していました。キャンセルされた走行は終端ステータスを一切
+  発行しないので、エリアが放棄されたことを上位層は誰も知りません。ハンドルを離すとラベルだけが
+  `boustrophedon_ready`に戻り、もう存在しない走行を再開していました。Pauseの2回クリックは
+  ダッシュボード側のもう半分です。手動解除の'Paused'を解除するエフェクトはロボットが
+  `boustrophedon_ready`を報告することだけを条件にしており、その報告はオペレーター自身のPauseの
+  約1秒後まで直前のpingに残るため、そのPauseが画面上で取り消されていました。ユニット側では、
+  Manual Overrideを有効にした瞬間の`path_coverage`ログに
+  `External cancel received on /move_base/cancel`が出ているかで確認できます。すでにこの状態に
+  陥ったロボットは、カバレッジの再初期化でしか復帰しません。
+  [手動操作 & オートパイロット § カバレッジ掃引をオペレーターに渡し、また受け取る](/ja/development/webui/navigation/manual-and-autopilot#カバレッジ掃引をオペレーターに渡し、また受け取る)
+  を参照してください。
 - **掃き掃除された部屋でも、すべての壁に沿ってまだ掃いていない部分があります。** その一部は幾何学であり、一部は
   それはバグでした。床は壁あたり `wall_clearance - body_half_width` = 0.225 m であり、どのプランも可能ではありません。
   倒せ。幅が広い場合は、クリアランスが複数回適用されていることを意味します。ジオメトリを読んでください。

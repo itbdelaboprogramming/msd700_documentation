@@ -29,6 +29,51 @@ The same panel appears in the Mapping page's sidebar as well, where the two togg
 active SLAM session rather than a navigation run; that page's own write-up covers what Manual
 Override and Autopilot mean there.
 
+## Handing a coverage sweep to the operator and back
+
+Manual Override **pauses** a boustrophedon run, it does not end it: releasing the wheel hands the
+same sweep back to the robot at the lane it was driving. Three separate rules have to hold for that
+to work, and each one exists because the obvious shortcut is wrong.
+
+**Stopping the sweep goes through `/path_coverage/pause`, never through a bare `/move_base/cancel`.**
+`path_coverage_node` subscribes to `/move_base/cancel`, and a cancel it did not publish itself reads
+there as "the mission is over": it sets a terminal `cancelled` flag and the run thread unwinds.
+`system_command.py` used to publish an empty `GoalID` there when Manual Override engaged, so taking
+the wheel silently killed the sweep. The coverage node's own pause service cancels its goals
+internally without that side effect, so `_enable_manual` asks the coverage node first and keeps the
+blanket cancel for the cases with no coverage node to ask: browser-driven point nav, an autopilot
+route, or a coverage node too old to have the service.
+
+**A cancel that lands while the run is paused is ignored.** A paused run has already cancelled its
+own goals, so anything arriving afterwards is another party stopping the base, not ending the
+mission. Ending a run for good goes through `/path_coverage/cancel`, which is what
+`boustrophedon.deactivate` calls.
+
+**Whoever paused it decides who may resume it.** `system_command.py` records the owner of the
+coverage pause: `manual` when Manual Override took it, `operator` when the Pause button did.
+Releasing Manual Override resumes only a pause it took itself, so a Pause pressed while the operator
+held the wheel survives the release. This used to be inferred from the activity label instead, which
+got it wrong in both directions: `stuck` restores as `navigation_ready`, and an operator's Pause
+during manual leaves the activity at `paused`, so neither one resumed the sweep.
+
+| Event | Coverage node | Robot activity afterwards |
+| --- | --- | --- |
+| Manual Override on while the sweep is driving | `~pause` | `manual` |
+| Manual Override off | `~resume` | `boustrophedon_ready` |
+| Manual Override off, resume refused | nothing left to resume | `coverage_failed` |
+| Pause pressed, at any time | `~pause` | `paused` |
+| Manual Override off after that Pause | untouched | `paused` |
+| Cancel Coverage | `~cancel` | `idle` |
+
+::: warning Never report a run you could not restart
+When the resume is refused the activity becomes `coverage_failed`, not `boustrophedon_ready`. The
+dashboard reads `boustrophedon_ready` as "driving" and parks at **On Progress** over a robot that
+will never move, which is the exact failure this path exists to prevent. For the same reason a run
+killed by an external cancel now publishes `aborted` on `/msd700/coverage_status`: a cancelled run
+publishes no terminal status of its own, so without it the sweep died while every layer above still
+reported a live run.
+:::
+
 ## Activity state machine: routing to dashboard tabs
 
 The robot's activity string, tracked by `RobotStateTracker` and reported on every heartbeat ping,

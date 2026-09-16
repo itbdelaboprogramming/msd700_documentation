@@ -112,6 +112,20 @@ at their cause:
   `/unit_<ULID>/string/map_request` in the bridge on the cloud side, and for `Map resend requested`
   in the robot's `map_compression_node` log. See
   [Message Contracts § Map delivery](/development/message-contracts#map-delivery).
+- **After driving with WASD during a coverage run, the dashboard goes back to "On Progress" but the
+  robot never moves, and Pause takes two clicks.** Before 2026-09-16, engaging Manual Override
+  published a bare `GoalID` on `/move_base/cancel` to stop autonomous motion. `path_coverage_node`
+  subscribes to that topic and reads a cancel it did not send itself as "the mission is over", so it
+  set its terminal `cancelled` flag and the sweep thread exited. A cancelled run publishes no
+  terminal status at all, so nothing above ever learned the area had been abandoned: releasing the
+  wheel restored the label `boustrophedon_ready` and resumed a run that no longer existed. The
+  double-click on Pause was the second half of it, in the dashboard: the effect that lifts the
+  manual-release 'Paused' keyed only on the robot reporting `boustrophedon_ready`, which lingers in
+  the last ping for about a second after an operator's own Pause, so that Pause was undone on
+  screen. Confirm on the unit with `External cancel received on /move_base/cancel` in the
+  `path_coverage` log at the moment Manual Override engaged. Only a fresh coverage init recovers a
+  robot already in this state. See
+  [Manual & Autopilot § Handing a coverage sweep to the operator and back](/development/webui/navigation/manual-and-autopilot#handing-a-coverage-sweep-to-the-operator-and-back).
 - **A swept room still has an unswept strip along every wall.** Some of it is geometry and some of
   it was a bug. The floor is `wall_clearance - body_half_width` = 0.225 m per wall, and no plan can
   beat it. Anything wider means the clearance is being applied more than once: read the geometry
