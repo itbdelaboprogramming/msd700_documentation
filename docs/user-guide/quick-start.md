@@ -69,7 +69,7 @@ flowchart TD
 3. The 2D floorplan renders on the canvas along with the robot's current position (blue circular icon with direction arrow).
 
 ::: tip No map available?
-If no maps exist in the dropdown, see [Building a New Map (SLAM)](/getting-started/features#1-autonomous-slam-mapping) to create your first map.
+If no maps exist in the dropdown, see [Mapping](/user-guide/mapping) to create your first map.
 :::
 
 ---
@@ -125,5 +125,5 @@ The **Emergency Stop** button is prominently located at the top right of every p
 
 ## Next Steps
 
-- Learn how to perform systematic area coverage in [System Features](/getting-started/features).
-- Understand safety timers and Autopilot in [How the Robot Behaves](/getting-started/behavior).
+- Learn how to perform systematic area coverage in [Routes & Coverage](/user-guide/routes-coverage).
+- Understand safety timers and Autopilot in [How the Robot Behaves](/user-guide/behavior).

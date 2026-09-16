@@ -25,6 +25,12 @@ radio**. It can join a network as a client (STA) *or* broadcast a hotspot (AP), 
 same time, this is not a driver limitation, it is the hardware: `iw phy` shows exactly one `phy` for
 the onboard card, and one radio can only be tuned to one channel at a time.
 
+::: info Unit built with a MediaTek MT7922 instead
+Some units carry a MT7922 card instead of the RTL8822CE. On Tegra kernels it can come up with a
+firmware-not-found error even though the driver is present, see
+[MT7922 Wi-Fi Setup](/setup/wifi-mt7922) for that specific fix before assuming it's a hardware fault.
+:::
+
 | Topology | Feasibility |
 | --- | --- |
 | A dongle runs the hotspot, the built-in radio stays a WiFi client | High confidence, no chipset risk. AP and client live on two physically separate radios, so there is no "concurrent mode" question at all: two independent processes (hostapd on the dongle, NetworkManager on the onboard radio), each bound to its own interface. |

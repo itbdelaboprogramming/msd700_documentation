@@ -1,5 +1,6 @@
 ---
 outline: deep
+search: false
 ---
 
 # ロボットの動作仕様
@@ -168,7 +169,7 @@ sequenceDiagram
 | ロボットが目に見えて走行中の場合 | バグです。回避せず報告してください |
 
 数分経っても表示され続ける場合は、カメラ映像で障害物がないか確認し、
-[トラブルシューティング](/ja/getting-started/troubleshooting)を参照してください。
+[トラブルシューティング](/ja/user-guide/troubleshooting)を参照してください。
 
 ## 緊急停止
 
@@ -186,7 +187,7 @@ E-Stopはまさにそれを本番で発見したくない機能です。
 
 ## 関連ページ
 
-- [クイックスタート](/ja/getting-started/quick-start)
-- [機能](/ja/getting-started/features)
-- [FAQ](/ja/getting-started/faq)
-- [トラブルシューティング](/ja/getting-started/troubleshooting)
+- [クイックスタート](/ja/user-guide/quick-start)
+- [ナビゲーション](/ja/user-guide/navigation)
+- [FAQ](/ja/user-guide/faq)
+- [トラブルシューティング](/ja/user-guide/troubleshooting)

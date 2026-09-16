@@ -28,6 +28,10 @@ Coverage areas tell the robot to systematically sweep an entire zone: for exampl
 
 The robot will plan an efficient back-and-forth (boustrophedon) sweep pattern that covers the full zone while avoiding any keep-out areas.
 
+::: tip Getting full coverage
+The default lane spacing (`0.574 m`) already overlaps adjacent passes by about 18% so no strip is missed. For the fewest turns, draw the area so its long edge roughly matches the direction you'd naturally sweep the room in.
+:::
+
 ## Running a Coverage Sweep
 
 1. Open the saved area from the list.
@@ -41,8 +45,9 @@ A playlist chains multiple routes and coverage areas into one unattended sequenc
 
 1. Go to **Playlists** and click **New Playlist**.
 2. Add routes and/or coverage areas in the order you want them run.
-3. Save the playlist with a descriptive name.
-4. From [Navigation](/user-guide/navigation), select the playlist and click **Start Autopilot** to run the whole sequence automatically.
+3. Optionally set a pause (dwell time) at a specific waypoint, for example to wait 30 seconds at an inspection checkpoint.
+4. Save the playlist with a descriptive name.
+5. From [Navigation](/user-guide/navigation), select the playlist and click **Start Autopilot** to run the whole sequence automatically.
 
 ## Renaming or Deleting
 

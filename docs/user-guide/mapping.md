@@ -18,7 +18,7 @@ Before the robot can navigate a space, it needs a **map** of that space. Mapping
 
 You can build a map in two ways:
 
-- **Manual driving**: Use the joystick or **W A S D** keys to drive the robot slowly around the entire area, including corners and dead ends, so nothing is missed.
+- **Manual driving**: Use the joystick or **W A S D** keys to drive the robot slowly (around `0.15 m/s`) around the entire area, including corners and dead ends, so nothing is missed.
 - **Autonomous exploration**: Click **Auto Explore** and the robot investigates the area on its own, backing off automatically if it senses it's cornered.
 
 As you drive, the map fills in on screen in real time: walls and obstacles appear as dark lines, open floor appears in a lighter shade.
@@ -29,11 +29,15 @@ As you drive, the map fills in on screen in real time: walls and obstacles appea
 - Click **Play** again to resume from where you left off: nothing is lost.
 - Drive back over an area if a section looks incomplete or noisy.
 
+## Setting the Homebase
+
+Before saving, drive the robot back to its intended starting or charging position and click **Set Homebase Here** on the toolbar. This marks the reference origin `(x=0, y=0)` that automated playlists later use to send the robot back to its charging station when a mission finishes.
+
 ## Saving the Map
 
 1. Once the area is fully covered, click **Stop**.
 2. Confirm the map name and click **Save**.
-3. The finished map now appears in [Maps & Database](/user-guide/database), ready to use for [Navigation](/user-guide/navigation).
+3. The finished map (grid, thumbnail, and homebase position) now appears in [Maps & Database](/user-guide/database), ready to use for [Navigation](/user-guide/navigation).
 
 ::: warning Don't close the browser mid-recording
 Closing the tab while Play is active may lose unsaved progress. Always click Stop and Save first.

@@ -68,5 +68,5 @@ Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your
 
 ## Still have questions?
 
-- Consult the [Operator Troubleshooting Guide](/getting-started/troubleshooting).
+- Consult the [Troubleshooting Guide](/user-guide/troubleshooting).
 - For hardware maintenance and installation, see [System Setup](/setup/system-setup).

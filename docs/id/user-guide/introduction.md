@@ -57,6 +57,6 @@ Akses ke robot diatur oleh **Profil Penyewaan (Rental Profiles)**:
 
 ## Langkah Selanjutnya
 
-- Lanjutkan ke [Panduan Cepat](/id/getting-started/quick-start) untuk masuk dan mengendalikan robot pertama Anda.
-- Baca [Fitur Sistem](/id/getting-started/features) untuk uraian lengkap kemampuan pemetaan dan navigasi.
-- Tinjau [Bagaimana Robot Berperilaku](/id/getting-started/behavior) untuk memahami watchdog keselamatan dan persistensi Autopilot.
+- Lanjutkan ke [Panduan Cepat](/id/user-guide/quick-start) untuk masuk dan mengendalikan robot pertama Anda.
+- Jelajahi panduan fitur untuk [Pemetaan](/id/user-guide/mapping), [Navigasi](/id/user-guide/navigation), dan [Rute & Cakupan](/id/user-guide/routes-coverage).
+- Tinjau [Bagaimana Robot Berperilaku](/id/user-guide/behavior) untuk memahami watchdog keselamatan dan persistensi Autopilot.

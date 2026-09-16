@@ -5,35 +5,36 @@ import mathjax3 from 'markdown-it-mathjax3'
 const enSidebar = {
   '/user-guide/': [
     {
-      text: 'ROS Web UI User Guide',
+      text: 'Get Started',
       items: [
         { text: 'Overview', link: '/user-guide/' },
+        { text: 'Introduction', link: '/user-guide/introduction' },
+        { text: 'Quick Start', link: '/user-guide/quick-start' },
+      ]
+    },
+    {
+      text: 'Core Operations',
+      items: [
         { text: 'Accounts & Access', link: '/user-guide/accounts' },
         { text: 'Navigation', link: '/user-guide/navigation' },
         { text: 'Mapping', link: '/user-guide/mapping' },
         { text: 'Maps & Database', link: '/user-guide/database' },
         { text: 'Routes & Coverage', link: '/user-guide/routes-coverage' },
         { text: 'Live Camera', link: '/user-guide/camera' },
-        { text: 'Admin Console', link: '/user-guide/admin-console' },
       ]
-    }
-  ],
-  '/getting-started/': [
+    },
     {
-      text: 'Getting Started',
+      text: 'Reference',
       items: [
-        { text: 'Overview', link: '/getting-started/' },
-        { text: 'Introduction', link: '/getting-started/introduction' },
-        { text: 'Quick Start', link: '/getting-started/quick-start' },
-        { text: 'Features', link: '/getting-started/features' },
-        { text: 'How the Robot Behaves', link: '/getting-started/behavior' },
+        { text: 'How the Robot Behaves', link: '/user-guide/behavior' },
+        { text: 'Admin Console', link: '/user-guide/admin-console' },
       ]
     },
     {
       text: 'Help & FAQ',
       items: [
-        { text: 'FAQ', link: '/getting-started/faq' },
-        { text: 'Operator Troubleshooting', link: '/getting-started/troubleshooting' },
+        { text: 'FAQ', link: '/user-guide/faq' },
+        { text: 'Troubleshooting', link: '/user-guide/troubleshooting' },
       ]
     }
   ],
@@ -58,6 +59,7 @@ const enSidebar = {
       items: [
         { text: 'Docker Reference', link: '/setup/docker-reference' },
         { text: 'WiFi Hotspot + Client', link: '/setup/wifi-hotspot' },
+        { text: 'MT7922 Wi-Fi Setup', link: '/setup/wifi-mt7922' },
       ]
     },
     {
@@ -209,35 +211,36 @@ const enSidebar = {
 const idSidebar = {
   '/id/user-guide/': [
     {
-      text: 'Panduan Pengguna ROS Web UI',
+      text: 'Mulai Dari Sini',
       items: [
         { text: 'Ikhtisar', link: '/id/user-guide/' },
+        { text: 'Pengenalan Sistem', link: '/id/user-guide/introduction' },
+        { text: 'Panduan Cepat', link: '/id/user-guide/quick-start' },
+      ]
+    },
+    {
+      text: 'Operasi Inti',
+      items: [
         { text: 'Akun & Akses', link: '/id/user-guide/accounts' },
         { text: 'Navigasi', link: '/id/user-guide/navigation' },
         { text: 'Pemetaan', link: '/id/user-guide/mapping' },
         { text: 'Peta & Database', link: '/id/user-guide/database' },
         { text: 'Rute & Cakupan', link: '/id/user-guide/routes-coverage' },
         { text: 'Kamera Langsung', link: '/id/user-guide/camera' },
-        { text: 'Konsol Admin', link: '/id/user-guide/admin-console' },
       ]
-    }
-  ],
-  '/id/getting-started/': [
+    },
     {
-      text: 'Panduan Memulai',
+      text: 'Referensi',
       items: [
-        { text: 'Ikhtisar', link: '/id/getting-started/' },
-        { text: 'Pengenalan Sistem', link: '/id/getting-started/introduction' },
-        { text: 'Panduan Cepat', link: '/id/getting-started/quick-start' },
-        { text: 'Fitur Utama', link: '/id/getting-started/features' },
-        { text: 'Perilaku Robot', link: '/id/getting-started/behavior' },
+        { text: 'Perilaku Robot', link: '/id/user-guide/behavior' },
+        { text: 'Konsol Admin', link: '/id/user-guide/admin-console' },
       ]
     },
     {
       text: 'Bantuan & FAQ',
       items: [
-        { text: 'Tanya Jawab (FAQ)', link: '/id/getting-started/faq' },
-        { text: 'Pemecahan Masalah Operator', link: '/id/getting-started/troubleshooting' },
+        { text: 'Tanya Jawab (FAQ)', link: '/id/user-guide/faq' },
+        { text: 'Pemecahan Masalah', link: '/id/user-guide/troubleshooting' },
       ]
     }
   ],
@@ -262,6 +265,7 @@ const idSidebar = {
       items: [
         { text: 'Referensi Docker', link: '/id/setup/docker-reference' },
         { text: 'Hotspot Wi-Fi & Klien', link: '/id/setup/wifi-hotspot' },
+        { text: 'Penyiapan Wi-Fi MT7922', link: '/id/setup/wifi-mt7922' },
       ]
     },
     {
@@ -413,35 +417,36 @@ const idSidebar = {
 const jaSidebar = {
   '/ja/user-guide/': [
     {
-      text: 'ROS Web UI ユーザーガイド',
+      text: 'はじめに',
       items: [
         { text: '概要', link: '/ja/user-guide/' },
+        { text: 'システム紹介', link: '/ja/user-guide/introduction' },
+        { text: 'クイックスタート', link: '/ja/user-guide/quick-start' },
+      ]
+    },
+    {
+      text: '基本操作',
+      items: [
         { text: 'アカウントとアクセス', link: '/ja/user-guide/accounts' },
         { text: 'ナビゲーション', link: '/ja/user-guide/navigation' },
         { text: 'マッピング', link: '/ja/user-guide/mapping' },
         { text: 'マップとデータベース', link: '/ja/user-guide/database' },
         { text: 'ルートとカバレッジ', link: '/ja/user-guide/routes-coverage' },
         { text: 'ライブカメラ', link: '/ja/user-guide/camera' },
-        { text: '管理コンソール', link: '/ja/user-guide/admin-console' },
       ]
-    }
-  ],
-  '/ja/getting-started/': [
+    },
     {
-      text: '導入ガイド',
+      text: 'リファレンス',
       items: [
-        { text: '概要', link: '/ja/getting-started/' },
-        { text: 'システム紹介', link: '/ja/getting-started/introduction' },
-        { text: 'クイックスタート', link: '/ja/getting-started/quick-start' },
-        { text: '主要機能', link: '/ja/getting-started/features' },
-        { text: 'ロボットの動作仕様', link: '/ja/getting-started/behavior' },
+        { text: 'ロボットの動作仕様', link: '/ja/user-guide/behavior' },
+        { text: '管理コンソール', link: '/ja/user-guide/admin-console' },
       ]
     },
     {
       text: 'ヘルプ & FAQ',
       items: [
-        { text: 'よくある質問 (FAQ)', link: '/ja/getting-started/faq' },
-        { text: 'オペレーター向けトラブルシューティング', link: '/ja/getting-started/troubleshooting' },
+        { text: 'よくある質問 (FAQ)', link: '/ja/user-guide/faq' },
+        { text: 'トラブルシューティング', link: '/ja/user-guide/troubleshooting' },
       ]
     }
   ],
@@ -466,6 +471,7 @@ const jaSidebar = {
       items: [
         { text: 'Docker コマンドリファレンス', link: '/ja/setup/docker-reference' },
         { text: 'Wi-Fi ホットスポット & クライアント', link: '/ja/setup/wifi-hotspot' },
+        { text: 'MT7922 Wi-Fi セットアップ', link: '/ja/setup/wifi-mt7922' },
       ]
     },
     {
@@ -649,7 +655,6 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Home', link: '/' },
-          { text: 'Getting Started', link: '/getting-started/' },
           { text: 'User Guide', link: '/user-guide/' },
           { text: 'Setup', link: '/setup/' },
           { text: 'Developer Docs', link: '/development/' }
@@ -675,7 +680,6 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Beranda', link: '/id/' },
-          { text: 'Panduan Operator', link: '/id/getting-started/' },
           { text: 'Panduan Pengguna', link: '/id/user-guide/' },
           { text: 'Setup', link: '/id/setup/' },
           { text: 'Dokumentasi Developer', link: '/id/development/' }
@@ -710,7 +714,6 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'ホーム', link: '/ja/' },
-          { text: '導入ガイド', link: '/ja/getting-started/' },
           { text: 'ユーザーガイド', link: '/ja/user-guide/' },
           { text: 'セットアップ', link: '/ja/setup/' },
           { text: '開発ドキュメント', link: '/ja/development/' }

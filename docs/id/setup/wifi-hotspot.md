@@ -26,6 +26,13 @@ pernah keduanya sekaligus; ini bukan keterbatasan driver, melainkan perangkat ke
 menunjukkan tepat satu `phy` untuk kartu onboard, dan satu radio hanya bisa disetel ke satu channel
 pada satu waktu.
 
+::: info Unit yang dibangun dengan MediaTek MT7922
+Sebagian unit membawa kartu MT7922, bukan RTL8822CE. Pada kernel Tegra, kartu ini bisa muncul dengan
+error firmware-not-found padahal drivernya sudah ada; lihat
+[Penyiapan Wi-Fi MT7922](/id/setup/wifi-mt7922) untuk perbaikan spesifiknya sebelum menganggapnya
+kerusakan hardware.
+:::
+
 | Topologi | Kelayakan |
 | --- | --- |
 | Sebuah dongle menjalankan hotspot, radio bawaan tetap menjadi klien WiFi | Kepercayaan tinggi, tanpa risiko chipset. AP dan klien berada pada dua radio yang secara fisik terpisah, sehingga tidak ada pertanyaan "mode konkuren" sama sekali: dua proses independen (hostapd pada dongle, NetworkManager pada radio bawaan), masing-masing terikat ke interface-nya sendiri. |

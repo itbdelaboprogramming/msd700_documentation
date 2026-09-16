@@ -1,5 +1,6 @@
 ---
 outline: deep
+search: false
 ---
 
 # How the Robot Behaves
@@ -167,7 +168,7 @@ The banner means the robot believes it should be moving and is not.
 | While the robot is visibly driving | A bug. Report it, do not work around it |
 
 If it stays up for several minutes, check the camera feed for something in the way, then see
-[Troubleshooting](/getting-started/troubleshooting).
+[Troubleshooting](/user-guide/troubleshooting).
 
 ## Emergency Stop
 
@@ -186,7 +187,7 @@ not want to discover that on.
 
 ## Related
 
-- [Quick Start](/getting-started/quick-start)
-- [Features](/getting-started/features)
-- [FAQ](/getting-started/faq)
-- [Troubleshooting](/getting-started/troubleshooting)
+- [Quick Start](/user-guide/quick-start)
+- [Navigation](/user-guide/navigation)
+- [FAQ](/user-guide/faq)
+- [Troubleshooting](/user-guide/troubleshooting)

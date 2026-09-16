@@ -135,7 +135,7 @@ menyerahkannya ke operator:
    yang mencakup unit ini. Sebuah unit yang ada dan telah di-enrol tidak, dengan sendirinya, membuatnya
    terlihat oleh akun pengguna mana pun: unit adalah sumber daya bersama lintas armada, dan akses ke
    unit tersebut sepenuhnya dikontrol melalui profil, bukan melalui unit itu sendiri.
-2. **Arahkan mereka ke [Memulai](/id/getting-started/).** Bagian tersebut mengasumsikan persis kondisi ini:
+2. **Arahkan mereka ke [Panduan Pengguna](/id/user-guide/).** Bagian tersebut mengasumsikan persis kondisi ini:
    unit yang sudah terpasang, terhubung, dan telah diberi akses.
 
 ## Langkah Berikutnya

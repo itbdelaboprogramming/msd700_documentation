@@ -128,7 +128,7 @@ msd700_documentation/
 │   │       ├── custom.css        # site-wide style overrides
 │   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
 │   ├── index.md                 # homepage
-│   ├── getting-started/         # end-user docs
+│   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
 │   └── development/             # developer docs (this section)
 ├── scripts/

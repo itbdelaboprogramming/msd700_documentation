@@ -68,5 +68,5 @@ Mengklik tombol merah **Emergency Stop** (atau menekan tombol `Escape` pada keyb
 
 ## Masih ada pertanyaan?
 
-- Konsultasikan [Panduan Pemecahan Masalah Operator](/id/getting-started/troubleshooting).
+- Konsultasikan [Panduan Pemecahan Masalah](/id/user-guide/troubleshooting).
 - Untuk pemeliharaan dan instalasi perangkat keras, lihat [Instalasi Sistem](/id/setup/system-setup).

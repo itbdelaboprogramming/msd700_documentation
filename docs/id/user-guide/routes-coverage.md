@@ -28,6 +28,10 @@ Area cakupan memberi tahu robot untuk menyapu seluruh zona secara sistematis: mi
 
 Robot akan merencanakan pola penyapuan bolak-balik (boustrophedon) yang efisien untuk mencakup seluruh zona sambil menghindari area larangan.
 
+::: tip Agar cakupan penuh
+Jarak antar-jalur default (`0.574 m`) sudah tumpang tindih sekitar 18% dengan jalur sebelahnya sehingga tidak ada bagian yang terlewat. Agar belokan seminimal mungkin, gambar area sedemikian rupa sehingga sisi terpanjangnya kurang lebih sejajar dengan arah penyapuan alami ruangan.
+:::
+
 ## Menjalankan Penyapuan Cakupan
 
 1. Buka area tersimpan dari daftar.
@@ -41,8 +45,9 @@ Playlist merangkai beberapa rute dan area cakupan menjadi satu urutan tanpa peng
 
 1. Buka **Playlist** dan klik **Playlist Baru**.
 2. Tambahkan rute dan/atau area cakupan sesuai urutan yang diinginkan.
-3. Simpan playlist dengan nama yang deskriptif.
-4. Dari [Navigasi](/id/user-guide/navigation), pilih playlist tersebut dan klik **Mulai Autopilot** untuk menjalankan seluruh urutan secara otomatis.
+3. Atur jeda (waktu tunggu) opsional pada waypoint tertentu, misalnya menunggu 30 detik di titik pemeriksaan inspeksi.
+4. Simpan playlist dengan nama yang deskriptif.
+5. Dari [Navigasi](/id/user-guide/navigation), pilih playlist tersebut dan klik **Mulai Autopilot** untuk menjalankan seluruh urutan secara otomatis.
 
 ## Mengganti Nama atau Menghapus
 

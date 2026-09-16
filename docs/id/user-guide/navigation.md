@@ -39,12 +39,21 @@ Kendali manual selalu memiliki prioritas lebih tinggi dari misi otomatis apa pun
 
 Anda juga bisa menaruh beberapa pin secara berurutan: robot akan mengunjunginya sesuai urutan.
 
+### Membaca Kanvas Peta
+
+Saat robot bergerak, kanvas menampilkan beberapa indikator yang perlu diketahui:
+
+- **Garis biru**: jalur yang direncanakan pada peta.
+- **Trajektori hijau/merah**: jalur jarak pendek yang sedang aktif diikuti robot saat ini (hingga beberapa meter ke depan).
+- **Titik merah**: titik pantulan LiDAR langsung, menunjukkan apa yang sedang dilihat robot.
+- **Garis tembus pandang di sekeliling robot**: jejak keselamatannya; perencana jalur menjaga area ini tetap bebas dari rintangan.
+
 ## Auto Align
 
 Jika posisi robot pada peta terlihat sedikit meleset (misalnya setelah dipindahkan secara manual), gunakan **Auto Align** untuk mengoreksinya tanpa berputar di tempat:
 
 1. Klik **Auto Align** pada toolbar.
-2. Robot menyesuaikan perkiraan posisinya menggunakan penanda di sekitarnya.
+2. Robot mencocokkan pemindaian LiDAR langsungnya dengan peta untuk menyempurnakan posisinya, biasanya dalam waktu kurang dari satu detik, tanpa bergerak. Di koridor simetris, robot mungkin bergerak maju-mundur beberapa sentimeter untuk memastikan arah hadapnya.
 3. Tunggu pesan konfirmasi sebelum mengirim tujuan baru.
 
 ## Autopilot (Misi Tanpa Pengawasan)

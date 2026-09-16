@@ -8,8 +8,8 @@ hero:
   tagline: "Manual teknis lengkap untuk operator, teknisi lapangan, dan pengembang robotika."
   actions:
     - theme: brand
-      text: Panduan Memulai
-      link: /id/getting-started/
+      text: Panduan Pengguna
+      link: /id/user-guide/
     - theme: alt
       text: Panduan Instalasi
       link: /id/setup/
@@ -18,9 +18,9 @@ hero:
       link: /id/development/
 
 features:
-  - title: Panduan Memulai
+  - title: Panduan Pengguna
     details: "Untuk operator armada: pelajari cara mengendalikan robot, merekam peta SLAM, menjalankan penyapuan area, dan memantau video langsung."
-    link: /id/getting-started/
+    link: /id/user-guide/
     linkText: Baca panduan operator
   - title: Instalasi & Penerapan
     details: "Untuk teknisi lapangan: panduan instalasi langkah demi langkah untuk stack server cloud dan perangkat keras robot NVIDIA Jetson."

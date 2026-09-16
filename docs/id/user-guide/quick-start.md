@@ -69,7 +69,7 @@ flowchart TD
 3. Denah lantai 2D ditampilkan pada kanvas beserta posisi robot saat ini (ikon lingkaran biru dengan panah arah).
 
 ::: tip Tidak ada peta yang tersedia?
-Jika tidak ada peta dalam dropdown, lihat [Membuat Peta Baru (SLAM)](/id/getting-started/features#1-autonomous-slam-mapping) untuk membuat peta pertama Anda.
+Jika tidak ada peta dalam dropdown, lihat [Pemetaan](/id/user-guide/mapping) untuk membuat peta pertama Anda.
 :::
 
 ---
@@ -125,5 +125,5 @@ Tombol **Emergency Stop** terletak menonjol di bagian kanan atas setiap halaman:
 
 ## Langkah Selanjutnya
 
-- Pelajari cara melakukan cakupan area sistematis di [Fitur Sistem](/id/getting-started/features).
-- Pahami timer keselamatan dan Autopilot di [Bagaimana Robot Berperilaku](/id/getting-started/behavior).
+- Pelajari cara melakukan cakupan area sistematis di [Rute & Cakupan](/id/user-guide/routes-coverage).
+- Pahami timer keselamatan dan Autopilot di [Bagaimana Robot Berperilaku](/id/user-guide/behavior).

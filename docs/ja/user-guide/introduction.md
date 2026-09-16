@@ -57,6 +57,6 @@ flowchart LR
 
 ## 次のステップ
 
-- [クイックスタートガイド](/ja/getting-started/quick-start)に進み、最初のロボットにログインして操作してみましょう。
-- マッピングとナビゲーション機能の全体像については[システム機能](/ja/getting-started/features)を参照してください。
-- セーフティウォッチドッグとオートパイロットの持続性については[ロボットの動作仕様](/ja/getting-started/behavior)を確認してください。
+- [クイックスタートガイド](/ja/user-guide/quick-start)に進み、最初のロボットにログインして操作してみましょう。
+- [マッピング](/ja/user-guide/mapping)、[ナビゲーション](/ja/user-guide/navigation)、[ルートとカバレッジ](/ja/user-guide/routes-coverage)の各機能ガイドを確認してください。
+- セーフティウォッチドッグとオートパイロットの持続性については[ロボットの動作仕様](/ja/user-guide/behavior)を確認してください。

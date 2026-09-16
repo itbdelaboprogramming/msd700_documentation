@@ -2,7 +2,7 @@
 
 <RoleBadge role="technician" />
 
-Technical diagnostics for installation and deployment issues. For user-facing issues, see [Getting Started &gt; Troubleshooting](/id/getting-started/troubleshooting) instead.
+Technical diagnostics for installation and deployment issues. For user-facing issues, see [User Guide &gt; Troubleshooting](/id/user-guide/troubleshooting) instead.
 
 ## Start here: which layer is broken?
 

@@ -57,6 +57,6 @@ Access to robots is governed by **Rental Profiles**:
 
 ## Next Steps
 
-- Proceed to the [Quick Start Guide](/getting-started/quick-start) to log in and control your first robot.
-- Read [System Features](/getting-started/features) for a full breakdown of mapping and navigation capabilities.
-- Review [How the Robot Behaves](/getting-started/behavior) to understand safety watchdogs and Autopilot persistence.
+- Proceed to the [Quick Start Guide](/user-guide/quick-start) to log in and control your first robot.
+- Explore feature guides for [Mapping](/user-guide/mapping), [Navigation](/user-guide/navigation), and [Routes & Coverage](/user-guide/routes-coverage).
+- Review [How the Robot Behaves](/user-guide/behavior) to understand safety watchdogs and Autopilot persistence.

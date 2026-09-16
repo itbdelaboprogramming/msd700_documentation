@@ -69,7 +69,7 @@ flowchart TD
 3. 2D床図がキャンバスにレンダリングされ、ロボットの現在位置(方向矢印付きの青い円形アイコン)も表示されます。
 
 ::: tip 利用できるマップがない場合
-ドロップダウンにマップが存在しない場合は、[新しいマップの作成(SLAM)](/ja/getting-started/features#1-autonomous-slam-mapping)を参照して最初のマップを作成してください。
+ドロップダウンにマップが存在しない場合は、[マッピング](/ja/user-guide/mapping)を参照して最初のマップを作成してください。
 :::
 
 ---
@@ -125,5 +125,5 @@ flowchart LR
 
 ## 次のステップ
 
-- [システム機能](/ja/getting-started/features)で体系的なエリアカバレッジの実行方法を学びましょう。
-- [ロボットの動作仕様](/ja/getting-started/behavior)で安全タイマーとオートパイロットについて理解しましょう。
+- [ルートとカバレッジ](/ja/user-guide/routes-coverage)で体系的なエリアカバレッジの実行方法を学びましょう。
+- [ロボットの動作仕様](/ja/user-guide/behavior)で安全タイマーとオートパイロットについて理解しましょう。

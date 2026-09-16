@@ -1,5 +1,6 @@
 ---
 outline: deep
+search: false
 ---
 
 # Bagaimana Robot Berperilaku
@@ -167,7 +168,7 @@ Banner ini berarti robot meyakini bahwa dirinya seharusnya bergerak dan ternyata
 | Saat robot terlihat sedang berjalan | Bug. Laporkan, jangan dikerjain sendiri |
 
 Jika tetap muncul selama beberapa menit, periksa feed kamera untuk melihat sesuatu yang menghalangi, lalu lihat
-[Troubleshooting](/id/getting-started/troubleshooting).
+[Troubleshooting](/id/user-guide/troubleshooting).
 
 ## Berhenti Darurat
 
@@ -186,7 +187,7 @@ ingin Anda temukan hal itu di saat genting.
 
 ## Terkait
 
-- [Panduan Cepat](/id/getting-started/quick-start)
-- [Fitur](/id/getting-started/features)
-- [FAQ](/id/getting-started/faq)
-- [Troubleshooting](/id/getting-started/troubleshooting)
+- [Panduan Cepat](/id/user-guide/quick-start)
+- [Navigasi](/id/user-guide/navigation)
+- [FAQ](/id/user-guide/faq)
+- [Troubleshooting](/id/user-guide/troubleshooting)

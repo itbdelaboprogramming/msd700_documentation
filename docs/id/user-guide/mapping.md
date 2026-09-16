@@ -18,7 +18,7 @@ Sebelum robot bisa bernavigasi di suatu ruangan, robot membutuhkan **peta** dari
 
 Anda bisa membangun peta dengan dua cara:
 
-- **Kendarai secara manual**: Gunakan joystick atau tombol **W A S D** untuk mengendarai robot perlahan mengelilingi seluruh area, termasuk sudut dan jalan buntu, agar tidak ada yang terlewat.
+- **Kendarai secara manual**: Gunakan joystick atau tombol **W A S D** untuk mengendarai robot perlahan (sekitar `0.15 m/s`) mengelilingi seluruh area, termasuk sudut dan jalan buntu, agar tidak ada yang terlewat.
 - **Eksplorasi otonom**: Klik **Auto Explore** dan robot akan menjelajahi area secara mandiri, mundur otomatis jika merasa terjebak di sudut.
 
 Saat Anda mengendarai, peta akan terisi di layar secara real-time: dinding dan rintangan muncul sebagai garis gelap, lantai terbuka muncul dengan warna lebih terang.
@@ -29,11 +29,15 @@ Saat Anda mengendarai, peta akan terisi di layar secara real-time: dinding dan r
 - Klik **Play** lagi untuk melanjutkan dari titik terakhir: tidak ada yang hilang.
 - Kendarai kembali ke area tertentu jika bagian itu terlihat belum lengkap atau kurang jelas.
 
+## Menetapkan Homebase
+
+Sebelum menyimpan, kendarai robot kembali ke posisi awal atau pengisian daya yang dimaksud, lalu klik **Set Homebase Here** pada toolbar. Ini menandai titik acuan `(x=0, y=0)` yang nantinya dipakai playlist otomatis untuk mengirim robot kembali ke stasiun pengisian daya saat misi selesai.
+
 ## Menyimpan Peta
 
 1. Setelah seluruh area tercakup, klik **Stop**.
 2. Konfirmasi nama peta dan klik **Simpan**.
-3. Peta yang selesai akan muncul di [Peta & Database](/id/user-guide/database), siap digunakan untuk [Navigasi](/id/user-guide/navigation).
+3. Peta yang selesai (grid, thumbnail, dan posisi homebase) akan muncul di [Peta & Database](/id/user-guide/database), siap digunakan untuk [Navigasi](/id/user-guide/navigation).
 
 ::: warning Jangan tutup browser saat masih merekam
 Menutup tab saat Play masih aktif dapat menghilangkan progres yang belum tersimpan. Selalu klik Stop dan Simpan terlebih dahulu.

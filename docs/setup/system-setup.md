@@ -135,7 +135,7 @@ handing it to an operator:
    profile that includes this unit. A unit existing and being enrolled does not, by itself, make it
    visible to any user account: units are shared, fleet-wide resources, and access to them is
    controlled entirely through profiles, not through the unit itself.
-2. **Point them at [Getting Started](/getting-started/).** That section assumes exactly this state:
+2. **Point them at the [User Guide](/user-guide/).** That section assumes exactly this state:
    a unit that's already installed, connected, and access-granted.
 
 ## Next step

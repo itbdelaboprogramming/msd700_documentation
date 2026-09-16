@@ -68,5 +68,5 @@ SLAMセッション中にマップを作成する際、**Set Homebase Here** を
 
 ## まだ質問がありますか?
 
-- [オペレーター向けトラブルシューティングガイド](/ja/getting-started/troubleshooting)をご覧ください。
+- [トラブルシューティングガイド](/ja/user-guide/troubleshooting)をご覧ください。
 - ハードウェアの保守と設置については、[システムセットアップ](/ja/setup/system-setup)を参照してください。

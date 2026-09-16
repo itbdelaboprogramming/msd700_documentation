@@ -39,12 +39,21 @@ Manual control always takes priority over any automatic mission. If Autopilot is
 
 You can also drop multiple pins in sequence: the robot visits them in order.
 
+### Reading the Map Canvas
+
+While the robot is moving, the canvas overlays a few indicators worth knowing:
+
+- **Blue line**: the planned path across the map.
+- **Green/red trajectory**: the short-range path the robot is actively following right now (up to a few meters ahead).
+- **Red dots**: live LiDAR points, showing what the robot currently sees.
+- **Translucent outline around the robot**: its safety footprint; the path planner keeps this clear of obstacles.
+
 ## Auto Align
 
 If the robot's position on the map looks slightly off (for example, after moving it by hand), use **Auto Align** to correct it without spinning in place:
 
 1. Click **Auto Align** on the toolbar.
-2. The robot fine-tunes its position estimate using nearby landmarks.
+2. The robot matches its live LiDAR scan against the map to fine-tune its position, usually in well under a second, without moving. In a symmetric corridor it may jog a few centimeters forward and back to disambiguate heading.
 3. Wait for the confirmation message before sending a new goal.
 
 ## Autopilot (Unattended Missions)

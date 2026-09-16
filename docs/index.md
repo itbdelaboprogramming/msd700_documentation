@@ -8,8 +8,8 @@ hero:
   tagline: "Complete technical manual for operators, field technicians, and robotics developers."
   actions:
     - theme: brand
-      text: Getting Started
-      link: /getting-started/
+      text: User Guide
+      link: /user-guide/
     - theme: alt
       text: Setup Guide
       link: /setup/
@@ -18,9 +18,9 @@ hero:
       link: /development/
 
 features:
-  - title: Getting Started
+  - title: User Guide
     details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
-    link: /getting-started/
+    link: /user-guide/
     linkText: Read the operator guide
   - title: Setup & Deployment
     details: "For field technicians: step-by-step installation guides for the cloud server stack and NVIDIA Jetson robot hardware."
