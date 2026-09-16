@@ -46,29 +46,7 @@ bersama di bawah setiap mode, bukan sesuatu yang diimplementasikan ulang oleh ma
 `MapComponent` menyusun tampilannya sebagai tumpukan layer EaselJS di atas satu stage HTML5
 Canvas, yang dipasok oleh topic WebSocket rosbridge:
 
-```mermaid
-flowchart TD
-  subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
-    OCC_MSG["/server/slam/map (OccupancyGrid)"]
-    POSE_MSG["/server/robot_pose (PoseStamped, 25 Hz)"]
-    SCAN_MSG["/server/scan (LaserScan, 2 Hz)"]
-    PATH_MSG["/server/move_base/NavfnROS/plan (Path)"]
-    BOSTRO_MSG["/server/boustrophedon_path (Path)"]
-  end
-
-  subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
-    L1["Layer 1: Base Map OccupancyGrid Bitmap (0.05 m/px)"]
-    L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
-    L3["Layer 3: Global Path (Blue Line) & Local Trajectory (Green)"]
-    L4["Layer 4: Boustrophedon Sweep Lanes (Orange Comb Splines)"]
-    L5["Layer 5: Laser Scan Reflection Points (Red 2D Dots)"]
-    L6["Layer 6: Interactive Polygon Drawing Vertex Overlay"]
-    L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
-  end
-
-  rosbridgeWS --> StagePipeline
-  StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
-```
+![Map Canvas Pipeline](/images/MSD700-DrawMapPipeline.jpg)
 
 Layer 6, overlay vertex interaktif, adalah tempat Single Pinpoint, Multiple Pinpoint, dan Set Home
 Base menggambar saat operator mengklik canvas; lihat
@@ -84,6 +62,16 @@ canvas dan setiap pose robot yang digambar ke atasnya melintasi batas ini.
 
 Dengan resolusi peta $r$ (meter per piksel), tinggi citra $H$ (piksel), dan titik asal peta
 $\mathbf{o} = [x_0, y_0]^T$:
+
+**Definisi variabel:**
+
+| Variabel | Keterangan |
+| --- | --- |
+| $(x, y)$ | Posisi dalam frame koordinat metrik ROS (meter) |
+| $(p_x, p_y)$ | Posisi dalam frame koordinat piksel canvas |
+| $r$ | Resolusi peta (meter per piksel) |
+| $H$ | Tinggi citra canvas dalam piksel |
+| $(x_0, y_0)$ | Titik asal peta dalam koordinat ROS (meter) |
 
 **Metrik ke piksel canvas** (dipakai untuk menggambar robot, jalur, dan state ter-latch apa pun ke
 peta):

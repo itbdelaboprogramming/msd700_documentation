@@ -10,5 +10,8 @@
     "docs:preview": "vitepress preview docs --port 4700 --strictPort",
     "docs:check-diagrams": "node scripts/check-mermaid.mjs docs",
     "docs:i18n": "node scripts/sync_i18n.mjs"
+  },
+  "dependencies": {
+    "markdown-it-mathjax3": "^4.3.2"
   }
 }

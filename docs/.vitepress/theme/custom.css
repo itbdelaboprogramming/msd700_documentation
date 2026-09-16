@@ -2,3 +2,18 @@
  * Site-wide style overrides.
  * https://vitepress.dev/guide/extending-default-theme#style-customization
  */
+
+/* Justify text alignment for better readability */
+.VPDoc .content p,
+.VPDoc .content li,
+.VPDoc .content blockquote {
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* Center images */
+.VPDoc .content img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}

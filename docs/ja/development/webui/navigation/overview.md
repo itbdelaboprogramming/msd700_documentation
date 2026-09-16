@@ -29,29 +29,7 @@ canvas自体はオペレーターがモードを切り替えても再マウン�
 
 `MapComponent`は、rosbridgeのWebSocketトピックから供給されるEaselJSレイヤーのスタックとして、1つのHTML5 Canvasステージ上にビューを構成する。
 
-```mermaid
-flowchart TD
-  subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
-    OCC_MSG["/server/slam/map (OccupancyGrid)"]
-    POSE_MSG["/server/robot_pose (PoseStamped, 25 Hz)"]
-    SCAN_MSG["/server/scan (LaserScan, 2 Hz)"]
-    PATH_MSG["/server/move_base/NavfnROS/plan (Path)"]
-    BOSTRO_MSG["/server/boustrophedon_path (Path)"]
-  end
-
-  subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
-    L1["Layer 1: Base Map OccupancyGrid Bitmap (0.05 m/px)"]
-    L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
-    L3["Layer 3: Global Path (Blue Line) & Local Trajectory (Green)"]
-    L4["Layer 4: Boustrophedon Sweep Lanes (Orange Comb Splines)"]
-    L5["Layer 5: Laser Scan Reflection Points (Red 2D Dots)"]
-    L6["Layer 6: Interactive Polygon Drawing Vertex Overlay"]
-    L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
-  end
-
-  rosbridgeWS --> StagePipeline
-  StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
-```
+![Map Canvas Pipeline](/images/MSD700-DrawMapPipeline.jpg)
 
 レイヤー6、インタラクティブな頂点オーバーレイは、オペレーターがcanvasをクリックしたときにSingle Pinpoint、Multiple Pinpoint、Set Home Baseが描画する場所である。このオーバーレイがどう駆動されるかは[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)を参照。レイヤー2と4(keep-outポリゴンとboustrophedonの掃引レーン)は、兄弟ページが扱うモードに属する。
 
@@ -60,6 +38,16 @@ flowchart TD
 ROSの座標フレームはメートル法(メートル単位、マップ原点が$(0, 0)$)であるのに対し、HTML5 Canvasは左上を原点とするピクセル座標$(p_x, p_y)$を使う。canvas上のすべてのクリックとそこに描画されるすべてのロボットポーズは、この境界を横断する。
 
 マップ解像度$r$(メートル毎ピクセル)、画像の高さ$H$(ピクセル)、マップ原点$\mathbf{o} = [x_0, y_0]^T$が与えられたとき、
+
+**変数定義:**
+
+| 変数 | 説明 |
+| --- | --- |
+| $(x, y)$ | ROS計量座標系での位置(メートル) |
+| $(p_x, p_y)$ | canvasピクセル座標系での位置 |
+| $r$ | マップ解像度(メートル毎ピクセル) |
+| $H$ | canvasの画像の高さ(ピクセル) |
+| $(x_0, y_0)$ | ROS座標系でのマップ原点(メートル) |
 
 **メートルからcanvasピクセルへ**(ロボット、パス、ラッチされた状態をマップに描画する際に使用):
 

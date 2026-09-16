@@ -78,21 +78,21 @@ login dari workstation baru, bukan sekadar perilaku tingkat tinggi.
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Browser as Operator Browser
+  participant Browser as Browser
   participant Backend as backend_node
-  participant Robot as Robot (system_command.py)
-  participant Supervisor as operation_supervisor.py
+  participant Robot as Robot
+  participant Supervisor as operation_supervisor
 
   Browser->>Backend: POST /user/login
-  Browser->>Backend: POST /api/units/ping (page: "dashboard")
-  Backend->>Robot: Ping query
-  Robot-->>Backend: Telemetry: active_page = "navigation", autopilot = true
-  Backend-->>Browser: Return telemetry
-  Browser->>Browser: Automatically route to Navigation tab
-  Browser->>Supervisor: Subscribe to /string/operation_snapshot (latched)
-  Supervisor-->>Browser: Deliver full mission batch (waypoints, index, mode)
-  Browser->>Browser: Reconstruct map overlay, pin markers, and progress bar
-  Note over Browser: Reconnection complete without losing mission state
+  Browser->>Backend: Ping (page: dashboard)
+  Backend->>Robot: Ping
+  Robot-->>Backend: active_page=nav, autopilot=true
+  Backend-->>Browser: Telemetry
+  Browser->>Browser: Route to Navigation
+  Browser->>Supervisor: Subscribe snapshot
+  Supervisor-->>Browser: Mission batch
+  Browser->>Browser: Rebuild state
+  Note over Browser: Recovery done
 ```
 
 ### Prinsip pemulihan

@@ -44,29 +44,7 @@ underneath every mode, not something each mode reimplements.
 `MapComponent` composes its view as a stack of EaselJS layers on a single HTML5 Canvas stage, fed
 by rosbridge WebSocket topics:
 
-```mermaid
-flowchart TD
-  subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
-    OCC_MSG["/server/slam/map (OccupancyGrid)"]
-    POSE_MSG["/server/robot_pose (PoseStamped, 25 Hz)"]
-    SCAN_MSG["/server/scan (LaserScan, 2 Hz)"]
-    PATH_MSG["/server/move_base/NavfnROS/plan (Path)"]
-    BOSTRO_MSG["/server/boustrophedon_path (Path)"]
-  end
-
-  subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
-    L1["Layer 1: Base Map OccupancyGrid Bitmap (0.05 m/px)"]
-    L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
-    L3["Layer 3: Global Path (Blue Line) & Local Trajectory (Green)"]
-    L4["Layer 4: Boustrophedon Sweep Lanes (Orange Comb Splines)"]
-    L5["Layer 5: Laser Scan Reflection Points (Red 2D Dots)"]
-    L6["Layer 6: Interactive Polygon Drawing Vertex Overlay"]
-    L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
-  end
-
-  rosbridgeWS --> StagePipeline
-  StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
-```
+![Map Canvas Pipeline](/images/MSD700-DrawMapPipeline.jpg)
 
 Layer 6, the interactive vertex overlay, is what Single Pinpoint, Multiple Pinpoint, and Set Home
 Base draw onto when the operator clicks the canvas; see
@@ -82,6 +60,16 @@ drawn onto it crosses this boundary.
 
 Given map resolution $r$ (meters per pixel), image height $H$ (pixels), and map origin
 $\mathbf{o} = [x_0, y_0]^T$:
+
+**Variable definitions:**
+
+| Variable | Description |
+| --- | --- |
+| $(x, y)$ | Position in ROS metric coordinate frame (meters) |
+| $(p_x, p_y)$ | Position in canvas pixel coordinate frame |
+| $r$ | Map resolution (meters per pixel) |
+| $H$ | Canvas image height in pixels |
+| $(x_0, y_0)$ | Map origin in ROS coordinates (meters) |
 
 **Metric to canvas pixel** (used to draw the robot, paths, and any latched state onto the map):
 
