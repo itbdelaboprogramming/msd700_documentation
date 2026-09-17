@@ -42,10 +42,6 @@ Materi lintas domain yang berlaku untuk kedua domain, sehingga tidak diduplikasi
   <LinkCard icon="📝" title="Changelog" details="Riwayat perubahan platform dan catatan rilis." link="/id/development/changelog" />
 </LinkCards>
 
-::: info Masih dalam migrasi
-`Referensi REST API`, `Protokol rosbridge`, `Frontend Canvas`, `Skema Database`, `Sinkronisasi Data`, `Cadangan & Pemulihan`, dan `Siklus Hidup Kontainer Unit` untuk saat ini tetap menjadi referensi mandiri yang lengkap; setiap halaman fitur ROS Web UI di atas menautkan ke bagian spesifik yang dibutuhkannya, bukan menduplikasinya.
-:::
-
 ## Urutan Bacaan yang Disarankan
 
 Untuk engineer yang baru bergabung dengan MSD700, urutan progresi fondasi yang disarankan adalah:

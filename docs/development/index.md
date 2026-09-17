@@ -42,10 +42,6 @@ Cross-cutting material that applies to both domains, so it isn't duplicated into
   <LinkCard icon="📝" title="Changelog" details="Historical platform changelog and release notes." link="/development/changelog" />
 </LinkCards>
 
-::: info Still being migrated
-`REST API Reference`, `rosbridge Protocol`, `Frontend Canvas`, `Database Schema`, `Data Sync`, `Backup & Restore`, and `Unit Container Lifecycle` remain as full standalone references for now, every ROS Web UI feature page above links into the specific section of these it needs, rather than duplicating them.
-:::
-
 ## Recommended Reading Order
 
 For engineers newly onboarding to MSD700, the recommended foundational progression is:
