@@ -22,7 +22,7 @@ Akun pengguna Anda ada, tetapi administrator belum menetapkannya ke **Profil Pen
 ::: details 3. Bisakah dua operator mengendalikan robot yang sama secara bersamaan?
 Tidak. Untuk menjamin keselamatan, setiap robot diatur oleh **lease operasi eksklusif** yang dipegang oleh satu sesi aktif:
 - Jika seorang rekan sedang mengoperasikan robot, unit tersebut menampilkan lencana **In Use** dan perintah diblokir.
-- Jika Anda membuka tab kedua atau berpindah perangkat dengan akun Anda sendiri, dashboard menampilkan tombol **Take Over Control** yang memungkinkan Anda memindahkan lease secara eksplisit ke jendela baru Anda.
+- Jika sesi lain sedang mengendarai (tab kedua, operator lain, atau dashboard lokal unit itu sendiri), dashboard menampilkan dialog berisi **Take over control** yang memungkinkan Anda memindahkan kendali secara eksplisit ke jendela Anda. Sesi lainnya diakhiri secara terlihat.
 :::
 
 ::: details 4. Apa yang terjadi jika laptop saya kehilangan Wi-Fi atau tertutup saat robot sedang bergerak?
@@ -43,25 +43,23 @@ Sinar LiDAR 2D/3D optik dapat menembus kaca bening atau memantul dari cermin ref
 :::
 
 ::: details 7. Seberapa cepat robot berjalan?
-Batas kecepatan maksimum diterapkan pada perangkat lunak demi keselamatan tempat kerja:
-- **Kecepatan Default**: `0.20 m/s` (kira-kira 0,72 km/jam).
-- **Rentang yang Dapat Disesuaikan**: Anda dapat mengatur kecepatan linear antara `0.05 m/s` dan `0.40 m/s` menggunakan slider kecepatan di panel kontrol kanan bawah.
-- **Kecepatan Putar Angular**: Dapat dikonfigurasi hingga `0.50 rad/s`.
+Anda mengendarai dengan tombol **W A S D**; ada dua kecepatan tetap:
+- **Normal**: `0.40 m/s` maju.
+- **Mode lambat**: tahan **Shift** untuk gerakan presisi `0.20 m/s`, misalnya di ruang sempit atau saat pemetaan.
 :::
 
 ::: details 8. Berapa lama baterai bertahan dan bagaimana pemantauannya?
 Robot ditenagai oleh paket baterai LiFePO4 24V berkapasitas tinggi yang menyediakan **4 hingga 6 jam** operasi otonom berkelanjutan:
-- Tegangan dan persentase baterai langsung ditampilkan di header bar atas.
-- Jika baterai turun di bawah **20%**, dashboard menampilkan peringatan kuning kecoklatan (amber).
-- Jika baterai turun di bawah **15%**, misi yang sedang berjalan dijeda dan robot memprioritaskan kembali ke stasiun pengisian daya homebase-nya.
+- Status baterai langsung ditampilkan di header dashboard saat Anda mengoperasikan unit.
+- Dashboard menampilkan peringatan saat baterai hampir habis. Jika melihat peringatan tersebut, selesaikan misi dan kirim robot kembali ke stasiun pengisian daya homebase-nya.
 :::
 
 ::: details 9. Bisakah saya mengoperasikan robot jika tidak ada koneksi internet di gedung?
-Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop atau tablet Anda langsung ke jaringan Wi-Fi robot (`MSD700_Unit_<ULID>`) dan buka `http://<jetson-ip>:3000`. Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan cakupan sepenuhnya secara offline.
+Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop Anda langsung ke hotspot Wi-Fi robot (tanyakan namanya ke administrator) dan buka `http://<robot-ip>:3000` di Chrome atau Edge. Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan cakupan sepenuhnya secara offline. Perhatikan bahwa dashboard membutuhkan jendela browser berukuran desktop bahkan saat offline: ponsel dan tablet tidak didukung.
 :::
 
 ::: details 10. Bagaimana cara kerja Emergency Stop?
-Mengklik tombol merah **Emergency Stop** (atau menekan tombol `Escape` pada keyboard Anda) langsung mengambil alih semua rencana otonom yang aktif, menurunkan kecepatan motor ke nol dalam hitungan milidetik, dan mengunci status keselamatan. Untuk melanjutkan operasi, selesaikan kondisi keselamatan lalu klik **Release Emergency Stop**.
+Mengklik tombol merah **Emergency Stop** langsung mengambil alih semua rencana otonom yang aktif, menghentikan robot, dan mengunci status keselamatan. Dashboard kemudian menampilkan halaman **Emergency Stop Activated**: periksa situasi di lapangan, dan jika semuanya aman, restart robot lalu masuk kembali melalui tombol **Go to LOGIN page**.
 :::
 
 ---

@@ -40,22 +40,22 @@ panel akan kembali ke apa yang sebenarnya sedang aktif pada robot, bukan apa yan
 
 ```mermaid
 flowchart TB
-  A["You open a unit"] --> B{"Is someone else<br/>already driving it?"}
+  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
   B -->|no| C["You get control immediately"]
-  B -->|"yes, another ACCOUNT"| D["Shown as In Use.<br/>You cannot take over."]
-  B -->|"yes, another session of YOUR account"| E["You are offered an explicit<br/>Take Over prompt"]
-  E --> F["Click it, and the other tab<br/>is told it lost control"]
+  B -->|yes| D["A dialog appears:<br/>already being operated"]
+  D --> E["Take over control:<br/>the other session ends visibly"]
+  D --> F["Leave it running:<br/>you stay without control"]
 ```
 
 | Yang Anda lihat | Artinya | Yang bisa Anda lakukan |
 | --- | --- | --- |
 | Tidak ada yang khusus | Unit ini bebas | Kendarai |
-| Lencana **In Use** pada daftar unit | **Akun** lain sedang mengendarai | Tunggu, atau tanyakan pada mereka. Membuka unit tidak masalah; Anda hanya tidak mendapat kendali |
-| Prompt **Take Over** | Sesi lain dari akun **Anda sendiri** yang memegang kendali: tab kedua, atau dashboard lokal unit itu sendiri | Ambil alih dengan sengaja, dan sesi lainnya akan mundur secara terlihat |
+| Lencana **In Use** pada daftar unit | Sesi lain sedang mengendarai: tab kedua, operator lain, atau dashboard lokal unit itu sendiri | Buka unit, lalu tentukan pilihan pada dialog |
+| Dialog **"This unit is already being operated from …"** | Sesi Anda ditolak karena ada pihak lain yang sedang mengendarai | **Take over control**, atau **Leave it running** |
 
-::: warning Dua tab Anda sendiri tidak bisa sama-sama mengendarai
-Itu memang disengaja. Dua tab yang masing-masing mengirim perintah ke satu robot akan saling
-bertumpang tindih, dan tidak satu pun akan pernah diberi tahu tentang yang lain. Tab mana pun yang mengambil alih menang, dan yang lain
+::: warning Dua sesi tidak bisa mengendarai bersamaan
+Itu memang disengaja. Dua sesi yang masing-masing mengirim perintah ke satu robot akan saling
+bertumpang tindih, dan tidak satu pun akan pernah diberi tahu tentang yang lain. Sesi mana pun yang mengambil alih menang, dan yang lain
 diberi tahu bahwa ia kehilangan kendali, alih-alih diam-diam mengirim perintah yang tak diterapkan siapa pun.
 :::
 

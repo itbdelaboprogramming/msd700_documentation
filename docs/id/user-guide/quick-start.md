@@ -56,7 +56,7 @@ flowchart TD
     TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Joystick, Mode Selector, Goal Dispatcher, Speed Sliders"]
+    RIGHT_BOT["Panel Kanan Bawah: Kontrol & Telemetri<br/>Drive Keyboard WASD (Shift = lambat), Mode Selector, Goal Dispatcher"]
   end
 ```
 
@@ -76,7 +76,7 @@ Jika tidak ada peta dalam dropdown, lihat [Pemetaan](/id/user-guide/mapping) unt
 
 ## Langkah 5: Mengendarai Secara Manual (Teleoperasi)
 
-Anda dapat mengendarai robot secara manual menggunakan keyboard atau joystick virtual pada layar:
+Anda mengendarai robot secara manual dengan keyboard:
 
 ```mermaid
 flowchart LR
@@ -85,14 +85,15 @@ flowchart LR
     S["S: Drive Backward"]
     A["A: Rotate Left (Counter-Clockwise)"]
     D["D: Rotate Right (Clockwise)"]
-    SPACE["Spacebar: Immediate Stop"]
+    SHIFT["Hold Shift: Slow Mode"]
   end
 ```
 
 ### Kontrol Teleoperasi:
-- **Slider Kecepatan Linear**: Mengatur kecepatan maju maksimum (default: `0.20 m/s`, rentang: `0.05` hingga `0.40 m/s`).
-- **Slider Kecepatan Angular**: Mengatur kecepatan putar rotasi (default: `0.40 rad/s`).
-- **Joystick Virtual**: Klik dan seret pegangan joystick pada layar ke arah yang diinginkan.
+- **W / S**: Maju / mundur dengan kecepatan normal (`0.40 m/s`).
+- **A / D**: Belok kiri / kanan.
+- **Tahan Shift untuk mode lambat**: Gerakan presisi `0.20 m/s` untuk ruang sempit dan pemetaan. Petunjuk di bawah kontrol berbunyi "Drive with W A S D · hold Shift = slow".
+- **Lepaskan semua tombol** (atau klik **Stop**) untuk menghentikan robot seketika.
 
 ---
 
@@ -118,8 +119,8 @@ flowchart LR
 
 Tombol **Emergency Stop** terletak menonjol di bagian kanan atas setiap halaman:
 
-- **Mengaktifkan E-Stop**: Klik tombol merah **Emergency Stop** (atau tekan tombol `Escape`). Robot langsung mengerem dan menghentikan semua rutinitas otonom.
-- **Menghapus E-Stop**: Selesaikan kondisi keselamatan lalu klik **Resume Operations** untuk memulihkan daya motor.
+- **Mengaktifkan E-Stop**: Klik tombol merah **Emergency Stop**. Robot langsung mengerem dan menghentikan semua rutinitas otonom.
+- **Setelah E-Stop**: Dashboard menampilkan halaman **Emergency Stop Activated**. Periksa situasi di lapangan; jika semuanya aman, restart robot dan masuk kembali melalui tombol **Go to LOGIN page** untuk melanjutkan operasi.
 
 ---
 

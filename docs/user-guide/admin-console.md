@@ -16,11 +16,11 @@ The Admin Console is only visible to accounts with **Administrator** access. It'
 
 ## Units & Fleet
 
-The **Units** tab lists every physical MSD700 robot registered to your organization.
+The Admin Console itself has four tabs: **Operators**, **Rentals**, **Backups**, and **Admins** (superadmin only). There is no separate Units tab: robots appear in the **fleet list** you see right after logging in.
 
 - **Status**: Online, Offline, or In Use, updated live.
 - **Battery**: Current charge level.
-- Click a unit to see its details, including which rental it currently belongs to.
+- Click a unit to connect to it and see its details, including which rental it currently belongs to.
 
 ## Rentals
 

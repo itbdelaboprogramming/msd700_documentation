@@ -95,19 +95,32 @@ flowchart TD
   - Anda meninggalkan tab atau laptop lain terbuka dan masuk ke robot yang sama.
 - **Tindakan Operator**:
   1. Jika banner menampilkan nama rekan yang berbeda, koordinasikan dengan mereka sebelum meminta kendali.
-  2. Jika banner menampilkan akun Anda sendiri (misalnya dari tab lama), klik tombol **Take Over Control**. Sesi sebelumnya dilepaskan secara mulus dan kendali berpindah ke jendela aktif Anda.
+  2. Jika dialog menampilkan sesi lain milik Anda sendiri (misalnya dari tab lama), klik **Take over control**. Sesi sebelumnya diakhiri secara terlihat dan kendali berpindah ke jendela aktif Anda.
 
 ---
 
 ### 6. Emergency Stop Aktif
-- **Gejala**: Header berkedip merah dengan tulisan "Emergency Stop Engaged" dan semua pergerakan terkunci.
+- **Gejala**: Dashboard menampilkan halaman "Emergency Stop Activated" dan semua pergerakan terkunci.
 - **Kemungkinan Penyebab**:
-  - Seorang operator menekan tombol `Escape` atau mengklik tombol E-Stop pada layar.
-  - Seorang teknisi memicu bumper E-Stop perangkat keras fisik pada robot.
+  - Seorang operator mengklik tombol E-Stop pada layar.
 - **Tindakan Operator**:
   1. Verifikasi bahwa lingkungan robot fisik sepenuhnya aman.
-  2. Jika E-Stop perangkat keras fisik ditekan, putar dan lepaskan tombol perangkat keras pada chassis robot.
-  3. Pada dashboard web, klik **Release Emergency Stop** untuk mengaktifkan kembali pengendali motor.
+  2. Restart robot, lalu masuk kembali melalui tombol **Go to LOGIN page** untuk melanjutkan operasi.
+
+---
+
+### 7. Tiba-tiba Kembali ke Halaman Login
+- **Gejala**: Dashboard tiba-tiba mengembalikan Anda ke layar login di tengah operasi.
+- **Kemungkinan Penyebab**: Sesi login Anda kedaluwarsa, atau koneksi ke server terputus (timeout).
+- **Tindakan Operator**:
+  1. Masuk kembali. Dashboard akan menanyakan ke robot apa yang sedang dilakukannya dan memulihkan operasi Anda (lihat [Bagaimana Robot Berperilaku](/id/user-guide/behavior#kembali-lagi)): tidak ada yang hilang kecuali robot itu sendiri sempat dijeda atau dimatikan.
+
+### 8. Halaman Kosong di Ponsel/Tablet, atau Overlay "Desktop Only"
+- **Gejala**: Dashboard menolak tampil di perangkat seluler, atau overlay pemblokir menutupi jendela desktop.
+- **Kemungkinan Penyebab**: Dashboard hanya mendukung jendela browser berukuran desktop. Jendela kecil diblokir secara sengaja agar bilah kendali yang terlihat separuh tidak pernah mengendalikan robot yang sedang aktif.
+- **Tindakan Operator**:
+  1. Beralih ke laptop atau desktop dengan Chrome atau Edge.
+  2. Jika overlay muncul di desktop, maksimalkan jendela (minimal 1366 x 768) hingga overlay tersebut hilang.
 
 ---
 

@@ -19,9 +19,9 @@ Type into the **search box** at the top to filter the list by name. This is usef
 
 ## Renaming a Map
 
-1. Double-click the map's name.
+1. Use the rename option on the map entry (e.g. double-click its name).
 2. Type the new name.
-3. Press **Enter** to confirm, or click elsewhere to cancel.
+3. Press **Enter** to confirm, or click elsewhere to cancel. A short confirmation message appears when the rename succeeds.
 
 ::: info Note
 Map names only need to be unique per robot and rental: the same name can exist under a different robot without conflict.

@@ -16,11 +16,11 @@ Konsol Admin hanya terlihat untuk akun dengan akses **Administrator**. Digunakan
 
 ## Unit & Armada
 
-Tab **Unit** menampilkan semua robot MSD700 fisik yang terdaftar untuk organisasi Anda.
+Konsol Admin sendiri memiliki empat tab: **Operators**, **Rentals**, **Backups**, dan **Admins** (khusus superadmin). Tidak ada tab Unit tersendiri: robot muncul di **daftar armada (fleet list)** yang Anda lihat tepat setelah login.
 
-- **Status**: Online, Offline, atau Sedang Digunakan, diperbarui secara real-time.
+- **Status**: Online, Offline, atau In Use, diperbarui secara langsung.
 - **Baterai**: Level daya saat ini.
-- Klik sebuah unit untuk melihat detailnya, termasuk penyewaan mana yang saat ini menggunakannya.
+- Klik sebuah unit untuk terhubung dan melihat detailnya, termasuk penyewaan mana yang saat ini menggunakannya.
 
 ## Penyewaan (Rental)
 

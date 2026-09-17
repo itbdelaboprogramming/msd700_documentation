@@ -19,11 +19,12 @@ Layar Navigasi adalah tempat Anda mengendarai dan mengirim robot pada peta yang 
 Gunakan kendali manual saat Anda ingin mengendarai robot sendiri, langkah demi langkah.
 
 1. Klik tombol **Kendali Manual** untuk mengaktifkannya.
-2. Gunakan joystick di layar (atau tombol **W A S D** di keyboard) untuk mengendarai:
-   - **W**: maju
+2. Gunakan tombol **W A S D** pada keyboard untuk mengendarai:
+   - **W**: maju (`0.40 m/s`)
    - **S**: mundur
    - **A / D**: belok kiri / kanan
-3. Lepaskan kendali (atau klik **Stop**) untuk menghentikan robot seketika.
+   - Tahan **Shift** untuk mode lambat (`0.20 m/s`) saat butuh presisi
+3. Lepaskan semua tombol (atau klik **Stop**) untuk menghentikan robot seketika.
 
 ::: info Catatan
 Kendali manual selalu memiliki prioritas lebih tinggi dari misi otomatis apa pun. Jika Autopilot sedang berjalan, mengambil kendali manual akan menjeda Autopilot.
@@ -79,8 +80,8 @@ Autopilot memungkinkan robot menjalankan rute atau playlist yang telah direncana
 **Klik pada peta tidak berpengaruh apa-apa**
 : Kendali Manual mungkin masih aktif: matikan dulu, atau pastikan Anda terhubung ke robot yang benar (lihat indikator koneksi).
 
-**Robot berputar di tempat secara tak terduga**
-: Rotasi di tempat dinonaktifkan secara default demi keamanan. Jika Anda melihat robot menolak berputar di tempat, ini memang sesuai desain: robot akan mencari jalur yang tidak membutuhkan putaran di tempat.
+**Robot berhenti sejenak sebelum berbelok, bukan berputar di tempat**
+: Ini wajar: perencana lebih memilih jalur yang aman daripada berputar di tempat. Beri waktu sesaat agar robot menemukan jalannya.
 
 **Misi Autopilot berhenti setelah saya menutup tab**
 : Ini seharusnya tidak terjadi: Autopilot berjalan di robot, bukan di browser. Jika terjadi, periksa dengan administrator; mungkin ada masalah konektivitas.

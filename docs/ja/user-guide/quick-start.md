@@ -56,7 +56,7 @@ flowchart TD
     TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Joystick, Mode Selector, Goal Dispatcher, Speed Sliders"]
+    RIGHT_BOT["右下パネル: 操作 & テレメトリ<br/>WASDキーボード操作 (Shift = 低速)、モード選択、ゴール送信"]
   end
 ```
 
@@ -76,7 +76,7 @@ flowchart TD
 
 ## ステップ5: 手動走行(テレオペレーション)
 
-キーボードまたは画面上の仮想ジョイスティックを使ってロボットを手動で操作できます。
+キーボードを使ってロボットを手動で操作できます。
 
 ```mermaid
 flowchart LR
@@ -85,14 +85,15 @@ flowchart LR
     S["S: Drive Backward"]
     A["A: Rotate Left (Counter-Clockwise)"]
     D["D: Rotate Right (Clockwise)"]
-    SPACE["Spacebar: Immediate Stop"]
+    SHIFT["Hold Shift: Slow Mode"]
   end
 ```
 
 ### テレオペレーション操作:
-- **直進速度スライダー**: 最大前進速度を調整します(デフォルト: `0.20 m/s`、範囲: `0.05`〜`0.40 m/s`)。
-- **角速度スライダー**: 回転速度を調整します(デフォルト: `0.40 rad/s`)。
-- **仮想ジョイスティック**: 画面上のジョイスティックハンドルをクリックし、目的の方向にドラッグします。
+- **W / S**: 通常速度(`0.40 m/s`)で前進 / 後退します。
+- **A / D**: 左折 / 右折します。
+- **低速モードは Shift 長押し**: 狭い場所やマッピング時の精密な移動用の `0.20 m/s` です。操作パネル下のヒントには「Drive with W A S D · hold Shift = slow」と表示されます。
+- すべてのキーを離す(または **停止** をクリック)とロボットは即座に停止します。
 
 ---
 
@@ -118,8 +119,8 @@ flowchart LR
 
 **Emergency Stop** ボタンは、すべてのページの右上に目立つ形で配置されています。
 
-- **E-Stopの作動**: 赤い **Emergency Stop** ボタンをクリックする(または `Escape` キーを押す)と、ロボットは即座にブレーキをかけ、すべての自律ルーチンを停止します。
-- **E-Stopの解除**: 安全上の問題を解決した後、**Resume Operations** をクリックしてモーター電源を復帰させます。
+- **E-Stopの作動**: 赤い **Emergency Stop** ボタンをクリックします。ロボットは即座にブレーキをかけ、すべての自律ルーチンを停止します。
+- **E-Stop作動後**: ダッシュボードに **Emergency Stop Activated** ページが表示されます。現場の状況を確認し、安全が確保できたら、ロボットを再起動して **Go to LOGIN page** ボタンから再度ログインし、運用を再開してください。
 
 ---
 

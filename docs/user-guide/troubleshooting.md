@@ -95,19 +95,32 @@ flowchart TD
   - You left another tab or laptop open logged into the same robot.
 - **Operator Actions**:
   1. If the banner shows a different colleague's name, coordinate with them before requesting control.
-  2. If the banner shows your own account (e.g. from an old tab), click the **Take Over Control** button. The previous session is gracefully detached and control transfers to your active window.
+  2. If the dialog shows another session of your own (e.g. from an old tab), click **Take over control**. The previous session is ended visibly and control transfers to your active window.
 
 ---
 
 ### 6. Emergency Stop Engaged
-- **Symptom**: The header flashes red with "Emergency Stop Engaged" and all movement is locked.
+- **Symptom**: The dashboard shows an "Emergency Stop Activated" page and all movement is locked.
 - **Probable Causes**:
-  - An operator pressed the `Escape` key or clicked the on-screen E-Stop button.
-  - A technician triggered the physical hardware E-Stop bumper on the robot.
+  - An operator clicked the on-screen E-Stop button.
 - **Operator Actions**:
   1. Verify that the physical robot environment is completely safe.
-  2. If physical hardware E-Stop was pressed, twist and release the hardware button on the robot chassis.
-  3. In the web dashboard, click **Release Emergency Stop** to re-engage motor controllers.
+  2. Restart the robot, then log in again via the **Go to LOGIN page** button to resume operations.
+
+---
+
+### 7. Kicked Back to the Login Page
+- **Symptom**: The dashboard suddenly returns you to the login screen mid-operation.
+- **Probable Causes**: Your login session expired, or the connection to the server timed out.
+- **Operator Actions**:
+  1. Log in again. The dashboard asks the robot what it is doing and restores your operation (see [How the Robot Behaves](/user-guide/behavior#coming-back)): nothing is lost unless the robot itself was paused or shut down meanwhile.
+
+### 8. Blank Page on a Phone/Tablet, or "Desktop Only" Overlay
+- **Symptom**: The dashboard refuses to render on a mobile device, or a blocking overlay covers a desktop window.
+- **Probable Causes**: The dashboard only supports desktop-size browser windows. Small windows are blocked deliberately so a half-visible control bar can never drive a live robot.
+- **Operator Actions**:
+  1. Switch to a laptop or desktop with Chrome or Edge.
+  2. If you see the overlay on a desktop, maximize the window (at least 1366 x 768) until it clears.
 
 ---
 

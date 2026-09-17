@@ -69,7 +69,7 @@ flowchart LR
 ## Persyaratan Sistem
 
 - **Peramban yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge (peramban modern berbasis Chromium dengan dukungan WebRTC).
-- **Resolusi Layar**: Dioptimalkan untuk layar desktop dan laptop (1366 x 768 atau lebih tinggi) agar kanvas peta, feed kamera langsung, dan telemetri dapat ditampilkan berdampingan.
+- **Hanya desktop**: Gunakan laptop atau desktop dengan jendela minimal 1366 x 768. Ponsel dan tablet diblokir dengan pemberitahuan satu halaman penuh, dan jendela desktop yang lebih kecil ditutup overlay pemblokir: bilah kendali yang terlihat separuh tidak boleh mengendalikan robot yang sedang aktif.
 - **Jaringan**: Akses internet untuk dashboard cloud (`msd.nglobal.jp`), atau koneksi Wi-Fi lokal saat mengoperasikan robot secara offline di lapangan.
 
 ## Butuh Bantuan?

@@ -19,11 +19,12 @@ The Navigation screen is where you drive and dispatch the robot on a map you've 
 Use manual control when you want to drive the robot yourself, step by step.
 
 1. Click the **Manual Control** button to activate it.
-2. Use the on-screen joystick (or **W A S D** keys on a keyboard) to drive:
-   - **W**: move forward
+2. Use the **W A S D** keys on your keyboard to drive:
+   - **W**: move forward (`0.40 m/s`)
    - **S**: move backward
    - **A / D**: turn left / right
-3. Release the controls (or click **Stop**) to halt the robot immediately.
+   - Hold **Shift** for slow mode (`0.20 m/s`) when precision matters
+3. Release all keys (or click **Stop**) to halt the robot immediately.
 
 ::: info Note
 Manual control always takes priority over any automatic mission. If Autopilot is running, taking manual control will pause it.
@@ -79,8 +80,8 @@ Autopilot lets the robot run a pre-planned route or playlist on its own, even if
 **Clicking on the map does nothing**
 : Manual Control may still be active: turn it off first, or check that you're connected to the correct robot (see the connection indicator).
 
-**Robot rotates in place unexpectedly**
-: In-place rotation is disabled by default for safety. If you see the robot refuse to turn on the spot, this is expected: it will find a path that doesn't require spinning.
+**Robot pauses before turning instead of spinning on the spot**
+: This is expected: the planner prefers a safe path over turning in place. Give it a moment to find its way.
 
 **Autopilot mission stopped after I closed the tab**
 : This shouldn't happen: Autopilot runs on the robot, not the browser. If it did, check with your administrator; there may be a connectivity issue.

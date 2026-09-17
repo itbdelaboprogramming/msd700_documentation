@@ -11,7 +11,7 @@ Setelah memiliki peta, Anda bisa menyimpan **rute** (urutan titik) dan **area** 
 ## Menyimpan Rute
 
 1. Di [Navigasi](/id/user-guide/navigation), taruh pin pada peta untuk setiap titik pemberhentian yang ingin dikunjungi robot, secara berurutan.
-2. Klik **Simpan sebagai Rute**.
+2. Buka dialog **Save Route**.
 3. Beri nama rute (contoh: "Patroli Pagi") dan konfirmasi.
 
 Rute kini muncul di bagian **Rute** dan bisa dipakai ulang kapan saja tanpa perlu klik ulang setiap titik.
@@ -20,16 +20,15 @@ Rute kini muncul di bagian **Rute** dan bisa dipakai ulang kapan saja tanpa perl
 
 Area cakupan memberi tahu robot untuk menyapu seluruh zona secara sistematis: misalnya sebuah lorong atau ruangan terbuka: bukan sekadar mengunjungi titik-titik tunggal.
 
-1. Klik **Gambar Area** pada toolbar peta.
-2. Klik untuk menempatkan titik-titik sudut mengelilingi zona yang ingin dicakup, mengikuti tepi ruangan atau lorong.
-3. Klik dua kali (atau klik titik pertama lagi) untuk menutup bentuk.
-4. Pilih apakah area tersebut **Cakup** (robot menyapu) atau **Tanpa Cakupan / Larangan** (robot menghindarinya sepenuhnya).
-5. Klik **Simpan** dan beri nama area tersebut.
+1. Gambar zona melalui toolbar peta dengan mengklik untuk menempatkan titik-titik sudut mengelilinginya, mengikuti tepi ruangan atau lorong.
+2. Klik dua kali (atau klik titik pertama lagi) untuk menutup bentuk.
+3. Pada dialog penyimpanan, pilih jenis area: **Covered Area** (robot menyapunya) atau **Avoided Area** (robot tidak memasukinya sama sekali, misalnya di sekitar partisi kaca atau area terjun).
+4. Masukkan nama area lalu klik **Save**.
 
 Robot akan merencanakan pola penyapuan bolak-balik (boustrophedon) yang efisien untuk mencakup seluruh zona sambil menghindari area larangan.
 
 ::: tip Agar cakupan penuh
-Jarak antar-jalur default (`0.574 m`) sudah tumpang tindih sekitar 18% dengan jalur sebelahnya sehingga tidak ada bagian yang terlewat. Agar belokan seminimal mungkin, gambar area sedemikian rupa sehingga sisi terpanjangnya kurang lebih sejajar dengan arah penyapuan alami ruangan.
+Jalur sapuan yang bersebelahan saling tumpang tindih sehingga tidak ada bagian yang terlewat. Agar belokan seminimal mungkin, gambar area sedemikian rupa sehingga sisi terpanjangnya kurang lebih sejajar dengan arah penyapuan alami ruangan.
 :::
 
 ## Menjalankan Penyapuan Cakupan

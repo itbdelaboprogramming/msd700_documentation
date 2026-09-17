@@ -19,9 +19,9 @@ Ketik pada **kotak pencarian** di bagian atas untuk menyaring daftar berdasarkan
 
 ## Mengganti Nama Peta
 
-1. Klik dua kali pada nama peta.
+1. Gunakan opsi rename pada entri peta (misalnya klik dua kali namanya).
 2. Ketik nama baru.
-3. Tekan **Enter** untuk konfirmasi, atau klik di tempat lain untuk membatalkan.
+3. Tekan **Enter** untuk konfirmasi, atau klik di tempat lain untuk membatalkan. Pesan konfirmasi singkat akan muncul saat penggantian nama berhasil.
 
 ::: info Catatan
 Nama peta hanya perlu unik per robot dan penyewaan: nama yang sama bisa ada di robot lain tanpa konflik.

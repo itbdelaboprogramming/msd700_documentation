@@ -56,7 +56,7 @@ flowchart TD
     TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Joystick, Mode Selector, Goal Dispatcher, Speed Sliders"]
+    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Keyboard Drive (Shift = slow), Mode Selector, Goal Dispatcher"]
   end
 ```
 
@@ -76,7 +76,7 @@ If no maps exist in the dropdown, see [Mapping](/user-guide/mapping) to create y
 
 ## Step 5: Drive Manually (Teleoperation)
 
-You can drive the robot manually using your keyboard or the on-screen virtual joystick:
+You drive the robot manually with your keyboard:
 
 ```mermaid
 flowchart LR
@@ -85,14 +85,15 @@ flowchart LR
     S["S: Drive Backward"]
     A["A: Rotate Left (Counter-Clockwise)"]
     D["D: Rotate Right (Clockwise)"]
-    SPACE["Spacebar: Immediate Stop"]
+    SHIFT["Hold Shift: Slow Mode"]
   end
 ```
 
 ### Teleoperation Controls:
-- **Linear Speed Slider**: Adjusts maximum forward speed (default: `0.20 m/s`, range: `0.05` to `0.40 m/s`).
-- **Angular Speed Slider**: Adjusts rotational turning speed (default: `0.40 rad/s`).
-- **Virtual Joystick**: Click and drag the on-screen joystick handle in the desired direction.
+- **W / S**: Drive forward / backward at normal speed (`0.40 m/s`).
+- **A / D**: Turn left / right.
+- **Hold Shift for slow mode**: Precise movement at `0.20 m/s` for tight spaces and mapping. The hint under the controls reads "Drive with W A S D · hold Shift = slow".
+- **Release all keys** (or click **Stop**) to halt the robot immediately.
 
 ---
 
@@ -118,8 +119,8 @@ flowchart LR
 
 The **Emergency Stop** button is prominently located at the top right of every page:
 
-- **Activate E-Stop**: Click the red **Emergency Stop** button (or press the `Escape` key). The robot brakes immediately and halts all autonomous routines.
-- **Clear E-Stop**: Resolve the safety condition and click **Resume Operations** to restore motor power.
+- **Activate E-Stop**: Click the red **Emergency Stop** button. The robot brakes immediately and halts all autonomous routines.
+- **After E-Stop**: The dashboard shows an **Emergency Stop Activated** page. Check the situation in the field; when everything is safe, restart the robot and log in again via the **Go to LOGIN page** button to resume operations.
 
 ---
 

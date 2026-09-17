@@ -31,16 +31,15 @@ Jika akun Anda memiliki akses ke lebih dari satu robot, Anda akan melihat daftar
 
 1. Setiap robot menampilkan **nama**, **status** (Online / Offline / Sedang Digunakan), dan level baterai.
 2. Klik sebuah robot untuk terhubung.
-3. Jika sebuah robot menampilkan **"Sedang Digunakan"**, artinya ada orang lain yang sedang mengendalikannya: Anda tetap bisa melihatnya, tapi tidak bisa mengambil alih kendali sampai mereka selesai atau Anda melakukan pengambilalihan secara eksplisit.
+3. Jika sebuah robot menampilkan **"In Use"**, ada sesi lain yang sedang mengendalikannya: Anda tetap bisa membukanya, tetapi untuk mengendarai Anda harus mengambil alih secara eksplisit. Dialog ("This unit is already being operated from …") menawarkan **Take over control** (sesi lain diakhiri secara terlihat) atau **Leave it running**.
 
 ## Bekerja Offline (Mode Lokal)
 
 Jika Anda berada di lokasi fasilitas tanpa akses internet, Anda tetap bisa menggunakan dashboard lengkap dengan terhubung langsung ke robot, bukan ke cloud:
 
-1. Hubungkan laptop atau tablet Anda ke hotspot Wi-Fi onboard robot (`MSD700_Unit_<ULID>`).
-2. Buka `http://<jetson-ip>:3000` di browser Anda, alih-alih alamat cloud biasa.
-3. Lencana **Mode Lokal** akan muncul di header untuk mengonfirmasi Anda terhubung langsung ke robot. Pemetaan, navigasi, dan cakupan semuanya berfungsi persis seperti saat online.
-4. Setelah robot kembali terhubung ke Wi-Fi berinternet, klik lencana Mode Lokal dan pilih **Sync Now** untuk mendorong semua yang direkam secara offline ke database cloud.
+1. Hubungkan laptop Anda ke hotspot Wi-Fi onboard robot (tanyakan namanya ke administrator).
+2. Buka `http://<robot-ip>:3000` di Chrome atau Edge, alih-alih alamat cloud biasa. Pemetaan, navigasi, dan cakupan semuanya berfungsi persis seperti saat online.
+3. Setelah robot kembali terhubung ke Wi-Fi berinternet, gunakan opsi **Sync** pada layar untuk mendorong semua yang direkam secara offline ke database cloud.
 
 ## Keluar (Logout)
 

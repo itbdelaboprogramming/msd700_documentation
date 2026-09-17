@@ -22,7 +22,7 @@ Your user account exists, but an administrator has not yet assigned it to a **Re
 ::: details 3. Can two operators control the same robot simultaneously?
 No. To ensure safety, each robot is governed by an **exclusive operating lease** held by a single active session:
 - If a colleague is operating the robot, the unit displays an **In Use** badge and commands are blocked.
-- If you open a second tab or switch devices under your own account, the dashboard displays a **Take Over Control** button, allowing you to explicitly transfer the lease to your new window.
+- If another session is already driving (a second tab, another operator, or the unit's own local dashboard), the dashboard displays a dialog with **Take over control**, allowing you to explicitly transfer control to your window. The other session is ended visibly.
 :::
 
 ::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
@@ -43,25 +43,23 @@ Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mi
 :::
 
 ::: details 7. How fast does the robot drive?
-Maximum speed limits are enforced in software for workplace safety:
-- **Default Speed**: `0.20 m/s` (approx. 0.72 km/h).
-- **Adjustable Range**: You can adjust linear speed between `0.05 m/s` and `0.40 m/s` using the speed slider in the bottom-right control panel.
-- **Angular Turning Speed**: Configurable up to `0.50 rad/s`.
+You drive with the **W A S D** keys; there are two fixed speeds:
+- **Normal**: `0.40 m/s` forward.
+- **Slow mode**: hold **Shift** for `0.20 m/s` precise movement, e.g. in tight spaces or while mapping.
 :::
 
 ::: details 8. How long does the battery last and how is it monitored?
 The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 to 6 hours** of continuous autonomous operation:
-- Live battery voltage and percentage are displayed in the top header bar.
-- If the battery falls below **20%**, the dashboard surfaces an amber warning.
-- If the battery falls below **15%**, running missions are paused and the robot prioritizes returning to its homebase charging station.
+- Live battery status is displayed in the dashboard header while you operate a unit.
+- The dashboard surfaces a warning when the battery runs low. If you see one, wrap up the mission and send the robot back to its homebase charging station.
 :::
 
 ::: details 9. Can I operate the robot if there is no internet connection in the building?
-Yes. Every MSD700 robot runs an onboard web server. Connect your laptop or tablet directly to the robot's Wi-Fi network (`MSD700_Unit_<ULID>`) and open `http://<jetson-ip>:3000`. You can perform all mapping, teleoperation, and coverage routines completely offline.
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop directly to the robot's Wi-Fi hotspot (ask your administrator for its name) and open `http://<robot-ip>:3000` in Chrome or Edge. You can perform all mapping, teleoperation, and coverage routines completely offline. Note the dashboard requires a desktop-size browser window even offline: phones and tablets are not supported.
 :::
 
 ::: details 10. How does the Emergency Stop work?
-Clicking the red **Emergency Stop** button (or pressing the `Escape` key on your keyboard) instantly overrides all active autonomous plans, brings motor velocity to zero within milliseconds, and latches the safety state. To resume operations, resolve the safety condition and click **Release Emergency Stop**.
+Clicking the red **Emergency Stop** button instantly overrides all active autonomous plans, brings the robot to a stop, and latches the safety state. The dashboard then shows an **Emergency Stop Activated** page: check the situation in the field, and when everything is safe, restart the robot and log in again via the **Go to LOGIN page** button.
 :::
 
 ---

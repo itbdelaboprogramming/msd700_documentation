@@ -11,7 +11,7 @@ Once you have a map, you can save reusable **routes** (a sequence of points) and
 ## Saving a Route
 
 1. In [Navigation](/user-guide/navigation), drop pins on the map for each stop you want the robot to visit, in order.
-2. Click **Save as Route**.
+2. Open the **Save Route** dialog.
 3. Give the route a name (for example, "Morning Patrol") and confirm.
 
 The route now appears under **Routes** and can be reused any time without re-clicking every point.
@@ -20,16 +20,15 @@ The route now appears under **Routes** and can be reused any time without re-cli
 
 Coverage areas tell the robot to systematically sweep an entire zone: for example, an aisle or an open room: rather than just visiting single points.
 
-1. Click **Draw Area** on the map toolbar.
-2. Click to place corner points around the zone you want covered, following the edges of the room or aisle.
-3. Double-click (or click the first point again) to close the shape.
-4. Choose whether the area is **Cover** (robot sweeps it) or **No-Cover / Keep-Out** (robot avoids it entirely).
-5. Click **Save** and give the area a name.
+1. Draw the zone on the map toolbar by clicking to place corner points around it, following the edges of the room or aisle.
+2. Double-click (or click the first point again) to close the shape.
+3. In the save dialog, choose the area type: **Covered Area** (the robot sweeps it) or **Avoided Area** (the robot stays out of it entirely, e.g. around glass partitions or drop-offs).
+4. Enter an area name and click **Save**.
 
 The robot will plan an efficient back-and-forth (boustrophedon) sweep pattern that covers the full zone while avoiding any keep-out areas.
 
 ::: tip Getting full coverage
-The default lane spacing (`0.574 m`) already overlaps adjacent passes by about 18% so no strip is missed. For the fewest turns, draw the area so its long edge roughly matches the direction you'd naturally sweep the room in.
+Adjacent sweep passes overlap so no strip is missed. For the fewest turns, draw the area so its long edge roughly matches the direction you'd naturally sweep the room in.
 :::
 
 ## Running a Coverage Sweep

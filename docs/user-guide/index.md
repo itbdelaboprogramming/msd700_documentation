@@ -69,7 +69,7 @@ flowchart LR
 ## System Requirements
 
 - **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
-- **Display Resolution**: Optimized for desktop and laptop displays (1366 x 768 or higher) to display map canvases, live camera feeds, and telemetry side-by-side.
+- **Desktop only**: Use a laptop or desktop with a window at least 1366 x 768. Phones and tablets are blocked with a full-page notice, and smaller desktop windows are covered by a blocking overlay: a half-visible control bar must never drive a live robot.
 - **Network**: Internet access for the cloud dashboard (`msd.nglobal.jp`), or a local Wi-Fi connection when operating robots offline in the field.
 
 ## Need Help?

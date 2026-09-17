@@ -40,22 +40,22 @@ panel snap back to whatever the robot actually has engaged rather than what you 
 
 ```mermaid
 flowchart TB
-  A["You open a unit"] --> B{"Is someone else<br/>already driving it?"}
+  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
   B -->|no| C["You get control immediately"]
-  B -->|"yes, another ACCOUNT"| D["Shown as In Use.<br/>You cannot take over."]
-  B -->|"yes, another session of YOUR account"| E["You are offered an explicit<br/>Take Over prompt"]
-  E --> F["Click it, and the other tab<br/>is told it lost control"]
+  B -->|yes| D["A dialog appears:<br/>already being operated"]
+  D --> E["Take over control:<br/>the other session ends visibly"]
+  D --> F["Leave it running:<br/>you stay without control"]
 ```
 
 | What you see | What it means | What you can do |
 | --- | --- | --- |
 | Nothing special | The unit is free | Drive |
-| **In Use** badge on the unit list | Another **account** is driving | Wait, or ask them. Opening the unit is fine; you just do not get control |
-| A **Take Over** prompt | Another session of **your own** account has control: a second tab, or the unit's own local dashboard | Take over deliberately, and the other one stands down visibly |
+| **In Use** badge on the unit list | Another session is driving: a second tab, another operator, or the unit's own local dashboard | Open the unit, then decide in the dialog |
+| **"This unit is already being operated from …"** dialog | Your session was refused because someone is already driving | **Take over control**, or **Leave it running** |
 
-::: warning Two of your own tabs cannot both drive
-That is deliberate. Two tabs each sending commands to one robot interleave, and neither one would
-ever be told about the other. Whichever tab takes over wins, and the other is told it lost, rather
+::: warning Two sessions cannot both drive
+That is deliberate. Two sessions each sending commands to one robot interleave, and neither one would
+ever be told about the other. Whichever session takes over wins, and the other is told it lost, rather
 than silently sending commands nobody applies.
 :::
 

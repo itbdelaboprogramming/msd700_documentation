@@ -40,22 +40,22 @@ MSD700は、頼まれなくてもいくつかのことを自分で行います�
 
 ```mermaid
 flowchart TB
-  A["You open a unit"] --> B{"Is someone else<br/>already driving it?"}
+  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
   B -->|no| C["You get control immediately"]
-  B -->|"yes, another ACCOUNT"| D["Shown as In Use.<br/>You cannot take over."]
-  B -->|"yes, another session of YOUR account"| E["You are offered an explicit<br/>Take Over prompt"]
-  E --> F["Click it, and the other tab<br/>is told it lost control"]
+  B -->|yes| D["A dialog appears:<br/>already being operated"]
+  D --> E["Take over control:<br/>the other session ends visibly"]
+  D --> F["Leave it running:<br/>you stay without control"]
 ```
 
 | 表示される内容 | 意味 | できること |
 | --- | --- | --- |
 | 特に何も表示されない | このユニットは空いています | 操作できます |
-| ユニット一覧の **In Use** バッジ | 別の**アカウント**が操作中です | 待つか、その相手に確認してください。ユニットを開くこと自体は問題なく、単に制御権が得られないだけです |
-| **Take Over** プロンプト | **あなた自身**の別セッション(2つ目のタブ、またはユニット自体のローカルダッシュボード)が制御権を持っています | 意図的に引き継ぐと、もう一方には制御権を失ったことが明示的に通知されます |
+| ユニット一覧の **In Use** バッジ | 別のセッションが操作中です。2つ目のタブ、別のオペレーター、ユニット自体のローカルダッシュボードなどが該当します | ユニットを開き、ダイアログで判断してください |
+| **「This unit is already being operated from …」**ダイアログ | すでに誰かが操作中のため、あなたのセッションが拒否されました | **Take over control** するか、**Leave it running** を選択します |
 
-::: warning 自分自身の2つのタブが同時に操作することはできません
-これは意図的な仕様です。2つのタブがそれぞれ1台のロボットにコマンドを送ると互いに干渉し合い、
-どちらのタブももう一方の存在を知ることができません。引き継いだタブが勝ち、もう一方は
+::: warning 2つのセッションが同時に操作することはできません
+これは意図的な仕様です。2つのセッションがそれぞれ1台のロボットにコマンドを送ると互いに干渉し合い、
+どちらのセッションももう一方の存在を知ることができません。引き継いだセッションが勝ち、もう一方は
 誰にも適用されないコマンドを黙って送り続けるのではなく、制御権を失ったことを通知されます。
 :::
 

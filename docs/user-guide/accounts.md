@@ -31,16 +31,15 @@ If your account has access to more than one robot, you'll see a list after loggi
 
 1. Each robot shows its **name**, **status** (Online / Offline / In Use), and battery level.
 2. Click a robot to connect to it.
-3. If a robot shows **"In Use"**, someone else is currently controlling it: you can still view it, but can't take control until they finish or you take over explicitly.
+3. If a robot shows **"In Use"**, another session is currently controlling it: you can still open it, but to drive you must take over explicitly. A dialog ("This unit is already being operated from …") offers **Take over control** (the other session is ended visibly) or **Leave it running**.
 
 ## Working Offline (Local Mode)
 
 If you're on-site at a facility with no internet access, you can still use the full dashboard by connecting directly to the robot instead of the cloud:
 
-1. Connect your laptop or tablet to the robot's onboard Wi-Fi hotspot (`MSD700_Unit_<ULID>`).
-2. Open `http://<jetson-ip>:3000` in your browser instead of the usual cloud address.
-3. A **Local Mode** badge appears in the header to confirm you're connected directly to the robot. Mapping, navigation, and coverage all work exactly as they do online.
-4. Once the robot is back on internet-connected Wi-Fi, click the Local Mode badge and choose **Sync Now** to push anything recorded offline up to the cloud database.
+1. Connect your laptop to the robot's onboard Wi-Fi hotspot (ask your administrator for its name).
+2. Open `http://<robot-ip>:3000` in Chrome or Edge instead of the usual cloud address. Mapping, navigation, and coverage all work exactly as they do online.
+3. Once the robot is back on internet-connected Wi-Fi, use the on-screen **Sync** option to push anything recorded offline up to the cloud database.
 
 ## Logging Out
 

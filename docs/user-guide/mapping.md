@@ -18,7 +18,7 @@ Before the robot can navigate a space, it needs a **map** of that space. Mapping
 
 You can build a map in two ways:
 
-- **Manual driving**: Use the joystick or **W A S D** keys to drive the robot slowly (around `0.15 m/s`) around the entire area, including corners and dead ends, so nothing is missed.
+- **Manual driving**: Use the **W A S D** keys (hold **Shift** for slow `0.20 m/s` mode) to drive the robot slowly around the entire area, including corners and dead ends, so nothing is missed.
 - **Autonomous exploration**: Click **Auto Explore** and the robot investigates the area on its own, backing off automatically if it senses it's cornered.
 
 As you drive, the map fills in on screen in real time: walls and obstacles appear as dark lines, open floor appears in a lighter shade.
