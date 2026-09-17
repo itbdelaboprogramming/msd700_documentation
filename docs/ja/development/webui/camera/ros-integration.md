@@ -104,6 +104,20 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
 ンサーを処理しているかによって切り替わることのない、無条件のものになっている。
 :::
 
+## シグナリング線路プロトコル(`signalling_server/server.js`)
+
+2ポートであり、両方ともenv必須(未設定ならプロセス終了):`PORT_WS`(本番3001/開発4001)と `PORT_HTTP`(3002 / 4002)。認証は共有キーリング。最初のWebSocketメッセージはJWT付き `{ type: 'authenticate', token }` でなければならず(`userId` または `username` を運ぶ)、違反時は `AUTH_TIMEOUT` 10秒後に `auth_error` + close(4000)。
+
+| `type` | 方向 | 備考 |
+| --- | --- | --- |
+| `offer`、`answer`、`candidate` | どちら向きも | 文字列 `target` 必須。`clients[target]` へ `sender`/`senderName` 付き転送。不明target → `{ type: 'error', originalType }` |
+| `client_ready` | どちら向きも | 同転送 |
+| `ping` → `pong` | サーバー | 30秒ごとハートビート。死ソケット終了、別名掃除 |
+| `error` | サーバー | `new_login` 乗っ取り含む:重複 `userId` は旧ソケットを殺す |
+| `server_shutdown` | サーバー | SIGTERM/SIGINT時に5秒強制終了前に放送 |
+
+`GET /clients`(HTTP、Bearer)は接続中クライアント一覧。サーバーは `Answer SDP` 部分文字列をログする——SDP framingは見るが、メディアは決して見ない。
+
 ## 再接続とリトライ
 
 `camera_client.py` の接続ループは決して永久には諦めない。以前のバージョンは、固定の試行回数の上限に達
@@ -126,7 +140,7 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
 `Dockerfile.webui-local` は `./src/ros-web-ui/source` ツリー全体を **`COPY`** する(条件付きの
 依存関係インストール付き)。そこでの変更には、`docker-manager.sh` が
 ダッシュボードとバックエンドのイメージに対してすでにチェックしているのと同じ再ビルドが必要になる(
-[Docker Reference § `up` が行うこと、その順序](/ja/setup/docker-reference#up-が行うこと-順番)を参
+[Docker Reference § `up` の動作順](/ja/setup/docker-reference#upの動作順)を参
 照)。これを忘れると、そこで文書化されている陳腐化(staleness)の失敗とまったく同じように見える。スタッ
 クは何事もなく正常に起動し、編集前のシグナリングロジックをそのまま提供し続けてしまう。
 
@@ -136,7 +150,7 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
   `VideoStreamComponent`、ブラウザ側のスタール検知
 - [アーキテクチャ](/ja/development/architecture): `signalling_server` と `coturn` がより広いシステムの
   中でどこに位置するか、そしてここで使われるトークンに対する信頼ドメイン
-- [Server Setup § TURNリレー](/ja/setup/server-setup#_6-the-turn-relay-production-only): 本番のTURN
+- [Server Setup § 高度な設定](/ja/setup/server-setup#高度な設定): 本番のTURN
   リレー自体の設定
 - [Docker Reference § Unit: run_msd.sh](/ja/setup/docker-reference#ユニット-run-msd-sh): `camera_client`
   のtmuxウィンドウが起動される場所

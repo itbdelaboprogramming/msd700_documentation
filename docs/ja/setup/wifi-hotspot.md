@@ -72,7 +72,7 @@ flowchart TB
   NA -->|"SSID/パスワード編集"| HAP
   NA -->|"番兵ファイルに触れる"| RPATH["再起動監視<br/>ホットスポットサービスを再起動"]
 
-  BE["backend_local<br/>/local/wifi/*"] -->|"ループバックプロキシ"| NA
+  BE["backend_local<br/>/local/wifi/*"] -->|"ループバックプロキシ<br/>(wifi_proxy.js、25秒タイムアウト)"| NA
   FE["frontend_local :3000<br/>WiFiパネル"] -->|"scan/connect/status"| BE
 
   CLIENT["ホットスポット参加機器"] -->|"DNS: mymsd.jp -> ユニット"| DNSM
@@ -187,7 +187,7 @@ hostapd上下に連動して自動適用/撤去され、コンテナ非依存で
 
 ## ダッシュボードのバッジ
 
-独立WiFiバッジはありません。WiFiは**[Local Modeバッジ](/ja/development/data-sync#the-local-mode-badge)**ドロップダウン内の**一区画**です。バッジ行は**グリフ**のみで状態色付けし、概要(SSID、`hotspot only`、`no network`、`wifi unreachable`)は印刷文でなくホバーツールチップです。エージェント到達不能も区画冒頭に文で明記します。
+独立WiFiバッジはありません。WiFiは**[Local Modeバッジ](/ja/development/data-sync#local-mode-ステータスバッジ)**ドロップダウン内の**一区画**です。バッジ行は**グリフ**のみで状態色付けし、概要(SSID、`hotspot only`、`no network`、`wifi unreachable`)は印刷文でなくホバーツールチップです。エージェント到達不能も区画冒頭に文で明記します。
 
 エージェントは*勝者*インターフェースを`/run/msd700-hotspot-active`から読みます(当起動の勝者プライマリ`msd700-ap0`か予備ドングル)。欠落時のみ`AP_INTERFACE_LOCAL`ドングルに後退します。ドングルなしプライマリ専用ユニットでバッジがホットスポットを見るのはこのおかげです。
 
@@ -249,6 +249,22 @@ hostapd上下に連動して自動適用/撤去され、コンテナ非依存で
 | `NETWORK_AGENT_PORT_LOCAL` | `network_local`のループバックAPIポート | `5011` |
 | `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | 任意:初回 provisioning 時自動参加の上流網 | 空(後でダッシュボードから追加) |
 | `LOCAL_IP` | 表示ダッシュボードアドレス+フロントエンドビルド予備。ホットスポット固定アドレスは`192.168.4.1`のまま | `192.168.4.1` |
+
+## `network-agent` エンドポイントリファレンス
+
+`network_local` は `127.0.0.1:5011` のみ束縛します。唯一の呼出者は `backend_local` であり、オペレーター認証を付加します。両者間のプロキシは `wifi_proxy.js`(25秒タイムアウト、absentとemptyの区別保存のためホットスポットボディを無改変で通す)です。エージェントは `nmcli` へargvのみでシェルアウトします(シェル経由なし)。1呼出15秒、ホストNetworkManagerへのD-Busバインドマウント越しです。ホットスポットのプロビジョニングは**担当外**です(`setup.sh --provision-network` が行います)。
+
+| エンドポイント | 用途 |
+| --- | --- |
+| `GET /health` | `{ ok: true }` |
+| `GET /wifi/status` | 無線/接続状態 |
+| `GET /wifi/scan` | 周辺網(自ホットスポットSSID除外、重複排除の強い順) |
+| `GET /wifi/saved` | 保存済みプロファイル |
+| `POST /wifi/connect { ssid, ... }` | 参加(通常、エンタープライズEAP、隠し網)。ssidなしは400、失敗は502 |
+| `POST /wifi/disconnect` | クライアント上りの切断 |
+| `GET /wifi/hotspot` | 現ホットスポット + `limits`(SSID最大32オクテット、パスワード8〜63)+ `last_change` |
+| `POST /wifi/hotspot` | 即時検証、1.5秒後適用: `202 { accepted, applies_in_ms: 1500, ssid, password_changed }` |
+| `POST /wifi/forget { name }` | 保存プロファイルの削除 |
 
 ## 動作確認
 
@@ -336,5 +352,5 @@ nmcli標準エラー素通しです。直接読みます:誤パスワード/圏�
 - [MT7922 Wi-Fi設定](/ja/setup/wifi-mt7922):上記[流れ](#セットアップの流れ)のStep 1、実機の確定MT7922ファームウェア問題のみ対象
 - [ユニット構築](/ja/setup/unit-setup):本機能が載るベースのローカルモード導入
 - [Dockerリファレンス](/ja/setup/docker-reference#network-mode-host):一部サービスがホスト網共有の理由
-- [データ同期: Local Modeバッジ](/ja/development/data-sync#the-local-mode-badge):本区画が属するバッジ
-- [アーキテクチャ: 信頼境界](/ja/development/architecture#trust-domains):`/local/*`経路の信頼設計(変更系WiFi経路のオペレーターセッションミドルウェアは設計済み未装着。上記警告参照)
+- [データ同期: Local Modeバッジ](/ja/development/data-sync#local-mode-ステータスバッジ):本区画が属するバッジ
+- [アーキテクチャ: 信頼境界](/ja/development/architecture#マルチティア・トラストドメインとセキュリティ):`/local/*`経路の信頼設計(変更系WiFi経路のオペレーターセッションミドルウェアは設計済み未装着。上記警告参照)

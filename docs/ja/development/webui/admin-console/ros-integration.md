@@ -29,7 +29,7 @@ MySQL-と-REST の話である。このコンソールの中には、実際に�
 pending` の `pending_units` 行を、特定の `units` 行に紐づけて `approved` に変える。
 
 ユニットのデバイスの**バインド解除**(
-[ユニット & フリート § ユニットのエンロール済みデバイスのバインドを解除する](/ja/development/webui/admin-console/units-and-fleet#unbind-a-units-enrolled-device)
+[ユニット & フリート § ユニットのエンロール済みデバイスのバインドを解除する](/ja/development/webui/admin-console/units-and-fleet#ユニットのエンロール済みデバイスのバインドを解除する)
 を参照)は、そのユニットに `fingerprint` を紐づけている稼働中の `unit_devices` 行を削除する。
 その結果は具体的であり、戻ってきたロボットが本来たどるはずだったセルフヒールパスに直接文書化
 されている。

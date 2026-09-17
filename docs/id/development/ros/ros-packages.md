@@ -42,6 +42,25 @@ flowchart TD
 
 ## Direktori Paket: `msd700_robot`
 
+### 0. `msd700_bringup`
+Lapisan launch yang merakit hardware, sim, dan navigasi menjadi stack yang bisa dijalankan.
+
+| File launch | Tujuan | Jalan di |
+| --- | --- | --- |
+| `robot_navigation.launch` | Stack penuh: hardware **atau** sim + control + navigation core, RViz/teleop opsional | Robot vs sim (`use_sim`) |
+| `robot_slam.launch` | Layering sama untuk mapping (gmapping/hector) | Robot vs sim (`use_sim`) |
+| `robot_teleop.launch` | Drive manual: hardware/sim + control + `teleop_twist_keyboard` → `mux/key_vel` | Robot vs sim + teleop/debug |
+| `lidar_scanner.launch` | Entry lidar robot nyata (default Velodyne, RPLIDAR/legacy); tidak pernah di-launch di sim | Hanya robot |
+| `serial_launch.launch` | `rosserial_python` di `/dev/stm32` @57600 | Robot |
+| `map_server.launch` | `map_server` di yaml relatif-paket atau absolut | Keduanya |
+| `multiple_point.launch` | Mode multi-point `nav_controller.py` + `nav_gui.py` | Netral |
+| `rviz_launch.launch` | Helper debug/viz (description + state publisher + rviz) | Debug |
+| `teleop.launch` | `teleop_node_cmd_vel.py` | Teleop |
+| `custom_model/` | Launch RPLIDAR tunggal/ganda legacy | Robot (legacy) |
+| `testing/speed_test.launch` | Rig serial + teleop + bridger + `calculate.py` | Debug/test |
+
+`bridger.launch` (geometri drive + `bridger.py`) selalu menyala, di semua mode termasuk cold idle.
+
 ### 1. `msd700_navigation`
 Paket inti untuk pergerakan otonom, pemetaan SLAM, dan cakupan area.
 
@@ -88,7 +107,14 @@ Lingkungan simulasi Gazebo untuk menguji algoritma navigasi secara software.
   - `scripts/fetch_sim_worlds.sh`: Pengunduh on-demand untuk mesh simulasi 3D (12 MB) dari branch `ros1` GitHub.
 
 ### 6. `third_party/ira_laser_tools`
-Tersedia untuk menggabungkan beberapa scanner LiDAR 2D, tetapi stack default tidak menggunakan dual merger: `pointcloud_to_laserscan` mengonversi awan Velodyne menjadi `/scan`, dengan pipeline hazard menambahkan `/scan_hazard`.
+Tersedia untuk menggabungkan beberapa scanner LiDAR 2D, tetapi stack default tidak menggunakan dual merger: `pointcloud_to_laserscan` mengonversi awan Velodyne menjadi `/scan`, dengan pipeline hazard menambahkan `/scan_hazard`. Lihat [Persepsi dan Hazard Scan](/id/development/ros/perception-and-hazard-scan).
+
+### 7. `msd700_msgs`
+Kontrak message internal robot (`msd700_robot/msd700_msgs/msg/`):
+
+- `HardwareCommand.msg`: `uint8 movement_command`, `uint8 cam_angle_command`, `float32 right_motor_speed`, `float32 left_motor_speed`.
+- `HardwareState.msg`: 8× `float32 ch_ultrasonic_distance_1…_8`, `int32 right/left_motor_pulse_delta`, `float32 heading/pitch/roll`, `float32 acc/gyr/mag_x/y/z`, `float32 uwb_dist/deviation/rho/theta`.
+- `WebNavCommand.msg`: `string command`, `geometry_msgs/PoseStamped pose`, `string file_path`.
 
 ## Direktori Paket: `ros-web-ui/source`
 

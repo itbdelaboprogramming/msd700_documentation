@@ -53,7 +53,7 @@ keyed by `target`: it never inspects SDP content, only routes messages between t
 in them. Authentication only requires a valid, keyring-verified token carrying `userId` or
 `username`; a robot token missing `userId` is rejected here outright, which is why both the cloud and
 unit-local token issuers put it in explicitly (see
-[Architecture § Trust domains](/development/architecture#trust-domains)).
+[Architecture § Trust domains](/development/architecture#multi-tier-trust-domains-and-security)).
 
 ## Browser-side stall detection
 

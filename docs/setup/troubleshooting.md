@@ -4,6 +4,10 @@
 
 Fixing installation and deployment problems. For user-facing issues, see [User Guide > Troubleshooting](/user-guide/troubleshooting) instead.
 
+::: info Ownership
+Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide/troubleshooting) owns operator fixes (select map, refresh, retry), this page owns technician fixes (ports, env, containers, logs), and [Developer Diagnostics](/development/troubleshooting-guide) owns root causes. Fix a symptom in the page of the role that fixes it; link, don't duplicate.
+:::
+
 ## Start here: which layer is broken?
 
 ```mermaid

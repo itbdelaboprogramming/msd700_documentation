@@ -84,6 +84,12 @@ Anything that fails those checks still falls through to the pending pool for a h
 nonce (a genuine re-image, or an impostor), or no live binding (the hardware was adopted onto a
 different unit, or an admin unbound it on purpose).
 
+### Admin-minted vouchers: claiming a unit before its robot exists
+
+The nonce flow starts at the robot. The voucher flow starts at the admin console for units registered manually (placeholder identity, no physical contact yet): `POST /admin/api/units/:id/enrollment-code` (admin token) mints a **10-character** code from the same 30-char alphabet as claim codes, bcrypt-hashed in the database, valid `valid_hours` (default 72, clamped 1–720), shown **once**.
+
+The robot redeems it at `POST /enroll/claim` with `enrollment_code`, skipping the pending pool: the server finds an unused, unexpired row, `bcrypt.compare`s, marks `used_at`, and runs the same `issueCredential` as a normal handover (returns `unit_id, unit_name, topic_root, device_secret, access_token`). Invalid, used, or expired codes get 404. Revocation is `DELETE /units/:id/device` (unbind the robot) — there is no code-delete endpoint. Do not confuse the three secrets: the 32-byte claim **nonce** (robot-generated, never stored), the 8-char admin **claim code** (pending pool), the 10-char **voucher** (pre-registered units), and the 32-byte **device secret** (the credential itself).
+
 ### `secret_prev_hash`: one generation of grace
 
 `issueCredential` keeps the outgoing `secret_hash` as `secret_prev_hash` **only when the same

@@ -76,5 +76,6 @@ pencarian saat ini.
 
 - [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete): dua aksi pengubah pada layar ini, secara rinci
 - [Integrasi ROS](/id/development/webui/database/ros-integration): skema dan endpoint REST di balik fitur ini
+- [Referensi Media Server](/id/development/webui/database/media-server-reference): API aset peta (upload, thumbnail, legacy-ID mapper)
 - [Arsitektur](/id/development/architecture)
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap untuk `ROS_DB`

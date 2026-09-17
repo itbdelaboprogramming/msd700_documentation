@@ -286,6 +286,20 @@ sudo systemctl restart apache2
 
 実ホストには追加ブロックがあります(MQTT WebSocket、webhook、旧ドキュメント、`/development/`のBasic認証)。原則:`ProxyPass /`は最後に、`ProxyPass ... !`の除外はその上に置きます。
 
+| パス | 転送先 | 備考 |
+| --- | --- | --- |
+| `/services/signalling` | `ws://localhost:3001` | WebRTCシグナリングWS |
+| `/services/media` | `http://localhost:3003` | マップアセット |
+| `/services/rosbackend` | `http://localhost:5000` | REST API |
+| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`、`Host: localhost:9090` |
+| `/services/msd700-webhook` | `localhost:4701/webhook` | ドキュメント配備フック(主ブロックでなく `apache-snippet.conf` 内) |
+| `/itbdelabo/docs` | 除外 + `dist/` への `Alias` | キャッチオールより上に維持必須 |
+| `/` | `http://localhost:3000/` | ダッシュボードフロントエンド、**必ず最後** |
+
+HiveMQメモ:1つの `config.xml` で本番と開発を賄う。平文 `1883` はコンテナ内部専用。TLS `8883` は両方ともコンテナ内で、ホストマップは本番8883/開発8884(XML内の開発ポートを「修正」しないこと)。クライアント認証NONE——TLSは転送路/サーバーidentityのみ。`/opt/hivemq/conf/keystore.p12` のキーストアは `update_ssl.sh` が再生成し、ブローカー再起動が必要。Control Center HTTP `8080` はヘルスチェック用に存在する。
+
+coturnメモ:`realm=msd.nglobal.jp`、`lt-cred-mech`(旧無認証設定は認証なしAllocateを許可していた——閉鎖済み)。認証情報・ポート・`external-ip` はconfファイルでなくcompose由来のコンテナ**フラグ**で渡す(coturnはenv展開しない)。TURN-over-TLS/5349なしは設計通り。`no-cli`、TCPリレーなし、LAN/ループバック/マルチキャストのpeer拒否。開発は本番リレーを共有する。
+
 ```bash
 sudo apache2ctl configtest
 sudo systemctl reload apache2

@@ -9,6 +9,10 @@ search: false
 
 This document provides structured diagnostic workflows, symptom-to-cause mappings, and recovery procedures for resolving common engineering issues across the MSD700 stack.
 
+::: info Ownership
+Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide/troubleshooting) owns operator fixes, [Setup Troubleshooting](/setup/troubleshooting) owns technician fixes, and this page owns root causes. Fix a symptom in the page of the role that fixes it; link, don't duplicate.
+:::
+
 ## Systematic Diagnostic Flowchart
 
 ```mermaid

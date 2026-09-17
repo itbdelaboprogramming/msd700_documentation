@@ -429,6 +429,14 @@ Tiga langkah ada karena failure diam-diam:
 - **Refresher tak pernah menghapus identitas.** Saat `401 reenroll` ia log dan berhenti, mempertahankan `device.json`. Hanya boot nyata boleh menghapusnya. Menghapusnya saat refresh gagal pernah memaksa re-approval admin penuh hampir tiap restart.
 - **Cek image basi.** Image web lokal meng-**COPY** source masuk (tanpa bind mount). Mtime source dibandingkan waktu build image, sehingga unit bisa sadar ia menyajikan backend minggu lalu (klasik "endpoint baru 404 padahal source punya").
 
+### Boot autostart (`msd700.service`)
+
+`up` memasang dan mengaktifkan unit systemd (di-render dari `msd700.service.tmpl`); `down` menonaktifkannya. `ExecStart` hasil render menjalankan `docker-manager.sh up -d --no-autostart` **dengan flag `up` yang mempersenjatainya** (`--dev`/`--simulator` terpanggang), sehingga reboot tidak pernah diam-diam membalik robot dev/simulator ke prod/hardware. `Type=oneshot`, `RemainAfterExit=yes`, setelah `docker.service`, timeout start 15 menit. Inspeksi dengan `print-autostart-unit` (atau `grep ExecStart`); `--no-autostart` memilih keluar; dilewati otomatis bila tanpa systemctl atau di dalam container.
+
+### `manage-unit.sh` (sisi-server, hanya manual/debug)
+
+Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu — backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai di unit mode fleet.
+
 ## Unit: `run_msd.sh`
 
 Jalan **di dalam** container robot, meluncurkan tiap service ROS di sesi tmux (`robot_services`). Normalnya dikemudikan `docker-manager.sh`; bisa dipanggil langsung dari `docker-manager.sh shell`.
@@ -453,7 +461,19 @@ Jalan **di dalam** container robot, meluncurkan tiap service ROS di sesi tmux (`
 
 Ini setting **inner-launcher**. Wrapper tidak meneruskannya lewat `docker exec`; export host atau entri `docker/.env` tak sampai ke inner launcher. Tree dan batas log: [Maintenance](/id/setup/maintenance#housekeeping-log).
 
-Window tmux di `robot_services`: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, plus `token_refresh` (memperbarui `token.cred` tiap 6 jam) dan `enrol_collect` (hanya saat re-enrolment menunggu approval admin).
+Window tmux di `robot_services` (sesi `robot_services`, urutan startup `roscore → log_janitor → token_refresh → launch mode → sisanya`):
+
+| Window | Log | Tujuan |
+| --- | --- | --- |
+| `roscore` | `logs/roscore.log` | roscore privat unit (11321 / 11322 `--dev`), distart sebelum enrolment |
+| `ros_webui` | `logs/ros_webui.log` | `bringup_msd.launch` hardware atau simulator + `unit_id:=` |
+| `camera_client` | Python `RotatingFileHandler` ke `$LOGDIR` (bukan piped) | `camera_client.py`, target signalling cloud + lokal |
+| `switch_mode` | `logs/switch_mode.log` | `switch_mode.launch` |
+| `log_janitor` | `logs/log_janitor.log` | Membatasi `~/.ros/log` ke `ROS_LOG_CAP_MB` (512) tiap `ROS_LOG_SWEEP_SECONDS` (60) |
+| `token_refresh` | `logs/token_refresh.log` | `enroll.py --refresh` tiap 6 jam (separuh token 12 jam); harus menarget backend enrolment |
+| `enrol_collect` | `logs/enrol_collect.log` | Hanya kondisional: saat re-enrolment menunggu approval admin |
+
+Log piped dibatasi ~50 MB tiapnya (5×10 MB rotatelogs). Gejala → window: bridge MQTT diam → `ros_webui`; tanpa video → `camera_client`; loop token/enrol → `token_refresh`/`enrol_collect`; disk penuh → `log_janitor`.
 
 ```bash
 docker exec -it msd700 tmux attach -t robot_services   # attach
@@ -479,15 +499,42 @@ Di sana `run_msd.sh` **adalah** perintah utama container, sehingga return menghe
 
 Default, bukan hasil ukur host-mu. Tiap service memakai `network_mode: host`, sehingga **Docker mem-publish nothing**; firewall unit mengontrol akses. Default menghadap browser: `3000`, `5002`, `9090`, `3003`, `3001`, `3002`, `9001`. MySQL `3306`, MQTT polos `1883`, dan network agent `5011` internal unit. Listener MQTT WebSocket mengizinkan client anonymous di config checked-in: simpan di jaringan operator tepercaya, jangan internet publik.
 
-Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.example` saat pertama run). Key layak review:
+Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.example` saat pertama run). File live per-host; template adalah referensi yang ter-track. `docker/.env` ter-track di git di unit — `git pull` yang mengubah `MYSQL_*` setelah volume data diinisialisasi menyebabkan credential drift (lihat [Setup Troubleshooting](/id/setup/troubleshooting)).
 
-```bash
-MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
-#LOCAL_IP=192.168.4.1     # biarkan comment untuk auto-detect tiap run
-WITH_SIMULATOR=false      # menambah stack Gazebo ke image; makan 1+ GB
-USER_UID=                 # kosong = deteksi dari `id -u` (Jetson 2002, laptop 1000)
-USER_GID=
-```
+## Referensi `.env` unit
+
+| Grup | Key | Default live | Catatan |
+| --- | --- | --- | --- |
+| Secret | `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` | `change_me_*` | Rotasi saat boot pertama; harus cocok dengan volume yang diinisialisasi |
+| Secret | `MYSQL_DATABASE`, `MYSQL_USER` | `ROS_DB`, `itbdelabo` | |
+| Secret | `JWT_SECRET` | `roswebui` | Harus cocok dengan `JWT_SECRET_KEY` backend |
+| Identitas | `USER_UID`, `USER_GID` | kosong = autodetect | Jetson 2002, laptop 1000 |
+| Identitas | `UNIT_ID` | kosong = cloud enrol | Di-pin hanya untuk recovery |
+| Identitas | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
+| Persepsi | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Butuh Velodyne terpasang; lihat [Persepsi](/id/development/ros/perception-and-hazard-scan) |
+| Simulasi | `MSD700_SIM_WORLD` | `mine` (template `warehouse`) | `warehouse`, `hazard`, `mine` |
+| Simulasi | `MSD700_SIM_HEADLESS` | `true` (template: tidak ada) | |
+| Simulasi | `WITH_SIMULATOR` | `false` | Menambah stack Gazebo ke image; makan 1+ GB |
+| Port unit | `MYSQL_PORT_LOCAL` | `3306` | |
+| Port unit | `MOSQUITTO_PORT_LOCAL`, `MOSQUITTO_WS_PORT_LOCAL` | `1883`, `9001` (WS hanya live) | |
+| Port unit | `BACKEND_PORT_LOCAL` | `5002` | |
+| Port unit | `ROSBRIDGE_PORT_LOCAL` | `9090` | |
+| Port unit | `FRONTEND_PORT_LOCAL` | `3000` | |
+| Port unit | `MEDIA_SERVER_PORT_LOCAL` | `3003` | |
+| Port unit | `SIGNALLING_PORT_WS_LOCAL`, `SIGNALLING_PORT_HTTP_LOCAL` | `3001`, `3002` | |
+| Port unit | `NETWORK_AGENT_PORT_LOCAL` | `5011` | Hanya loopback |
+| Jaringan | `LOCAL_IP` | `192.168.4.1` (template: di-comment) | Di-comment = autodetect tiap run |
+| Jaringan | `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL` | nama NIC live (template: kosong) | Nama hardware per-host |
+| Jaringan | `AP_CONNECTION_NAME_LOCAL` | `msd700-hotspot` | |
+| Jaringan | `AP_SSID_LOCAL` | `MSD700-Unit01` (template: kosong = `MSD700-<hostname>`) | |
+| Jaringan | `AP_PASSWORD_LOCAL` | fallback (template: kosong, wajib 8+ karakter) | Password asli tinggal di `/etc/hostapd/*.conf` (0600), bukan di sini |
+| Jaringan | `STA_SSID_LOCAL`, `STA_PASSWORD_LOCAL` | kosong | Uplink client, opsional |
+| Jaringan | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
+| Velodyne | `VELODYNE_IFACE` | `end0` (template: kosong = autodetect) | Dibaca `setup.sh` saja, di luar Docker |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Jaga tetap sinkron dengan `velodyne_scanner.launch device_ip` |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Camera ICE | `LOCAL_STUN_URLS`, `LOCAL_TURN_URL`, `LOCAL_TURN_USERNAME`, `LOCAL_TURN_CREDENTIAL` | absen di live; template punya contoh ter-comment | Literal `none` = tanpa server; default kode berlaku bila unset |
+| Path | `WEBUI_PATH`, `DASHBOARD_PATH` | di-comment (autoresolve `src/<repo>` atau `../<repo>`) | |
 
 ::: info `LOCAL_IP` tak lagi membentuk bundle
 JS dashboard mengambil **host**-nya dari alamat yang dipakai browser membuka halaman; hanya **port** yang masih dari build. IP, hostname, mDNS (`msd700.local`), atau tunnel SSH `localhost` semua bekerja. `LOCAL_IP` tersisa hanya sebagai hint URL cetakan dan fallback tanpa-DHCP.

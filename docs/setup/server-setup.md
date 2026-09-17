@@ -286,6 +286,20 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 
 The live host has extra blocks not shown here (MQTT WebSocket, webhook, legacy docs, a Basic Auth gate on `/development/`). Rule of thumb: keep `ProxyPass /` last, keep every `ProxyPass ... !` exclusion above it.
 
+| Path | Target | Notes |
+| --- | --- | --- |
+| `/services/signalling` | `ws://localhost:3001` | WebRTC signalling WS |
+| `/services/media` | `http://localhost:3003` | Map assets |
+| `/services/rosbackend` | `http://localhost:5000` | REST API |
+| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
+| `/services/msd700-webhook` | `localhost:4701/webhook` | Docs deploy hook (in `apache-snippet.conf`, not the main block) |
+| `/itbdelabo/docs` | exclusion + `Alias` to `dist/` | Must stay above the catch-all |
+| `/` | `http://localhost:3000/` | Dashboard frontend, **must be last** |
+
+HiveMQ notes: one `config.xml` serves prod and dev; plaintext `1883` is container-internal only; TLS `8883` in-container for both, host-mapped 8883 prod / 8884 dev (don't "fix" the dev port in the XML). Client auth NONE — TLS is transport/server identity only; the keystore at `/opt/hivemq/conf/keystore.p12` is rebuilt by `update_ssl.sh` and needs a broker restart. Control-center HTTP `8080` exists for the healthcheck.
+
+coturn notes: `realm=msd.nglobal.jp`, `lt-cred-mech` (the old no-auth config granted Allocate with no credentials — closed). Credentials, ports, and `external-ip` come as container **flags** from compose (coturn expands no env), not the conf file. No TURN-over-TLS/5349 by design; `no-cli`, no TCP relay, LAN/loopback/multicast denied peers. Dev shares the prod relay.
+
 ```bash
 sudo apache2ctl configtest
 sudo systemctl reload apache2

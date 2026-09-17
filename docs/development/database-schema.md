@@ -68,7 +68,7 @@ the rental scope: both are required, neither replaces the other.
 | `unit_enrollment_codes` | Single-use vouchers to claim a specific unit before its robot exists | `unit_id`, `code_hash`, `expires_at`, `used_at` |
 | `unit_connection_log` | Append-only connection history | The only table with a plain `AUTO_INCREMENT` PK rather than a ULID; purged past 180 days |
 
-See [Message Contracts § Enrolment](/development/message-contracts#enrolment) for the full exchange
+See [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake) for the full exchange
 these tables support.
 
 ## Backup and sync
@@ -166,5 +166,5 @@ for how these ports fit into the rest of the compose profile.
 
 - [API Reference](/development/api-reference): the HTTP surface built on this schema
 - [Data Sync](/development/data-sync): how `sync_tombstones` and `sync_state` get used
-- [Message Contracts § Enrolment](/development/message-contracts#enrolment)
+- [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake)
 - [Architecture](/development/architecture)

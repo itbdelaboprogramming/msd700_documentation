@@ -111,6 +111,20 @@ dijangkau lewat internet terlepas dari masalah DNS. Perbaikan ini berlaku tanpa 
 digerbangi berdasarkan instance `CameraClient` mana yang sedang menangani jawaban tersebut.
 :::
 
+## Protokol wire signalling (`signalling_server/server.js`)
+
+Dua port, keduanya wajib dari env (proses exit bila salah satunya unset): `PORT_WS` (3001 prod / 4001 dev) dan `PORT_HTTP` (3002 / 4002). Auth memakai keyring bersama; message WebSocket pertama harus `{ type: 'authenticate', token }` dengan JWT membawa `userId` atau `username`, bila tidak `auth_error` + close(4000) setelah `AUTH_TIMEOUT` 10 dtk.
+
+| `type` | Arah | Catatan |
+| --- | --- | --- |
+| `offer`, `answer`, `candidate` | kedua peer | Wajib string `target`; di-route ke `clients[target]` dengan `sender`/`senderName`; target tak dikenal → `{ type: 'error', originalType }` |
+| `client_ready` | kedua peer | Routing sama |
+| `ping` → `pong` | server | Heartbeat tiap 30 dtk; socket mati diterminasi, alias dibersihkan |
+| `error` | server | Termasuk takeover `new_login`: `userId` ganda membunuh socket lama |
+| `server_shutdown` | server | Broadcast saat SIGTERM/SIGINT sebelum force-exit 5 dtk |
+
+`GET /clients` (HTTP, Bearer) me-list client yang terhubung. Server me-log substring `Answer SDP` — ia memeriksa framing SDP, hanya tidak pernah media.
+
 ## Reconnect dan retry
 
 Loop koneksi `camera_client.py` tidak pernah menyerah secara permanen. Versi sebelumnya berhenti
@@ -135,7 +149,7 @@ melibatkan build image. Server signalling, sebaliknya, dikirim di dalam image lo
 `Dockerfile.webui-local` meng-`COPY` seluruh tree `./src/ros-web-ui/source` (dengan install
 dependency kondisional); perubahan di sana membutuhkan rebuild yang sama, yang sudah diperiksa staleness-nya oleh
 `docker-manager.sh` pada image dashboard dan backend (lihat
-[Referensi Docker § Yang dilakukan `up`, secara berurutan](/id/setup/docker-reference#apa-yang-dilakukan-up-secara-berurutan)).
+[Referensi Docker § Yang dilakukan `up`, secara berurutan](/id/setup/docker-reference#apa-yang-dilakukan-up-berurutan)).
 Melupakan hal ini terlihat persis seperti kegagalan staleness yang didokumentasikan di sana: stack
 naik dengan bersih dan tetap menyajikan logika signalling dari sebelum perubahan itu dibuat.
 
@@ -145,7 +159,7 @@ naik dengan bersih dan tetap menyajikan logika signalling dari sebelum perubahan
   `VideoStreamComponent`, dan deteksi stall di sisi browser
 - [Arsitektur](/id/development/architecture): di mana `signalling_server` dan `coturn` berada dalam
   sistem yang lebih luas, dan domain kepercayaan untuk token yang dipakai di sini
-- [Server Setup § Relay TURN](/id/setup/server-setup#_6-the-turn-relay-production-only): konfigurasi
+- [Server Setup § Advanced Configurations](/id/setup/server-setup#advanced-configurations): konfigurasi
   relay TURN produksi itu sendiri
 - [Referensi Docker § Unit: run_msd.sh](/id/setup/docker-reference#unit-run-msd-sh): di mana jendela
   tmux `camera_client` dimulai

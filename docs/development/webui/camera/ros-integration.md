@@ -106,6 +106,20 @@ internet regardless of DNS. The fix is unconditional rather than gated on which 
 instance is handling the answer.
 :::
 
+## Signalling wire protocol (`signalling_server/server.js`)
+
+Two ports, both mandatory from env (the process exits if either is unset): `PORT_WS` (3001 prod / 4001 dev) and `PORT_HTTP` (3002 / 4002). Auth is the shared keyring; the first WebSocket message must be `{ type: 'authenticate', token }` with a JWT carrying `userId` or `username`, else `auth_error` + close(4000) after `AUTH_TIMEOUT` 10 s.
+
+| `type` | Direction | Notes |
+| --- | --- | --- |
+| `offer`, `answer`, `candidate` | either peer | Require string `target`; routed to `clients[target]` with `sender`/`senderName`; unknown target → `{ type: 'error', originalType }` |
+| `client_ready` | either peer | Same routing |
+| `ping` → `pong` | server | Heartbeat every 30 s; dead sockets terminated, aliases cleaned |
+| `error` | server | Includes `new_login` takeover: a duplicate `userId` kills the old socket |
+| `server_shutdown` | server | Broadcast on SIGTERM/SIGINT before the 5 s force-exit |
+
+`GET /clients` (HTTP, Bearer) lists connected clients. The server logs `Answer SDP` substrings — it does inspect SDP framing, just never media.
+
 ## Reconnect and retry
 
 `camera_client.py`'s connection loop never gives up permanently. An earlier version stopped after a
@@ -139,7 +153,7 @@ cleanly and serves signalling logic from before the edit.
   `VideoStreamComponent`, and browser-side stall detection
 - [Architecture](/development/architecture): where `signalling_server` and `coturn` sit in the wider
   system, and trust domains for the tokens used here
-- [Server Setup § The TURN relay](/setup/server-setup#_6-the-turn-relay-production-only): the
+- [Server Setup § Advanced Configurations](/setup/server-setup#advanced-configurations): the
   production TURN relay's own configuration
 - [Docker Reference § Unit: run_msd.sh](/setup/docker-reference#unit-run-msd-sh): where the
   `camera_client` tmux window is started

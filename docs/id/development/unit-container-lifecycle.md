@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 ::: warning Pemberitahuan Arsitektur Tergantikan
-Orkestrasi siklus hidup 1-kontainer-per-unit yang dikelola oleh `unit_manager.js` **digantikan** oleh fleet relay yang dijelaskan di [Fleet Relay: Satu Kontainer untuk Setiap Unit](#fleet-relay-one-container-for-every-unit) di bawah, yang kini menjadi default. Jalur per-unit masih tersedia dan hanya berjarak satu environment variable; dokumen ini mencakup keduanya.
+Orkestrasi siklus hidup 1-kontainer-per-unit yang dikelola oleh `unit_manager.js` **digantikan** oleh fleet relay yang dijelaskan di [Fleet Relay: Satu Kontainer untuk Setiap Unit](#fleet-relay-satu-kontainer-untuk-setiap-unit) di bawah, yang kini menjadi default. Jalur per-unit masih tersedia dan hanya berjarak satu environment variable; dokumen ini mencakup keduanya.
 :::
 
 Dokumen ini merinci manajemen siklus hidup dinamis dari kontainer relay per-unit (`rosweb_unit_<ULID>`) pada server cloud, dikelola oleh `unit_manager.js` lewat Docker socket, serta fleet relay yang menggantikannya.

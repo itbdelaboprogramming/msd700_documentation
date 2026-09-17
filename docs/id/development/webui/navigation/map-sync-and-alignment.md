@@ -18,7 +18,7 @@ untuk kontrak jalur (wire contract) yang hanya diringkas di halaman ini, lihat
 ::: info Cakupan
 Halaman ini hanya membahas koreksi pose: Map Sync dan Auto Align. Pembersihan cakupan, mengemudi
 pinpoint/rute, dan kontrol manual/autopilot dibahas di halaman masing-masing di bawah
-[Terkait](#related). Algoritma sapuan cakupan itu sendiri (geometri, dekomposisi selular,
+[Terkait](#terkait). Algoritma sapuan cakupan itu sendiri (geometri, dekomposisi selular,
 penanganan obstacle) berada di
 [Cakupan Boustrophedon](/id/development/ros/boustrophedon-and-alignment), bukan di sini.
 :::
@@ -30,7 +30,7 @@ melenceng dari posisi fisik robot sebenarnya: setelah didorong secara manual, na
 daya yang menghilangkan pose dalam memori, atau robot yang diangkat sepenuhnya. Secara tradisional
 inilah fungsi langkah AMCL sendiri "berputar 360 derajat di tempat untuk mengumpulkan dispersi
 partikel", tetapi
-[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
+[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-guard-dihapus-sumber-diperbaiki)
 menolak putaran tanpa pengawasan secara default, sehingga platform memerlukan cara yang dihadapkan
 ke operator untuk mengoreksi pose tanpa bergantung pada gerakan tersebut.
 
@@ -46,7 +46,7 @@ scan LiDAR live milik robot dicocokkan terhadap peta yang dimuat oleh pencocok s
 (stationary scan matcher), dan pose hasilnya ditulis langsung ke AMCL, tanpa rotasi dan tanpa
 translasi. Ini adalah algoritma Correlative Scan Matching (CSM) zero-spin yang sama yang
 didokumentasikan secara lengkap di
-[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#alignment-orientasi-zero-spin-correlative-scan-matching):
+[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#alignment-orientasi-zero-spin-particle-align-validator):
 halaman tersebut adalah sumber kebenaran untuk fungsi skoring, ambang keyakinan (confidence
 threshold), dan fallback micro-jog. Halaman ini hanya membahas kontrak tombol itu sendiri dengan
 backend.
@@ -91,7 +91,7 @@ materi sumber yang tersedia saat ini dan tidak ditebak di sini.
 
 Auto Align sendiri tidak memerintahkan rotasi apa pun: itulah inti dari penggunaan pencocok scan
 alih-alih putaran. Namun ia tetap menjadi penopang penting bagi
-[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
+[guard rotasi di tempat](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-guard-dihapus-sumber-diperbaiki)
 milik platform, yang menolak setiap rotasi di tempat kecuali disertai perintah live pada salah
 satu dari dua topic consent, dan pemeriksa internal Auto Align sendiri (`align_checker`) adalah
 salah satu dari keduanya (yang lain adalah WASD manual). Secara konkret, ini berarti:
@@ -108,7 +108,7 @@ Halaman ini menyatakan tautan tersebut karena ini adalah titik integrasi UI-ke-R
 tombol yang ditekan operator di mode Map Sync dinamai, oleh guard tersebut, sebagai sumber consent
 yang tepercaya. Logika gating lengkap guard tersebut (gerbang geometri, jendela toleransi, apa
 yang dimatikan) didokumentasikan di
-[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-ditolak-secara-default)
+[Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment#rotasi-di-tempat-guard-dihapus-sumber-diperbaiki)
 dan tidak diulang di sini.
 
 ## Terkait

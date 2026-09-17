@@ -177,7 +177,7 @@ tiga-kali-percobaan) semuanya berlaku sama untuk Navigasi dan tidak diulang di s
 Subset dari
 [Subscription Canvas Web Utama](/id/development/rosbridge-protocol#subscription-canvas-web-utama)
 yang benar-benar di-render Navigasi adalah kumpulan topic yang sama yang terdaftar di
-[Telemetri Streaming](#streaming-telemetry) di atas, dialamatkan dengan nama sisi-rosbridge-nya
+[Telemetri Streaming](#telemetri-streaming) di atas, dialamatkan dengan nama sisi-rosbridge-nya
 (misalnya `/server/robot_pose`, `/server/boustrophedon_path`) alih-alih bentuk sisi-MQTT
 `/unit_<ULID>/server/...`: rosbridge berlangganan per-relay-unit, sehingga segmen ULID tersirat
 dari relay mana browser terhubung alih-alih diulang di setiap nama topic pada lapisan itu.

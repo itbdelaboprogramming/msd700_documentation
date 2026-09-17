@@ -95,6 +95,13 @@ Applies the uploaded archive additively.
 ### 5. List Backups
 `GET /admin/api/backups`
 
+## Archive machinery
+
+Two scripts do the packing, so backups never shell out to `tar` on untrusted uploads:
+
+- `profile_archive.js` packs/unpacks one DB slice + map files into a `.tar.gz` (`manifest.json` + `files/<mapId>.pgm|yaml|png`) for profile scope (one tenant) or unit scope (one robot, optionally cross-rental). It never ships `users` (re-links membership/authorship to existing accounts only), reuses free ULIDs, remaps taken ones, never overwrites. Key functions: `buildArchive`, `readArchive`, `buildRestorePlan`, `restoreArchive`.
+- `tar_archive.js` is the minimal in-memory ustar reader/writer underneath it: `packTar`/`unpackTar` with an allow-list (`^files/<ULID>.(pgm|yaml|png)$`), checksum/truncation checks, non-regular files skipped — no staging dir, no CLI extraction.
+
 ## Schema Migration Scripts
 
 Database schema evolutions are managed by automated scripts in `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:

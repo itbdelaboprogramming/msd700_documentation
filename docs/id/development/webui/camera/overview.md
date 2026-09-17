@@ -54,7 +54,7 @@ merutekan pesan antara kedua peer yang disebutkan di dalamnya. Autentikasi hanya
 valid yang terverifikasi oleh keyring dan membawa `userId` atau `username`; sebuah token robot yang
 tidak memiliki `userId` ditolak di sini secara langsung, itulah sebabnya baik penerbit token cloud
 maupun unit-local secara eksplisit menyertakannya (lihat
-[Arsitektur § Domain kepercayaan](/id/development/architecture#trust-domains)).
+[Arsitektur § Domain kepercayaan](/id/development/architecture#trust-domain-dan-keamanan-multi-tingkat)).
 
 ## Deteksi stall di sisi browser
 

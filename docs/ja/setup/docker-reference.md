@@ -429,6 +429,14 @@ flowchart TB
 - **更新器はIDを消しません。** `401 reenroll`時はログ記録して停止し`device.json`保持します。消去は実起動時のみです。更新失敗での削除は、ほぼ毎再起動の完全再承認を強制しました。
 - **旧版検出。** ローカルWebイメージはソースを**COPY**します(バインドマウントなし)。ソースmtimeとイメージビルド時刻の比較で、先週バックエンド提供に気付けます(典型「ソースにある新エンドポイント404」)。
 
+### 起動時自動起動(`msd700.service`)
+
+`up` はsystemdユニットを導入・有効化します(`msd700.service.tmpl` から描画)。`down` は無効化します。描画済み `ExecStart` は、起動時自動起動を仕掛けた `up` の**フラグ付きで** `docker-manager.sh up -d --no-autostart` を実行します(`--dev`/`--simulator` を焼込済み)。そのため再起動でdev/simulatorロボットが黙ってprod/ハード側に替わることはありません。`Type=oneshot`、`RemainAfterExit=yes`、`docker.service` の後、起動タイムアウト15分。`print-autostart-unit` で確認します(または `grep ExecStart`)。`--no-autostart` で不参加。systemctlなし・コンテナ内では自動省略します。
+
+### `manage-unit.sh`(サーバー側、手動/デバッグ専用)
+
+**レガシーのユニット単位**クラウドコンテナをULIDのみで駆動します(名前は拒否):`start|stop|restart|status|logs|list|loop`。`loop` は10秒ごとに期待の7中継ノードをポーリングし、欠落で再起動します。通常は不要です——ダッシュボード展開時の自動起動とアイドルタイムアウト停止がバックエンド側で面倒を見ます。フリートモードのユニットには決して使わないでください。
+
 ## ユニット: `run_msd.sh`
 
 ロボットコンテナ**内部**で実行し、全ROSサービスをtmuxセッション(`robot_services`)に起動します。通常`docker-manager.sh`駆動ですが、`docker-manager.sh shell`から直接呼べます。
@@ -453,7 +461,19 @@ flowchart TB
 
 これらは**内部ランチャー**設定です。ラッパーは`docker exec`経由で転送しません。ホストexportや`docker/.env`追記は内部ランチャーに届きません。ログ体系と上限は[メンテナンス](/ja/setup/maintenance#ログの管理)。
 
-`robot_services`のtmuxウィンドウ: `roscore`、`ros_webui`、`camera_client`、`switch_mode`、`log_janitor`に加え`token_refresh`(`token.cred`を6時間毎更新)と`enrol_collect`(再登録の管理承認待ち中のみ)。
+`robot_services`のtmuxウィンドウ(`robot_services` セッション、起動順 `roscore → log_janitor → token_refresh → launch mode → 残り`):
+
+| ウィンドウ | ログ | 用途 |
+| --- | --- | --- |
+| `roscore` | `logs/roscore.log` | ユニット専用roscore(11321 / `--dev`で11322)、登録より先に起動 |
+| `ros_webui` | `logs/ros_webui.log` | `bringup_msd.launch` ハードまたはシミュレーター + `unit_id:=` |
+| `camera_client` | Python `RotatingFileHandler` で `$LOGDIR` へ(パイプでなく) | `camera_client.py`、クラウド+ローカルのシグナリング先 |
+| `switch_mode` | `logs/switch_mode.log` | `switch_mode.launch` |
+| `log_janitor` | `logs/log_janitor.log` | `~/.ros/log` を `ROS_LOG_CAP_MB` (512)に抑える、`ROS_LOG_SWEEP_SECONDS` (60)ごと |
+| `token_refresh` | `logs/token_refresh.log` | `enroll.py --refresh` を6時間ごと(トークン12時間の半分)。登録バックエンド宛必須 |
+| `enrol_collect` | `logs/enrol_collect.log` | 条件付きのみ:再登録の管理承認待ち中 |
+
+パイプログは各約50 MB上限(5×10 MB rotatelogs)。症状→ウィンドウ:MQTTブリッジ無言→`ros_webui`、映像なし→`camera_client`、トークン/登録ループ→`token_refresh`/`enrol_collect`、ディスク逼迫→`log_janitor`。
 
 ```bash
 docker exec -it msd700 tmux attach -t robot_services   # 接続
@@ -479,15 +499,42 @@ docker exec -it msd700 tmux list-windows -t robot_services
 
 既定値であり自ホストの実測ではありません。全サービス`network_mode: host`のため**Dockerは何も公開しません**。ユニットファイアウォールがアクセス制御します。ブラウザ向け既定:`3000`、`5002`、`9090`、`3003`、`3001`、`3002`、`9001`。MySQL `3306`・素MQTT `1883`・ネットワークエージェント`5011`はユニット内部用です。MQTT WebSocketリスナーはチェックイン設定で匿名可です。信頼できるオペレーターネットワークに留め、公共インターネット禁止です。
 
-設定は`msd700_noetic/docker/.env`(初回自動生成)にあります。要確認キー:
+設定は`msd700_noetic/docker/.env`(初回自動生成)にあります。ライブファイルはホスト固有であり、テンプレートが追跡対象のリファレンスです。ユニット上の `docker/.env` はgit追跡下にあります——データボリューム初期化後に `MYSQL_*` を変える `git pull` は認証情報ドリフトを起こします([セットアップのトラブル対処](/ja/setup/troubleshooting)参照)。
 
-```bash
-MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
-#LOCAL_IP=192.168.4.1     # コメントのまま毎回自動検出
-WITH_SIMULATOR=false      # Gazeboスタックをイメージ追加。1GB超消費
-USER_UID=                 # 空= `id -u`検出 (Jetson 2002、PC 1000)
-USER_GID=
-```
+## ユニット `.env` リファレンス
+
+| グループ | キー | ライブ既定 | 備考 |
+| --- | --- | --- | --- |
+| シークレット | `MYSQL_ROOT_PASSWORD`、`MYSQL_PASSWORD` | `change_me_*` | 初回起動でローテーション。初期化済みボリュームと一致必須 |
+| シークレット | `MYSQL_DATABASE`、`MYSQL_USER` | `ROS_DB`、`itbdelabo` | |
+| シークレット | `JWT_SECRET` | `roswebui` | バックエンドの `JWT_SECRET_KEY` と一致必須 |
+| Identity | `USER_UID`、`USER_GID` | 空=自動検出 | Jetson 2002、PC 1000 |
+| Identity | `UNIT_ID` | 空=クラウド登録 | 復旧時のピン留め専用 |
+| Identity | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
+| 知覚 | `MSD700_HAZARD_SCAN` | `true`(テンプレートは `false`) | Velodyne装着が前提。[知覚](/ja/development/ros/perception-and-hazard-scan)参照 |
+| シミュレーション | `MSD700_SIM_WORLD` | `mine`(テンプレートは `warehouse`) | `warehouse`、`hazard`、`mine` |
+| シミュレーション | `MSD700_SIM_HEADLESS` | `true`(テンプレート:なし) | |
+| シミュレーション | `WITH_SIMULATOR` | `false` | Gazeboスタックをイメージ追加。1GB超消費 |
+| ユニットポート | `MYSQL_PORT_LOCAL` | `3306` | |
+| ユニットポート | `MOSQUITTO_PORT_LOCAL`、`MOSQUITTO_WS_PORT_LOCAL` | `1883`、`9001`(WSはライブのみ) | |
+| ユニットポート | `BACKEND_PORT_LOCAL` | `5002` | |
+| ユニットポート | `ROSBRIDGE_PORT_LOCAL` | `9090` | |
+| ユニットポート | `FRONTEND_PORT_LOCAL` | `3000` | |
+| ユニットポート | `MEDIA_SERVER_PORT_LOCAL` | `3003` | |
+| ユニットポート | `SIGNALLING_PORT_WS_LOCAL`、`SIGNALLING_PORT_HTTP_LOCAL` | `3001`、`3002` | |
+| ユニットポート | `NETWORK_AGENT_PORT_LOCAL` | `5011` | ループバックのみ |
+| ネットワーク | `LOCAL_IP` | `192.168.4.1`(テンプレート:コメント) | コメント=毎回自動検出 |
+| ネットワーク | `AP_INTERFACE_LOCAL`、`STA_INTERFACE_LOCAL` | ライブNIC名(テンプレート:空) | ホスト固有のハード名 |
+| ネットワーク | `AP_CONNECTION_NAME_LOCAL` | `msd700-hotspot` | |
+| ネットワーク | `AP_SSID_LOCAL` | `MSD700-Unit01`(テンプレート:空=`MSD700-<hostname>`) | |
+| ネットワーク | `AP_PASSWORD_LOCAL` | フォールバック(テンプレート:空、8文字以上必須) | 真のパスワードはここでなく `/etc/hostapd/*.conf` (0600) |
+| ネットワーク | `STA_SSID_LOCAL`、`STA_PASSWORD_LOCAL` | 空 | クライアント上り、任意 |
+| ネットワーク | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
+| Velodyne | `VELODYNE_IFACE` | `end0`(テンプレート:空=自動検出) | `setup.sh` のみ読取、Docker外 |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | `velodyne_scanner.launch device_ip` と同期維持 |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| カメラICE | `LOCAL_STUN_URLS`、`LOCAL_TURN_URL`、`LOCAL_TURN_USERNAME`、`LOCAL_TURN_CREDENTIAL` | ライブなし。テンプレートにコメント例あり | リテラル `none` =サーバーなし。未設定時はコード既定 |
+| パス | `WEBUI_PATH`、`DASHBOARD_PATH` | コメント(自動解決 `src/<repo>` または `../<repo>`) | |
 
 ::: info `LOCAL_IP`はバンドル形成しません
 ダッシュボードJSはページを開いたブラウザのアドレスを**ホスト**にします。ビルド由来は**ポート**のみです。IP・ホスト名・mDNS(`msd700.local`)・`localhost` SSHトンネル全て動作します。`LOCAL_IP`は表示URLヒントとDHCPレス予備のみに残ります。

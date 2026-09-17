@@ -17,6 +17,7 @@ search: false
 ## 知覚 & 位置推定
 
 <LinkCards>
+  <LinkCard icon="👁️" title="知覚 & ハザードスキャン" details="SLAM用/scan、コストマップ用/scan_hazard、MSD700_HAZARD_SCAN切替。" link="/ja/development/ros/perception-and-hazard-scan" />
   <LinkCard icon="📡" title="センサーフュージョン & 制御" details="Velodyne VLP-16 LiDAR、IMUフィルタリング、EKF状態推定。" link="/ja/development/ros/sensor-fusion-and-control" />
   <LinkCard icon="📐" title="座標系変換 (TF)" details="REP-103/105変換ツリー、センサーオフセット、BoundaryPublisherによる再スタンプ。" link="/ja/development/ros/tf-transforms" />
 </LinkCards>

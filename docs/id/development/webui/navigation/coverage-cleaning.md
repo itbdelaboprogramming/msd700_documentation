@@ -42,7 +42,7 @@ milik robot sendiri yang memutuskan lantai mana yang bisa dijangkau. Memulainya
 (`src/components/navigationMap/coverageApi.ts`, `POST /api/boustrophedon/init` dengan
 `use_autocover: true`) menghapus pinpoint yang tersisa, menghapus overlay
 [jejak-robot](#show-hide-trace) dari run sebelumnya agar run baru menggambar garis yang bersih, dan
-menghidupkan kembali subscription [overlay jalur-cakupan](#the-coverage-path-overlay) jika sebuah
+menghidupkan kembali subscription [overlay jalur-cakupan](#overlay-jalur-cakupan) jika sebuah
 Cancel sebelumnya telah merobohkannya. Karena tidak ada polygon terbatas untuk ditandai, overlay
 area yang digambar itu sendiri dihapus alih-alih diisi: batas sapuan ditemukan oleh robot, bukan
 digambar oleh operator.
@@ -128,7 +128,7 @@ multi-polygon yang terbatas, bukan urutan sapuan terpisah.
 Show/Hide Trace mengaktifkan atau menonaktifkan overlay visual dari jalur yang telah dilalui robot
 selama sebuah run cakupan: sebuah polyline merah (`src/components/navigationMap/robotTrace.ts`)
 digambar di canvas dengan berlangganan ke topic pose live robot dan menambahkan setiap pose baru
-ke bentuk jejak, terlepas dari [overlay jalur-cakupan](#the-coverage-path-overlay) yang dijelaskan
+ke bentuk jejak, terlepas dari [overlay jalur-cakupan](#overlay-jalur-cakupan) yang dijelaskan
 di bawah. Ia menjawab pertanyaan yang berbeda dari overlay itu: jejak menunjukkan ke mana robot
 sebenarnya pernah berada, bukan apa yang direncanakan planner untuk disapu. Jejak direset
 (dihapus dan dimulai ulang) di awal setiap run cakupan baru (Auto, Custom Range, atau Playlist),

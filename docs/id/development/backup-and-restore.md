@@ -95,6 +95,13 @@ Menerapkan arsip yang diunggah secara aditif.
 ### 5. Daftar Backup
 `GET /admin/api/backups`
 
+## Mesin arsip
+
+Dua script mengerjakan packing, sehingga backup tidak pernah shell-out ke `tar` atas upload tak tepercaya:
+
+- `profile_archive.js` mem-pack/unpack satu irisan DB + file peta ke `.tar.gz` (`manifest.json` + `files/<mapId>.pgm|yaml|png`) untuk lingkup profil (satu tenant) atau lingkup unit (satu robot, opsional lintas-rental). Ia tidak pernah membawa `users` (hanya me-relink membership/authorship ke akun yang sudah ada), memakai ulang ULID bebas, me-remap yang terpakai, tidak pernah menimpa. Fungsi kunci: `buildArchive`, `readArchive`, `buildRestorePlan`, `restoreArchive`.
+- `tar_archive.js` adalah reader/writer ustar in-memory minimal di bawahnya: `packTar`/`unpackTar` dengan allow-list (`^files/<ULID>.(pgm|yaml|png)$`), cek checksum/truncation, file non-reguler dilewati — tanpa dir staging, tanpa ekstraksi CLI.
+
 ## Script Migrasi Skema
 
 Evolusi skema database dikelola oleh script otomatis di `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:

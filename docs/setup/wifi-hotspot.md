@@ -72,7 +72,7 @@ flowchart TB
   NA -->|"edits SSID/password"| HAP
   NA -->|"touches sentinel file"| RPATH["restart watcher<br/>restarts hotspot service"]
 
-  BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
+  BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy<br/>(wifi_proxy.js, 25 s timeout)"| NA
   FE["frontend_local :3000<br/>WiFi panel"] -->|"scan/connect/status"| BE
 
   CLIENT["Device on hotspot"] -->|"DNS: mymsd.jp -> unit"| DNSM
@@ -187,7 +187,7 @@ Applied/removed automatically with hostapd up/down, independent of containers.
 
 ## The dashboard badge
 
-No separate WiFi badge. WiFi lives as a **section inside the [Local Mode badge](/development/data-sync#the-local-mode-badge)** dropdown. The badge line shows only a WiFi **glyph**, colored by state, with the summary (SSID, `hotspot only`, `no network`, `wifi unreachable`) as hover tooltip, not printed text. Agent-unreachable is also spelled out at the section top.
+No separate WiFi badge. WiFi lives as a **section inside the [Local Mode badge](/development/data-sync#the-local-mode-status-badge)** dropdown. The badge line shows only a WiFi **glyph**, colored by state, with the summary (SSID, `hotspot only`, `no network`, `wifi unreachable`) as hover tooltip, not printed text. Agent-unreachable is also spelled out at the section top.
 
 The agent reads the *winning* interface from `/run/msd700-hotspot-active` (primary `msd700-ap0` or backup dongle, whichever won this boot), falling back to the `AP_INTERFACE_LOCAL` dongle only if that file is missing. On a primary-only unit with no dongle, this is what lets the badge see the hotspot at all.
 
@@ -249,6 +249,22 @@ Client internet reachability (`full` / `limited` / `portal` / `none`) comes stra
 | `NETWORK_AGENT_PORT_LOCAL` | `network_local`'s loopback API port | `5011` |
 | `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: upstream network to auto-join at first provisioning | empty (add later from the dashboard instead) |
 | `LOCAL_IP` | Printed dashboard address + frontend build fallback; hotspot's fixed address stays `192.168.4.1` | `192.168.4.1` |
+
+## `network-agent` endpoint reference
+
+`network_local` binds `127.0.0.1:5011` only; `backend_local` is the sole caller and adds operator auth. The proxy between them is `wifi_proxy.js` (25 s timeout, passes the hotspot body through untouched to preserve absent-vs-empty). The agent shells to `nmcli` via argv only (never a shell), 15 s per call, over a D-Bus bind-mount to host NetworkManager. Provisioning the hotspot is **not** its job (`setup.sh --provision-network` does that).
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | `{ ok: true }` |
+| `GET /wifi/status` | Radio/connection state |
+| `GET /wifi/scan` | Networks (own-hotspot SSIDs filtered, deduped strongest-first) |
+| `GET /wifi/saved` | Saved profiles |
+| `POST /wifi/connect { ssid, ... }` | Join (standard, enterprise EAP, or hidden); 400 without ssid, 502 on failure |
+| `POST /wifi/disconnect` | Drop the client uplink |
+| `GET /wifi/hotspot` | Current hotspot + `limits` (SSID 32 octets max, password 8–63) + `last_change` |
+| `POST /wifi/hotspot` | Validate now, apply in 1.5 s: `202 { accepted, applies_in_ms: 1500, ssid, password_changed }` |
+| `POST /wifi/forget { name }` | Delete a saved profile |
 
 ## Verifying it works
 
@@ -336,5 +352,5 @@ Neither hostapd config exists yet, or `network_local` can't read them (check the
 - [MT7922 Wi-Fi Setup](/setup/wifi-mt7922): step 1 of the [flow](#setup-flow), only for a confirmed MT7922 firmware issue on the real unit
 - [Unit Setup](/setup/unit-setup): the base local-mode install this sits on
 - [Docker Reference](/setup/docker-reference#network-mode-host): why some services share the host network
-- [Data Sync: Local Mode badge](/development/data-sync#the-local-mode-badge): the badge this section lives in
-- [Architecture: Trust domains](/development/architecture#trust-domains): trust design for `/local/*` routes (operator-session middleware on mutating WiFi routes is designed but not attached; see warning above)
+- [Data Sync: Local Mode badge](/development/data-sync#the-local-mode-status-badge): the badge this section lives in
+- [Architecture: Trust domains](/development/architecture#multi-tier-trust-domains-and-security): trust design for `/local/*` routes (operator-session middleware on mutating WiFi routes is designed but not attached; see warning above)

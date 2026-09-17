@@ -79,6 +79,10 @@ yang bukan dokumen `msd-jwt-keyring`, dan proses exit alih-alih berjalan dengan 
 }
 ```
 
+### Urutan resolusi keyring
+
+`shared/jwt_keyring.js` me-resolve berurutan: (1) file `JWT_KEYRING_FILE` (default `/run/secrets/jwt_keyring`); (2) env `JWT_SECRET` lalu `JWT_SECRET_KEY` (sehingga prod yang belum migrasi tetap jalan di env sementara dev memakai file); (3) tidak ada keduanya → `process.exit(1)`. Error file bersifat fatal tanpa fallthrough env: tak terbaca, JSON tak valid, `format` salah, nol key usable, atau tanpa key ber-`status: 'active'`. Sengaja tanpa default secret (fallback `'roswebui'` lama sudah dihapus).
+
 ### Aturan rotasi keyring
 
 1. **Kunci Penandatangan Aktif**: Semua token akses dan refresh yang baru diterbitkan ditandatangani

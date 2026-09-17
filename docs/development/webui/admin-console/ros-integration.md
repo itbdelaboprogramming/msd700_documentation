@@ -30,7 +30,7 @@ middle: turning a `pending_units` row with `status: pending` into `approved`, bo
 
 **Unbinding** a unit's device (see
 [Units & Fleet § Unbind a unit's enrolled
-device](/development/webui/admin-console/units-and-fleet#unbind-a-units-enrolled-device)) removes
+device](/development/webui/admin-console/units-and-fleet#unbind-a-unit-s-enrolled-device)) removes
 the live `unit_devices` row that binds a `fingerprint` to that unit. The consequence is specific and
 documented directly in the self-heal path a returning robot would otherwise take:
 

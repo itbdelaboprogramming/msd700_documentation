@@ -28,7 +28,7 @@ AMCL localizes the robot against a pre-recorded map, but that estimate can drift
 where the robot physically is: after a manual push, a lift ride, a power cycle that lost the
 in-memory pose, or a robot that was picked up entirely. Traditionally this is what AMCL's own
 360-degree "spin in place to collapse particle dispersion" step is for, but the
-[in-place rotation guard](/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default)
+[in-place rotation guard](/development/ros/boustrophedon-and-alignment#in-place-rotation-guard-removed-sources-fixed)
 denies unattended spins by default, so the platform needs an operator-facing way to correct the
 pose without relying on that motion.
 
@@ -43,7 +43,7 @@ drags the robot icon to the right spot and orientation" with a single click: the
 scan is matched against the loaded map by a stationary scan matcher, and the resulting pose is
 written straight to AMCL, with no rotation and no translation. This is the same zero-spin
 Correlative Scan Matching (CSM) algorithm documented in full in
-[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment#zero-spin-orientation-alignment-correlative-scan-matching):
+[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment#zero-spin-orientation-alignment-particle-align-validator):
 that page is the source of truth for the scoring function, the confidence threshold, and the
 micro-jog fallback. This page only covers the button's own contract with the backend.
 
@@ -85,7 +85,7 @@ current source material and are not guessed at here.
 
 Auto Align does not itself command any rotation: that is the entire point of using a scan matcher
 instead of a spin. But it is still load-bearing for the platform's
-[in-place rotation guard](/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default),
+[in-place rotation guard](/development/ros/boustrophedon-and-alignment#in-place-rotation-guard-removed-sources-fixed),
 which denies every in-place rotation unless it is accompanied by a live command on one of two
 consent topics, and Auto Align's own internal checker (`align_checker`) is one of the two (the
 other being manual WASD). Concretely, this means:
@@ -100,7 +100,7 @@ other being manual WASD). Concretely, this means:
 This page states the link because it is a genuine UI-to-ROS integration point: the button an
 operator presses in Map Sync mode is named, by the guard, as a trusted consent source. The guard's
 full gating logic (the geometry gate, the tolerance window, what got turned off) is documented in
-[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment#in-place-rotation-is-denied-by-default)
+[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment#in-place-rotation-guard-removed-sources-fixed)
 and is not repeated here.
 
 ## Related

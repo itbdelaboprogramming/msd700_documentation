@@ -59,6 +59,10 @@ flowchart LR
 - **`sync_engine.js`**: Shared library on both sides that queries changed rows based on watermarks, executes upserts, and manages delete tombstones.
 - **`sync_tables.js`**: Defines synchronization directions, primary keys, and conflict resolution rules for each table.
 
+## The cloud half (`sync_api.js`)
+
+The unit drives; the cloud answers. `sync_api.js` authenticates the robot token (`role: robot`, `typ: access`, `unit_id` from claims, never the body) and serves `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` and `/route-file/:routeId/:kind`. Pushes are scoped — and forced — to the caller unit + profile; identity tables are refused.
+
 ## Conflict Resolution Rules
 
 Conflict resolution follows a deterministic **Last-Write-Wins per row** strategy:

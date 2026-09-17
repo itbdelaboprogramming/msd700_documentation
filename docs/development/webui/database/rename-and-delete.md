@@ -56,7 +56,7 @@ depending on which map is being opened:
   instead of silently discarding the in-progress map:
   - **Save**: the in-progress map is saved before the new one loads. This follows the same
     stop-and-save path documented in
-    [API Reference § Stop Mapping and Save Map](/development/api-reference#_2-stop-mapping-and-save-map)
+    [API Reference § Mapping Control](/development/api-reference#_1-mapping-control)
     (`POST /api/mapping/stop`).
   - **Discard**: the in-progress map is dropped without saving.
   - **Cancel**: the operator stays on the current map and the mapping session continues

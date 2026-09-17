@@ -9,6 +9,10 @@ search: false
 
 Panduan ini menyediakan solusi cepat untuk gejala operasional umum yang ditemui saat mengendalikan robot MSD700 dari dashboard web.
 
+::: info Kepemilikan
+Tiga halaman troubleshooting berbagi gejala per peran: halaman ini memegang perbaikan operator (pilih peta, refresh, retry), [Panduan Pemecahan Masalah Teknisi](/id/setup/troubleshooting) memegang perbaikan teknisi, dan [Diagnostik Pengembang](/id/development/troubleshooting-guide) memegang root cause. Bila perbaikan butuh terminal, tempatnya di salah satu halaman itu, ditautkan dari sini.
+:::
+
 ::: tip Diagnostik Teknis atau Perangkat Keras
 Untuk error server tingkat rendah, log kontainer Docker, atau diagnostik driver ROS, lihat [Panduan Pemecahan Masalah Teknisi](/id/setup/troubleshooting) atau [Diagnostik Pengembang](/id/development/troubleshooting-guide).
 :::

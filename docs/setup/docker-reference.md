@@ -429,6 +429,14 @@ Three steps exist because of silent failures:
 - **Refresher never deletes identity.** On `401 reenroll` it logs and stops, keeping `device.json`. Only a real boot may clear it. Deleting it on any refresh failure once forced full admin re-approval nearly every restart.
 - **Staleness check.** Local web images **COPY** source in (no bind mount). Source mtimes are compared against image build time, so the unit can notice it serves last week's backend (the classic "new endpoint 404s though source has it").
 
+### Boot autostart (`msd700.service`)
+
+`up` installs and enables a systemd unit (rendered from `msd700.service.tmpl`); `down` disables it. The rendered `ExecStart` runs `docker-manager.sh up -d --no-autostart` **with the flags of the `up` that armed it** (`--dev`/`--simulator` baked in), so a reboot never silently flips a dev/simulator robot to prod/hardware. `Type=oneshot`, `RemainAfterExit=yes`, after `docker.service`, 15-minute start timeout. Inspect with `print-autostart-unit` (or `grep ExecStart`); `--no-autostart` opts out; skipped automatically with no systemctl or inside a container.
+
+### `manage-unit.sh` (server-side, manual/debug only)
+
+Drives **legacy per-unit** cloud containers by ULID only (names rejected): `start|stop|restart|status|logs|list|loop`. `loop` polls every 10 s for the 7 expected relay nodes and restarts on missing. Normally unneeded — the backend auto-starts/stops unit containers on dashboard open plus idle timeout. Never use it on a fleet-mode unit.
+
 ## Unit: `run_msd.sh`
 
 Runs **inside** the robot container, launching every ROS service in a tmux session (`robot_services`). Normally driven by `docker-manager.sh`; callable directly from `docker-manager.sh shell`.
@@ -453,7 +461,19 @@ Runs **inside** the robot container, launching every ROS service in a tmux sessi
 
 These are **inner-launcher** settings. The wrapper doesn't forward them through `docker exec`; host exports or `docker/.env` entries don't reach the inner launcher. Log trees and limits: [Maintenance](/setup/maintenance#log-housekeeping).
 
-tmux windows in `robot_services`: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, plus `token_refresh` (renews `token.cred` every 6 hours) and `enrol_collect` (only while re-enrolment waits for admin approval).
+tmux windows in `robot_services` (`robot_services` session, startup order `roscore → log_janitor → token_refresh → launch mode → the rest`):
+
+| Window | Log | Purpose |
+| --- | --- | --- |
+| `roscore` | `logs/roscore.log` | Private unit roscore (11321 / 11322 `--dev`), started before enrolment |
+| `ros_webui` | `logs/ros_webui.log` | `bringup_msd.launch` hardware or simulator + `unit_id:=` |
+| `camera_client` | Python `RotatingFileHandler` into `$LOGDIR` (not piped) | `camera_client.py`, cloud + local signalling targets |
+| `switch_mode` | `logs/switch_mode.log` | `switch_mode.launch` |
+| `log_janitor` | `logs/log_janitor.log` | Bounds `~/.ros/log` to `ROS_LOG_CAP_MB` (512) every `ROS_LOG_SWEEP_SECONDS` (60) |
+| `token_refresh` | `logs/token_refresh.log` | `enroll.py --refresh` every 6 h (half the 12 h token); must target the enrolment backend |
+| `enrol_collect` | `logs/enrol_collect.log` | Conditional only: while re-enrolment waits for admin approval |
+
+Piped logs cap at ~50 MB each (5×10 MB rotatelogs). Symptom → window: MQTT bridge silent → `ros_webui`; no video → `camera_client`; token/enrol loop → `token_refresh`/`enrol_collect`; disk filling → `log_janitor`.
 
 ```bash
 docker exec -it msd700 tmux attach -t robot_services   # attach
@@ -479,15 +499,42 @@ There `run_msd.sh` **is** the container's main command, so returning stops the c
 
 Defaults, not measurements of your host. Every service uses `network_mode: host`, so **Docker publishes nothing**; the unit firewall controls access. Browser-facing defaults: `3000`, `5002`, `9090`, `3003`, `3001`, `3002`, `9001`. MySQL `3306`, plain MQTT `1883`, and network agent `5011` are unit-internal. The MQTT WebSocket listener allows anonymous clients in the checked-in config: keep it on a trusted operator network, never public internet.
 
-Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on first run). Keys worth reviewing:
+Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on first run). The live file is per-host; the template is the tracked reference. `docker/.env` is git-tracked on the unit — a `git pull` that changes `MYSQL_*` after the data volume was initialized causes credential drift (see [Setup Troubleshooting](/setup/troubleshooting)).
 
-```bash
-MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
-#LOCAL_IP=192.168.4.1     # leave commented to auto-detect each run
-WITH_SIMULATOR=false      # adds Gazebo stack to the image; costs 1+ GB
-USER_UID=                 # empty = detect from `id -u` (Jetson 2002, laptop 1000)
-USER_GID=
-```
+## Unit `.env` reference
+
+| Group | Key | Live default | Notes |
+| --- | --- | --- | --- |
+| Secrets | `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` | `change_me_*` | Rotate on first boot; must match the initialized volume |
+| Secrets | `MYSQL_DATABASE`, `MYSQL_USER` | `ROS_DB`, `itbdelabo` | |
+| Secrets | `JWT_SECRET` | `roswebui` | Must match the backend's `JWT_SECRET_KEY` |
+| Identity | `USER_UID`, `USER_GID` | empty = autodetect | Jetson 2002, laptop 1000 |
+| Identity | `UNIT_ID` | empty = cloud enrol | Pinned only for recovery |
+| Identity | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
+| Perception | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Needs the Velodyne fitted; see [Perception](/development/ros/perception-and-hazard-scan) |
+| Simulation | `MSD700_SIM_WORLD` | `mine` (template `warehouse`) | `warehouse`, `hazard`, `mine` |
+| Simulation | `MSD700_SIM_HEADLESS` | `true` (template: absent) | |
+| Simulation | `WITH_SIMULATOR` | `false` | Adds the Gazebo stack to the image; costs 1+ GB |
+| Unit ports | `MYSQL_PORT_LOCAL` | `3306` | |
+| Unit ports | `MOSQUITTO_PORT_LOCAL`, `MOSQUITTO_WS_PORT_LOCAL` | `1883`, `9001` (WS live only) | |
+| Unit ports | `BACKEND_PORT_LOCAL` | `5002` | |
+| Unit ports | `ROSBRIDGE_PORT_LOCAL` | `9090` | |
+| Unit ports | `FRONTEND_PORT_LOCAL` | `3000` | |
+| Unit ports | `MEDIA_SERVER_PORT_LOCAL` | `3003` | |
+| Unit ports | `SIGNALLING_PORT_WS_LOCAL`, `SIGNALLING_PORT_HTTP_LOCAL` | `3001`, `3002` | |
+| Unit ports | `NETWORK_AGENT_PORT_LOCAL` | `5011` | Loopback only |
+| Network | `LOCAL_IP` | `192.168.4.1` (template: commented) | Commented = autodetect each run |
+| Network | `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL` | live NIC names (template: empty) | Per-host hardware names |
+| Network | `AP_CONNECTION_NAME_LOCAL` | `msd700-hotspot` | |
+| Network | `AP_SSID_LOCAL` | `MSD700-Unit01` (template: empty = `MSD700-<hostname>`) | |
+| Network | `AP_PASSWORD_LOCAL` | fallback (template: empty, 8+ chars required) | Real passwords live in `/etc/hostapd/*.conf` (0600), not here |
+| Network | `STA_SSID_LOCAL`, `STA_PASSWORD_LOCAL` | empty | Client uplink, optional |
+| Network | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
+| Velodyne | `VELODYNE_IFACE` | `end0` (template: empty = autodetect) | Read by `setup.sh` only, outside Docker |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Keep in sync with `velodyne_scanner.launch device_ip` |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Camera ICE | `LOCAL_STUN_URLS`, `LOCAL_TURN_URL`, `LOCAL_TURN_USERNAME`, `LOCAL_TURN_CREDENTIAL` | absent live; template has commented examples | Literal `none` = no server; code default applies when unset |
+| Paths | `WEBUI_PATH`, `DASHBOARD_PATH` | commented (autoresolved `src/<repo>` or `../<repo>`) | |
 
 ::: info `LOCAL_IP` no longer shapes the bundle
 The dashboard JS takes its **host** from whatever address the browser used to open the page; only the **port** still comes from the build. IP, hostname, mDNS (`msd700.local`), or `localhost` SSH tunnel all work. `LOCAL_IP` remains only as a hint for printed URLs and the DHCP-less fallback.

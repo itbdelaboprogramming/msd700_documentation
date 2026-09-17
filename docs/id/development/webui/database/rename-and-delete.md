@@ -56,7 +56,7 @@ mana yang dibuka:
   pilihan alih-alih diam-diam membuang peta yang sedang berjalan itu:
   - **Simpan**: peta yang sedang berjalan disimpan sebelum peta baru dimuat. Ini mengikuti jalur
     stop-and-save yang sama seperti yang terdokumentasi di
-    [Referensi API § Hentikan Pemetaan dan Simpan Peta](/id/development/api-reference#_2-hentikan-mapping-dan-simpan-peta)
+    [Referensi API § Kontrol Mapping](/id/development/api-reference#_1-kontrol-mapping)
     (`POST /api/mapping/stop`).
   - **Buang**: peta yang sedang berjalan dibuang tanpa disimpan.
   - **Batal**: operator tetap berada di peta saat ini dan sesi pemetaan berlanjut tanpa perubahan.

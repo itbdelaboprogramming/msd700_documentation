@@ -59,6 +59,10 @@ flowchart LR
 - **`sync_engine.js`**: Library bersama di kedua sisi yang meng-query baris yang berubah berdasarkan watermark, menjalankan upsert, dan mengelola delete tombstone.
 - **`sync_tables.js`**: Mendefinisikan arah sinkronisasi, primary key, dan aturan resolusi konflik untuk setiap tabel.
 
+## Separuh cloud (`sync_api.js`)
+
+Unit mengemudi; cloud menjawab. `sync_api.js` mengautentikasi token robot (`role: robot`, `typ: access`, `unit_id` dari claim, tidak pernah dari body) dan melayani `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` dan `/route-file/:routeId/:kind`. Push di-scope — dan dipaksa — ke unit + profil pemanggil; tabel identitas ditolak.
+
 ## Aturan Resolusi Konflik
 
 Resolusi konflik mengikuti strategi deterministik **Last-Write-Wins per baris**:

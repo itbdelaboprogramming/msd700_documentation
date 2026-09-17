@@ -31,7 +31,7 @@ baris `units` tertentu.
 
 **Melepas ikatan** perangkat milik sebuah unit (lihat
 [Unit & Armada § Lepas ikatan perangkat terdaftar milik sebuah
-unit](/id/development/webui/admin-console/units-and-fleet#unbind-a-units-enrolled-device))
+unit](/id/development/webui/admin-console/units-and-fleet#lepas-ikatan-perangkat-terdaftar-milik-sebuah-unit))
 menghapus baris `unit_devices` hidup yang mengikat sebuah `fingerprint` ke unit tersebut.
 Konsekuensinya spesifik dan terdokumentasi langsung dalam jalur self-heal yang seharusnya diambil
 robot yang kembali:

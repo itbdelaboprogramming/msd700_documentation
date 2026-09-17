@@ -71,7 +71,7 @@ menggantikan yang lain.
 | `unit_enrollment_codes` | Voucher sekali pakai untuk mengklaim sebuah unit spesifik sebelum robotnya ada | `unit_id`, `code_hash`, `expires_at`, `used_at` |
 | `unit_connection_log` | Riwayat koneksi append-only | Satu-satunya tabel dengan PK `AUTO_INCREMENT` biasa alih-alih ULID; dibersihkan setelah 180 hari |
 
-Lihat [Kontrak Pesan § Pendaftaran](/id/development/message-contracts#enrolment) untuk pertukaran
+Lihat [Kontrak Pesan § Handshake Pendaftaran Robot](/id/development/message-contracts#handshake-pendaftaran-robot) untuk pertukaran
 lengkap yang didukung tabel-tabel ini.
 
 ## Cadangan dan sinkronisasi
@@ -173,5 +173,5 @@ untuk bagaimana port-port ini cocok dengan sisa profil compose.
 
 - [Referensi API](/id/development/api-reference): permukaan HTTP yang dibangun di atas skema ini
 - [Sinkronisasi Data](/id/development/data-sync): bagaimana `sync_tombstones` dan `sync_state` digunakan
-- [Kontrak Pesan § Pendaftaran](/id/development/message-contracts#enrolment)
+- [Kontrak Pesan § Handshake Pendaftaran Robot](/id/development/message-contracts#handshake-pendaftaran-robot)
 - [Arsitektur](/id/development/architecture)

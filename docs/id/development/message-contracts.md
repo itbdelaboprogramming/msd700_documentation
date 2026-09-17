@@ -141,7 +141,7 @@ sequenceDiagram
 
 | Kata Kerja Perintah | Konten Payload | Tujuan |
 | --- | --- | --- |
-| `ping` | Lihat [Bagian Ping Heartbeat](#heartbeat-ping-and-lease-contract) | Heartbeat, akuisisi lease, pengambilan telemetri, dan penyegaran watchdog. |
+| `ping` | Lihat [Bagian Ping Heartbeat](#kontrak-ping-heartbeat-dan-lease) | Heartbeat, akuisisi lease, pengambilan telemetri, dan penyegaran watchdog. |
 | `check` | Tidak ada | Meng-query status driver motor dan mikrokontroler level rendah. |
 | `init` | Tidak ada | Menginisialisasi antarmuka hardware dan jalur daya. |
 | `stop` | Tidak ada | Mematikan periferal hardware dan tahap daya. |

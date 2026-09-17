@@ -42,6 +42,25 @@ flowchart TD
 
 ## Package Directory: `msd700_robot`
 
+### 0. `msd700_bringup`
+The launch layer that assembles hardware, sim, and navigation into runnable stacks.
+
+| Launch file | Purpose | Runs on |
+| --- | --- | --- |
+| `robot_navigation.launch` | Full stack: hardware **or** sim + control + navigation core, optional RViz/teleop | Robot vs sim (`use_sim`) |
+| `robot_slam.launch` | Same layering for mapping (gmapping/hector) | Robot vs sim (`use_sim`) |
+| `robot_teleop.launch` | Manual drive: hardware/sim + control + `teleop_twist_keyboard` → `mux/key_vel` | Robot vs sim + teleop/debug |
+| `lidar_scanner.launch` | Real-robot lidar entry (Velodyne default, RPLIDAR/legacy); never launched in sim | Robot only |
+| `serial_launch.launch` | `rosserial_python` on `/dev/stm32` @57600 | Robot |
+| `map_server.launch` | `map_server` on a package-relative or absolute yaml | Both |
+| `multiple_point.launch` | `nav_controller.py` + `nav_gui.py` multi-point mode | Neutral |
+| `rviz_launch.launch` | Debug/viz helper (description + state publisher + rviz) | Debug |
+| `teleop.launch` | `teleop_node_cmd_vel.py` | Teleop |
+| `custom_model/` | Legacy single/dual RPLIDAR launches | Robot (legacy) |
+| `testing/speed_test.launch` | Serial + teleop + bridger + `calculate.py` rig | Debug/test |
+
+`bridger.launch` (drive geometry + `bridger.py`) is always on, every mode including cold idle.
+
 ### 1. `msd700_navigation`
 The core autonomous movement, SLAM mapping, and area coverage package.
 
@@ -88,7 +107,14 @@ Gazebo simulation environment for testing navigation algorithms in software.
   - `scripts/fetch_sim_worlds.sh`: On-demand downloader for 3D simulation meshes (12 MB) from GitHub `ros1` branch.
 
 ### 6. `third_party/ira_laser_tools`
-Available for merging multiple 2D LiDAR scanners, but the default stack does not use the dual merger: `pointcloud_to_laserscan` converts the Velodyne cloud into `/scan`, with the hazard pipeline adding `/scan_hazard`.
+Available for merging multiple 2D LiDAR scanners, but the default stack does not use the dual merger: `pointcloud_to_laserscan` converts the Velodyne cloud into `/scan`, with the hazard pipeline adding `/scan_hazard`. See [Perception and Hazard Scan](/development/ros/perception-and-hazard-scan).
+
+### 7. `msd700_msgs`
+Robot-internal message contracts (`msd700_robot/msd700_msgs/msg/`):
+
+- `HardwareCommand.msg`: `uint8 movement_command`, `uint8 cam_angle_command`, `float32 right_motor_speed`, `float32 left_motor_speed`.
+- `HardwareState.msg`: 8× `float32 ch_ultrasonic_distance_1…_8`, `int32 right/left_motor_pulse_delta`, `float32 heading/pitch/roll`, `float32 acc/gyr/mag_x/y/z`, `float32 uwb_dist/deviation/rho/theta`.
+- `WebNavCommand.msg`: `string command`, `geometry_msgs/PoseStamped pose`, `string file_path`.
 
 ## Package Directory: `ros-web-ui/source`
 

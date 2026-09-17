@@ -4,6 +4,10 @@
 
 Memperbaiki masalah instalasi dan deployment. Untuk masalah user, lihat [User Guide > Troubleshooting](/id/user-guide/troubleshooting).
 
+::: info Kepemilikan
+Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-guide/troubleshooting) memegang perbaikan operator (pilih peta, refresh, retry), halaman ini memegang perbaikan teknisi (port, env, container, log), dan [Diagnostik Pengembang](/id/development/troubleshooting-guide) memegang root cause. Perbaiki gejala di halaman peran yang memperbaikinya; tautkan, jangan duplikasi.
+:::
+
 ## Mulai di sini: layer mana yang rusak?
 
 ```mermaid

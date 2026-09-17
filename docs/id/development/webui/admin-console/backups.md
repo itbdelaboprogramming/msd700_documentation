@@ -12,7 +12,7 @@ didokumentasikan lengkap di [Cadangan, Pemulihan, dan Migrasi
 Data](/id/development/backup-and-restore): arsip **seluruh profil penyewaan**. Tab Unit punya
 titik masuknya sendiri yang lebih sempit ke separuh bercakupan-unit dari arsitektur yang sama —
 lihat [Unit & Armada § Cadangkan data bercakupan-penyewaan unit
-ini](/id/development/webui/admin-console/units-and-fleet#backup-this-units-rental-scoped-data) —
+ini](/id/development/webui/admin-console/units-and-fleet#cadangkan-data-bercakupan-penyewaan-unit-ini) —
 tetapi tab ini adalah tempat admin mengelola arsip sebagai objek kelas satu: buat, hapus, unduh,
 unggah, dan pulihkan.
 
@@ -56,11 +56,11 @@ menghapus arsip itu sendiri hanyalah menghapus arsip, tanpa efek pada profil hid
 ## Unduh / unggah
 
 - **Unduh** sesuai dengan
-  [Cadangan dan Pemulihan § Ekspor Arsip](/id/development/backup-and-restore#_1-ekspor-arsip),
+  [Cadangan dan Pemulihan § Buat Backup](/id/development/backup-and-restore#_1-buat-backup),
   `POST /api/backup/export`, yang menghasilkan dan mengunduh `.tar.gz` untuk sebuah
   `{ scope, profile_id }` tertentu.
 - **Unggah** sesuai dengan
-  [Cadangan dan Pemulihan § Impor dan Pulihkan Arsip](/id/development/backup-and-restore#_2-impor-dan-restore-arsip),
+  [Cadangan dan Pemulihan § Restore Arsip](/id/development/backup-and-restore#_4-restore-arsip),
   `POST /api/backup/import`, sebuah permintaan multipart yang membawa berkas arsip dan
   `profile_id` target.
 

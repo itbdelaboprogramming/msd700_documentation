@@ -74,5 +74,6 @@ filter.
 
 - [Rename and Delete](/development/webui/database/rename-and-delete): the two mutating actions on this screen, in detail
 - [ROS Integration](/development/webui/database/ros-integration): the schema and REST endpoints behind this feature
+- [Media Server Reference](/development/webui/database/media-server-reference): the map-asset API (upload, thumbnails, legacy-ID mapper)
 - [Architecture](/development/architecture)
 - [Database Schema](/development/database-schema): the full schema reference for `ROS_DB`

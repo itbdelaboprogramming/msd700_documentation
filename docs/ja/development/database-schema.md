@@ -70,7 +70,7 @@ search: false
 | `unit_connection_log` | 追記専用の接続履歴 | ULID ではなく普通の `AUTO_INCREMENT` PK を持つ唯一のテーブル。180日を過ぎたものはパージされる |
 
 これらのテーブルがサポートするやり取りの詳細については
-[メッセージ仕様 § 登録](/ja/development/message-contracts#enrolment) を参照してください。
+[メッセージ仕様 § ロボット登録ハンドシェイク](/ja/development/message-contracts#ロボット登録ハンドシェイク) を参照してください。
 
 ## バックアップと同期
 
@@ -152,7 +152,7 @@ flowchart TB
 `migrate_backup_scope.js` はこの組み合わせをハードコードしており、フォールバックのデフォルトが
 誤ったデータベースをメンテナンススクリプトの対象にすることが決してないよう、明示的な `--profile`
 フラグなしでは**実行を拒否します**。これらのポートが compose プロファイルの他の部分とどう組み合わさるか
-については、[Docker リファレンス § サービスとポートのマッピング](/ja/setup/docker-reference#サービスとポートの対応表)
+については、[Docker リファレンス § サービス・ポート表](/ja/setup/docker-reference#サービス・ポート表)
 を参照してください。
 
 ## 知っておく価値のあるインデックス
@@ -168,5 +168,5 @@ flowchart TB
 
 - [API リファレンス](/ja/development/api-reference): このスキーマの上に構築された HTTP サーフェス
 - [データ同期](/ja/development/data-sync): `sync_tombstones` と `sync_state` がどう使われるか
-- [メッセージ仕様 § 登録](/ja/development/message-contracts#enrolment)
+- [メッセージ仕様 § ロボット登録ハンドシェイク](/ja/development/message-contracts#ロボット登録ハンドシェイク)
 - [アーキテクチャ](/ja/development/architecture)

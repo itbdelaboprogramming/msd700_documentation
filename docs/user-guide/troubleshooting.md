@@ -9,6 +9,10 @@ search: false
 
 This guide provides quick solutions for common operational symptoms encountered while controlling the MSD700 robot from the web dashboard.
 
+::: info Ownership
+Three troubleshooting pages share symptoms by role: this page owns operator fixes (select map, refresh, retry), [Setup Troubleshooting](/setup/troubleshooting) owns technician fixes, and [Developer Diagnostics](/development/troubleshooting-guide) owns root causes. If a fix needs a terminal, it belongs on one of those pages, linked from here.
+:::
+
 ::: tip Technical or Hardware Diagnostics
 For low-level server errors, Docker container logs, or ROS driver diagnostics, see the [Technician Troubleshooting Guide](/setup/troubleshooting) or [Developer Diagnostics](/development/troubleshooting-guide).
 :::

@@ -78,6 +78,10 @@ flowchart TB
 }
 ```
 
+### キーリング解決順序
+
+`shared/jwt_keyring.js` は順に解決する:(1)ファイル `JWT_KEYRING_FILE`(既定 `/run/secrets/jwt_keyring`)、(2)env `JWT_SECRET` の後に `JWT_SECRET_KEY`(未移行本番はenvで動き続け、開発はファイルを使う)、(3)両方なし→`process.exit(1)`。ファイル側の異常はenvフォールバックなしの致命扱い:読取不能、不正JSON、誤 `format`、有効鍵ゼロ、`status: 'active'` 鍵なし。意図的に既定シークレットはない(旧 `'roswebui'` フォールバックは削除済み)。
+
 ### キーリングのローテーションルール
 
 1. **アクティブ署名鍵**: 新たに発行されるアクセストークンとリフレッシュトークンはすべて、

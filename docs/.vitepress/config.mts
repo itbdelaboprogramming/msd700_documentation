@@ -52,6 +52,7 @@ const enSidebar = {
         { text: 'Server Setup', link: '/setup/server-setup' },
         { text: 'Unit Setup', link: '/setup/unit-setup' },
         { text: 'System Integration', link: '/setup/system-setup' },
+        { text: 'Commissioning Checklist', link: '/setup/commissioning-checklist' },
       ]
     },
     {
@@ -90,6 +91,7 @@ const enSidebar = {
         {
           text: 'Perception & Localization',
           items: [
+            { text: 'Perception & Hazard Scan', link: '/development/ros/perception-and-hazard-scan' },
             { text: 'Sensor Fusion & Control', link: '/development/ros/sensor-fusion-and-control' },
             { text: 'Coordinate Transforms (TF)', link: '/development/ros/tf-transforms' },
           ]
@@ -153,6 +155,7 @@ const enSidebar = {
             { text: 'Overview', link: '/development/webui/database/overview' },
             { text: 'Rename & Delete', link: '/development/webui/database/rename-and-delete' },
             { text: 'ROS Integration', link: '/development/webui/database/ros-integration' },
+            { text: 'Media Server Reference', link: '/development/webui/database/media-server-reference' },
           ]
         },
         {
@@ -258,6 +261,7 @@ const idSidebar = {
         { text: 'Penyiapan Server', link: '/id/setup/server-setup' },
         { text: 'Penyiapan Unit Jetson', link: '/id/setup/unit-setup' },
         { text: 'Integrasi Sistem', link: '/id/setup/system-setup' },
+        { text: 'Checklist Commissioning', link: '/id/setup/commissioning-checklist' },
       ]
     },
     {
@@ -296,6 +300,7 @@ const idSidebar = {
         {
           text: 'Persepsi & Lokalisasi',
           items: [
+            { text: 'Persepsi & Hazard Scan', link: '/id/development/ros/perception-and-hazard-scan' },
             { text: 'Sensor Fusion & Kontrol', link: '/id/development/ros/sensor-fusion-and-control' },
             { text: 'Transformasi Koordinat (TF)', link: '/id/development/ros/tf-transforms' },
           ]
@@ -359,6 +364,7 @@ const idSidebar = {
             { text: 'Ikhtisar', link: '/id/development/webui/database/overview' },
             { text: 'Ganti Nama & Hapus', link: '/id/development/webui/database/rename-and-delete' },
             { text: 'Integrasi ROS', link: '/id/development/webui/database/ros-integration' },
+            { text: 'Referensi Media Server', link: '/id/development/webui/database/media-server-reference' },
           ]
         },
         {
@@ -464,6 +470,7 @@ const jaSidebar = {
         { text: 'サーバーセットアップ', link: '/ja/setup/server-setup' },
         { text: 'Jetsonユニットセットアップ', link: '/ja/setup/unit-setup' },
         { text: 'システム統合手順', link: '/ja/setup/system-setup' },
+        { text: 'コミッショニングチェックリスト', link: '/ja/setup/commissioning-checklist' },
       ]
     },
     {
@@ -502,6 +509,7 @@ const jaSidebar = {
         {
           text: '知覚 & 自己位置推定',
           items: [
+            { text: '知覚 & ハザードスキャン', link: '/ja/development/ros/perception-and-hazard-scan' },
             { text: 'センサーフュージョン & 制御', link: '/ja/development/ros/sensor-fusion-and-control' },
             { text: '座標系変換 (TF)', link: '/ja/development/ros/tf-transforms' },
           ]
@@ -565,6 +573,7 @@ const jaSidebar = {
             { text: '概要', link: '/ja/development/webui/database/overview' },
             { text: '名前変更 & 削除', link: '/ja/development/webui/database/rename-and-delete' },
             { text: 'ROS連携', link: '/ja/development/webui/database/ros-integration' },
+            { text: 'メディアサーバーリファレンス', link: '/ja/development/webui/database/media-server-reference' },
           ]
         },
         {

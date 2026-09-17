@@ -79,7 +79,7 @@ jadi tanpa itu sapuan mati sementara semua lapisan di atasnya masih melaporkan r
 
 String aktivitas robot, yang dilacak oleh `RobotStateTracker` dan dilaporkan pada setiap ping
 heartbeat, adalah yang menentukan tab dashboard mana yang dituju operator, termasuk saat
-rekoneksi (lihat [Rekoneksi dan Pemulihan Sesi](#session-reconnection-and-recovery) di bawah).
+rekoneksi (lihat [Rekoneksi dan Pemulihan Sesi](#rekoneksi-dan-pemulihan-sesi) di bawah).
 Kedua toggle di halaman ini masing-masing mendorong robot ke aktivitas tertentu:
 
 - Mengaktifkan **Manual Override** mendorong aktivitas robot menjadi `manual`, yang mengarahkan

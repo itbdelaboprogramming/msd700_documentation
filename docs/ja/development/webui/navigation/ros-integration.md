@@ -145,7 +145,7 @@ Align](/ja/development/webui/navigation/map-sync-and-alignment#api-autoalign-sta
 [WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol)で完全に文書化されているWebSocketプロトコルを通じて`rosbridge_suite`と通信する。環境ごとの接続エンドポイント、`subscribe`/`publish`/`call_service`操作の形状、フロントエンドのレジリエンス/自己修復(EaselJSの`createjs.Stage`プロトタイプパッチと3回失敗での再接続デバウンス)はすべてナビゲーションにも変更なく適用され、ここでは繰り返さない。
 
 ナビゲーションが実際にレンダーする
-[主要Web Canvasサブスクリプション](/ja/development/rosbridge-protocol#主要な-web-キャンバスのサブスクリプション)のサブセットは、上記の[ストリーミングテレメトリ](#streaming-telemetry)に挙げたのと同じトピック群であるが、MQTT側の`/unit_<ULID>/server/...`形式ではなく、rosbridge側の名前(例:
+[主要Web Canvasサブスクリプション](/ja/development/rosbridge-protocol#主要な-web-キャンバスのサブスクリプション)のサブセットは、上記の[ストリーミングテレメトリ](#ストリーミングテレメトリ)に挙げたのと同じトピック群であるが、MQTT側の`/unit_<ULID>/server/...`形式ではなく、rosbridge側の名前(例:
 `/server/robot_pose`、`/server/boustrophedon_path`)でアドレス指定される。rosbridgeはユニットごとのrelayに対してサブスクライブするため、ULIDセグメントはそのレイヤーの各トピック名に繰り返されるのではなく、ブラウザがどのrelayに接続しているかに暗黙的に含まれる。
 
 ## 関連

@@ -87,6 +87,12 @@ Apa pun yang gagal pada pemeriksaan tersebut tetap jatuh ke kolam pending untuk 
 nonce yang berubah (re-image yang genuine, atau seorang penyamar), atau tidak ada binding yang hidup
 (perangkat keras diadopsi ke unit lain, atau seorang admin sengaja melepas ikatannya).
 
+### Voucher cetakan admin: mengklaim unit sebelum robotnya ada
+
+Alur nonce dimulai di robot. Alur voucher dimulai di admin console untuk unit yang didaftarkan manual (identitas placeholder, belum ada kontak fisik): `POST /admin/api/units/:id/enrollment-code` (token admin) mencetak kode **10 karakter** dari alfabet 30-char yang sama dengan claim code, di-bcrypt-hash di database, berlaku `valid_hours` (default 72, dijepit 1–720), ditampilkan **sekali**.
+
+Robot menebusnya di `POST /enroll/claim` dengan `enrollment_code`, melewati kolam pending: server menemukan baris yang belum dipakai dan belum kedaluwarsa, `bcrypt.compare`, menandai `used_at`, dan menjalankan `issueCredential` yang sama dengan handover normal (mengembalikan `unit_id, unit_name, topic_root, device_secret, access_token`). Kode tak valid, sudah dipakai, atau kedaluwarsa mendapat 404. Revokasi adalah `DELETE /units/:id/device` (lepas ikatan robot) — tidak ada endpoint hapus-kode. Jangan tertukar ketiga secret ini: claim **nonce** 32-byte (dibuat robot, tidak pernah disimpan), **claim code** 8-char milik admin (kolam pending), **voucher** 10-char (unit pra-registrasi), dan **device secret** 32-byte (kredensialnya sendiri).
+
 ### `secret_prev_hash`: satu generasi masa tenggang
 
 `issueCredential` menyimpan `secret_hash` yang lama sebagai `secret_prev_hash` **hanya ketika**

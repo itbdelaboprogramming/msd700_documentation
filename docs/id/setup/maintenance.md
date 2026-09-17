@@ -37,7 +37,21 @@ Dua sistem log lain, terpisah dari log ROS:
 - Log launcher di `src/ros-web-ui/logs/`: lima file 10 MB per service bila `rotatelogs` ada, `tee` tanpa batas bila tidak.
 - Stdout/stderr Docker: tiap service unit dibatasi 20 MB x 3. Di server, hanya `coturn` menyetel batas itu; service lain memakai default daemon.
 
-`ROS_LOG_CAP_MB` dan `ROS_LOG_SWEEP_SECONDS` hanya mengonfigurasi launcher dalam. Menyetelnya di host atau `docker/.env` tidak berpengaruh.
+`ROS_LOG_CAP_MB` dan `ROS_LOG_SWEEP_SECONDS` hanya mengonfigurasi launcher dalam. Menyetelnya di host atau `docker/.env` tidak berpengaruh. Janitor memangkas terbesar-dulu berdasarkan pemakaian blok nyata (tidak pernah menghapus — ROS memegang fd-nya tetap terbuka) dan tidak pernah memercayai ukuran `stat` (jebakan sparse-file); ~96% tree biasanya adalah `rosout.log`.
+
+## `ros_doctor.sh`: membaca output-nya
+
+`scripts/ros_doctor.sh` bersifat read-only. Jalankan di dalam container backend saat dashboard punya status tapi tanpa topik live:
+
+- `OK master answers` — sebuah ROS master menjawab.
+- `stamped as '<role>' owned by <host>` — `/msd700/stack_role` + `/msd700/stack_host`; memberi tahu master milik siapa yang sebenarnya diajak bicara.
+- `none: every node advertises a host this machine can resolve` — tanpa node asing. Apa pun selain itu menyebut node yang terdaftar dari host yang tak bisa dijangkau mesin ini (pembajakan forwarded-port).
+- `listening on 9090` vs `nothing listening on 9090. Dashboards get no live topics at all.` — apakah rosbridge up.
+- `no rosbridge node on this master (evicted by a duplicate name, or never started)` — bridge kehilangan registrasi namanya.
+
+## `deploy_certs.sh`: copy aman, overwrite eksplisit
+
+Jalankan dari `ros-web-ui/`. Default menyalin `Certificates/mqtt` dan `Certificates/sql` ke tree source backend/mqtt dengan `cp -n` — **tidak pernah menimpa**. Hanya `--force` yang menimpa. Jangan tertukar dengan `update_ssl.sh` (memperpanjang Let's Encrypt + me-rebuild keystore HiveMQ).
 
 ## Rotasi secrets
 

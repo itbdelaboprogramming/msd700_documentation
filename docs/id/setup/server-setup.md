@@ -286,6 +286,20 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 
 Host live punya blok tambahan yang tidak ditampilkan (MQTT WebSocket, webhook, docs lama, gate Basic Auth di `/development/`). Aturannya: `ProxyPass /` selalu terakhir, setiap exclusion `ProxyPass ... !` di atasnya.
 
+| Path | Target | Catatan |
+| --- | --- | --- |
+| `/services/signalling` | `ws://localhost:3001` | Signalling WebRTC WS |
+| `/services/media` | `http://localhost:3003` | Aset peta |
+| `/services/rosbackend` | `http://localhost:5000` | REST API |
+| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
+| `/services/msd700-webhook` | `localhost:4701/webhook` | Hook deploy docs (di `apache-snippet.conf`, bukan blok utama) |
+| `/itbdelabo/docs` | exclusion + `Alias` ke `dist/` | Harus tetap di atas catch-all |
+| `/` | `http://localhost:3000/` | Frontend dashboard, **harus terakhir** |
+
+Catatan HiveMQ: satu `config.xml` melayani prod dan dev; plaintext `1883` hanya internal container; TLS `8883` di dalam container untuk keduanya, dipetakan ke host 8883 prod / 8884 dev (jangan "perbaiki" port dev di XML). Auth client NONE — TLS hanya untuk transport/identitas server; keystore di `/opt/hivemq/conf/keystore.p12` di-rebuild oleh `update_ssl.sh` dan butuh restart broker. HTTP control-center `8080` ada untuk healthcheck.
+
+Catatan coturn: `realm=msd.nglobal.jp`, `lt-cred-mech` (config lama tanpa auth memberi Allocate tanpa kredensial — sudah ditutup). Kredensial, port, dan `external-ip` masuk sebagai **flag** container dari compose (coturn tidak mengekspansi env), bukan file conf. Tanpa TURN-over-TLS/5349 by design; `no-cli`, tanpa relay TCP, peer LAN/loopback/multicast ditolak. Dev berbagi relay prod.
+
 ```bash
 sudo apache2ctl configtest
 sudo systemctl reload apache2

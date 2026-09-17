@@ -9,6 +9,10 @@ search: false
 
 Dokumen ini menyediakan alur kerja diagnostik terstruktur, pemetaan gejala-ke-penyebab, dan prosedur pemulihan untuk mengatasi masalah engineering umum di seluruh stack MSD700.
 
+::: info Kepemilikan
+Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-guide/troubleshooting) memegang perbaikan operator, [Setup Troubleshooting](/id/setup/troubleshooting) memegang perbaikan teknisi, dan halaman ini memegang root cause. Perbaiki gejala di halaman peran yang memperbaikinya; tautkan, jangan duplikasi.
+:::
+
 ## Diagram Alur Diagnostik Sistematis
 
 ```mermaid

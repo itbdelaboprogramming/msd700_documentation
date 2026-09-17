@@ -74,5 +74,6 @@ REST エンドポイントについては [ROS連携](/ja/development/webui/data
 
 - [名前変更 & 削除](/ja/development/webui/database/rename-and-delete): この画面上の2つの変更アクションの詳細
 - [ROS連携](/ja/development/webui/database/ros-integration): この機能を支えるスキーマと REST エンドポイント
+- [メディアサーバーリファレンス](/ja/development/webui/database/media-server-reference): マップアセット API(アップロード、サムネイル、レガシーIDマッパー)
 - [アーキテクチャ](/ja/development/architecture)
 - [データベーススキーマ](/ja/development/database-schema): `ROS_DB` の完全なスキーマリファレンス

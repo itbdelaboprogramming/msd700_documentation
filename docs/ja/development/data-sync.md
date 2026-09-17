@@ -59,6 +59,10 @@ flowchart LR
 - **`sync_engine.js`**: 両側で共有されるライブラリで、ウォーターマークに基づいて変更された行をクエリし、upsert を実行し、削除トゥームストーンを管理します。
 - **`sync_tables.js`**: 各テーブルについて、同期方向、主キー、競合解決ルールを定義します。
 
+## クラウド半分(`sync_api.js`)
+
+駆動するのはユニット、応えるのはクラウド。`sync_api.js` はロボットトークンを認証し(`role: robot`、`typ: access`、`unit_id` はクレーム由来、ボディ由来決して不可)、`POST /handshake|/pull|/push|/ack` と `GET|PUT /file/:mapId/:kind` および `/route-file/:routeId/:kind` を提供する。pushは呼出者ユニット+プロファイルにスコープされ、強制される。identity系テーブルは拒否する。
+
 ## 競合解決ルール
 
 競合解決は決定論的な**行単位の Last-Write-Wins** 戦略に従います。

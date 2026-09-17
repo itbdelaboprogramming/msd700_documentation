@@ -72,7 +72,7 @@ flowchart TB
   NA -->|"mengedit SSID/password"| HAP
   NA -->|"menyentuh sentinel file"| RPATH["watcher restart<br/>me-restart service hotspot"]
 
-  BE["backend_local<br/>/local/wifi/*"] -->|"proxy loopback"| NA
+  BE["backend_local<br/>/local/wifi/*"] -->|"proxy loopback<br/>(wifi_proxy.js, timeout 25 dtk)"| NA
   FE["frontend_local :3000<br/>panel WiFi"] -->|"scan/connect/status"| BE
 
   CLIENT["Device di hotspot"] -->|"DNS: mymsd.jp -> unit"| DNSM
@@ -187,7 +187,7 @@ Dipasang/dilepas otomatis dengan naik/turun hostapd, independen container.
 
 ## Badge dashboard
 
-Tanpa badge WiFi terpisah. WiFi tinggal sebagai **seksi di dalam dropdown [Local Mode badge](/id/development/data-sync#the-local-mode-badge)**. Baris badge hanya menampilkan **glyph** WiFi, diwarnai sesuai state, dengan ringkasan (SSID, `hotspot only`, `no network`, `wifi unreachable`) sebagai hover tooltip, bukan teks cetakan. Kondisi agent tak terjangkau juga ditulis di atas seksi.
+Tanpa badge WiFi terpisah. WiFi tinggal sebagai **seksi di dalam dropdown [Local Mode badge](/id/development/data-sync#badge-status-local-mode)**. Baris badge hanya menampilkan **glyph** WiFi, diwarnai sesuai state, dengan ringkasan (SSID, `hotspot only`, `no network`, `wifi unreachable`) sebagai hover tooltip, bukan teks cetakan. Kondisi agent tak terjangkau juga ditulis di atas seksi.
 
 Agent membaca interface *pemenang* dari `/run/msd700-hotspot-active` (primary `msd700-ap0` atau dongle backup, mana yang menang boot ini), fallback ke dongle `AP_INTERFACE_LOCAL` hanya bila file hilang. Di unit primary-only tanpa dongle, inilah yang membuat badge bisa melihat hotspot.
 
@@ -249,6 +249,22 @@ Reachability internet sisi-client (`full` / `limited` / `portal` / `none`) beras
 | `NETWORK_AGENT_PORT_LOCAL` | Port API loopback `network_local` | `5011` |
 | `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: jaringan upstream untuk auto-join saat provisioning pertama | kosong (tambah dari dropdown dashboard saja) |
 | `LOCAL_IP` | Alamat dashboard cetakan + fallback build frontend; alamat tetap hotspot tetap `192.168.4.1` | `192.168.4.1` |
+
+## Referensi endpoint `network-agent`
+
+`network_local` hanya bind `127.0.0.1:5011`; `backend_local` satu-satunya pemanggil dan menambahkan auth operator. Proxy di antara keduanya adalah `wifi_proxy.js` (timeout 25 dtk, meneruskan body hotspot apa adanya untuk menjaga beda absent-vs-empty). Agent memanggil `nmcli` via argv saja (tidak pernah shell), 15 dtk per panggilan, lewat bind-mount D-Bus ke NetworkManager host. Provisioning hotspot **bukan** tugasnya (`setup.sh --provision-network` yang mengerjakannya).
+
+| Endpoint | Tujuan |
+| --- | --- |
+| `GET /health` | `{ ok: true }` |
+| `GET /wifi/status` | State radio/koneksi |
+| `GET /wifi/scan` | Jaringan (SSID hotspot sendiri difilter, dedup terkuat-dulu) |
+| `GET /wifi/saved` | Profile tersimpan |
+| `POST /wifi/connect { ssid, ... }` | Gabung (standar, enterprise EAP, atau hidden); 400 tanpa ssid, 502 saat gagal |
+| `POST /wifi/disconnect` | Putus uplink client |
+| `GET /wifi/hotspot` | Hotspot saat ini + `limits` (SSID maks 32 oktet, password 8–63) + `last_change` |
+| `POST /wifi/hotspot` | Validasi kini, terapkan dalam 1.5 dtk: `202 { accepted, applies_in_ms: 1500, ssid, password_changed }` |
+| `POST /wifi/forget { name }` | Hapus profile tersimpan |
 
 ## Verifikasi
 
@@ -336,5 +352,5 @@ Kedua config hostapd belum ada, atau `network_local` tak bisa membacanya (cek bi
 - [Setup Wi-Fi MT7922](/id/setup/wifi-mt7922): step 1 [alur](#alur-setup) di atas, hanya untuk masalah firmware MT7922 terkonfirmasi di unit nyata
 - [Setup Unit](/id/setup/unit-setup): instal mode-lokal dasar yang ditumpangi fitur ini
 - [Referensi Docker](/id/setup/docker-reference#network-mode-host): kenapa sebagian service berbagi network host
-- [Data Sync: Local Mode badge](/id/development/data-sync#the-local-mode-badge): badge tempat seksi ini tinggal
-- [Architecture: Trust domains](/id/development/architecture#trust-domains): desain trust-boundary untuk route `/local/*` (middleware sesi operator di route WiFi mutating didesain tapi belum dipasang; lihat warning di atas)
+- [Data Sync: Local Mode badge](/id/development/data-sync#badge-status-local-mode): badge tempat seksi ini tinggal
+- [Architecture: Trust domains](/id/development/architecture#trust-domain-dan-keamanan-multi-tingkat): desain trust-boundary untuk route `/local/*` (middleware sesi operator di route WiFi mutating didesain tapi belum dipasang; lihat warning di atas)

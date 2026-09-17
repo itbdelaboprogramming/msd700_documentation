@@ -12,7 +12,7 @@ search: false
 アーカイブ機構に対する管理コンソールのフロントエンドであり、**レンタルプロファイル全体**の
 アーカイブを扱う。ユニットタブには、同じアーキテクチャのユニットスコープ半分へのより狭い独自の
 入口がある(
-[ユニット & フリート § このユニットのレンタルスコープデータをバックアップする](/ja/development/webui/admin-console/units-and-fleet#backup-this-units-rental-scoped-data)
+[ユニット & フリート § このユニットのレンタルスコープデータをバックアップする](/ja/development/webui/admin-console/units-and-fleet#このユニットのレンタルスコープデータをバックアップする)
 を参照)。しかしこのタブは、管理者がアーカイブを第一級オブジェクトとして管理する場所である。
 作成、削除、ダウンロード、アップロード、復元だ。
 
@@ -56,11 +56,11 @@ search: false
 ## ダウンロード / アップロード
 
 - **ダウンロード**は
-  [バックアップとリストア § アーカイブのエクスポート](/ja/development/backup-and-restore#_1-アーカイブのエクスポート)、
+  [バックアップとリストア § バックアップの作成](/ja/development/backup-and-restore#_1-バックアップの作成)、
   `POST /api/backup/export` に対応し、指定された `{ scope, profile_id }` に対する `.tar.gz` を
   生成してダウンロードする。
 - **アップロード**は
-  [バックアップとリストア § アーカイブのインポートと復元](/ja/development/backup-and-restore#_2-アーカイブのインポートとリストア)、
+  [バックアップとリストア § アーカイブのリストア](/ja/development/backup-and-restore#_4-アーカイブのリストア)、
   `POST /api/backup/import` に対応する。アーカイブファイルと対象の `profile_id` を運ぶ
   マルチパートリクエストである。
 

@@ -79,6 +79,10 @@ running on a stale secret.
 }
 ```
 
+### Keyring resolution order
+
+`shared/jwt_keyring.js` resolves in order: (1) file `JWT_KEYRING_FILE` (default `/run/secrets/jwt_keyring`); (2) env `JWT_SECRET` then `JWT_SECRET_KEY` (so unmigrated prod keeps running on env while dev uses the file); (3) neither → `process.exit(1)`. File errors are fatal with no env fallthrough: unreadable, invalid JSON, wrong `format`, zero usable keys, or no `status: 'active'` key. There is deliberately no default secret (the old `'roswebui'` fallback was removed).
+
 ### Keyring rotation rules
 
 1. **Active Signing Key**: All newly minted access and refresh tokens are signed with the key

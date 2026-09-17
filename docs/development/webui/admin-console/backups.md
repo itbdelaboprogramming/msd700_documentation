@@ -12,7 +12,7 @@ documented in full in [Backup, Restore, and Data
 Migration](/development/backup-and-restore): archives of **whole rental profiles**. The Units tab
 has its own, narrower entry point into the unit-scoped half of the same architecture — see
 [Units & Fleet § Backup this unit's rental-scoped
-data](/development/webui/admin-console/units-and-fleet#backup-this-units-rental-scoped-data) — but
+data](/development/webui/admin-console/units-and-fleet#backup-this-unit-s-rental-scoped-data) — but
 this tab is where an admin manages archives as first-class objects: create, delete, download,
 upload, and restore.
 
@@ -53,11 +53,11 @@ just deleting the archive, with no effect on the live profile it was taken from.
 ## Download / upload
 
 - **Download** corresponds to
-  [Backup and Restore § Export Archive](/development/backup-and-restore#_1-export-archive),
+  [Backup and Restore § Create Backup](/development/backup-and-restore#_1-create-backup),
   `POST /api/backup/export`, which generates and downloads the `.tar.gz` for a given
   `{ scope, profile_id }`.
 - **Upload** corresponds to
-  [Backup and Restore § Import and Restore Archive](/development/backup-and-restore#_2-import-and-restore-archive),
+  [Backup and Restore § Restore Archive](/development/backup-and-restore#_4-restore-archive),
   `POST /api/backup/import`, a multipart request carrying the archive file and a target
   `profile_id`.
 
