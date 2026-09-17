@@ -17,9 +17,9 @@ flowchart TD
   GLOBAL_PLANNER --> GLOBAL_PATH["Global Geometric Path: nav_msgs/Path"]
 
   GLOBAL_PATH --> TEB_OPT["TEB Local Planner: TebLocalPlannerROS<br/>Multi-Objective Non-Linear Least Squares Optimization"]
-  TEB_OPT --> CMD_VEL["Optimal Control Output: /cmd_vel<br/>(geometry_msgs/Twist, 10 Hz)"]
+  TEB_OPT --> CMD_VEL["Optimal Control Output: mux/nav_vel<br/>(geometry_msgs/Twist, 10 Hz)<br/>move_base remaps cmd_vel away from the wheels;<br/>twist_mux arbitrates onto /cmd_vel"]
 
-  LIDAR["LiDAR /scan (20 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
+  LIDAR["LiDAR /scan (10 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
   COSTMAPS --> GLOBAL_PLANNER
   COSTMAPS --> TEB_OPT
 ```
@@ -41,43 +41,32 @@ $$\text{Cost}(d) = \begin{cases}
 \end{cases}$$
 
 ### Parameter Inflasi yang Dikonfigurasi:
-- **Radius Inscribed ($r_{\text{inscribed}}$)**: $0.35\text{ m}$ (setengah lebar dari footprint perencanaan, `0.90 x 0.70 m`).
-- **Radius Inflasi ($r_{\text{inflation}}$)**: $0.25\text{ m}$ (diturunkan dari $0.70\text{ m}$ pada 2026-09-11).
-- **Faktor Skala Cost ($\alpha$)**: $4.0$.
+- **Radius Inscribed ($r_{\text{inscribed}}$)**: $0.35\text{ m}$ (setengah lebar footprint fisik `0.90 x 0.70 m`; envelope perencanaan yang ber-padding adalah `1.20 x 0.85 m`).
+- **Radius Inflasi ($r_{\text{inflation}}$)**: $0.45\text{ m}$ (harus tetap di atas setengah lebar inscribed $0.35\text{ m}$, atau pita peluruhan runtuh).
+- **Faktor Skala Cost ($\alpha$)**: $10.0$.
 
-::: warning Pita gradien saat ini kosong
-$r_{\text{inflation}} < r_{\text{inscribed}}$, sehingga kasus tengah dari fungsi cost piecewise di atas tidak
-pernah berlaku: setiap sel yang terinflasi berada di dalam radius inscribed dan mengambil nilai flat $253$, dan tidak ada
-yang terinflasi melewati $0.25\text{ m}$. Hasilnya adalah collar keras $0.25\text{ m}$ tanpa ekor peluruhan, dan
-collar itu lebih sempit daripada setengah-lebar yang sebenarnya ditempati robot, sehingga navfn akan merutekan
-garis-tengah yang tidak dapat diakomodasi oleh dinding, dan TEB harus menyimpang darinya (`inflation_dist` $0.75$,
-`weight_inflation` $5.0$, ditambah pengecekan footprint, adalah hal-hal yang menahan body agar tidak menabrak dinding).
-Memulihkan gradien yang nyata berarti nilai di atas $0.35\text{ m}$.
-:::
 
 ```yaml
-# config/costmap/costmap_common_params.yaml
+# config/costmap/costmap_common_params_field.yaml
 footprint: [[-0.45, -0.35], [0.45, -0.35], [0.45, 0.35], [-0.45, 0.35]]
-footprint_padding: 0.01
+# footprint_padding 0.01 hanya ada di komentar di sini; envelope
+# 1.20 x 0.85 m yang ber-padding terdokumentasi, bukan parameter.
 
 obstacle_layer:
   enabled: true
   max_obstacle_height: 2.0
   min_obstacle_height: 0.0
-  obstacle_range: 5.5
-  raytrace_range: 6.0
-  observation_sources: laser_scan_sensor
-  laser_scan_sensor:
-    sensor_frame: base_scan
-    data_type: LaserScan
-    topic: /scan
-    marking: true
-    clearing: true
+  obstacle_range: 3.0
+  raytrace_range: 3.0   # lokal; global memakai 3.0 / 6.0
+  # Tanpa sensor_frame dengan sengaja: raytrace memakai frame header scan itu sendiri.
+  obstacles: { data_type: LaserScan, topic: scan, marking: true, clearing: true }
+  # move_base.launch meng-override topik via arg obstacle_scan
+  # (persepsi meneruskan scan_hazard; sisanya tetap scan).
 
 inflation_layer:
   enabled: true
-  inflation_radius: 0.25
-  cost_scaling_factor: 4.0
+  inflation_radius: 0.45
+  cost_scaling_factor: 10.0
 ```
 
 ---
@@ -103,7 +92,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-   Dimana $d_{\min} = 0.150\text{ m}$ adalah jarak clearance obstacle minimum.
+   Dimana $d_{\min} = 0.10\text{ m}$ (`min_obstacle_dist`, batas keras) adalah jarak clearance obstacle minimum. Gradien lunaknya adalah `inflation_dist` $0.75\text{ m}$ pada `weight_inflation` $2.0$.
 
 3. **Constraint Kinematik Non-Holonomic**:
    Memberi penalti pada kecepatan pergeseran lateral untuk menegakkan kinematika differential drive:
@@ -114,7 +103,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 ## Zona Keep-Out dan Dynamic Reconfigure
 
 1. **Layer Grid Keep-Out (`keepout_layer`)**: Subscribe ke `/msd700/keepout_grid` dimana poligon kustom operator dirasterisasi menjadi sel cost $254$, mencegah planner global dan lokal menghasilkan trajektori yang melintasi zona terlarang.
-2. **Adaptasi Mode Coverage**: Selama sapuan boustrophedon, `path_coverage_node` menurunkan bobot forward drive (`weight_kinematics_forward_drive`) dari `1000.0` menjadi `5.0` melalui `dynamic_reconfigure`, memungkinkan belokan pivot comb 90 derajat yang mulus tanpa stall.
+2. **Adaptasi Mode Coverage**: Selama sapuan boustrophedon, `path_coverage_node` menyetel `weight_kinematics_forward_drive` ke `500.0` via `dynamic_reconfigure` (nilai dasar juga `500`; sweep juga mengencangkan `yaw_goal_tolerance` ke `0.10`), memungkinkan belokan pivot comb 90 derajat yang mulus tanpa stall.
 
 ## Dokumentasi Terkait
 

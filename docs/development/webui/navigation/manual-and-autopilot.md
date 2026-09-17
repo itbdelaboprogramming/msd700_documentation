@@ -131,7 +131,7 @@ from a new workstation, not just the high-level behavior.
    direction, and coverage polygons) is restored from the latched `/string/operation_snapshot` ROS
    topic.
 3. **Ghost state validation**: if the browser cache indicates a mission in progress but the robot
-   reports `idle` across 8 consecutive telemetry samples, the frontend automatically resets to
+   reports `idle` across 4 consecutive ~1 Hz ping samples (`PHANTOM_IDLE_SAMPLES = 4`), the frontend automatically resets to
    `idle` to prevent phantom execution displays.
 
 ### What triggers a snapshot rebuild

@@ -21,9 +21,9 @@ search: false
 
 ### 2026年8月: ドキュメント大規模刷新 & 高精度キネマティクス
 - **モジュール化されたドキュメントアーキテクチャ**: レスポンシブな Mermaid SVG 図、数式による定式化、ゼロダウンタイム運用を伴う、全ドキュメントページの徹底的な書き直し。
-- **実寸スケールの Gazebo シミュレーション**: シミュレーターモデルを、AWS RoboMaker Small Warehouse 内で動作する `msd700_field`(4つのキャスターを持つ本体フットプリント $0.90 \times 0.70\text{ m}$)にアップグレード。
-- **相関スキャンマッチング (Auto-Align)**: 狭い通路での360度回転を排除するため、ゼロスピンの初期姿勢アライメント(< 50 ms)を実装。
-- **32バイト Nonce による暗号学的登録**: ロボットデバイス認証のために CSPRNG nonce ハッシュ化プロトコルを導入。
+- **実寸スケールの Gazebo シミュレーション**: シミュレーターモデルを、AWS RoboMaker Small Warehouse 内で動作する `msd700_field`($0.90 \times 0.70\text{ m}$ボディ、4つの駆動輪、150 kg)にアップグレード。
+- **ゼロスピン Auto-Align**: 狭い通路での360度回転を排除するため、`particle_align_validator.py`による粗密な初期姿勢アライメント(< 50 ms)を実装。
+- **Nonce による暗号学的登録**: ロボットデバイス認証のために CSPRNG nonce ハッシュ化プロトコルを導入。3つの異なるシークレットを混同しないこと。ロボットの32バイトクレームnonce、8文字の管理者クレームコード(`K7M2QP4R`)、ハンドオーバー時に発行される32バイトデバイスシークレットである。
 
 ### 2026年7月: マルチテナントレンタルセキュリティ & ULID 移行
 - **レンタルプロファイル認可**: マップとユニット全体にわたる厳格なテナント分離を強制するため、`attachUnit` Express ミドルウェアを追加。
@@ -46,7 +46,7 @@ search: false
 行単位のコミットログについては、それぞれの GitHub リポジトリを参照してください。
 
 - [msd700_documentation のコミット](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui のコミット](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
-- [msd700_robot のコミット](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
-- [ROS-dashboard-next-ts のコミット](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
-- [msd700_noetic のコミット](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)
+- [ros-web-ui のコミット](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
+- [msd700_robot のコミット](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
+- [ROS-dashboard-next-ts のコミット](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
+- [msd700_noetic のコミット](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)

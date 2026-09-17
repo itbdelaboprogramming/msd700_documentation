@@ -11,22 +11,24 @@ This document details the 2D rendering pipeline, coordinate space conversions, l
 
 ## Canvas Rendering Pipeline Architecture
 
+All topics are per-unit rooted: `` `${root}/server/…` `` with `root = /unit_<ULID>`. The bare `/server/…` names below are shorthand.
+
 ```mermaid
 flowchart TD
   subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
     OCC_MSG["/server/slam/map (OccupancyGrid)"]
-    POSE_MSG["/server/robot_pose (PoseStamped, 25 Hz)"]
-    SCAN_MSG["/server/scan (LaserScan, 2 Hz)"]
+    POSE_MSG["/server/robot_pose (PoseStamped)"]
+    SCAN_MSG["/server/scan (LaserScan, derived<br/>from robot_pose topic name)"]
     PATH_MSG["/server/move_base/NavfnROS/plan (Path)"]
     BOSTRO_MSG["/server/boustrophedon_path (Path)"]
   end
 
   subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
-    L1["Layer 1: Base Map OccupancyGrid Bitmap (0.05 m/px)"]
+    L1["Layer 1: Base Map OccupancyGrid Bitmap<br/>(resolution from map metadata)"]
     L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
-    L3["Layer 3: Global Path (Blue Line) & Local Trajectory (Green)"]
+    L3["Layer 3: Global Path (Pink) & Local Trajectory (Yellow)"]
     L4["Layer 4: Boustrophedon Sweep Lanes (Orange Comb Splines)"]
-    L5["Layer 5: Laser Scan Reflection Points (Red 2D Dots)"]
+    L5["Layer 5: Laser Scan Points (vendored Nav2D<br/>LaserScanViewer, latency-compensated)"]
     L6["Layer 6: Interactive Polygon Drawing Vertex Overlay"]
     L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
   end
@@ -57,45 +59,52 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ---
 
-## The `createjs.Stage.prototype` Patch (`rosScriptLoader.ts`)
+## The `createjs.Stage.prototype` Patch (`mapComponent.tsx`)
 
-In modern React SPA frameworks (such as Next.js 14+), components mount and unmount rapidly during page transitions. Standard `ROS2D.js` binds coordinate conversion functions to stage instances on creation, which can be lost upon React DOM re-renders, causing fatal `TypeError: this.stage.globalToRos is not a function` errors.
-
-To guarantee zero-crash visualization resilience, `rosScriptLoader.ts` dynamically patches `createjs.Stage.prototype` prior to canvas instantiation:
+EaselJS re-evaluates `createjs.Stage` into a brand-new constructor whose prototype no longer has the `ROS2D` coordinate helpers. A viewer built afterwards then throws `stage.globalToRos is not a function`. The fix is `ensureStagePrototype()` in `mapComponent.tsx`, re-applied idempotently on the current prototype right before every viewer creation (the math mirrors `public/script/ros2d.js` exactly, so behaviour is unchanged on the happy path). Note `rosScriptLoader.ts` is only the sequential script loader — the patch does not live there:
 
 ```typescript
-// scripts/rosScriptLoader.ts
-export function patchEaselJSStage(): void {
-  if (typeof window === "undefined" || !(window as any).createjs) return;
+// src/components/navigationMap/mapComponent.tsx
+const ensureStagePrototype = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const cjs = (window as any).createjs;
+  const ROSLIB = (window as any).ROSLIB;
+  const proto = cjs?.Stage?.prototype;
+  if (!proto || !ROSLIB?.Vector3) return false;
 
-  const StageProto = (window as any).createjs.Stage.prototype;
-
-  if (!StageProto.globalToRos) {
-    StageProto.globalToRos = function (x: number, y: number) {
-      const rosX = (x - this.x) / (this.scaleX * this.ros2dViewer.scaleToDimensions);
-      const rosY = -(y - this.y) / (this.scaleY * this.ros2dViewer.scaleToDimensions);
-      return { x: rosX, y: rosY };
+  if (typeof proto.globalToRos !== 'function') {
+    proto.globalToRos = function (this: any, x: number, y: number) {
+      return new ROSLIB.Vector3({
+        x: (x - this.x) / this.scaleX,
+        y: (this.y - y) / this.scaleY,
+      });
     };
   }
-
-  if (!StageProto.rosToGlobal) {
-    StageProto.rosToGlobal = function (rosX: number, rosY: number) {
-      const x = rosX * this.scaleX * this.ros2dViewer.scaleToDimensions + this.x;
-      const y = -rosY * this.scaleY * this.ros2dViewer.scaleToDimensions + this.y;
-      return { x, y };
+  if (typeof proto.rosToGlobal !== 'function') {
+    proto.rosToGlobal = function (this: any, pos: any) {
+      return {
+        x: pos.x * this.scaleX + this.x,
+        y: this.y - pos.y * this.scaleY,
+      };
     };
   }
-}
+  if (typeof proto.rosQuaternionToGlobalTheta !== 'function') {
+    proto.rosQuaternionToGlobalTheta = function (this: any, orientation: any) {
+      // quaternion -> canvas heading degrees
+    };
+  }
+  return typeof proto.globalToRos === 'function';
+};
 ```
 
 ---
 
 ## Interactive Polygon Drawing Engine
 
-When an operator defines area coverage sweep polygons or keep-out zones:
+When an operator defines area coverage sweep polygons or keep-out zones (`customAreaDraw.ts`):
 1. **Vertex Placement**: Clicking the canvas records metric coordinates $(x_i, y_i)$.
 2. **Dynamic Rubberbanding**: As the mouse moves, a dynamic temporary edge line renders to the cursor position.
-3. **Closing Snapping**: If the cursor enters within $15\text{ pixels}$ of the initial vertex, the polygon snaps closed and rasterizes into the `/msd700/keepout_grid` or coverage boundary.
+3. **Closing Snapping**: If the click lands within `CLOSE_TOLERANCE_M` ($0.5\text{ m}$ by default, overridable via `NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`) of the first vertex — a metric distance, not pixels — the loop closes. Keep-out polygons render as overlay and are sent as `areas`/`exclusions` payloads; coverage polygons go to `/msd700/coverage_polygon`. (`/msd700/keepout_grid` itself is only an empty-grid initializer on the robot side.)
 
 ## Related Documentation
 

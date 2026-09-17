@@ -17,9 +17,9 @@ flowchart TD
   GLOBAL_PLANNER --> GLOBAL_PATH["Global Geometric Path: nav_msgs/Path"]
 
   GLOBAL_PATH --> TEB_OPT["TEB Local Planner: TebLocalPlannerROS<br/>Multi-Objective Non-Linear Least Squares Optimization"]
-  TEB_OPT --> CMD_VEL["Optimal Control Output: /cmd_vel<br/>(geometry_msgs/Twist, 10 Hz)"]
+  TEB_OPT --> CMD_VEL["Optimal Control Output: mux/nav_vel<br/>(geometry_msgs/Twist, 10 Hz)<br/>move_base remaps cmd_vel away from the wheels;<br/>twist_mux arbitrates onto /cmd_vel"]
 
-  LIDAR["LiDAR /scan (20 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
+  LIDAR["LiDAR /scan (10 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
   COSTMAPS --> GLOBAL_PLANNER
   COSTMAPS --> TEB_OPT
 ```
@@ -41,43 +41,27 @@ $$\text{Cost}(d) = \begin{cases}
 \end{cases}$$
 
 ### Configured Inflation Parameters:
-- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0.35\text{ m}$ (half the width of the planning footprint, `0.90 x 0.70 m`).
-- **Inflation Radius ($r_{\text{inflation}}$)**: $0.25\text{ m}$ (lowered from $0.70\text{ m}$ on 2026-09-11).
-- **Cost Scaling Factor ($\alpha$)**: $4.0$.
-
-::: warning The gradient band is currently empty
-$r_{\text{inflation}} < r_{\text{inscribed}}$, so the middle case of the piecewise cost above never
-applies: every inflated cell is inside the inscribed radius and takes the flat $253$, and nothing is
-inflated past $0.25\text{ m}$. The result is a hard $0.25\text{ m}$ collar with no decay tail, and
-that collar is narrower than the half-width the robot actually occupies, so navfn will route a
-centre-line a wall cannot accommodate and TEB has to deviate from it (`inflation_dist` $0.75$,
-`weight_inflation` $5.0$, plus the footprint check, are what hold the body off the wall).
-Restoring a real gradient means a value above $0.35\text{ m}$.
-:::
+- **Inscribed Radius ($r_{\text{inscribed}}$)**: $0.35\text{ m}$ (half-width of the `0.90 x 0.70 m` physical footprint; the padded planning envelope is `1.20 x 0.85 m`).
+- **Inflation Radius ($r_{\text{inflation}}$)**: $0.45\text{ m}$ (must stay above the $0.35\text{ m}$ inscribed half-width, or the decay band collapses).
+- **Cost Scaling Factor ($\alpha$)**: $10.0$.
 
 ```yaml
-# config/costmap/costmap_common_params.yaml
+# config/costmap/costmap_common_params_field.yaml
 footprint: [[-0.45, -0.35], [0.45, -0.35], [0.45, 0.35], [-0.45, 0.35]]
-footprint_padding: 0.01
+# footprint_padding 0.01 lives only in a comment here; the padded
+# 1.20 x 0.85 m envelope is documented, not a parameter.
 
 obstacle_layer:
-  enabled: true
-  max_obstacle_height: 2.0
-  min_obstacle_height: 0.0
-  obstacle_range: 5.5
-  raytrace_range: 6.0
-  observation_sources: laser_scan_sensor
-  laser_scan_sensor:
-    sensor_frame: base_scan
-    data_type: LaserScan
-    topic: /scan
-    marking: true
-    clearing: true
+  obstacle_range: 3.0
+  raytrace_range: 3.0   # local; global uses 3.0 / 6.0
+  # No sensor_frame on purpose: raytrace uses the scan's own header frame.
+  obstacles: { data_type: LaserScan, topic: scan, marking: true, clearing: true }
+  # move_base.launch overrides the topic via its obstacle_scan arg
+  # (perception passes scan_hazard; everything else keeps scan).
 
 inflation_layer:
-  enabled: true
-  inflation_radius: 0.25
-  cost_scaling_factor: 4.0
+  inflation_radius: 0.45
+  cost_scaling_factor: 10.0
 ```
 
 ---
@@ -103,7 +87,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-   Where $d_{\min} = 0.150\text{ m}$ is the minimum obstacle clearance distance.
+    Where $d_{\min} = 0.10\text{ m}$ (`min_obstacle_dist`, hard floor) is the minimum obstacle clearance distance. The soft gradient is `inflation_dist` $0.75\text{ m}$ at `weight_inflation` $2.0$.
 
 3. **Kinematic Non-Holonomic Constraint**:
    Penalizes lateral sliding velocity to enforce differential drive kinematics:
@@ -114,7 +98,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 ## Keep-Out Zones and Dynamic Reconfigure
 
 1. **Keep-Out Grid Layer (`keepout_layer`)**: Subscribes to `/msd700/keepout_grid` where custom operator polygons are rasterized into cost $254$ cells, preventing the global and local planners from generating trajectories across excluded zones.
-2. **Coverage Mode Adaptation**: During boustrophedon sweep passes, `path_coverage_node` lowers forward drive weight (`weight_kinematics_forward_drive`) from `1000.0` to `5.0` via `dynamic_reconfigure`, allowing smooth 90-degree comb pivot turns without stalling.
+2. **Coverage Mode Adaptation**: During boustrophedon sweep passes, `path_coverage_node` sets `weight_kinematics_forward_drive` to `500.0` via `dynamic_reconfigure` (base value is also `500`; the sweep additionally tightens `yaw_goal_tolerance` to `0.10`), allowing smooth 90-degree comb pivot turns without stalling.
 
 ## Related Documentation
 

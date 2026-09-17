@@ -6,114 +6,110 @@ outline: deep
 
 <RoleBadge role="technician" />
 
-This guide provides step-by-step instructions for installing and configuring an **MSD700 Unit** (the physical robot running on an NVIDIA Jetson single-board computer).
+How to install and configure an **MSD700 Unit**: the physical robot on an NVIDIA Jetson.
 
-Ensure that a running [MSD700 Server](/setup/server-setup) exists before proceeding.
+You need a running [Server](/setup/server-setup) first. Run every command below **on the unit**, not on the cloud server.
 
-::: info Production-First Architecture
-This guide defaults to deploying a real hardware robot connecting to the **Production Cloud**. Simulation options (`--simulator`) and development cloud routing (`--dev`) are in the [Advanced Configurations](#advanced-configurations) section.
+::: info Production first
+This page connects a real robot to the **production cloud**. Simulator (`--simulator`) and dev cloud (`--dev`) are in [Advanced Configurations](#advanced-configurations).
 :::
 
-## System Topology
+## System topology
 
-![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![MSD700 System Diagram](/images/MSD700-System-Diagram.jpg)
 
+## Folder layout
 
-
-## Directory Structure Overview
-
-The Jetson workspace manages robot packages, web bridges, and onboard web UI as submodules:
+The Jetson workspace keeps robot packages, web bridges, and the onboard web UI as plain clones under `src/` (not submodules):
 
 ```
-~/msd700_noetic/                              # Main Jetson Orchestration Workspace
-├── setup.sh                                  # Host Dependency Installer (Docker, xhost)
+~/msd700_noetic/
+├── setup.sh
 ├── scripts/
-│   └── docker-manager.sh                     # Core Lifecycle CLI (build, up, down, logs)
+│   └── docker-manager.sh
 ├── docker/
-│   ├── Dockerfile                            # ROS 1 Noetic Desktop Full Container
-│   ├── docker-compose.yml                    # Robot Container Definition
-│   └── .env                                  # Local Environment Variables
-└── src/                                      # Catkin Workspace Submodules
-    ├── msd700_robot/                         # Navigation, EKF Control, Hardware Drivers
-    ├── ros-web-ui/                           # Web Bridges, MQTT nodes, System Command
-    └── ROS-dashboard-next-ts/                # Local Operator Web Dashboard
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── .env
+└── src/
+    ├── msd700_robot/
+    ├── ros-web-ui/
+    └── ROS-dashboard-next-ts/
 ```
 
 ---
 
-## Core Step-by-Step Setup
+## Setup steps
 
-Follow these 6 steps in sequence to set up the physical robot, including provisioning its own WiFi
-hotspot.
+Do Steps 1-4, then Step 6 (hotspot provisioning), then Step 5 (start). The hotspot files must exist before the first start.
 
-### Step 1: Clone Workspace and Source Repositories
-
-Clone the `msd700_noetic` orchestration workspace, then clone the three required repositories into the `src/` directory:
+### Step 1: Clone the workspace and sources
 
 ```bash
-# 1. Clone orchestration workspace
+# 1. Orchestration workspace
 git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
 
-# 2. Clone source packages into src/ on branch v2
-git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+# 2. Source repos into src/, branch v2
+git clone --recurse-submodules -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
 git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
 git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip Why Manual Clone into `src/`?
-`msd700_noetic` ignores `src/*/` in its `.gitignore` to avoid Git-in-Git conflicts and allow each sub-repository to be managed on its own independent branch.
+::: tip Why clone by hand into `src/`?
+`msd700_noetic` ignores `src/*/` so each repo keeps its own branch without Git-in-Git conflicts.
 :::
 
 ---
 
-### Step 2: One-Time Host Setup
-
-Run the host setup script to configure Docker group permissions and graphics forwarding:
+### Step 2: One-time host setup
 
 ```bash
 cd ~/msd700_noetic
 ./setup.sh
 ```
 
-::: warning Apply Group Permissions
-If the script added your user to the `docker` group, log out and back in, or run:
-```bash
-newgrp docker
-```
+This installs Docker if missing, sets group access and `xhost`, makes scripts executable, configures the Velodyne wired link, installs STM32/RealSense udev rules and the RealSense recovery service, and downloads simulator worlds. It changes the host; it is not a read-only check.
+
+::: warning Docker group
+If the script added you to the `docker` group, log out and back in, or run `newgrp docker` (current shell only).
 :::
 
 ---
 
-### Step 3: Review Environment Configuration (`docker/.env`)
+### Step 3: Check `docker/.env`
 
-On first launch, `./scripts/docker-manager.sh` automatically creates `docker/.env` from `docker/.env.example` and generates secure, loopback-only local MySQL passwords (`ensure_local_secrets`).
+The startup scripts create `docker/.env` from `docker/.env.example` **only if missing**. Placeholder MySQL passwords are replaced only while the local database is still uninitialized; this does not rotate existing passwords.
 
-If you wish to pre-configure or review settings manually before launch:
+::: warning Credentials in this file
+`docker/.env` is tracked in git. Check the per-unit values yourself before first use. Never print, commit, or copy them to another unit. Changing the password of an existing database needs a matching SQL rotation, not just editing the file.
+:::
+
+To review settings by hand before launch:
 
 ```bash
 cd ~/msd700_noetic
-cp docker/.env.example docker/.env
+test -e docker/.env || cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-Key settings in `docker/.env`:
+Main settings:
 
 ```ini
-# Storage path for map occupancy grids on the Jetson
+# Map storage on the Jetson
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+# Local user UID/GID (blank = auto-detect: Jetson 2002, dev laptop 1000)
 USER_UID=
 USER_GID=
 
-# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+# Gazebo simulator (true only on machines without robot hardware)
 WITH_SIMULATOR=false
 
-# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+# Leave empty; filled automatically during cloud enrolment
 UNIT_ID=
 
-# Local Ports (Default settings for on-board local stack)
+# Local ports (onboard stack defaults)
 MYSQL_PORT_LOCAL=3306
 MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
@@ -124,214 +120,178 @@ SIGNALLING_PORT_WS_LOCAL=3001
 SIGNALLING_PORT_HTTP_LOCAL=3002
 NETWORK_AGENT_PORT_LOCAL=5011
 
-# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+# Optional static IP hint (the dashboard follows the browser address anyway)
 #LOCAL_IP=192.168.4.1
 ```
 
-::: info Cloud Connection Routing
-Cloud connection parameters (Production Cloud `https://msd.nglobal.jp/services` or Dev Cloud via `--dev`) are managed automatically by `docker-manager.sh` during launch and enrolment, and are not configured in `docker/.env`.
+::: info Which cloud does it talk to?
+Default is `https://msd.nglobal.jp/services/rosbackend`, or the dev backend with `--dev`. `CLOUD_BASE_URL` overrides the default. Keep enrolment and sync pointed at the same cloud; these settings do not move the MQTT broker by themselves.
 :::
 
 ---
 
-### Step 4: Build Robot Docker Image
+### Step 4: Build the robot image
 
-Build the ROS Noetic robot runtime container:
+Build while you have internet. The robot base is `ros:noetic-robot`; the Dockerfile copies `src/` in and runs `catkin build`.
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh build
 ```
 
-This builds the `msd700:latest` image containing ROS Noetic, navigation stacks, sensor drivers, and web bridges.
+This builds `msd700:latest`, `ros-noetic-webui-app-local:latest`, and `ros-dashboard-next-local:latest`, and pulls MySQL and Mosquitto. A pull failure only warns; check upstream images are reachable before going offline. Plain `up` reuses images and only warns about stale ones; rebuild on purpose after source changes.
+
+Create the maps folder first, owned by your UID/GID. Docker creates a missing bind folder as root otherwise:
+
+```bash
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/ubuntu/ros_maps
+```
+
+**If this unit uses the hotspot, do Step 6 before Step 5.** The stack bind-mounts `/run/msd700-hotspot-active`; starting Docker before that file exists can create a folder in its place.
 
 ---
 
-### Step 5: Start Robot and Complete Enrolment
-
-Launch the robot stack in detached mode:
+### Step 5: Start the robot and enrol
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
-#### Automated Enrolment Flow:
-1. On its very first launch, the robot contacts the cloud server and outputs a 6-character **Claim Code** (e.g. `K7M2QP`).
-2. An administrator opens `https://msd.nglobal.jp/admin` and logs in.
-3. Under **Pending Units**, locate the matching claim code, assign the unit to an active **Rental Profile**, and click **Approve**.
-4. The robot receives its cryptographically signed credentials (`Certificates/robot/device.json`), binds to HiveMQ over TLS port 8883, and appears live on the fleet map.
+This starts the robot container plus the always-on `local_dev` stack (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Despite the name, `local_dev` runs for either cloud. `-d` returns after startup and enrolment finish. `up` also installs `msd700.service` for boot autostart; add `--no-autostart` to skip that.
+
+**Enrolment, first launch only:**
+
+1. The robot contacts the cloud and prints an 8-character **claim code** (for example `K7M2QP4R`). It is a display handle, not a secret.
+2. An admin opens the cloud admin console (`https://msd.nglobal.jp/admin`, or the dev backend on port 5001 with `--dev`) and logs in.
+3. Under **Pending Units**, find the code, then either register it as a new unit on an active **Rental Profile**, or **Adopt** it onto an existing unit's ULID (hardware swap path; keeps maps already in the cloud).
+4. The unit saves its identity to `src/ros-web-ui/Certificates/robot/device.json` plus a token in `token.cred`. Treat both as secrets. Later launches reuse them.
+5. The production bridge targets HiveMQ TLS port `8883`. Approval alone proves nothing about connectivity; check the cloud and local dashboards separately.
 
 ---
 
-### Step 6: Provision the WiFi Hotspot
+### Step 6: Provision the WiFi hotspot
 
-Every unit broadcasts its own WiFi hotspot for an operator to connect to directly (alongside the
-onboard radio staying a normal WiFi client). Plug in the validated USB WiFi dongle and run two
-commands from an interactive terminal:
+A provisioned unit offers a hotspot and can keep a WiFi client connection on the same onboard radio, if the driver supports both at once. Check the real driver first, not just the chip name. Do this provisioning **before the first `up`**, from a local console or wired connection: NetworkManager restarts and WiFi can drop.
 
 ```bash
 cd ~/msd700_noetic
 
-# 1. Install the dongle's driver (one-time, builds via DKMS so it survives kernel upgrades)
+# Optional: backup dongle driver (one-time, DKMS). Skip if the onboard radio does the hotspot alone.
 ./scripts/install-wifi-dongle-driver.sh
 
-# 2. Provision the hotspot
+# Provision the hotspot (udev rules, PolicyKit rule, hostapd/dnsmasq services)
 ./setup.sh --provision-network
 ```
 
-Run directly at the keyboard (not piped or over a non-TTY session), `--provision-network` walks
-through every setting create-next-app style: interface names, SSID, and password are shown as
-auto-detected `[defaults]`, press Enter to accept each one, or type a new value. The hotspot
-password is typed twice to confirm and is never written to `docker/.env` or any other file on disk.
-The hotspot comes up on its own on every boot afterward, independent of Docker or
-`docker-manager.sh`.
+`--provision-network` runs in a terminal and asks for interface names and SSID (with detected defaults). Password typing is hidden; an existing password shows as `[keep current]`, never displayed. A new password is typed twice. It is saved to the hostapd configs under `/etc/hostapd/` (mode 0600), **not** back to `docker/.env`. The upstream client network goes to its NetworkManager profile. After this, the hotspot comes up on every boot by itself, no Docker needed.
 
-::: info Unattended / scripted provisioning
-Without a TTY (or with `MSD700_NONINTERACTIVE=1`), the prompts are skipped and `--provision-network`
-takes `docker/.env` and the environment as-is instead, so `AP_PASSWORD_LOCAL='your-hotspot-password'
-./setup.sh --provision-network` still works for automation. See
-[WiFi Hotspot + Client](/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit) for the full
-provisioning walkthrough, the validated dongle hardware, and troubleshooting.
+::: info Scripted provisioning
+Without a TTY (or with `MSD700_NONINTERACTIVE=1`), prompts are skipped. An existing hostapd password wins over env values. Typing a password inline can leak it into shell history. Prefer the hidden interactive prompt. Secure unattended password rotation is still unsolved. Full walkthrough: [WiFi Hotspot](/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit).
 :::
 
 ---
 
-## Operating the Unit Locally (Offline Mode)
+## Driving locally (offline)
 
-When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network, or the [robot's WiFi hotspot](/setup/wifi-hotspot) provisioned in Step 6:
+Without internet, join the robot's local network or its [hotspot](/setup/wifi-hotspot) from Step 6:
 
-1. Open your browser and navigate to: `http://<jetson-ip>:3000`.
-2. The local dashboard allows full teleoperation, SLAM mapping, route creation, and area coverage sweeps.
-3. When internet connectivity is restored, all locally recorded maps automatically synchronize back to the central cloud server.
+1. Open `http://<jetson-ip>:3000`.
+2. After cloud enrolment and one successful sync (rental assignment + operator accounts), the local dashboard drives, maps, and runs routes offline. A never-enrolled unit cannot start offline.
+3. When internet returns, sync exchanges maps, routes, areas, and database rows with the configured cloud, limited to this unit and its rental profile. Check sync status; do not assume everything uploaded.
 
 ---
 
-## Advanced Configurations
+## Advanced configurations
 
 <details>
-<summary><b>Simulation Mode (Gazebo Warehouse)</b></summary>
+<summary><b>Simulation mode (Gazebo warehouse)</b></summary>
 
-To test algorithms on a laptop without physical robot hardware:
+For testing on a laptop with no robot hardware. `build --simulator` sets `WITH_SIMULATOR=true` and picks `msd700-simulator:latest`; `fetch_sim_worlds.sh` downloads the warehouse world while online. Use the spawn pose of the selected world.
 
-1. Build the simulator-enabled image:
-   ```bash
-   ./scripts/docker-manager.sh build --simulator
-   ```
+```bash
+./scripts/docker-manager.sh build --simulator
+./scripts/docker-manager.sh up --simulator -d
+```
 
-2. Start the simulation stack:
-   ```bash
-   ./scripts/docker-manager.sh up --simulator -d
-   ```
+With `MSD700_SIM_HEADLESS=true` in `docker/.env`, Gazebo runs without its window.
 
 </details>
 
 <details>
-<summary><b>Development Cloud Routing (`--dev`)</b></summary>
+<summary><b>Dev cloud (`--dev`)</b></summary>
 
-To point the unit at a development cloud server instead of production:
+Point the unit at the dev cloud instead of production:
 
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-This connects MQTT to dev port `8884` and synchronizes with the development database.
+This moves the cloud bridge to the dev backend (port 5001), MQTT to `8884`, and this robot's roscore to `11322`.
 
-**The broker hostname stays `msd.nglobal.jp` on the dev cloud too.** Dev and production are the
-same machine, separated only by the published port, and the broker's TLS certificate is issued for
-that name, so pointing MQTT at a bare IP would fail verification. A log line reading
-`mqtts://msd.nglobal.jp:8884` is therefore the **dev** broker. Read the port, not the hostname:
+**The broker hostname stays `msd.nglobal.jp` on dev too.** Dev and production share one machine, split only by port, and the TLS certificate names that host. A bare IP would fail verification. Read the port, not the hostname:
 
 | Peer | Broker | Backend | ROS master |
 | --- | --- | --- | --- |
 | Production (no flag) | `msd.nglobal.jp:8883` | `https://msd.nglobal.jp/services/rosbackend` | `11321` |
 | Dev (`--dev`) | `msd.nglobal.jp:8884` | `http://118.22.31.252:5001` | `11322` |
 
-::: danger Never let this unit reach the cloud's ROS master
-This robot's roscore is on `11321`/`11322`, deliberately clear of the cloud server's
-`11311`/`11312`. They used to share those numbers, so `localhost:11312` meant a different master
-depending on the machine. A VS Code Remote session or `ssh -L` forwarding the server's port was
-enough: `roscore` could not bind and quit, the readiness probe still passed because the tunnel
-answered, and the whole unit stack registered on the **cloud** master. ROS kills the older node
-whenever a name is claimed twice, so it evicted the server's own `/rosbridge_websocket` and
-`/backend_node`; live topics vanished from the cloud dashboard (the mapping map first) while the
-local dashboard looked perfectly fine. That was 2026-09-10.
-
-Two guards now. The ports no longer overlap, and `run_msd.sh` refuses to start unless a `rosmaster`
-of its own runs on that port and the master's `/msd700/stack_role` is not `cloud` (every roscore
-stamps that param; `run_msd.sh` adds `/msd700/stack_host`). Cloud node names carry a `_cloud`
-suffix as a last resort, so a stack that does end up on the wrong master no longer evicts anything.
+::: danger Keep this unit off the cloud's ROS master
+This robot's roscore is `11321`/`11322`, deliberately different from the cloud's `11311`/`11312`. Never forward the server's ROS port to the unit (no `ssh -L`, no VS Code port forward of 11311/11312): the unit stack would register on the **cloud** master and evict the server's own nodes. Symptoms: cloud dashboard goes empty (mapping map first) while the local dashboard looks fine.
 
 ```bash
-ss -ltnp | grep :11322                     # who owns the port
-rosparam get /msd700/stack_role            # whose master answers
-src/ros-web-ui/scripts/ros_doctor.sh       # owner, foreign nodes, rosbridge, in one verdict
+ss -ltnp | grep :11322
+docker exec -e ROS_MASTER_URI=http://localhost:11322 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
 ```
 
-Close the forward (VS Code: PORTS panel), or move this robot with
-`ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d`.
+Close the forward (VS Code: PORTS panel), or move this robot with `ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d`.
 :::
 
-**The mode is remembered across reboots.** `up` arms `msd700.service`, and since the
-September 2026 fix the `--dev` and `--simulator` flags of that `up` are written into the unit's
-`ExecStart`. Before it, the boot unit re-ran a bare `up`, so a robot started with
-`up --simulator --dev` came back after a reboot as **hardware, against production**. Confirm what
-is armed with:
+**The mode sticks across reboots.** `up` writes its `--dev` / `--simulator` flags into `msd700.service`, so the unit reboots into the same mode. Check what is armed:
 
 ```bash
 ./scripts/docker-manager.sh print-autostart-unit --simulator --dev   # what would be written
 grep ExecStart /etc/systemd/system/msd700.service                    # what is armed now
 ```
 
-`up` also prints it: `Boot autostart armed (DEV cloud, simulator)`. Re-running `up` with different
-flags rewrites the unit; `down` disarms it entirely.
+Re-running `up` with different flags rewrites the unit; `down` removes autostart.
 
 </details>
 
 <details>
-<summary><b>Host Networking Fixes for Non-Ubuntu/Arch Laptops</b></summary>
+<summary><b>Non-Ubuntu laptops (sim/dev only)</b></summary>
 
-If running on Arch Linux or non-standard distributions:
-
-1. **Hostname Resolution**:
-   ```bash
-   grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
-   ```
-
-2. **Disable IPv6 Loopback Mapping**:
-   ```bash
-   sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
-   ```
-
-3. **Create Shared Maps Directory**:
-   ```bash
-   sudo mkdir -p /home/ubuntu/ros_maps
-   sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
-   ```
+Set `MAPS_FOLDER_LOCAL` in `docker/.env` to a real writable folder, not a Jetson-style `/home/ubuntu` path. Match the image UID/GID. See `msd700_noetic/docker/docker-compose.yml:219` and `ros-web-ui/run_msd.sh:606-613`.
 
 </details>
 
 ---
 
-## Verification & Diagnostics
-
-Use these diagnostic commands to verify robot health:
+## Check robot health
 
 ```bash
-# 1. View overall container and service status
+# 1. Robot + local stack status
 ./scripts/docker-manager.sh status
 
-# 2. Attach to the ROS tmux session inside the container
+# 2. ROS session inside the container
 ./scripts/docker-manager.sh shell
 tmux attach -t robot_services
 
-# 3. View real-time container logs
+# 3. Robot logs (follow); local stack: local-logs
 ./scripts/docker-manager.sh logs -f
+
+# 4. Stack health (master, foreign nodes, rosbridge)
+docker exec -e ROS_MASTER_URI=http://localhost:11321 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
+
+# 5. Sync state on the unit
+curl -s http://localhost:5002/local/status
 ```
 
-## Related Documentation
+## Related
 
-- [Server Setup](/setup/server-setup): Cloud backend installation.
-- [System Setup](/setup/system-setup): Sensor calibration and verification.
-- [Docker Reference](/setup/docker-reference): Comprehensive CLI syntax reference.
-- [WiFi Hotspot + Client](/setup/wifi-hotspot): Full hotspot architecture, dongle hardware, and troubleshooting.
+- [Server Setup](/setup/server-setup): cloud backend.
+- [System Setup](/setup/system-setup): check server + unit together.
+- [Docker Reference](/setup/docker-reference): full CLI reference.
+- [WiFi Hotspot](/setup/wifi-hotspot): hotspot setup and troubleshooting.
+- [MT7922 Wi-Fi](/setup/wifi-mt7922): onboard-radio firmware fix.
+- [Troubleshooting](/setup/troubleshooting): wider diagnostics.

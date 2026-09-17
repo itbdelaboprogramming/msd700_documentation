@@ -30,7 +30,7 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-Token ditandatangani secara kriptografis menggunakan HS256 dan divalidasi terhadap sebuah keyring bersama (`/srv/msd/secrets/jwt_keyring`). Secret key aktif menandatangani token baru, sementara key yang baru saja dirotasi tetap valid selama periode grace transisi.
+Token ditandatangani secara kriptografis menggunakan HS256 dan divalidasi terhadap sebuah keyring bersama. Di dalam container file keyring adalah `/run/secrets/jwt_keyring` (di-mount dari `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` pada service `*_dev`; produksi fallback ke env var `JWT_SECRET_KEY`/`JWT_SECRET`). Secret key aktif menandatangani token baru, sementara key yang baru saja dirotasi tetap valid selama periode grace transisi.
 
 ```mermaid
 sequenceDiagram
@@ -42,7 +42,7 @@ sequenceDiagram
   Client->>Backend: POST /user/login { username, password }
   Backend->>DB: Query user credentials & rental profiles
   DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { token, refresh_token, user_id, profile_id }
+  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
   Note over Client: Include token in Bearer header on subsequent calls
 
   Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
@@ -54,7 +54,7 @@ sequenceDiagram
 
 | Klaim Token `typ` | Lingkup & Penerimaan | Aturan Penolakan |
 | --- | --- | --- |
-| **Operator Standar** (tidak ada atau `operator`) | Akses penuh ke operasi dan peta fleet robot yang ditugaskan. | Ditolak jika kedaluwarsa atau ditandatangani dengan secret tidak valid. |
+| `access` (token operator standar) | Akses penuh ke operasi dan peta fleet robot yang ditugaskan. | Ditolak jika kedaluwarsa atau ditandatangani dengan secret tidak valid. |
 | `refresh` | Hanya diterima secara eksklusif pada `/user/refresh`. | Ditolak oleh middleware API standar dengan HTTP 401. |
 | `admin` | Diterima pada rute administratif (`/admin/api/*`). | Ditolak oleh rute operator robot standar karena kekurangan konteks pengguna. |
 
@@ -128,12 +128,16 @@ Mengautentikasi akun operator dan menerbitkan token akses/refresh.
 ```json
 {
   "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "msg": "Login user success",
+  "username": "operator1",
+  "full_name": "Operator One",
   "user_id": "01JZ7YV5CQUSER00000000000",
-  "role": "operator",
-  "profile_id": 4
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
+```
+
+Tidak ada `role` atau `profile_id` dalam response. Unit mana yang boleh disentuh ditentukan per request dari rental profile (lihat `attachUnit` di bawah), bukan dari payload login.
 ```
 
 ### 2. Refresh Token
@@ -159,9 +163,9 @@ Menukar refresh token yang valid dengan pasangan token baru.
 ## Manajemen Unit dan Operasi Fleet
 
 ### 1. Daftar Unit yang Dapat Diakses
-`GET /api/units`
+`GET /unit/all`
 
-Mengembalikan semua robot terdaftar yang ditugaskan ke rental profile aktif pengguna terautentikasi.
+Mengembalikan semua robot terdaftar yang ditugaskan ke rental profile aktif pengguna terautentikasi. (Tidak ada `GET /api/units`; status live seperti baterai berasal dari heartbeat ping, bukan daftar ini.)
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Response (200 OK)**:
@@ -170,22 +174,20 @@ Mengembalikan semua robot terdaftar yang ditugaskan ke rental profile aktif peng
   "success": true,
   "data": [
     {
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
+      "id": "01JZ8P9WZ0UNIT00000000000",
       "unit_name": "Unit 01",
-      "model": "MSD700",
-      "status": "online",
-      "is_in_use": false,
-      "active_page": "navigation",
-      "battery": 94.2
+      "topic_root": "/unit_01JZ8P9WZ0UNIT00000000000",
+      "profile_name": "Nakayama",
+      "created_at": "2026-08-10T14:20:00Z"
     }
   ]
 }
 ```
 
 ### 2. Ping Heartbeat Robot
-`POST /api/units/ping`
+`POST /api/hardware/ping`
 
-Mengirim heartbeat liveness, memperbarui operating lease, dan mengembalikan telemetri saat ini.
+Mengirim heartbeat liveness ke robot lewat MQTT (round-trip) dan menjaga operating lease pemanggil. Field `page` menentukan apa yang dijaga ping: daftar unit hanya membaca status, sedangkan halaman operasi menahan tier watchdog idle/shutdown.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
@@ -199,35 +201,20 @@ Mengirim heartbeat liveness, memperbarui operating lease, dan mengembalikan tele
   "force_takeover": false
 }
 ```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "status": true,
-    "robot_activity": "navigation_point_published",
-    "battery": 91.0,
-    "uptime": 128.5,
-    "hw_status": "ready",
-    "manual_override": false,
-    "autopilot": false,
-    "in_use": false,
-    "origin_conflict": false
-  }
-}
-```
+
+Terkait tapi berbeda: `POST /api/unit/heartbeat` adalah keepalive container yang dipakai container relay per-unit. Ia tidak menerima field lease dan hanya mengembalikan `{ "success": true }`.
 
 ### 3. Emergency Stop / Pause
-`POST /api/hardware/emergency`
+`POST /api/emergency_stop`
 
-Mengalihkan emergency stop hardware atau pause pergerakan.
+Mengalihkan emergency stop hardware atau pause pergerakan. Boolean dipetakan ke perintah robot: `true` mengirim `activate`, `false` mengirim `deactivate` lewat topik `system_command`/`system_feedback` yang sama seperti semuanya.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "action": "activate"
+  "enable": true
 }
 ```
 - **Response (200 OK)**:
@@ -304,35 +291,38 @@ Meluncurkan coverage sweep boustrophedon otonom di atas batas poligon yang diten
 
 ## Operasi Mapping (SLAM)
 
-### 1. Mulai Sesi Mapping
-`POST /api/mapping/start`
+### 1. Kontrol Mapping
+`POST /api/mapping`
 
-Memulai mode SLAM (gmapping) pada unit target.
+Satu endpoint mengendalikan seluruh sesi mapping. Tepat satu dari `start`, `pause`, `stop` bernilai true per panggilan. Stop menyimpan occupancy grid aktif, menghasilkan metadata thumbnail, dan mengunggah aset; field nama yang disimpan adalah `map_name`, bukan `display_map_name`.
 
-- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
-
-### 2. Hentikan Mapping dan Simpan Peta
-`POST /api/mapping/stop`
-
-Menyimpan occupancy grid aktif, menghasilkan metadata thumbnail, dan mengunggah aset.
-
-- **Request Body**:
+- **Request Body** (contoh stop + simpan):
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
   "homebase_x": 0.0,
-  "homebase_y": 0.0
+  "homebase_y": 0.0,
+  "homebase_z": 0.0,
+  "homebase_ox": 0.0,
+  "homebase_oy": 0.0,
+  "homebase_oz": 0.0,
+  "homebase_ow": 1.0
 }
 ```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
-}
-```
+
+### 2. Buang Sesi Mapping
+`POST /api/mapping/discard`
+
+Membatalkan sesi aktif tanpa menyimpan.
+
+- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+
+### 3. Progres Simpan Mapping (SSE)
+`GET /api/mapping/progress/:request_id?token=<jwt>`
+
+Stream Server-Sent Events untuk penyimpanan yang dipicu stop. JWT ditaruh di query string karena `EventSource` tidak bisa menyetel header.
 
 ## Manajemen Data Peta dan Rute
 

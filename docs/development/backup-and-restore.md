@@ -70,25 +70,30 @@ msd700_backup_01JZ8QK2H.tar.gz
 
 ## REST API Backup Operations
 
-### 1. Export Archive
-`POST /api/backup/export`
+All backup routes live under `/admin/api` (admin token required). There are no `/api/backup/export` or `/api/backup/import` endpoints.
 
-Generates and downloads a `.tar.gz` archive.
+### 1. Create Backup
+`POST /admin/api/profiles/:id/backups` (profile scope) or `POST /admin/api/units/:id/backups` (unit scope)
 
-- **Request Body**:
-```json
-{
-  "scope": "profile",
-  "profile_id": "01JZ7YV5CQPROF00000000000"
-}
-```
+Creates a backup record for the profile or unit.
 
-### 2. Import and Restore Archive
-`POST /api/backup/import`
+### 2. Download Archive
+`GET /admin/api/backups/:id/download`
 
-Uploads an archive and applies it additively.
+Downloads the `.tar.gz` archive.
 
-- **Request Payload**: Multipart form-data with `file: <archive.tar.gz>` and target `profile_id`.
+### 3. Upload Archive
+`POST /admin/api/backups/upload`
+
+Uploads an archive (raw body). Preview the plan first with `POST /admin/api/backups/:id/plan`.
+
+### 4. Restore Archive
+`POST /admin/api/backups/:id/restore`
+
+Applies the uploaded archive additively.
+
+### 5. List Backups
+`GET /admin/api/backups`
 
 ## Schema Migration Scripts
 
@@ -96,10 +101,10 @@ Database schema evolutions are managed by automated scripts in `ros-web-ui/sourc
 
 | Script Name | Purpose | Execution Command |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` | Migrates legacy username/unitname paths to ULID addressing. | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | Creates `pending_units` and `unit_devices` tables for 32-byte nonce auth. | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` | Installs `sync_state` and `sync_tombstones` tables for offline data sync. | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | Upgrades `profile_backups` table with `scope` column. | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | Migrates legacy username/unitname paths to ULID addressing. | `node migrate_unit_id_refactor.js --profile server_dev --apply` |
+| `migrate_enrolment.js` | Creates `pending_units` and `unit_devices` tables for nonce auth. | `node migrate_enrolment.js --profile server_dev --apply` |
+| `migrate_sync.js` | Installs `sync_state` and `sync_tombstones` tables for offline data sync. | `node migrate_sync.js --profile server_dev --apply` |
+| `migrate_backup_scope.js` | Upgrades `profile_backups` table with `scope` column. | `node migrate_backup_scope.js --profile server_dev --apply` |
 
 ::: danger Migration Testing Rule
 Always test migration scripts against the development database on **port 3308** before applying them to production on port 3307. Migration scripts require an explicit `--profile` argument to prevent accidental target mismatch.

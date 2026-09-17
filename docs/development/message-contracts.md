@@ -473,7 +473,7 @@ sequenceDiagram
 
   Robot->>Robot: Generate 32-byte cryptographically random nonce<br/>Compute nonce_hash = sha256(nonce)<br/>Compute fingerprint = sha256(hardware_serial)
   Robot->>Backend: POST /enroll/claim { fingerprint, nonce_hash, hostname, mac }
-  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP", status: "pending" }
+  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP4R", status: "pending" }
   Note over Robot: Displays claim code on LCD/terminal
   Admin->>Backend: Admin approves claim code in console
   loop Poll until Approved

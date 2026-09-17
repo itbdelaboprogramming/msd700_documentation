@@ -90,42 +90,19 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ## Patch `createjs.Stage.prototype`
 
-Kode di `rosScriptLoader.ts` yang mem-patch `createjs.Stage.prototype` sebelum canvas apa pun
-dibuat terlihat janggal jika dilihat tanpa konteks, jadi ada baiknya dijelaskan alasannya. Dalam
-SPA React seperti dashboard ini, komponen di-mount dan di-unmount dengan cepat selama transisi
-halaman dan mode. `ROS2D.js` standar mengikat fungsi konversi koordinatnya (`globalToRos`,
-`rosToGlobal`) ke satu *instance* stage pada saat pembuatannya. Ikatan tersebut bisa hilang saat
-React me-render ulang, yang jika tidak ditangani akan muncul sebagai `TypeError` fatal
-`this.stage.globalToRos is not a function` begitu operator mencoba mengklik canvas.
+Kode di `mapComponent.tsx` yang mem-patch `createjs.Stage.prototype` sebelum canvas apa pun
+dibuat terlihat janggal jika dilihat tanpa konteks, jadi ada baiknya dijelaskan alasannya. EaselJS
+dapat mengevaluasi ulang `createjs.Stage` menjadi konstruktor yang benar-benar baru yang
+prototypenya tidak lagi memiliki helper koordinat `ROS2D` (`globalToRos`, `rosToGlobal`,
+`rosQuaternionToGlobalTheta`). Viewer yang dibangun sesudahnya kemudian melempar `TypeError`
+fatal `this.stage.globalToRos is not a function` begitu operator mencoba mengklik canvas.
 
-Untuk menjamin canvas tidak pernah crash dengan cara ini, `rosScriptLoader.ts` mem-patch fungsi
-konversi tersebut langsung ke `createjs.Stage.prototype` itu sendiri, sebelum instantiasi, alih-alih
-mengandalkan ikatan per-instance yang bertahan di setiap remount:
-
-```typescript
-// scripts/rosScriptLoader.ts
-export function patchEaselJSStage(): void {
-  if (typeof window === "undefined" || !(window as any).createjs) return;
-
-  const StageProto = (window as any).createjs.Stage.prototype;
-
-  if (!StageProto.globalToRos) {
-    StageProto.globalToRos = function (x: number, y: number) {
-      const rosX = (x - this.x) / (this.scaleX * this.ros2dViewer.scaleToDimensions);
-      const rosY = -(y - this.y) / (this.scaleY * this.ros2dViewer.scaleToDimensions);
-      return { x: rosX, y: rosY };
-    };
-  }
-
-  if (!StageProto.rosToGlobal) {
-    StageProto.rosToGlobal = function (rosX: number, rosY: number) {
-      const x = rosX * this.scaleX * this.ros2dViewer.scaleToDimensions + this.x;
-      const y = -rosY * this.scaleY * this.ros2dViewer.scaleToDimensions + this.y;
-      return { x, y };
-    };
-  }
-}
-```
+Untuk menjamin canvas tidak pernah crash dengan cara ini, `ensureStagePrototype()` di
+`mapComponent.tsx` menerapkan ulang helper tersebut secara idempoten pada prototype saat ini tepat
+sebelum setiap pembuatan viewer. Matematikanya mencerminkan `public/script/ros2d.js` secara persis,
+sehingga perilaku tidak berubah pada jalur normal (`rosScriptLoader.ts` hanyalah sequential script
+loader — patch tidak berada di sana).
+Lihat [Frontend Canvas](/id/development/frontend-canvas) untuk snippet lengkap.
 
 Penanganan klik setiap mode di halaman ini (penempatan pinpoint, penempatan home base, penggambaran
 polygon) pada akhirnya memanggil `stage.globalToRos`, sehingga patch ini menjadi prasyarat untuk

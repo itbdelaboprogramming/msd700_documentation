@@ -17,9 +17,9 @@ flowchart TD
   GLOBAL_PLANNER --> GLOBAL_PATH["Global Geometric Path: nav_msgs/Path"]
 
   GLOBAL_PATH --> TEB_OPT["TEB Local Planner: TebLocalPlannerROS<br/>Multi-Objective Non-Linear Least Squares Optimization"]
-  TEB_OPT --> CMD_VEL["Optimal Control Output: /cmd_vel<br/>(geometry_msgs/Twist, 10 Hz)"]
+  TEB_OPT --> CMD_VEL["Optimal Control Output: mux/nav_vel<br/>(geometry_msgs/Twist, 10 Hz)<br/>move_base remaps cmd_vel away from the wheels;<br/>twist_mux arbitrates onto /cmd_vel"]
 
-  LIDAR["LiDAR /scan (20 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
+  LIDAR["LiDAR /scan (10 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
   COSTMAPS --> GLOBAL_PLANNER
   COSTMAPS --> TEB_OPT
 ```
@@ -41,43 +41,32 @@ $$\text{Cost}(d) = \begin{cases}
 \end{cases}$$
 
 ### 設定されているインフレーションパラメータ:
-- **内接半径($r_{\text{inscribed}}$)**: $0.35\text{ m}$(プランニングフットプリント`0.90 x 0.70 m`の幅の半分)。
-- **インフレーション半径($r_{\text{inflation}}$)**: $0.25\text{ m}$(2026-09-11に$0.70\text{ m}$から引き下げ)。
-- **コストスケーリング係数($\alpha$)**: $4.0$。
+- **内接半径($r_{\text{inscribed}}$)**: $0.35\text{ m}$(物理フットプリント`0.90 x 0.70 m`の半幅。パディング付き計画エンベロープは`1.20 x 0.85 m`)。
+- **インフレーション半径($r_{\text{inflation}}$)**: $0.45\text{ m}$(内接半幅$0.35\text{ m}$を上回らなければ減衰帯が崩壊する)。
+- **コストスケーリング係数($\alpha$)**: $10.0$。
 
-::: warning 勾配帯は現在空である
-$r_{\text{inflation}} < r_{\text{inscribed}}$であるため、上記の区分コスト関数の中間ケースは
-決して適用されない。インフレーションされるすべてのセルは内接半径の内側にあり、フラットな$253$を取り、
-$0.25\text{ m}$を超えてインフレーションされるセルは存在しない。結果として、減衰の尾を持たない硬い$0.25\text{ m}$の
-カラーができあがるが、そのカラーはロボットが実際に占める半幅よりも狭い。そのためnavfnは、
-壁が許容できない中心線ルートを生成してしまい、TEBはそこから逸脱せざるを得ない(`inflation_dist` $0.75$、
-`weight_inflation` $5.0$、そしてフットプリントチェックが、実際に機体を壁から離しているものである)。
-実質的な勾配を取り戻すには、$0.35\text{ m}$を上回る値が必要になる。
-:::
 
 ```yaml
-# config/costmap/costmap_common_params.yaml
+# config/costmap/costmap_common_params_field.yaml
 footprint: [[-0.45, -0.35], [0.45, -0.35], [0.45, 0.35], [-0.45, 0.35]]
-footprint_padding: 0.01
+# footprint_padding 0.01 はここのコメントにのみ存在する。パディング付き
+# 1.20 x 0.85 m エンベロープは文書化されているがパラメータではない。
 
 obstacle_layer:
   enabled: true
   max_obstacle_height: 2.0
   min_obstacle_height: 0.0
-  obstacle_range: 5.5
-  raytrace_range: 6.0
-  observation_sources: laser_scan_sensor
-  laser_scan_sensor:
-    sensor_frame: base_scan
-    data_type: LaserScan
-    topic: /scan
-    marking: true
-    clearing: true
+  obstacle_range: 3.0
+  raytrace_range: 3.0   # ローカル。グローバルは 3.0 / 6.0
+  # sensor_frame は意図的に未設定。レイ tracing はスキャン自体のヘッダフレームを使う。
+  obstacles: { data_type: LaserScan, topic: scan, marking: true, clearing: true }
+  # move_base.launch が obstacle_scan 引数でトピックを上書きする
+  # (知覚系は scan_hazard を渡す。それ以外は scan のまま)。
 
 inflation_layer:
   enabled: true
-  inflation_radius: 0.25
-  cost_scaling_factor: 4.0
+  inflation_radius: 0.45
+  cost_scaling_factor: 10.0
 ```
 
 ---
@@ -103,7 +92,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-   $d_{\min} = 0.150\text{ m}$は最小障害物クリアランス距離である。
+   $d_{\min} = 0.10\text{ m}$(`min_obstacle_dist`、ハードフロア)が最小障害物クリアランス距離である。ソフト勾配は `inflation_dist` $0.75\text{ m}$、`weight_inflation` $2.0$ である。
 
 3. **非ホロノミック運動学制約**:
    差動駆動のキネマティクスを満たすため、横滑り速度にペナルティを課す:
@@ -114,7 +103,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 ## 進入禁止ゾーンとDynamic Reconfigure
 
 1. **進入禁止グリッドレイヤー(`keepout_layer`)**: `/msd700/keepout_grid`をサブスクライブし、オペレーターが指定したカスタムポリゴンをコスト$254$のセルにラスタライズすることで、グローバル/ローカルプランナーが除外ゾーンを横断する軌道を生成しないようにする。
-2. **網羅走行モードへの適応**: ブストロフェドン走行のパスの間、`path_coverage_node`は`dynamic_reconfigure`経由で前進駆動の重み(`weight_kinematics_forward_drive`)を`1000.0`から`5.0`に下げ、失速することなく滑らかな90度のコム状ピボットターンを可能にする。
+2. **網羅走行モードへの適応**: ブストロフェドン走行のパスの間、`path_coverage_node`は`dynamic_reconfigure`経由で前進駆動の重み(`weight_kinematics_forward_drive`)を`500.0`に設定する(ベース値も`500`。走行時はさらに `yaw_goal_tolerance` を `0.10` に締める)。これにより失速することなく滑らかな90度のコム状ピボットターンが可能になる。
 
 ## 関連ドキュメント
 

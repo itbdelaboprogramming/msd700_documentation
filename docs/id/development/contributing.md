@@ -22,12 +22,15 @@ Stack pengembangan menggunakan offset port khusus untuk memungkinkan operasi ber
 
 | Layanan | Port Produksi | Port Pengembangan | Protokol |
 | --- | --- | --- | --- |
-| **ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **ROS Master Cloud** | `11311` | `11312` | TCP (XML-RPC) |
+| **ROS Master Unit** | `11321` | `11322` | TCP (XML-RPC, `--dev` di unit) |
 | **rosbridge** | `9090` | `9091` | WebSocket |
 | **HiveMQ MQTT** | `8883` | `8884` | TLS Encrypted MQTTS |
 | **Database MySQL** | `3307` | `3308` | TCP |
 | **Backend REST API** | `5000` | `5001` | HTTP |
 | **Dashboard Next.js**| `3000` | `3100` | HTTP |
+| **Signalling (WS / HTTP)** | `3001` / `3002` | `4001` / `4002` | WebSocket / HTTP |
+| **Media Server** | `3003` | `4003` | HTTP |
 
 Robot fisik atau simulasi terhubung ke peer cloud dev dengan meneruskan `--dev`:
 ```bash
@@ -56,7 +59,7 @@ Sebelum melakukan commit perubahan dokumentasi, jalankan:
 
 ```bash
 # 1. Validate all Mermaid diagrams syntax
-node scripts/check_parse.mjs
+npm run docs:check-diagrams   # node scripts/check-mermaid.mjs docs
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build

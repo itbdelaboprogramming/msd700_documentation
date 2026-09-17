@@ -14,16 +14,16 @@ Dokumen ini menyediakan spesifikasi matematis dan arsitektural yang menyeluruh u
 ```mermaid
 flowchart TD
   subgraph RawSensors["Physical Sensor Hardware Suite"]
-    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.201)"]
+    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.231)"]
     IMU_HW["9-DOF IMU (I2C / Serial)<br/>3-Axis Accel, Gyro, Magnetometer"]
-    ENCODERS["Optical Quadrature Encoders<br/>Dual Channel (A/B) 4000 CPR"]
-    CAM["HD Optical Camera<br/>(/dev/video0, 1080p WebRTC)"]
+    ENCODERS["Wheel Encoders<br/>2400 PPR (msd700_odom)"]
+    CAM["USB Camera<br/>separate WebRTC device, not a URDF link"]
   end
 
   subgraph Preprocessing["ROS Preprocessing & Filtering"]
-    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: 0.46 to 0.96 m"]
-    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>Fuses Accel, Gyro & Gravity Vector"]
-    WHEEL_ODOM["msd700_hardware / serial_node<br/>Computes Forward Kinematics (/wheel/odom)"]
+    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: -0.30 to +0.30 m"]
+    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>gain 0.01, use_mag, fixed frame odom<br/>/imu/mag in, /imu/from_filter out"]
+    WHEEL_ODOM["msd700_hardware<br/>Computes Forward Kinematics (/wheel/odom)"]
   end
 
   subgraph StateEstimation["Continuous State Estimation (EKF)"]
@@ -44,18 +44,17 @@ flowchart TD
 
 ## Kinematika Maju Differential Drive
 
-Robot fisik beroperasi sebagai platform differential drive dua roda yang ditopang oleh empat roda caster pasif.
+Robot lapangan memiliki empat roda penggerak (depan/belakang kiri/kanan pada $x = \pm 0.30\text{ m}$, $y = \pm 0.30\text{ m}$); odometri mem-fusi-kannya sebagai pasangan diferensial.
 
-### Parameter Kinematik:
-- Radius Roda: $r = 0.075\text{ m}$ (Diameter Roda: $0.150\text{ m}$).
-- Track Gauge (jarak antara centerline roda penggerak): $L = 0.580\text{ m}$.
-- Resolusi Encoder: $CPR = 4000\text{ counts/revolution}$ (setelah decoding quadrature $4\times$).
-- Rasio Reduksi Gearbox: $N = 30:1$.
+### Parameter Kinematik (`msd700_hardware/config/odometry_config.yaml`):
+- Radius Roda: $r = 0.027\text{ m}$ ($2.7\text{ cm}$).
+- Track Gauge (jarak antara centerline roda): $L = 0.23\text{ m}$ ($23\text{ cm}$).
+- Resolusi Encoder: $PPR = 2400\text{ pulses/revolution}$.
 
 ### Perhitungan Displacement per Periode Kontrol $\Delta t$:
 Dengan delta encoder kiri $\Delta \text{ticks}_L$ dan delta encoder kanan $\Delta \text{ticks}_R$:
 
-$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{CPR \cdot N}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{CPR \cdot N}$$
+$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{PPR}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{PPR}$$
 
 Displacement linear $\Delta s$ dan perubahan heading $\Delta \theta$:
 
@@ -74,14 +73,14 @@ $$\theta_{k+1} = \theta_k + \Delta \theta$$
 
 ## Filter Orientasi Madgwick AHRS IMU
 
-Data IMU mentah pada `/imu/data_raw` ($50\text{ Hz}$) diproses oleh `imu_filter_madgwick` untuk menurunkan orientasi quaternion bebas-drift $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$:
+Data IMU mentah pada `/imu/data_raw` diproses oleh `imu_filter_madgwick` untuk menurunkan orientasi quaternion bebas-drift $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$. Filter berjalan dengan `gain 0.01`, `use_mag true`, fixed frame `odom`, membaca `/imu/mag` dan mempublikasikan output terfusi pada `/imu/from_filter` (yang dikonsumsi EKF sebagai `imu0`):
 
 ### Optimisasi Gradient Descent:
 $$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \right) \Delta t$$
 
 - $\mathbf{\omega}_{gyro} = [0, \omega_x, \omega_y, \omega_z]^T$: Vektor angular rate dari gyroscope.
 - $\nabla \mathbf{f}$: Gradient fungsi objektif yang menyelaraskan vektor gravitasi accelerometer terukur dengan gravitasi earth-frame referensi $[0, 0, 1]^T$.
-- $\beta = 0.05$: Parameter laju divergensi filter yang menyeimbangkan responsivitas gyroscope terhadap noise getaran accelerometer.
+- $\beta$ (`gain`) $= 0.01$: Parameter laju divergensi filter yang menyeimbangkan responsivitas gyroscope terhadap noise getaran accelerometer.
 
 ---
 
@@ -113,8 +112,8 @@ $$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \left( \mathb
 
 $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}$$
 
-- $\mathbf{z}_k$: Vektor pengukuran yang mem-fusi kecepatan $\dot{x}$ dari odometri roda, serta yaw absolut $\psi$ dan kecepatan sudut $\dot{\psi}$ dari IMU.
-- $\mathbf{R}_k$: Matriks Kovarians Measurement Noise yang disetel untuk varians sensor ($R_{\dot{x}, \text{wheel}} = 10^{-3}$, $R_{\psi, \text{imu}} = 10^{-4}$).
+- $\mathbf{z}_k$: Vektor pengukuran yang mem-fusi kecepatan $\dot{x}$ dari odometri roda (`odom0: /wheel/odom`), serta roll/pitch plus yaw rate dari IMU terfilter (`imu0`, frame `odom`). Roll dan pitch berasal dari IMU; filter berjalan pada $30\text{ Hz}$ dalam frame `odom`.
+- $\mathbf{R}_k$: Matriks Kovarians Measurement Noise dari `ekf_localization_config.yaml` (process dan initial covariance dalam file; lihat yaml untuk nilai yang disetel).
 
 ---
 
@@ -124,12 +123,12 @@ Sensor Velodyne VLP-16 menghasilkan 300.000 titik/detik melintasi 16 laser ring.
 
 ```mermaid
 flowchart LR
-  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.15 m (0.46 m above floor)<br/>max_height: +0.35 m (0.96 m above floor)"]
-  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.20 m, max_range: 100.0 m<br/>angle_increment: 0.0087 rad (0.5 deg)"]
-  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 20 Hz, 720 points/rev)"]
+  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.30 m<br/>max_height: +0.30 m"]
+  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.40 m, max_range: 100.0 m<br/>scan_time: 0.1 s (10 Hz)<br/>angle_increment: 0.0087 rad (0.5 deg)"]
+  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 10 Hz)"]
 ```
 
-Ini memastikan bahwa obstacle (seperti kaki meja, pallet rendah, dan personel yang berdiri) dalam zona elevasi $0.46\text{ m}$ hingga $0.96\text{ m}$ tertangkap ke dalam costmap navigasi tanpa clutter dari pantulan lantai.
+Ini menjaga pita $\pm 0.30\text{ m}$ di sekitar sensor di dalam costmap navigasi sementara return di luarnya (pantulan lantai, langit-langit) dibuang. Pipeline kedua (`cloud_hazard.launch`) mem-fitting ground dan mengawasi pita $0.08$–$0.65\text{ m}$ di atasnya untuk lubang dan drop-off, mempublikasikan `/scan_hazard`.
 
 ## Dokumentasi Terkait
 

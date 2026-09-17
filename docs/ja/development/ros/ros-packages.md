@@ -17,9 +17,10 @@ flowchart TD
     BRINGUP["msd700_bringup<br/>Hardware startup & teleop"]
     CONTROL["msd700_control<br/>EKF fusion & IMU filtering"]
     DESC["msd700_description<br/>URDF, xacro & 3D meshes"]
-    FIRM["msd700_firmware<br/>Arduino low-level controller"]
+    FIRM["msd700_firmware<br/>MCU firmware (plain directory,<br/>not a ROS package)"]
     HW["msd700_hardware<br/>Serial motor drivers & battery"]
-    NAV["msd700_navigation<br/>move_base, TEB, SLAM, coverage"]
+    NAV["msd700_navigation<br/>move_base, TEB, SLAM"]
+    COV["msd700_coverage<br/>boustrophedon sweep planner"]
     SIM["msd700_simulation<br/>Gazebo warehouse & worlds"]
     TP["third_party/ira_laser_tools<br/>Dual-LiDAR pointcloud merger"]
   end
@@ -46,21 +47,20 @@ flowchart TD
 
 - **主要ノード**:
   - `move_base`: グローバル経路計画に`navfn/NavfnROS`、軌道最適化に`teb_local_planner/TebLocalPlannerROS`を利用する標準ROSナビゲーションアクションサーバー。
-  - `path_coverage_node.py`: `libs/coverage_geometry.py`を用いて蛇行経路を計算し、リアルタイムの障害物再計画を処理するブストロフェドン網羅走行プランナー。
   - `slam_gmapping`: occupancy gridを生成する2Dレーザーベースのマッピングノード。
   - `amcl`: 静的地図上での位置推定を行うAdaptive Monte Carlo Localizationパーティクルフィルタ。
 - **主要Launchファイル**:
   - `msd700_navigation.launch`: map server、AMCL、move_baseを含む完全なナビゲーション起動。
-  - `msd700_boustrophedon.launch`: `path_coverage_node`によるエリア網羅走行実行スタック。
-  - `msd700_slam.launch`: テレオペレーション付きGmapping SLAM起動。
+  - `msd700_slam.launch`: Gmapping SLAM起動(テレオペは別の`robot_teleop.launch`)。
   - `msd700_explore.launch`: 自律SLAMフロンティア探索(`explore_lite`)。
+- **カバレッジは隣にある**: `msd700_coverage/launch/msd700_boustrophedon.launch`が`path_coverage_node.py`を実行し、`src/msd700_coverage/coverage_geometry.py`を用いて蛇行経路を計画し、障害物周辺を再計画する。
 
 ### 2. `msd700_control`
 状態推定、座標変換階層、センサーフュージョンを管理する。
 
 - **主要ノード**:
-  - `ekf_localization_node` (`robot_localization`): ホイールエンコーダーオドメトリ(`/wheel/odom`)とIMUセンサーデータ(`/imu/data`)を融合し、安定した`/odometry/filtered`トピックを生成する拡張カルマンフィルタ。
-  - `imu_filter_node` (`imu_tools`): 生の角速度と加速度をオリエンテーションクォータニオンに変換するMadgwick AHRSセンサーフィルタ。
+  - `ekf_localization_node` (`robot_localization`): ホイールエンコーダーオドメトリ(`/wheel/odom`)とフィルタ済みIMUデータ(`/imu/from_filter`)を融合し、安定した`/odometry/filtered`トピックを30 Hzで生成する拡張カルマンフィルタ。
+  - `imu_filter_node` (`imu_filter_madgwick`、`imu_filter.launch`により`gain 0.01`、磁力計オン、固定フレーム`odom`で起動): 生の角速度と加速度をオリエンテーションクォータニオンに変換するMadgwick AHRSフィルタ。その出力トピックは`/imu/from_filter`(`/imu/data`からのリマップ)であり、これがEKFが実際に消費するもの。`/imu/data`自体は`hardware_state.py`がパブリッシュする。
 - **主要Launchファイル**:
   - `robot_localization.launch`: `ekf_localization_config.yaml`からパラメータを読み込み、EKFフュージョンを構成・起動する。
   - `imu_filter.launch`: Madgwickオリエンテーション推定を起動する。
@@ -69,7 +69,7 @@ flowchart TD
 URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、センサー配置を定義する。
 
 - **主要URDFモデル**:
-  - `urdf/msd700_field.urdf.xacro`: 実寸スケールの量産ロボットモデル(0.90 x 0.70 m、キャスター4輪、中央駆動軸、Velodyneマスト)。
+  - `urdf/msd700_field.urdf.xacro`: 実寸スケールの量産ロボットモデル(0.90 x 0.70 mボディ、x = ±0.30 m / y = ±0.30 mに4つの駆動輪、footprintから0.50 m上のVelodyneマスト)。キャスターなし、`camera_link`なし。
   - `urdf/velodyne/VLP_16.urdf.xacro`: 高精度16チャンネル3D LiDARモデルとGazeboセンサープラグイン。
   - `urdf/turtlebot3_waffle.urdf.xacro`: レガシーな小型プロトタイプモデル。
 
@@ -77,21 +77,18 @@ URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、セ�
 低レベルハードウェアインターフェース、モーター駆動、エンコーダーパルスカウント、バッテリー状態を扱う。
 
 - **ハードウェア構成**:
-  - `serial_launch.launch`: ホストのシリアルポートを`/dev/ttyUSB*`経由(115200ボー)で低レベルのArduino/Teensyマイコンに接続する。
-  - Arduinoファームウェアは閉ループPID速度制御を実行し、`/cmd_vel`速度コマンドを受信し、ホイールエンコーダーのティックカウントをパブリッシュする。
+  - `serial_launch.launch` (`msd700_bringup`): ホストを低レベルマイコンに`/dev/stm32`経由(57600ボー、`rosserial_python`の`serial_node.py`経由)で接続する。
+  - ファームウェアは`msd700_hardware`インターフェースに対してrosserialプロトコルを話し、同インターフェースが`/wheel/odom`と生IMUトピックをパブリッシュする。スタック内のどこにも`/battery_state`トピックは存在しない。ファームウェアの実装内容については[ファームウェア & ハードウェア](/ja/development/ros/firmware-and-hardware)を参照。
 
 ### 5. `msd700_simulation`
 ナビゲーションアルゴリズムをソフトウェア上でテストするGazeboシミュレーション環境。
 
 - **主要環境**:
-  - `msd700_warehouse_nav.launch`: 実寸スケールの`msd700_field`ロボットモデルで14 x 21 mのAWS RoboMaker Small Warehouseを起動する。
+  - `msd700_warehouse_nav.launch`: 実寸スケールの`msd700_field`ロボットモデルで13.98 x 20.91 mのAWS RoboMaker Small Warehouseを起動する。
   - `scripts/fetch_sim_worlds.sh`: GitHubの`ros1`ブランチから3Dシミュレーションメッシュ(12 MB)をオンデマンドでダウンロードするスクリプト。
 
 ### 6. `third_party/ira_laser_tools`
-複数の2D LiDARスキャナーを統合、または3Dポイントクラウドを仮想の平面スキャンに変換する。
-
-- **ノード**:
-  - `laserscan_multi_merger`: 2台の平面LiDARを1つの360度`/scan`トピックに統合する。
+複数の2D LiDARスキャナーの統合に利用可能だが、デフォルトのスタックはデュアルマージャーを使用しない。`pointcloud_to_laserscan`がVelodyneのクラウドを`/scan`に変換し、ハザードパイプラインが`/scan_hazard`を追加する。
 
 ## パッケージディレクトリ: `ros-web-ui/source`
 
@@ -101,16 +98,16 @@ Webコマンドとダッシュボードテレメトリを物理ロボットハ�
 - **主要ノード**:
   - `system_command.py`: MQTTの`/system_command`をサブスクライブし、排他的な操作リースを管理し、アクションをディスパッチし、`/system_feedback`をパブリッシュする。
   - `operation_supervisor.py`: Autopilotのウェイポイント進行を管理し、`/string/operation_snapshot`をラッチする自律ミッションシーケンサー。
-  - `switch_mode.py`: `idle`、`navigation`、`mapping`の各モードのLaunchスタックを動的に切り替えるROSサービスオーケストレーター。
+  - `switch_mode.py`: `navigation`、`slam`、`explore`、`boustrophedon`の各モードのLaunchスタックを動的に切り替えるROSサービスオーケストレーター(idle = スタックなし)。
   - `hardware_monitor.py`: 重要なセンサープロセスとUSBデバイスの健全性を検証するバックグラウンドウォッチドッグ。
 
 ### 2. `dependencies/topic2string`
 重いROSメッセージ型をJSON文字列に変換する高性能シリアライゼーション層。
 
 - **主要ノード**:
-  - `robotpose_from_string.py` / `robotpose_to_string`: 25 Hzのポーズテレメトリシリアライザ。
-  - `laserscan_to_string.py`: 2 Hzの圧縮レーザースキャンシリアライザ。
-  - `map_compression_node` / `map_decompression_node`: ライブSLAM occupancy grid用のBase64 zlib圧縮。
+  - `robotpose_to_string.py`: ポーズテレメトリシリアライザ。デフォルト2 Hz(`topic2string/launch/msd.launch`により25 Hzに上げられ、手動走行中のダッシュボードマーカーが滑らかに保たれる)。
+  - `laserscan_to_string.py`: イベント駆動の圧縮レーザースキャンシリアライザ(固定レートなし)。
+  - `map_compression_pipeline.py`(ノード名`map_compression_node`): ライブSLAM occupancy grid用のBase64 zlib圧縮。
 
 ### 3. `dependencies/aws_mqtt`
 ローカルのROSトピックを中央HiveMQブローカーに接続する暗号化トランスポートブリッジ。

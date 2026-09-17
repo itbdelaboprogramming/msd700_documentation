@@ -7,120 +7,80 @@ search: false
 
 <RoleBadge role="developer" />
 
-This document provides a deep technical specification of the embedded microcontroller firmware, motor driver interfaces, optical encoder decoding, discrete PID velocity control algorithms, and analog telemetry circuitry implemented on the MSD700 robot.
+The embedded microcontroller firmware (`msd700_firmware/firmware/firmware.ino`, Arduino) and how the Jetson talks to it. The firmware takes commands from **two** sources — an RC receiver (Taranis X7) or the PC over ROS — and drives both wheel motors through per-wheel PID loops.
 
 ## Embedded Control Topology
 
 ```mermaid
 flowchart TD
   subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
-    SERIAL_NODE["serial_node.py (msd700_hardware)<br/>TTY Port: /dev/ttyUSB0 (115200 baud, 8N1)"]
-    CMD_PUB["Subscribes /cmd_vel (Twist)<br/>Publishes /wheel/odom & /battery_state"]
+    SERIAL_NODE["serial_node.py (rosserial_python)<br/>Port: /dev/stm32, 57600 baud"]
+    HW_IF["msd700_hardware interface<br/>Publishes /wheel/odom, /imu/data_raw,<br/>/imu/mag, /imu/data"]
   end
 
-  subgraph Microcontroller["Embedded Microcontroller (Arduino / Teensy)"]
-    UART_ISR["UART Receive ISR & Packet Checksum Validator"]
-    PID_LEFT["Left Wheel Discrete PID Controller (100 Hz)"]
-    PID_RIGHT["Right Wheel Discrete PID Controller (100 Hz)"]
-    ENC_ISR["Quadrature Encoder Pin Change ISRs (4000 CPR)"]
-    ADC_SENSE["10-Bit ADC Battery Voltage Sampling"]
-    WATCHDOG["Hardware Safety Watchdog Timer (500 ms)"]
+  subgraph Microcontroller["Microcontroller (Arduino, firmware.ino)"]
+    CMD_SEL["Command select: RC ch.3<br/>RC mode / hold mode / PC mode"]
+    FAILSAFE["Failsafe: RC ch.4<br/>ARMED only above 1400"]
+    PID_L["Left wheel PID (pidIr)<br/>10 ms control loop"]
+    PID_R["Right wheel PID (pidIr)<br/>10 ms control loop"]
+    ENC["Quadrature encoders<br/>PinChangeInterrupt pins"]
   end
 
-  subgraph PowerStage["Actuators and Power Electronics"]
-    H_BRIDGE_L["Left Motor H-Bridge Driver Stage"]
-    H_BRIDGE_R["Right Motor H-Bridge Driver Stage"]
-    MOTOR_L["Left High-Torque Brushed DC Motor"]
-    MOTOR_R["Right High-Torque Brushed DC Motor"]
-    BATTERY["24V LiFePO4 Battery Pack (25.6V Nominal)"]
-    ESTOP_RELAY["Hardware Safety Cutoff Relay"]
+  subgraph PowerStage["Actuators"]
+    H_BRIDGE_L["Left Motor Driver<br/>(REN / LEN / PWM)"]
+    H_BRIDGE_R["Right Motor Driver<br/>(REN / LEN / PWM)"]
   end
 
-  SERIAL_NODE <-->|Full-Duplex UART 115200| UART_ISR
-  CMD_PUB --> SERIAL_NODE
+  SERIAL_NODE <-->|rosserial, 57600 baud| CMD_SEL
+  CMD_SEL --> FAILSAFE
+  FAILSAFE -->|ARMED| PID_L
+  FAILSAFE -->|ARMED| PID_R
+  FAILSAFE -->|DISARMED| STOP["Motors stopped"]
 
-  UART_ISR --> PID_LEFT
-  UART_ISR --> PID_RIGHT
-  UART_ISR --> WATCHDOG
+  PID_L --> H_BRIDGE_L
+  PID_R --> H_BRIDGE_R
 
-  PID_LEFT --> H_BRIDGE_L --> MOTOR_L
-  PID_RIGHT --> H_BRIDGE_R --> MOTOR_R
+  H_BRIDGE_L --> ENC
+  H_BRIDGE_R --> ENC
+  ENC --> PID_L
+  ENC --> PID_R
 
-  MOTOR_L --> ENC_ISR
-  MOTOR_R --> ENC_ISR
-  ENC_ISR --> PID_LEFT
-  ENC_ISR --> PID_RIGHT
-  ENC_ISR --> UART_ISR
-
-  BATTERY --> ADC_SENSE --> UART_ISR
-  WATCHDOG --> ESTOP_RELAY
+  HW_IF --> SERIAL_NODE
 ```
 
----
-
-## Hardware Electrical Pinout and Wiring
-
-Communication between the NVIDIA Jetson and microcontroller runs over high-speed USB UART with optical isolation:
-
-| Signal Function | Microcontroller Pin | Driver / Peripheral Connection | Electrical Characteristics |
-| --- | --- | --- | --- |
-| **Left Motor PWM** | Pin 5 (Timer 3) | Left H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM (Quiet Inaudible Drive) |
-| **Left Motor DIR** | Pin 4 | Left H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
-| **Right Motor PWM** | Pin 6 (Timer 4) | Right H-Bridge Speed Gate | 0 to 5V Logic, 20 kHz PWM |
-| **Right Motor DIR** | Pin 7 | Right H-Bridge Direction Input | Logic High: Forward, Logic Low: Reverse |
-| **Left Encoder A** | Pin 2 (INT0) | Left Optical Encoder Channel A | 5V TTL Interrupt (Rising/Falling Edge) |
-| **Left Encoder B** | Pin 3 (INT1) | Left Optical Encoder Channel B | 5V TTL Interrupt |
-| **Right Encoder A** | Pin 18 (INT5) | Right Optical Encoder Channel A | 5V TTL Interrupt |
-| **Right Encoder B** | Pin 19 (INT4) | Right Optical Encoder Channel B | 5V TTL Interrupt |
-| **Battery Voltage ADC**| Pin A0 (ADC0) | Precision Resistor Divider Output | 0 to 5.0V Analog Voltage |
-| **E-Stop Safety Line** | Pin 12 | Hardware Relay Gate Driver | Logic High: Motors Enabled, Low: Cutoff |
+There is no `/battery_state` topic anywhere in the stack, and no ADC battery divider in this firmware. Wheel geometry constants in the firmware (`WHEEL_RADIUS 2.75 cm`, `WHEEL_DISTANCE 23.0 cm`) match the host-side odometry config (`odometry_config.yaml`: radius `2.7 cm`, distance `23 cm`, `encoder_ppr 2400`).
 
 ---
 
-## Closed-Loop Discrete PID Velocity Control
+## Hardware Pinout (`firmware.ino`)
 
-The firmware runs dual discrete PID control loops at $100\text{ Hz}$ ($\Delta t = 0.01\text{ s}$) with anti-windup clamping to control wheel velocity:
+| Signal Function | Microcontroller Pin |
+| --- | --- |
+| **Right Motor REN / LEN / PWM** | Pins 4 / 5 / 9 |
+| **Left Motor REN / LEN / PWM** | Pins 6 / 7 / 8 |
+| **Right Encoder A / B** | Pins 52 / 12 |
+| **Left Encoder A / B** | Pins 11 / 10 |
+| **Status LEDs (red / blue)** | Pins 30 / 31 |
+| **Camera servo** | Pin 3 (range 125–175, step 10) |
+| **Ultrasonic (UART2 RX / TX)** | Pins 17 / 16 |
 
-### Discrete Error Formulation:
-$$e_k = v_{\text{target}} - v_{\text{measured}}$$
-
-### PID Control Output with Clamping:
-$$\text{PWM}_k = K_p \cdot e_k + K_i \sum_{j=0}^k e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
-
-### Anti-Windup Integrator Protection:
-To prevent integrator windup when motors are temporarily loaded or stalled against an incline:
-
-$$\sum e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \right)$$
-
-$$\text{PWM}_k = \text{clamp}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
-
-Where $\text{PWM}_{\max} = 255$ ($8$-bit timer resolution).
+The Jetson link is `Serial.begin(57600)`.
 
 ---
 
-## Battery Voltage Sensing Circuitry
+## Closed-Loop PID Velocity Control
 
-The robot is powered by a 24V LiFePO4 battery pack (full charge: $29.2\text{ V}$, nominal: $25.6\text{ V}$, cutoff: $21.0\text{ V}$).
+Each wheel runs a discrete PID loop (`pidIr`) on a 10 ms control period (`LOOP_TIME 10`):
 
-An onboard voltage divider scales battery voltage down to the $0\text{ to }5\text{ V}$ range of the microcontroller ADC:
+$$\text{PWM}_k = K_p \cdot e_k + K_i \sum e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
 
-$$V_{adc} = V_{bat} \cdot \frac{R_2}{R_1 + R_2}$$
-
-Where $R_1 = 30\text{ k}\Omega$ and $R_2 = 5.1\text{ k}\Omega$ (Divider Ratio $K_{div} = 0.1453$).
-
-### Voltage Reconstruction in Firmware:
-$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \left( \frac{R_1 + R_2}{R_2} \right)$$
-
-Where $V_{ref} = 5.00\text{ V}$.
+The output is saturated (`constrain`) at `MAX_PWM 250`, not the full 8-bit 255. Speed caps are `MAX_RPM_MOVE 180` (longitudinal) and `MAX_RPM_TURN 70` (rotation). RC receiver channels pass through a 0.25 Hz low-pass filter; encoder signals through a 3 Hz low-pass filter.
 
 ---
 
-## Hardware Safety Watchdog
+## RC Failsafe (Arming)
 
-To prevent runaway robot conditions caused by host OS lockups or severed serial cables, the microcontroller executes an autonomous hardware watchdog:
-
-1. **Timer Expiry**: The watchdog timer register resets to $500\text{ ms}$ upon every valid checksum-verified velocity packet.
-2. **Safety Cutoff**: If no packet arrives for $500\text{ ms}$, the microcontroller immediately clamps motor PWM outputs to zero and drops the `ESTOP_RELAY` gate line.
+The prototype only accepts motion commands while **ARMED**: RC channel 4 must read above 1400 (`update_failsafe()`). Below that the state is DISARMED and the motors stop, regardless of what RC or PC commands arrive. Command source follows RC channel 3: RC mode, hold mode, or PC (ROS) mode.
 
 ## Related Documentation
 

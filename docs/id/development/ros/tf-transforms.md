@@ -18,15 +18,15 @@ flowchart TD
   MAP["map<br/>(Global Fixed World Frame, Origin at Homebase)"] -->|"AMCL / SLAM Global Correction (10 Hz)"| ODOM["odom<br/>(Smooth Continuous Local Odometry Frame)"]
   ODOM -->|"EKF Fusion: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(Chassis 2D Projection on Floor Plane)"]
 
-  BASE_FP -->|"Static TF: z = +0.010 m"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
+  BASE_FP -->|"Static TF: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
 
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEEL_L["wheel_left_link (y = +0.144 m)"]
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEEL_R["wheel_right_link (y = -0.144 m)"]
+  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEELS["4 drive wheels: wheel_front/back_left/right_link<br/>(x = ±0.30 m, y = ±0.30 m)"]
 
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.200]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
-  BASE_LINK -->|"Static TF: xyz = [0.25, 0.00, 0.610]"| BASE_SCAN["base_scan / velodyne (3D LiDAR)"]
-  BASE_LINK -->|"Static TF: xyz = [0.45, 0.00, 0.350]"| CAM_LINK["camera_link (HD Camera Optical Frame)"]
+  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.085]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
+  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.40]"| BASE_SCAN["base_scan (3D LiDAR, 0.50 m above footprint)<br/>+ laser alias frame for bag replay"]
 ```
+
+Tidak ada `camera_link` pada robot lapangan: kamera adalah perangkat USB/WebRTC terpisah, bukan link URDF.
 
 ---
 
@@ -36,10 +36,9 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Mengoreksi drift odometrik terhadap occupancy grid laser statis. | Lompatan diskret saat terlokalisasi; mempertahankan transformasi terakhir jika laser scan terputus. |
 | `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Fusion kontinu kecepatan wheel encoder dan yaw/angular rate IMU. | Trajektori jangka pendek yang kontinu, halus, dan bebas-drift. |
-| `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset elevasi tetap ($z = 0.010\text{ m}$). | Transformasi tetap dari URDF. |
-| `base_link -> base_scan` | `robot_state_publisher` | Statis | Koordinat mounting mast fisik ($x = 0.250\text{ m}, z = 0.610\text{ m}$). | Transformasi tetap dari URDF. |
-| `base_link -> imu_link` | `robot_state_publisher` | Statis | Mounting chassis fisik ($z = 0.200\text{ m}$). | Transformasi tetap dari URDF. |
-| `base_link -> camera_link` | `robot_state_publisher` | Statis | Mounting chassis depan ($x = 0.450\text{ m}, z = 0.350\text{ m}$). | Transformasi tetap dari URDF. |
+| `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset elevasi tetap ($z = 0.10\text{ m}$ = radius roda). | Transformasi tetap dari URDF. |
+| `base_link -> base_scan` | `robot_state_publisher` | Statis | Mast LiDAR ($x = 0$, $z = 0.40\text{ m}$ dari `base_link`, $0.50\text{ m}$ di atas footprint); frame alias `laser` terpasang untuk replay bag. | Transformasi tetap dari URDF. |
+| `base_link -> imu_link` | `robot_state_publisher` | Statis | Mounting chassis fisik ($z \approx 0.085\text{ m}$ = `body_center_z`). | Transformasi tetap dari URDF. |
 
 ---
 
@@ -75,7 +74,7 @@ sequenceDiagram
   autonumber
   participant Robot as Robot Jetson (Clock Domain A)
   participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_<ULID> (Cloud Server Domain B)
+  participant Relay as rosweb_unit_<u>_<unit>_nakayama (Cloud Server Domain B)
   participant Canvas as Browser ROS2D Canvas
 
   Robot->>Robot: Stamp Pose with Jetson Time (t_robot)

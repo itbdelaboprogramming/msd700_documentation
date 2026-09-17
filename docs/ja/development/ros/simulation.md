@@ -35,8 +35,8 @@ flowchart LR
 1. **再現不能な狭小通路の問題**: 倉庫の狭い通路での経路計画失敗という実世界の報告は、半径0.133 mのTurtleBotでは再現できなかった。
 2. **設定の漏れ残り**: 実寸スケールモデリングに置き換えられるまで、レガシーなパラメータ(`robot_width: 0.32`)が網羅走行設定内に残っていた。
 3. **環境スケールの不整合**: 標準のTurtleBotマップには、0.9 x 0.7 mのロボットに対する十分なクリアランスがなかった:
-   - `turtlebot_world`: 最大クリアランス0.39 m(0.425 mの内接半径をどこにも収容できない)。
-   - `AWS RoboMaker Small Warehouse`: 最大クリアランス**3.68 m**(走行可能な床面積58%、その場旋回可能な面積38%)。
+   - `turtlebot_world`: 最大クリアランス0.39 m(0.425 mの内接ハーフ幅をどこにも収容できない)。
+   - `AWS RoboMaker Small Warehouse`: 衝突ジオメトリからは最大クリアランス**3.83 m**(立つために十分な幅の床が65%、旋回に十分な幅が46%)、AWS同梱の占有地図からは**3.68 m**(58% / 38%) — 許容誤差内で一致する2通りの独立した測定方法。
 
 ## シミュレーションワールド: AWS Small Warehouse
 
@@ -70,24 +70,21 @@ AWS RoboMakerは2025-09-10にアーカイブされた。そのGitHubのデフォ
 ```mermaid
 flowchart TB
   subgraph RobotModel["msd700_field URDF"]
-    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.45 m (Mass: 60 kg)"]
-    DRIVE["Drive Wheels: Centered, Separation 0.60 m, Radius 0.10 m"]
-    CASTERS["4 Corner Passive Casters: Anti-tip Stability"]
-    LIDAR["Velodyne VLP-16 LiDAR: Mast Height 0.61 m"]
-    EKF["EKF Sensor Fusion: /robot_pose_ekf (Odom + IMU)"]
+    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.25 m (Mass: 150 kg)"]
+    DRIVE["4 Drive Wheels: x ±0.30 m, y ±0.30 m<br/>Radius 0.10 m, Separation 0.60 m"]
+    LIDAR["Velodyne VLP-16 LiDAR: 0.40 m above base_link<br/>0.50 m above footprint"]
+    EKF["EKF Sensor Fusion: /odometry/filtered (Odom + IMU)"]
   end
 
   CHASSIS --> DRIVE
-  CHASSIS --> CASTERS
   CHASSIS --> LIDAR
   DRIVE --> EKF
 ```
 
 ### 物理仕様:
-- **寸法**: 長さ0.90 m、幅0.70 m、高さ0.45 m、質量60 kg。
-- **駆動ジオメトリ**: 対称的な旋回エンベロープを確保するため、中点を中心としたスキッドステア/差動二輪駆動。
-- **4隅のキャスター**: 平面LiDARが幻の床面障害物を生成する原因となるピッチングおよびロールの振動を排除する。
-- **Velodyne VLP-16 LiDAR**: 実機と一致するよう、マウントマスト上で地上0.61 mの高さに設置。
+- **寸法**: 長さ0.90 m、幅0.70 m、高さ0.25 m、質量150 kg。
+- **駆動ジオメトリ**: 4つの駆動輪(前後左右)。オドメトリはそれらを差動ペアとして融合する。
+- **Velodyne VLP-16 LiDAR**: 実機と一致するよう、footprintから0.50 m上のマウントマストに設置。
 - **標準化されたROSフレーム**: 標準的なフレーム規約(`base_footprint`、`base_link`、`base_scan`、`imu_link`、`odom`、`map`)を使用する。
 
 ## シミュレーションスタックの起動
@@ -102,8 +99,8 @@ roslaunch msd700_simulation msd700_warehouse_nav.launch
 roslaunch msd700_simulation msd700_warehouse_slam.launch
 ```
 
-### 3. Move Baseのパラメータ化(`sim_body`)
-Launchファイルは`sim_body:=field`(倉庫Launchのデフォルト)を受け付け、1.20 x 0.85 mのフットプリント用にコストマップを構成する。あるいはレガシーな小型スケールテスト用に`sim_body:=waffle`を指定できる。
+### 3. Move Baseのパラメータ化(`robot_profile`)
+Launchファイルは`robot_profile:=field`(倉庫Launchのデフォルト)を受け付け、フィールドロボット用のコストマップを構成する。`prototype`やレガシーな小型スケールテスト用の`waffle`も指定できる。`sim_body:=`も引き続き動作するが、`robot_profile`の非推奨エイリアスである。
 
 ## 関連ドキュメント
 

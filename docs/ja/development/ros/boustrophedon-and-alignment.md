@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、ブストロフェドンセル分解による網羅走行計画パイプライン、2種類のジオメトリによるクリアランス計算、5層の障害物管理、およびCorrelative Scan Matcher(CSM)によるゼロスピンアライメントについての包括的なアルゴリズム仕様を提供する。
+本ドキュメントは、ブストロフェドンセル分解による網羅走行計画パイプライン、2種類のジオメトリによるクリアランス計算、5層の障害物管理、およびパーティクルアライン検証によるゼロスピンアライメントについての包括的なアルゴリズム仕様を提供する。
 
 ## 2つのロボットジオメトリ
 
@@ -33,24 +33,27 @@ flowchart LR
 | **Physical Body**(`~body_footprint`) | 長さ0.90 m x 幅0.70 m | レーンピッチと走査済みエリアのattainment計算を決定する。 |
 | **Costmap Safety Envelope** | 長さ1.20 m x 幅0.85 m | TEBローカルプランナーのクリアランスと旋回可能性を担保する。 |
 
-`costmap_common_params.yaml`内のコストマップエンベロープには、意図的な安全パディング(片側あたり横方向0.075 m、縦方向0.150 m)が含まれる。`path_coverage_node`はナビゲーションプランナーとの同期を保つため、`/move_base/global_costmap/footprint`からエンベロープを直接読み取る。
+エンベロープとボディは`costmap_common_params_field.yaml`と`msd700_coverage/config/robot/field.yaml`に存在する。`path_coverage_node`は`/move_base/global_costmap/footprint`からフットプリント多角形を読み取り、そこから内接/外接半径を導出する(`coverage_geometry.py`)。レーンピッチは常に物理ボディ由来であり、パディング済みエンベロープ由来ではない。
 
-### 派生クリアランス定数(`libs/coverage_geometry.py`)
+### 派生クリアランス定数(`src/msd700_coverage/coverage_geometry.py`)
+
+TEB起動時(`min_obstacle_dist 0.10`、`safety_margin 0.0`):
 
 | クリアランス定数 | 値 | 数式 |
 | --- | --- | --- |
-| `wall_clearance` | **0.575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `turn_clearance` | **0.885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `pitch` | **0.574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
+| `wall_clearance` | **0.450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `turn_clearance` | **0.670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `pitch` | **0.644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
-### 物理的なジオメトリ上の限界:
-- **ロボットが進入できる最も狭い通路**: **1.15 m**($2 \times \text{wall\_clearance}$)。
-- **ロボットが180度旋回できる最も狭い通路**: **1.77 m**($2 \times \text{turn\_clearance}$)。
-- **2レーン走査する価値のある最も狭い通路**: **1.72 m**。
-- **壁沿いの到達不能な境界ストリップ**: **0.225 m**($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$)。
+TEBなし(フォールバック`min_obstacle_dist 0.15`): `wall_clearance 0.500 m`、`turn_clearance 0.720 m`。
+
+### 物理的なジオメトリ上の限界(TEB起動時):
+- **ロボットが進入できる最も狭い通路**: **0.90 m**($2 \times \text{wall\_clearance}$)。
+- **ロボットが180度旋回できる最も狭い通路**: **1.34 m**($2 \times \text{turn\_clearance}$)。
+- **壁沿いの到達不能な境界ストリップ**: **0.10 m**($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$)。
 
 ::: info Attainmentと生の網羅率
-0.225 mの周辺ストリップは衝突なしには通過できないため、長方形の部屋(例: 3 x 6 m)が達成できる理論上の最大網羅率は**78.6%**となる。システム性能は、調整前の生の面積割合ではなく、**Attainment Ratio**(実際に走査された到達可能な床面の割合)によって測定される。
+0.10 mの周辺ストリップは衝突なしには通過できないため、長方形の部屋(例: 3 x 6 m)が達成できる理論上の最大網羅率は約**90%**となる。システム性能は、調整前の生の面積割合ではなく、**Attainment Ratio**(実際に走査された到達可能な床面の割合)によって測定される。
 :::
 
 ---
@@ -61,10 +64,10 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.575 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
-  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.574 m pitch"]
+  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
   E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
   F --> G["Goal Dispatch to move_base"]
 ```
@@ -93,17 +96,17 @@ flowchart TB
 
 ---
 
-## ゼロスピン方位アライメント(Correlative Scan Matching)
+## ゼロスピン方位アライメント(パーティクルアライン検証)
 
 ロボットが既知のマップ上の未知の姿勢に置かれた場合、従来のAMCLではパーティクルの分散を収束させるために360度のその場回転が必要となる。
 
-MSD700は、動くことなく方位と位置を瞬時に計算する**Correlative Scan Matching(CSM)**を実装している:
+MSD700は、動くことなく方位と位置を瞬時に計算する**粗密パーティクル探索**(`particle_align_validator.py`)を実装している。ダッシュボードは`/align/solve_pose`サービス経由でそれを起動する(Map SyncのAuto Alignボタン、`align_checker`経由):
 
 ```mermaid
 flowchart LR
-  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Multi-Resolution 2D Grid Search<br/>Over Search Space: (dx, dy, dyaw)"]
+  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Coarse-to-Fine Particle Search<br/>Over Search Space: (dx, dy, dyaw)"]
   GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
-  SCORE --> CONF{"Confidence >= 65%?"}
+  SCORE --> CONF{"Confidence >= 65%<br/>(solve_confidence_threshold)?"}
   CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
   CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
@@ -120,48 +123,20 @@ $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta
 
 ---
 
-## その場回転はデフォルトで拒否される
+## その場回転: ガードは撤去済み、発生源で修正
 
-ゼロスピンアライメントは回転する*理由*を取り除いた。Rotation Guardは回転する*能力*を取り除く。なぜなら、スタックの複数の箇所がいまだに独自にスピンしようとしていたためである。
+ゼロスピンアライメントは回転する*理由*を取り除いた。かつては自律的なその場回転をゼロ化する`rotation_guard`ノードが`twist_mux`とベースの間に存在したが、**削除済み**である(`twist_mux.launch`に撤去の記録がある)。それが捕捉するために存在した各スピンは、今ではそれぞれの発生源で止められており、ガードは旋回失敗の原因ではなかったことが測定されている。
 
-`rotation_guard`(`msd700_control`)は、`twist_mux`とベースの間、共有される`cmd_vel`経路上に配置される。そのため、プラグインごとに1つずつではなく、すべての回転要求元を一度にカバーする。あるコマンドが`|angular.z| > 0.05`かつ`|linear.x| <= 0.05`を満たす場合、その場回転とみなされる。円弧運動や直進運動はフットプリントを平行移動させつつ回転もさせており、その扱いはすでにローカルプランナーの領分であるため、変更されずに通過する。
-
-その場回転が車輪に到達するのは、**両方の**ゲートが合意した場合のみである:
-
-```mermaid
-flowchart TD
-  CMD["Twist from twist_mux"] --> INPLACE{"Pure in-place rotation?"}
-  INPLACE -->|"No, it is an arc"| PASS["Pass through unchanged"]
-  INPLACE -->|Yes| CONSENT{"Live matching command on<br/>/mux/allign or /mux/key_vel?"}
-  CONSENT -->|"No, it is autonomous"| ZERO["angular.z = 0<br/>linear.x preserved"]
-  CONSENT -->|Yes| SWEEP{"Swept footprint clear<br/>on the live scan?"}
-  SWEEP -->|No| ZERO
-  SWEEP -->|Yes| PASS
-```
-
-**ゲート1、同意。** 尊重される回転は、人間が要求したものだけである: Map Syncの**Auto Align**(`/mux/allign`、オペレーターがボタンを押した後に`align_checker`がパブリッシュ)と、**手動WASD**(`/mux/key_vel`、ローカルで入力されるか、ダッシュボードからリレーされる)。出力されるツイストは、その要求元が求めたのと同じ方向に、5%の許容誤差の範囲内でそれ以上速くなく回転しなければならず、同意はその要求元がパブリッシュを止めてから1秒後に失効する。`/mux/nav_vel`は意図的に対象外である。自律的なものはすべてそこに到達する。
-
-**ゲート2、ジオメトリ。** 走査されるフットプリントは、コストマップではなくライブスキャンに対して検証される。このゲートは`rotation_guard.py`内で完全に文書化されている。要約すると、走査帯がLiDARの最小レンジの内側にあり、ロボットが近づくにつれてobstacle layerがその跡をレイトレースで消してしまうため、コストマップは回転判定のオラクルとして不適切ということである。
-
-### これによって無効化されたもの
+### 発生源で無効化されたもの
 
 | 発生源 | 以前 | 現在 |
 | --- | --- | --- |
 | `rotate_recovery` | move_baseのリカバリーラダーの最後の段 | ロードされない。`recovery_behaviors`には2つのコストマップリセットのみが記載され、いずれも動作を指示しない |
-| TEB終端ピボット | 各ウェイポイントでゴールの方位に向かって回転していた | 廃止。`yaw_goal_tolerance: 3.15`は任意の最終方位を受け入れる |
-| TEB初期ピボット | パスがロボットの後方に向かう場合にその場で回転していた | 代わりにバックする。`allow_init_with_backwards_motion: true` |
+| TEB終端ピボット | 各ウェイポイントでゴールの方位に向かって回転していた | 厳密化。`yaw_goal_tolerance: 0.15`(網羅走行時: `0.10`) — ウェイポイントがクリックドラッグによる実方位を持つようになったため、ピボットはオペレーターが選んだ方位に着地する |
+| TEB初期ピボット | パスがロボットの後方に向かう場合にその場で回転していた | 代わりにバックする。`allow_init_with_backwards_motion: false` |
 | `SYNC`コマンド(`nav_controller`) | 障害物チェックなしの10秒間のオープンループ`0.5 rad/s` | 何もしない。先にスキャンマッチングを行うAuto Alignを使用する |
 
-::: warning ウェイポイントの方位
-`yaw_goal_tolerance: 3.15`が正しいのは、このシステム内のどのウェイポイントも誰かが選んだ方位を持たない限りにおいてである。ダッシュボードはすべてのピンを地図上のクリックから構築し、クォータニオンには単位元を入れる。そのため、厳しい許容誤差は、実際には未設定の構造体フィールドを満たすためだけに各ピンでのピボットを引き起こしていた。もしウェイポイントが実際の方位を持つようになれば、これは再検討する必要があり、その際は各ピンでのピボットも復活する。
-:::
-
-### 抜け道
-
-- `rotation_guard/allow_in_place: true`は、ジオメトリゲートのみに戻す。これにより、走査帯が空いている限りどの発生源もスピンできるようになる。
-- `twist_mux.launch guard_rotation:=false`はノード自体を完全に取り除き、いかなるチェックもないguard導入前の配線に戻す。
-
-どちらもフィールドロボットには適さない。進む前にピボットが必要だと判断するローカルプランナーは、今ではその場に静止し、最終的にゴールを中断する。そしてそのトレードオフは意図的なものである。中断されたゴールは目に見えて回復可能だが、棚への盲目的なスピンはそうではない。
+動作の調停は今では`twist_mux`単独にある。ナビゲーションは`/mux/nav_vel`(優先度10)、キーボードは独自の入力(優先度90)、緊急停止は`/mux/emergency_vel`を占有する(優先度255)。`/cmd_vel`へ直接書き込むノードはこのラダーを迂回し、停止させることができない。
 
 ## 関連ドキュメント
 

@@ -68,7 +68,7 @@ Per-unit containers run with the Docker restart policy `unless-stopped`. If the 
 | `FLEET_RELAY_CONTAINER` | derived from `UNIT_MODE` | Name of the single relay container the reconciler restarts. |
 | `FLEET_ROSTER_POLL_MS` | `60000` | How often the roster is re-read from `units`. A backstop against a missed change, not the mechanism. |
 | `MULTI_UNIT_LIST` | (unset) | Optional override. Comma- or space-separated ULIDs. Set it and the roster stops following enrolments. |
-| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` | Fleet relay only. MQTT client id for the one shared connection. Must be unique per broker: `clean_session` is true, so a duplicate id disconnects the other client and the two flap. |
+| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Fleet relay only. MQTT client id for the one shared connection. Must be unique per broker: `clean_session` is true, so a duplicate id disconnects the other client and the two flap. |
 | `FLEET_MAX_INFLIGHT` | `200` | Fleet relay only. Bounds in-flight messages for the whole fleet, where the per-unit value of `20` bounded one robot. Left low, one robot's map burst stalls pose updates for every other robot. |
 | `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` | Target Docker image instantiated for the unit relay. |
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Inactivity threshold before an idle container is stopped. |
@@ -80,7 +80,7 @@ Per-unit containers run with the Docker restart policy `unless-stopped`. If the 
 
 The per-unit design pays for each robot with a whole container: its own workspace build, its own set of ~10 Python relay nodes, and its own TLS connection to the broker. Nothing about ROS required that. Every topic is already fully qualified with `/unit_<ULID>/...`, and every MQTT bridge entry is a `primitive: true` `std_msgs/String` passthrough, so one process can serve the whole fleet by holding one subscriber/publisher pair per unit.
 
-The fleet relay collapses **both halves** of the data plane into a single container, `rosweb_unit_relays`:
+The fleet relay collapses **both halves** of the data plane into a single container, `ros_web_ui_v2_unit_relays` (`_dev` suffix on the dev stack):
 
 | Half | Per-unit path | Fleet path |
 | --- | --- | --- |

@@ -68,7 +68,7 @@ Kontainer per-unit berjalan dengan kebijakan restart Docker `unless-stopped`. Ji
 | `FLEET_RELAY_CONTAINER` | diturunkan dari `UNIT_MODE` | Nama kontainer relay tunggal yang di-restart reconciler. |
 | `FLEET_ROSTER_POLL_MS` | `60000` | Seberapa sering roster dibaca ulang dari `units`. Sebuah backstop terhadap perubahan yang terlewat, bukan mekanisme utamanya. |
 | `MULTI_UNIT_LIST` | (tidak diset) | Override opsional. ULID dipisahkan koma atau spasi. Setel ini dan roster berhenti mengikuti pendaftaran. |
-| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` | Khusus fleet relay. MQTT client id untuk satu koneksi bersama. Harus unik per broker: `clean_session` bernilai true, sehingga id ganda memutus klien lainnya dan keduanya bergantian flap. |
+| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Khusus fleet relay. MQTT client id untuk satu koneksi bersama. Harus unik per broker: `clean_session` bernilai true, sehingga id ganda memutus klien lainnya dan keduanya bergantian flap. |
 | `FLEET_MAX_INFLIGHT` | `200` | Khusus fleet relay. Membatasi pesan in-flight untuk seluruh fleet, di mana nilai per-unit sebesar `20` membatasi satu robot. Jika dibiarkan rendah, ledakan peta satu robot menahan update pose untuk setiap robot lainnya. |
 | `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` | Image Docker target yang diinstansiasi untuk relay unit. |
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 menit) | Ambang inaktivitas sebelum kontainer idle dihentikan. |
@@ -80,7 +80,7 @@ Kontainer per-unit berjalan dengan kebijakan restart Docker `unless-stopped`. Ji
 
 Desain per-unit membayar untuk setiap robot dengan sebuah kontainer utuh: build workspace-nya sendiri, sekitar 10 node relay Python-nya sendiri, dan koneksi TLS-nya sendiri ke broker. Tidak ada apa pun tentang ROS yang mengharuskan itu. Setiap topik sudah sepenuhnya berkualifikasi dengan `/unit_<ULID>/...`, dan setiap entri bridge MQTT adalah passthrough `std_msgs/String` `primitive: true`, sehingga satu proses dapat melayani seluruh fleet dengan menahan satu pasangan subscriber/publisher per unit.
 
-Fleet relay menggabungkan **kedua paruh** dari data plane menjadi satu kontainer, `rosweb_unit_relays`:
+Fleet relay menggabungkan **kedua paruh** dari data plane menjadi satu kontainer, `ros_web_ui_v2_unit_relays` (`_dev` suffix pada stack dev):
 
 | Paruh | Jalur per-unit | Jalur fleet |
 | --- | --- | --- |

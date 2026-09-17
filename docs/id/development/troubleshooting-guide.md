@@ -21,7 +21,7 @@ flowchart TD
   Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
   Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
 
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is rosweb_unit_<ULID> running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
+  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_<u>_<unit>_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
   Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
 
   Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]
@@ -40,10 +40,10 @@ flowchart TD
 
 ### 2. Unit Online, Tetapi Map Canvas Tetap Kosong (rosbridge / Kontainer Relay)
 - **Gejala**: Perintah berhasil, tetapi tidak ada peta, ikon robot, atau laser scan yang muncul di canvas web.
-- **Akar Penyebab**: Kontainer relay on-demand `rosweb_unit_<ULID>` dihentikan oleh idle reaper, atau proxy WebSocket Apache terblokir.
+- **Akar Penyebab**: Kontainer fleet relay (`ros_web_ui_v2_unit_relays`) mati — atau, pada jalur per-unit legacy, kontainer on-demand `rosweb_unit_<u>_<unit>_nakayama` dihentikan oleh idle reaper — atau proxy WebSocket Apache terblokir.
 - **Langkah Diagnostik**:
-  1. Verifikasi apakah kontainer per-unit berjalan di server: `docker ps | grep rosweb_unit`.
-  2. Jika tidak ada, muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`.
+  1. Periksa fleet relay lebih dulu: `docker ps | grep unit_relays`. Pada jalur legacy, periksa kontainer per-unit sebagai gantinya: `docker ps | grep rosweb_unit`.
+  2. Hanya pada jalur legacy: muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`. Pada mode fleet roster berasal dari tabel `units`, sehingga tidak perlu event touch — robot yang terdaftar dapat dijangkau.
   3. Uji konektivitas WebSocket ke `/services/rosbridge` menggunakan developer tools browser.
 
 ### 3. Navigasi Membeku dengan Error TF (Basi-nya `use_sim_time`)
@@ -62,7 +62,7 @@ flowchart TD
 
 ### 5. Deadlock Keep-Out Costmap
 - **Gejala**: Goal diterima oleh `move_base`, tetapi robot tidak pernah maju.
-- **Akar Penyebab**: `keepout_layer` diaktifkan di `costmap_common_params.yaml` tetapi menunggu `/msd700/keepout_grid`. Jika tidak ada keep-out grid yang dipublikasikan, costmap tidak pernah ditandai "current".
+- **Akar Penyebab**: `keepout_layer` diaktifkan di `costmap_common_params_field.yaml` tetapi menunggu `/msd700/keepout_grid`. Jika tidak ada keep-out grid yang dipublikasikan, costmap tidak pernah ditandai "current".
 - **Resolusi**: Pastikan `path_coverage_node` atau `system_command.py` mempublikasikan keepout grid kosong saat inisialisasi.
 
 ### 6. Sinkronisasi Lokal Melaporkan "Access Denied" (Drift Kredensial Database Lokal)

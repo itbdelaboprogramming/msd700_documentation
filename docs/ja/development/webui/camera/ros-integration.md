@@ -41,8 +41,9 @@ search: false
 `camera_client.py` とダッシュボードの `VideoStreamComponent` は、両者ともICEサーバー一覧について同じ
 規約を読み取る。未設定の場合はクラウドのデフォルト(Google STUNと本番のTURN認証情報)にフォールバックし、
 リテラル文字列の `none` は未設定のまま放置するのではなく一覧を完全に空にする。
-`msd700_noetic/docker/.env` の `LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` /
-`LOCAL_TURN_CREDENTIAL` は、まさにこの理由からデフォルトで `none` になっており、ユニットのLANが本当に
+`LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` / `LOCAL_TURN_CREDENTIAL`
+は、まさにこの理由からコード(`camera_client.py`)内ではリテラル文字列 `none` をデフォルトとする — 
+`msd700_noetic/docker/.env` ではコメントアウトされているため、適用されるのはコードのデフォルトである。これらはユニットのLANが本当に
 リレーを必要とする場合(セグメント化されたネットワーク、ロボットとオペレーターの間にあるキャプティブ
 Wi-Fiブリッジなど)にのみ設定する価値がある。
 
@@ -121,8 +122,9 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
 
 `camera_client.py` は、クラウドのみの経路でも `local_dev` の経路でも、常にバインドマウントされている。
 ホスト上での編集は、次に `run_msd.sh` がtmuxウィンドウを(再)起動したときに、イメージのビルドを一切伴
-わずに反映される。対照的に `signalling_server` は、`Dockerfile.webui-local` がユニット自身のローカル
-スタックイメージへと**`COPY`**する複数のサービスの一つであり、そこでの変更には、`docker-manager.sh` が
+わずに反映される。対照的にシグナリングサーバーは、ユニットのローカルスタックイメージ内に同梱される。
+`Dockerfile.webui-local` は `./src/ros-web-ui/source` ツリー全体を **`COPY`** する(条件付きの
+依存関係インストール付き)。そこでの変更には、`docker-manager.sh` が
 ダッシュボードとバックエンドのイメージに対してすでにチェックしているのと同じ再ビルドが必要になる(
 [Docker Reference § `up` が行うこと、その順序](/ja/setup/docker-reference#up-が行うこと-順番)を参
 照)。これを忘れると、そこで文書化されている陳腐化(staleness)の失敗とまったく同じように見える。スタッ

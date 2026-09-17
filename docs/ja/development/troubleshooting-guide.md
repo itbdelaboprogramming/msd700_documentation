@@ -21,7 +21,7 @@ flowchart TD
   Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
   Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
 
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is rosweb_unit_<ULID> running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
+  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_<u>_<unit>_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
   Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
 
   Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]
@@ -40,10 +40,10 @@ flowchart TD
 
 ### 2. ユニットはオンラインだが、マップキャンバスが空のまま(rosbridge / リレーコンテナ)
 - **症状**: コマンドは成功するが、Web キャンバス上にマップ、ロボットアイコン、レーザースキャンのいずれも表示されない。
-- **根本原因**: オンデマンドのリレーコンテナ `rosweb_unit_<ULID>` がアイドルリーパーによって停止された、または Apache の WebSocket プロキシがブロックされている。
+- **根本原因**: フリートリレーコンテナ(`ros_web_ui_v2_unit_relays`)がダウンしている — あるいはレガシーなユニット単位の経路では、オンデマンドコンテナ `rosweb_unit_<u>_<unit>_nakayama` がアイドルリーパーによって停止された — または Apache の WebSocket プロキシがブロックされている。
 - **診断手順**:
-  1. サーバー上でユニット単位のコンテナが稼働しているか確認する: `docker ps | grep rosweb_unit`。
-  2. 存在しない場合、ブラウザでユニットページをリロードし、`unit_manager.js` の `touch` イベントを発生させる。
+  1. まずフリートリレーを確認する: `docker ps | grep unit_relays`。レガシー経路では代わりにユニット単位のコンテナを確認する: `docker ps | grep rosweb_unit`。
+  2. レガシー経路でのみ: ブラウザでユニットページをリロードし、`unit_manager.js` の `touch` イベントを発生させる。フリートモードではロスターは`units`テーブルから得られるため、touchイベントは不要であり、登録済みロボットは到達可能である。
   3. ブラウザの開発者ツールを使って `/services/rosbridge` への WebSocket 接続をテストする。
 
 ### 3. TF エラーでナビゲーションがフリーズする(`use_sim_time` の陳腐化)
@@ -62,7 +62,7 @@ flowchart TD
 
 ### 5. Keep-Out コストマップのデッドロック
 - **症状**: `move_base` にゴールは受理されるが、ロボットが前進しない。
-- **根本原因**: `keepout_layer` が `costmap_common_params.yaml` で有効になっているが、`/msd700/keepout_grid` を待ち続けている。keep-out グリッドが発行されない場合、コストマップは決して "current" とマークされない。
+- **根本原因**: `keepout_layer` が `costmap_common_params_field.yaml` で有効になっているが、`/msd700/keepout_grid` を待ち続けている。keep-out グリッドが発行されない場合、コストマップは決して "current" とマークされない。
 - **解決策**: `path_coverage_node` または `system_command.py` が初期化時に空の keepout グリッドを発行するようにする。
 
 ### 6. ローカル同期が "Access Denied" を報告する(ローカルデータベース資格情報のドリフト)

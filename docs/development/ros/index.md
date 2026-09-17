@@ -25,7 +25,7 @@ The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops t
 
 <LinkCards>
   <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/development/ros/costmaps-and-planners" />
-  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, roslaunch Python API process spawning, and Autopilot sequencer." link="/development/ros/mode-switching" />
+  <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, subprocess process spawning, and Autopilot sequencer." link="/development/ros/mode-switching" />
 </LinkCards>
 
 ## Coverage Cleaning Algorithm
@@ -37,7 +37,7 @@ The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops t
 ## Hardware & Firmware
 
 <LinkCards>
-  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial UART protocol, PID velocity loops, and battery telemetry." link="/development/ros/firmware-and-hardware" />
+  <LinkCard icon="⚡" title="Firmware & Hardware" details="Microcontroller serial link (/dev/stm32, 57600 baud), motor control, and sensor topics." link="/development/ros/firmware-and-hardware" />
 </LinkCards>
 
 ## Simulation & Testing

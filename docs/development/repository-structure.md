@@ -17,7 +17,7 @@ ros-web-ui/
 ├── docker-compose.yml          # Server-side services (see Architecture)
 ├── docker-compose.robot.yml    # Robot-side container (used when this repo runs the robot half alone)
 ├── Docker/                     # Dockerfile, HiveMQ config, coturn config, patches
-├── Certificates/                # Robot credential cache (device.json, token.cred), MQTT/SQL certs
+├── Certificates/                # Robot credential cache (token.cred always; device.json written here by scripts/enroll.py at enrolment), MQTT/SQL certs
 ├── run_msd.sh                  # Launches roscore + ROS bringup + camera client + switch_mode in tmux
 ├── scripts/
 │   ├── docker-manager.sh        # Runs the robot half in a container (Ubuntu 24/ARM64 hosts)
@@ -39,7 +39,9 @@ ros-web-ui/
 │       ├── aws_mqtt/               # MQTT bridge launch files (local + cloud)
 │       ├── topic2string/           # Geometric topics ↔ MQTT string bridge
 │       ├── robot_pose_publisher/
-│       └── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
+│       ├── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
+│       ├── network-agent/          # Unit network helper
+│       └── shared/                 # Shared JS (jwt_keyring.js et al.)
 └── logs/
 ```
 
@@ -54,20 +56,21 @@ anything in the repo itself.
 
 ```
 msd700_robot/
-├── msd700_movement/
-│   ├── msd700_bringup/       # Launch files for primitive robot tasks
-│   ├── msd700_control/       # Sensor fusion (robot_localization)
-│   ├── msd700_firmware/      # Arduino firmware for the motor controller
-│   ├── msd700_msg/           # Robot-level messages
-│   └── msd700_navigations/   # SLAM, autonomous mapping, autonomous navigation, coverage
+├── msd700_bringup/           # Launch files for primitive robot tasks
+├── msd700_control/           # Sensor fusion (robot_localization), twist_mux
+├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
+├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
+├── msd700_firmware/          # Arduino firmware (plain directory, not a ROS package)
+├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
+├── msd700_movement/          # Vendored third_party only
+├── msd700_msgs/              # Robot-level messages
+├── msd700_navigation/        # move_base, TEB, SLAM, costmaps
+├── msd700_perception/        # Velodyne pipelines (scan, hazard)
 ├── msd700_simulation/        # Gazebo worlds and sim launches
 │   ├── worlds/               #   small, TurtleBot-scale worlds, committed
 │   ├── scripts/              #   fetch_sim_worlds.sh: pulls the AWS warehouse
 │   └── vendor/               #   fetched third-party worlds, gitignored
-├── msd700_visual/            # RViz/Gazebo robot visuals
-├── msd700_hardware/          # Hardware drivers
-├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
-└── ros_msd700_msgs/
+└── third_party/              # ira_laser_tools et al.
 ```
 
 Only `msd700_field.urdf.xacro` is the real 0.90 x 0.70 m robot; every other model here is a
@@ -86,13 +89,19 @@ msd700_noetic/
 ├── scripts/docker-manager.sh # build / up / down / shell / logs / local-* commands
 ├── docker/
 │   ├── Dockerfile             # osrf/ros:noetic-desktop-full based image
+│   ├── Dockerfile.webui-local # Unit local-stack image (COPYs ros-web-ui source in)
 │   ├── docker-compose.yml     # The single `msd700` robot container
+│   ├── entrypoint.sh          # Container entrypoint
 │   ├── .env.example           # Copied to .env on first run
-│   └── mosquitto/             # This unit's own local MQTT broker config
+│   ├── mosquitto/             # This unit's own local MQTT broker config
+│   └── networkmanager/        # Unit NetworkManager dispatcher scripts
 └── src/                       # Populated via git submodules:
     ├── msd700_robot/
     ├── ros-web-ui/
     └── ROS-dashboard-next-ts/
+    # NOTE: on a Server checkout (like this one) the submodules are NOT
+    # initialized — src/ holds only CMakeLists.txt. The robot code lives in
+    # the sibling directories /msd700_robot and /ros-web-ui instead.
 ```
 
 This is what a Unit actually runs. `src/` is bind-mounted into the container (not baked in), so

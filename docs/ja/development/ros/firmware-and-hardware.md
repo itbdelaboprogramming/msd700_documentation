@@ -7,120 +7,80 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、MSD700ロボットに実装されている組み込みマイクロコントローラファームウェア、モータードライバーインターフェース、光学エンコーダーのデコード、離散PID速度制御アルゴリズム、アナログテレメトリ回路についての詳細な技術仕様を提供する。
+組み込みマイクロコントローラファームウェア(`msd700_firmware/firmware/firmware.ino`、Arduino)と、Jetsonがそれとどう通信するかについて説明する。ファームウェアは**2つ**の入力源(RC受信機(Taranis X7)またはROS経由のPC)からコマンドを受け取り、車輪ごとのPIDループで両輪モーターを駆動する。
 
 ## 組み込み制御トポロジー
 
 ```mermaid
 flowchart TD
   subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
-    SERIAL_NODE["serial_node.py (msd700_hardware)<br/>TTY Port: /dev/ttyUSB0 (115200 baud, 8N1)"]
-    CMD_PUB["Subscribes /cmd_vel (Twist)<br/>Publishes /wheel/odom & /battery_state"]
+    SERIAL_NODE["serial_node.py (rosserial_python)<br/>Port: /dev/stm32, 57600 baud"]
+    HW_IF["msd700_hardware interface<br/>Publishes /wheel/odom, /imu/data_raw,<br/>/imu/mag, /imu/data"]
   end
 
-  subgraph Microcontroller["Embedded Microcontroller (Arduino / Teensy)"]
-    UART_ISR["UART Receive ISR & Packet Checksum Validator"]
-    PID_LEFT["Left Wheel Discrete PID Controller (100 Hz)"]
-    PID_RIGHT["Right Wheel Discrete PID Controller (100 Hz)"]
-    ENC_ISR["Quadrature Encoder Pin Change ISRs (4000 CPR)"]
-    ADC_SENSE["10-Bit ADC Battery Voltage Sampling"]
-    WATCHDOG["Hardware Safety Watchdog Timer (500 ms)"]
+  subgraph Microcontroller["Microcontroller (Arduino, firmware.ino)"]
+    CMD_SEL["Command select: RC ch.3<br/>RC mode / hold mode / PC mode"]
+    FAILSAFE["Failsafe: RC ch.4<br/>ARMED only above 1400"]
+    PID_L["Left wheel PID (pidIr)<br/>10 ms control loop"]
+    PID_R["Right wheel PID (pidIr)<br/>10 ms control loop"]
+    ENC["Quadrature encoders<br/>PinChangeInterrupt pins"]
   end
 
-  subgraph PowerStage["Actuators and Power Electronics"]
-    H_BRIDGE_L["Left Motor H-Bridge Driver Stage"]
-    H_BRIDGE_R["Right Motor H-Bridge Driver Stage"]
-    MOTOR_L["Left High-Torque Brushed DC Motor"]
-    MOTOR_R["Right High-Torque Brushed DC Motor"]
-    BATTERY["24V LiFePO4 Battery Pack (25.6V Nominal)"]
-    ESTOP_RELAY["Hardware Safety Cutoff Relay"]
+  subgraph PowerStage["Actuators"]
+    H_BRIDGE_L["Left Motor Driver<br/>(REN / LEN / PWM)"]
+    H_BRIDGE_R["Right Motor Driver<br/>(REN / LEN / PWM)"]
   end
 
-  SERIAL_NODE <-->|Full-Duplex UART 115200| UART_ISR
-  CMD_PUB --> SERIAL_NODE
+  SERIAL_NODE <-->|rosserial, 57600 baud| CMD_SEL
+  CMD_SEL --> FAILSAFE
+  FAILSAFE -->|ARMED| PID_L
+  FAILSAFE -->|ARMED| PID_R
+  FAILSAFE -->|DISARMED| STOP["Motors stopped"]
 
-  UART_ISR --> PID_LEFT
-  UART_ISR --> PID_RIGHT
-  UART_ISR --> WATCHDOG
+  PID_L --> H_BRIDGE_L
+  PID_R --> H_BRIDGE_R
 
-  PID_LEFT --> H_BRIDGE_L --> MOTOR_L
-  PID_RIGHT --> H_BRIDGE_R --> MOTOR_R
+  H_BRIDGE_L --> ENC
+  H_BRIDGE_R --> ENC
+  ENC --> PID_L
+  ENC --> PID_R
 
-  MOTOR_L --> ENC_ISR
-  MOTOR_R --> ENC_ISR
-  ENC_ISR --> PID_LEFT
-  ENC_ISR --> PID_RIGHT
-  ENC_ISR --> UART_ISR
-
-  BATTERY --> ADC_SENSE --> UART_ISR
-  WATCHDOG --> ESTOP_RELAY
+  HW_IF --> SERIAL_NODE
 ```
 
----
-
-## ハードウェア電気ピン配置と配線
-
-NVIDIA Jetsonとマイクロコントローラ間の通信は、光絶縁を備えた高速USB UART経由で行われる:
-
-| 信号機能 | マイコンピン | ドライバ / 周辺機器接続 | 電気的特性 |
-| --- | --- | --- | --- |
-| **Left Motor PWM** | Pin 5 (Timer 3) | Left H-Bridge Speed Gate | 0〜5Vロジック、20 kHz PWM(静音・無音駆動) |
-| **Left Motor DIR** | Pin 4 | Left H-Bridge Direction Input | Logic High: 前進、Logic Low: 後退 |
-| **Right Motor PWM** | Pin 6 (Timer 4) | Right H-Bridge Speed Gate | 0〜5Vロジック、20 kHz PWM |
-| **Right Motor DIR** | Pin 7 | Right H-Bridge Direction Input | Logic High: 前進、Logic Low: 後退 |
-| **Left Encoder A** | Pin 2 (INT0) | Left Optical Encoder Channel A | 5V TTL割り込み(立ち上がり/立ち下がりエッジ) |
-| **Left Encoder B** | Pin 3 (INT1) | Left Optical Encoder Channel B | 5V TTL割り込み |
-| **Right Encoder A** | Pin 18 (INT5) | Right Optical Encoder Channel A | 5V TTL割り込み |
-| **Right Encoder B** | Pin 19 (INT4) | Right Optical Encoder Channel B | 5V TTL割り込み |
-| **Battery Voltage ADC**| Pin A0 (ADC0) | Precision Resistor Divider Output | 0〜5.0Vアナログ電圧 |
-| **E-Stop Safety Line** | Pin 12 | Hardware Relay Gate Driver | Logic High: モーター有効、Low: 遮断 |
+スタック内のどこにも`/battery_state`トピックは存在せず、このファームウェアにADCによるバッテリー分圧回路もない。ファームウェア内の車輪ジオメトリ定数(`WHEEL_RADIUS 2.75 cm`、`WHEEL_DISTANCE 23.0 cm`)は、ホスト側のオドメトリ設定(`odometry_config.yaml`: 半径`2.7 cm`、距離`23 cm`、`encoder_ppr 2400`)と一致する。
 
 ---
 
-## 閉ループ離散PID速度制御
+## ハードウェアピン配置(`firmware.ino`)
 
-ファームウェアは、ホイール速度を制御するため、アンチワインドアップクランプ付きの離散PID制御ループを$100\text{ Hz}$($\Delta t = 0.01\text{ s}$)で2系統実行する:
+| 信号機能 | マイコンピン |
+| --- | --- |
+| **Right Motor REN / LEN / PWM** | Pins 4 / 5 / 9 |
+| **Left Motor REN / LEN / PWM** | Pins 6 / 7 / 8 |
+| **Right Encoder A / B** | Pins 52 / 12 |
+| **Left Encoder A / B** | Pins 11 / 10 |
+| **Status LEDs (red / blue)** | Pins 30 / 31 |
+| **Camera servo** | Pin 3 (range 125–175, step 10) |
+| **Ultrasonic (UART2 RX / TX)** | Pins 17 / 16 |
 
-### 離散誤差の定式化:
-$$e_k = v_{\text{target}} - v_{\text{measured}}$$
-
-### クランプ付きPID制御出力:
-$$\text{PWM}_k = K_p \cdot e_k + K_i \sum_{j=0}^k e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
-
-### アンチワインドアップ積分保護:
-モーターが一時的に負荷を受けたり、傾斜地で失速している際の積分ワインドアップを防ぐため:
-
-$$\sum e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \right)$$
-
-$$\text{PWM}_k = \text{clamp}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
-
-ここで$\text{PWM}_{\max} = 255$($8$ビットタイマー分解能)。
+Jetsonとのリンクは`Serial.begin(57600)`である。
 
 ---
 
-## バッテリー電圧検出回路
+## 閉ループPID速度制御
 
-ロボットは24V LiFePO4バッテリーパック(満充電: $29.2\text{ V}$、公称: $25.6\text{ V}$、カットオフ: $21.0\text{ V}$)により駆動される。
+各車輪は10 ms制御周期(`LOOP_TIME 10`)で離散PIDループ(`pidIr`)を実行する:
 
-オンボードの電圧分割回路が、バッテリー電圧をマイコンADCの$0\text{ 〜 }5\text{ V}$の範囲にスケールダウンする:
+$$\text{PWM}_k = K_p \cdot e_k + K_i \sum e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
 
-$$V_{adc} = V_{bat} \cdot \frac{R_2}{R_1 + R_2}$$
-
-ここで$R_1 = 30\text{ k}\Omega$、$R_2 = 5.1\text{ k}\Omega$(分圧比$K_{div} = 0.1453$)。
-
-### ファームウェアにおける電圧の再構成:
-$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \left( \frac{R_1 + R_2}{R_2} \right)$$
-
-ここで$V_{ref} = 5.00\text{ V}$。
+出力はフル8ビットの255ではなく`MAX_PWM 250`で飽和(`constrain`)する。速度上限は`MAX_RPM_MOVE 180`(直進)、`MAX_RPM_TURN 70`(回転)である。RC受信機チャンネルは0.25 Hzローパスフィルタ、エンコーダー信号は3 Hzローパスフィルタを通る。
 
 ---
 
-## ハードウェアセーフティウォッチドッグ
+## RCフェイルセーフ(アーミング)
 
-ホストOSのロックアップやシリアルケーブルの切断によって引き起こされる暴走状態を防ぐため、マイクロコントローラは自律的なハードウェアウォッチドッグを実行する:
-
-1. **タイマー満了**: チェックサム検証済みの速度パケットを受信するたびに、ウォッチドッグタイマーレジスタは$500\text{ ms}$にリセットされる。
-2. **セーフティカットオフ**: $500\text{ ms}$以内にパケットが届かない場合、マイクロコントローラは即座にモーターPWM出力をゼロにクランプし、`ESTOP_RELAY`のゲートラインを落とす。
+この試作機は**ARMED**のときのみ動作コマンドを受け付ける。RCチャンネル4が1400を超えていること(`update_failsafe()`)が必要で、それを下回るとDISARMEDとなり、RC・PCいずれのコマンドが届いてもモーターは停止する。コマンド源はRCチャンネル3に従う。RCモード、ホールドモード、PC(ROS)モードのいずれかである。
 
 ## 関連ドキュメント
 

@@ -32,7 +32,7 @@ suspended operator's existing session keeps working and they can still log back 
 deliberately kept separate so standing up the admin console could never lock a live deployment out
 of its own robots; enforcing it at the login boundary is a distinct piece of work. This is a
 different mechanism from a *suspended rental profile*, which does immediately remove a unit and its
-data from every member's view (see [API Reference § Rental profiles](/development/api-reference#rental-profiles)).
+data from every member's view (see [Admin Console § Rentals](/development/webui/admin-console/rentals)).
 :::
 
 ## Operational data (per map)
@@ -48,7 +48,7 @@ data from every member's view (see [API Reference § Rental profiles](/developme
 `maps_data` is deliberately locked to the rental that recorded it rather than to the unit: a unit
 re-rented to a different tenant does not hand over any previous tenant's maps, and a tenant whose
 rental ends keeps their maps even though they can no longer drive the unit that recorded them. See
-[API Reference § Rental profiles](/development/api-reference#rental-profiles) for how that plays out
+[Admin Console § Rentals](/development/webui/admin-console/rentals) for how that plays out
 at the access layer.
 
 That rule answers "may I see this row at all". It is not the same question as "which maps belong on
@@ -122,7 +122,7 @@ flowchart TB
 **user ULID**, never a name, and are used only to say who touched a row, never to decide who is
 allowed to see or change it. Both are safe to be `NULL`, and a creator whose account no longer exists
 renders as *unknown* rather than breaking the row. Access itself runs entirely through rental
-profiles (see [API Reference § Rental profiles](/development/api-reference#rental-profiles)).
+profiles (see [Admin Console § Rentals](/development/webui/admin-console/rentals)).
 :::
 
 ## `created_at` / `modified_at`

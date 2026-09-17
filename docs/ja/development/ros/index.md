@@ -25,7 +25,7 @@ search: false
 
 <LinkCards>
   <LinkCard icon="🗺️" title="コストマップ & プランナー" details="Move base、navfnグローバルプランナー、TEBローカル軌道最適化。" link="/ja/development/ros/costmaps-and-planners" />
-  <LinkCard icon="🔄" title="動的モード切り替え" details="switch_mode.py、roslaunch Python APIによるプロセス起動、Autopilotシーケンサー。" link="/ja/development/ros/mode-switching" />
+  <LinkCard icon="🔄" title="動的モード切り替え" details="switch_mode.py、subprocessによるプロセス起動、Autopilotシーケンサー。" link="/ja/development/ros/mode-switching" />
 </LinkCards>
 
 ## 網羅走行清掃アルゴリズム
@@ -37,7 +37,7 @@ search: false
 ## ハードウェア & ファームウェア
 
 <LinkCards>
-  <LinkCard icon="⚡" title="ファームウェア & ハードウェア" details="マイコンのシリアルUARTプロトコル、PID速度ループ、バッテリーテレメトリ。" link="/ja/development/ros/firmware-and-hardware" />
+  <LinkCard icon="⚡" title="ファームウェア & ハードウェア" details="マイコンのシリアルリンク(/dev/stm32、57600ボー)、モーター制御、センサートピック。" link="/ja/development/ros/firmware-and-hardware" />
 </LinkCards>
 
 ## シミュレーション & テスト

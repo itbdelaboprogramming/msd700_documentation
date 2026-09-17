@@ -150,7 +150,7 @@ sequenceDiagram
    perjalanan, dan polygon cakupan) dipulihkan dari topic ROS `/string/operation_snapshot` yang
    ter-latch.
 3. **Validasi ghost state**: jika cache browser menunjukkan sebuah misi sedang berjalan namun
-   robot melaporkan `idle` pada 8 sampel telemetri berturut-turut, frontend secara otomatis
+   robot melaporkan `idle` pada 4 sampel ping ~1 Hz berturut-turut (`PHANTOM_IDLE_SAMPLES = 4`), frontend secara otomatis
    mereset ke `idle` untuk mencegah tampilan eksekusi hantu (phantom).
 
 ### Apa yang memicu rekonstruksi snapshot

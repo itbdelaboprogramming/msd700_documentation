@@ -25,7 +25,7 @@ Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat u
 
 <LinkCards>
   <LinkCard icon="🗺️" title="Costmap & Planner" details="Move base, global planner navfn, dan optimisasi trajektori lokal TEB." link="/id/development/ros/costmaps-and-planners" />
-  <LinkCard icon="🔄" title="Pergantian Mode Dinamis" details="switch_mode.py, spawning proses roslaunch Python API, dan sequencer Autopilot." link="/id/development/ros/mode-switching" />
+  <LinkCard icon="🔄" title="Pergantian Mode Dinamis" details="switch_mode.py, spawning proses subprocess, dan sequencer Autopilot." link="/id/development/ros/mode-switching" />
 </LinkCards>
 
 ## Algoritma Pembersihan Cakupan
@@ -37,7 +37,7 @@ Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat u
 ## Perangkat Keras & Firmware
 
 <LinkCards>
-  <LinkCard icon="⚡" title="Firmware & Perangkat Keras" details="Protokol serial UART mikrokontroler, loop kecepatan PID, dan telemetri baterai." link="/id/development/ros/firmware-and-hardware" />
+  <LinkCard icon="⚡" title="Firmware & Perangkat Keras" details="Tautan serial mikrokontroler (/dev/stm32, 57600 baud), kontrol motor, dan topik sensor." link="/id/development/ros/firmware-and-hardware" />
 </LinkCards>
 
 ## Simulasi & Pengujian

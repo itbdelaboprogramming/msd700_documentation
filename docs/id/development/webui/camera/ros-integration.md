@@ -45,9 +45,10 @@ perlu diselesaikan oleh sebuah relay.
 daftar server ICE mereka: nilai yang tidak diset kembali ke default cloud (Google STUN plus kredensial
 TURN produksi), dan string literal `none` mengosongkan daftar tersebut sama sekali alih-alih
 membiarkannya tidak diset. `LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` /
-`LOCAL_TURN_CREDENTIAL` di `msd700_noetic/docker/.env` secara default berisi `none` justru karena
-alasan ini, dan hanya layak diset pada unit yang LAN-nya benar-benar membutuhkan relay (jaringan
-tersegmentasi, jembatan Wi-Fi captive antara robot dan operator).
+`LOCAL_TURN_CREDENTIAL` secara default berisi string literal `none` di dalam kode (`camera_client.py`)
+justru karena alasan ini — di `msd700_noetic/docker/.env` keduanya di-comment out, sehingga default
+kode-lah yang berlaku. Keduanya hanya layak diset pada unit yang LAN-nya benar-benar membutuhkan
+relay (jaringan tersegmentasi, jembatan Wi-Fi captive antara robot dan operator).
 
 ## Bug kandidat mDNS (2026-08-14)
 
@@ -130,9 +131,9 @@ ulang `/dev/videoN` yang sama yang dipakai bersama oleh kedua instance `CameraCl
 
 `camera_client.py` selalu di-bind-mount, baik di jalur cloud-only maupun jalur `local_dev`. Sebuah
 edit di host langsung berlaku pada kali berikutnya `run_msd.sh` (me-re)start jendela tmux-nya, tanpa
-melibatkan build image. `signalling_server`, sebaliknya, adalah salah satu layanan yang
-**`COPY`**-kan oleh `Dockerfile.webui-local` ke dalam image local-stack milik unit itu sendiri;
-perubahan di sana membutuhkan rebuild yang sama, yang sudah diperiksa staleness-nya oleh
+melibatkan build image. Server signalling, sebaliknya, dikirim di dalam image local-stack milik unit:
+`Dockerfile.webui-local` meng-`COPY` seluruh tree `./src/ros-web-ui/source` (dengan install
+dependency kondisional); perubahan di sana membutuhkan rebuild yang sama, yang sudah diperiksa staleness-nya oleh
 `docker-manager.sh` pada image dashboard dan backend (lihat
 [Referensi Docker § Yang dilakukan `up`, secara berurutan](/id/setup/docker-reference#apa-yang-dilakukan-up-secara-berurutan)).
 Melupakan hal ini terlihat persis seperti kegagalan staleness yang didokumentasikan di sana: stack

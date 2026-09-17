@@ -30,7 +30,7 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-Tokens are cryptographically signed using HS256 and validated against a shared keyring (`/srv/msd/secrets/jwt_keyring`). The active secret key signs new tokens, while recently rotated keys remain valid during a transition grace period.
+Tokens are cryptographically signed using HS256 and validated against a shared keyring. Inside the container the keyring file is `/run/secrets/jwt_keyring` (mounted from `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` on `*_dev` services; production falls back to the `JWT_SECRET_KEY`/`JWT_SECRET` env vars). The active secret key signs new tokens, while recently rotated keys remain valid during a transition grace period.
 
 ```mermaid
 sequenceDiagram
@@ -42,7 +42,7 @@ sequenceDiagram
   Client->>Backend: POST /user/login { username, password }
   Backend->>DB: Query user credentials & rental profiles
   DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { token, refresh_token, user_id, profile_id }
+  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
   Note over Client: Include token in Bearer header on subsequent calls
 
   Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
@@ -54,7 +54,7 @@ sequenceDiagram
 
 | Token Claim `typ` | Scope & Acceptance | Rejection Rules |
 | --- | --- | --- |
-| **Standard Operator** (absent or `operator`) | Full access to assigned robot fleet operations and maps. | Rejected if expired or signed with invalid secret. |
+| `access` (standard operator token) | Full access to assigned robot fleet operations and maps. | Rejected if expired or signed with invalid secret. |
 | `refresh` | Exclusively accepted on `/user/refresh`. | Rejected by standard API middleware with HTTP 401. |
 | `admin` | Accepted on administrative routes (`/admin/api/*`). | Rejected by standard robot operator routes because it lacks user context. |
 
@@ -128,13 +128,16 @@ Authenticates an operator account and issues access/refresh tokens.
 ```json
 {
   "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "msg": "Login user success",
+  "username": "operator1",
+  "full_name": "Operator One",
   "user_id": "01JZ7YV5CQUSER00000000000",
-  "role": "operator",
-  "profile_id": 4
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
+
+There is no `role` or `profile_id` in the response. Which units the caller may touch is resolved per request from their rental profile (see `attachUnit` below), not from the login payload.
 
 ### 2. Token Refresh
 `POST /user/refresh`
@@ -159,9 +162,9 @@ Exchanges a valid refresh token for a fresh token pair.
 ## Unit Management and Fleet Operations
 
 ### 1. List Accessible Units
-`GET /api/units`
+`GET /unit/all`
 
-Returns all enrolled robots assigned to the authenticated user's active rental profile.
+Returns all enrolled robots assigned to the authenticated user's active rental profile. (There is no `GET /api/units`; live status such as battery comes from the heartbeat ping, not this list.)
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Response (200 OK)**:
@@ -170,22 +173,20 @@ Returns all enrolled robots assigned to the authenticated user's active rental p
   "success": true,
   "data": [
     {
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
+      "id": "01JZ8P9WZ0UNIT00000000000",
       "unit_name": "Unit 01",
-      "model": "MSD700",
-      "status": "online",
-      "is_in_use": false,
-      "active_page": "navigation",
-      "battery": 94.2
+      "topic_root": "/unit_01JZ8P9WZ0UNIT00000000000",
+      "profile_name": "Nakayama",
+      "created_at": "2026-08-10T14:20:00Z"
     }
   ]
 }
 ```
 
 ### 2. Robot Heartbeat Ping
-`POST /api/units/ping`
+`POST /api/hardware/ping`
 
-Transmits liveness heartbeat, updates operating lease, and returns current telemetry.
+Sends a liveness heartbeat to the robot over MQTT (round-trip) and maintains the caller's operating lease. The `page` field decides what the ping keeps alive: the unit list only reads status, while the operating pages hold off the idle/shutdown watchdog tiers.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
@@ -199,35 +200,20 @@ Transmits liveness heartbeat, updates operating lease, and returns current telem
   "force_takeover": false
 }
 ```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "status": true,
-    "robot_activity": "navigation_point_published",
-    "battery": 91.0,
-    "uptime": 128.5,
-    "hw_status": "ready",
-    "manual_override": false,
-    "autopilot": false,
-    "in_use": false,
-    "origin_conflict": false
-  }
-}
-```
+
+Related but different: `POST /api/unit/heartbeat` is a container keepalive used by per-unit relay containers. It takes no lease fields and returns only `{ "success": true }`.
 
 ### 3. Emergency Stop / Pause
-`POST /api/hardware/emergency`
+`POST /api/emergency_stop`
 
-Toggles hardware emergency stop or motion pause.
+Toggles hardware emergency stop or motion pause. The boolean maps to the robot command: `true` sends `activate`, `false` sends `deactivate` over the same `system_command`/`system_feedback` topics as everything else.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "action": "activate"
+  "enable": true
 }
 ```
 - **Response (200 OK)**:
@@ -307,35 +293,38 @@ Launches autonomous boustrophedon sweep coverage over defined polygon boundaries
 
 ## Mapping (SLAM) Operations
 
-### 1. Start Mapping Session
-`POST /api/mapping/start`
+### 1. Mapping Control
+`POST /api/mapping`
 
-Initiates SLAM (gmapping) mode on the target unit.
+One endpoint drives the whole mapping session. Exactly one of `start`, `pause`, `stop` is true per call. Stopping saves the active occupancy grid, generates thumbnail metadata, and uploads assets; the saved name field is `map_name`, not `display_map_name`.
 
-- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
-
-### 2. Stop Mapping and Save Map
-`POST /api/mapping/stop`
-
-Saves the active occupancy grid, generates thumbnail metadata, and uploads assets.
-
-- **Request Body**:
+- **Request Body** (stop + save example):
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
   "homebase_x": 0.0,
-  "homebase_y": 0.0
+  "homebase_y": 0.0,
+  "homebase_z": 0.0,
+  "homebase_ox": 0.0,
+  "homebase_oy": 0.0,
+  "homebase_oz": 0.0,
+  "homebase_ow": 1.0
 }
 ```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
-}
-```
+
+### 2. Discard Mapping Session
+`POST /api/mapping/discard`
+
+Abandons the active session without saving.
+
+- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+
+### 3. Mapping Save Progress (SSE)
+`GET /api/mapping/progress/:request_id?token=<jwt>`
+
+Server-Sent Events stream for the save triggered by stop. The JWT goes in the query string because `EventSource` cannot set headers.
 
 ## Map and Route Data Management
 

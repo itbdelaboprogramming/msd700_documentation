@@ -87,42 +87,18 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ## The `createjs.Stage.prototype` patch
 
-Code in `rosScriptLoader.ts` that patches `createjs.Stage.prototype` before any canvas is
-constructed looks odd out of context, so it's worth explaining why it exists. In a React SPA like
-this dashboard, components mount and unmount rapidly during page and mode transitions. Standard
-`ROS2D.js` binds its coordinate-conversion functions (`globalToRos`, `rosToGlobal`) to a stage
-*instance* at creation time. Those bindings can be lost across a React re-render, which otherwise
-surfaces as a fatal `TypeError: this.stage.globalToRos is not a function` the moment the operator
-tries to click the canvas.
+Code in `mapComponent.tsx` that patches `createjs.Stage.prototype` before any canvas is
+constructed looks odd out of context, so it's worth explaining why it exists. EaselJS can
+re-evaluate `createjs.Stage` into a brand-new constructor whose prototype no longer has the
+`ROS2D` coordinate helpers (`globalToRos`, `rosToGlobal`, `rosQuaternionToGlobalTheta`). A viewer
+built afterwards then throws a fatal `TypeError: this.stage.globalToRos is not a function` the
+moment the operator tries to click the canvas.
 
-To guarantee the canvas never crashes this way, `rosScriptLoader.ts` patches the conversion
-functions onto `createjs.Stage.prototype` itself, ahead of instantiation, rather than relying on
-the per-instance binding surviving every remount:
-
-```typescript
-// scripts/rosScriptLoader.ts
-export function patchEaselJSStage(): void {
-  if (typeof window === "undefined" || !(window as any).createjs) return;
-
-  const StageProto = (window as any).createjs.Stage.prototype;
-
-  if (!StageProto.globalToRos) {
-    StageProto.globalToRos = function (x: number, y: number) {
-      const rosX = (x - this.x) / (this.scaleX * this.ros2dViewer.scaleToDimensions);
-      const rosY = -(y - this.y) / (this.scaleY * this.ros2dViewer.scaleToDimensions);
-      return { x: rosX, y: rosY };
-    };
-  }
-
-  if (!StageProto.rosToGlobal) {
-    StageProto.rosToGlobal = function (rosX: number, rosY: number) {
-      const x = rosX * this.scaleX * this.ros2dViewer.scaleToDimensions + this.x;
-      const y = -rosY * this.scaleY * this.ros2dViewer.scaleToDimensions + this.y;
-      return { x, y };
-    };
-  }
-}
-```
+To guarantee the canvas never crashes this way, `ensureStagePrototype()` in `mapComponent.tsx`
+re-applies the helpers idempotently on the current prototype right before every viewer creation.
+The math mirrors `public/script/ros2d.js` exactly, so behaviour is unchanged on the happy path
+(`rosScriptLoader.ts` is only the sequential script loader — the patch does not live there).
+See [Frontend Canvas](/development/frontend-canvas) for the full snippet.
 
 Every mode's click handling on this page (pinpoint placement, home base placement, polygon
 drawing) ultimately calls through `stage.globalToRos`, so this patch is a prerequisite for all of

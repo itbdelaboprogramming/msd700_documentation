@@ -42,10 +42,11 @@ case, a host candidate is already reachable; there is nothing for a relay to sol
 `camera_client.py` and the dashboard's `VideoStreamComponent` both read the same convention for
 their ICE server list: unset falls back to the cloud defaults (Google STUN plus the production TURN
 credentials), and the literal string `none` clears the list entirely rather than leaving it unset.
-`LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` / `LOCAL_TURN_CREDENTIAL` in
-`msd700_noetic/docker/.env` default to `none` for exactly this reason, and are only worth setting on
-a unit whose LAN genuinely needs a relay (a segmented network, a captive Wi-Fi bridge between robot
-and operator).
+`LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` / `LOCAL_TURN_CREDENTIAL`
+default to the literal string `none` in code (`camera_client.py`) for exactly this reason — in
+`msd700_noetic/docker/.env` they are commented out, so the code default is what applies. They are
+only worth setting on a unit whose LAN genuinely needs a relay (a segmented network, a captive
+Wi-Fi bridge between robot and operator).
 
 ## The mDNS candidate bug (2026-08-14)
 
@@ -124,8 +125,9 @@ exclusive with an in-progress reboot, since both power-cycle the same `/dev/vide
 
 `camera_client.py` is always bind-mounted, on both the cloud-only path and the `local_dev` path. An
 edit on the host takes effect the next time `run_msd.sh` (re)starts the tmux window, no image build
-involved. `signalling_server`, by contrast, is one of the services `Dockerfile.webui-local`
-**`COPY`s** into the unit's own local-stack image; a change there needs the same rebuild
+involved. The signalling server, by contrast, ships inside the unit's local-stack image:
+`Dockerfile.webui-local` `COPY`s the whole `./src/ros-web-ui/source` tree (with a conditional
+dependency install); a change there needs the same rebuild
 `docker-manager.sh` already checks for staleness on the dashboard and backend images (see
 [Docker Reference § What `up` does, in order](/setup/docker-reference#what-up-does-in-order)).
 Forgetting this looks exactly like the staleness failure documented there: the stack comes up

@@ -35,8 +35,8 @@ flowchart LR
 1. **Isu Lorong Sempit yang Tidak Dapat Direproduksi**: Laporan dunia-nyata tentang kegagalan path planning di koridor warehouse sempit tidak dapat direproduksi pada TurtleBot dengan radius 0,133 m.
 2. **Kebocoran Konfigurasi**: Parameter legacy (`robot_width: 0.32`) tersisa dalam konfigurasi cakupan hingga pemodelan skala-nyata menggantikannya.
 3. **Ketidaksesuaian Skala Lingkungan**: Peta TurtleBot standar tidak memiliki clearance yang memadai untuk robot 0,9 x 0,7 m:
-   - `turtlebot_world`: Clearance maksimum 0,39 m (tidak dapat menampung radius inscribed 0,425 m di mana pun).
-   - `AWS RoboMaker Small Warehouse`: Clearance maksimum **3,68 m** (58% lantai yang dapat dilalui, 38% dapat pivot di tempat).
+   - `turtlebot_world`: Clearance maksimum 0,39 m (tidak dapat menampung setengah-lebar inscribed 0,425 m di mana pun).
+   - `AWS RoboMaker Small Warehouse`: Clearance maksimum **3,83 m** dari geometri collision (65% lantai cukup lebar untuk berdiri, 46% untuk pivot), atau **3,68 m** (58% / 38%) dari occupancy map bawaan AWS — dua cara pengukuran independen yang selaras dalam toleransi.
 
 ## Dunia Simulasi: AWS Small Warehouse
 
@@ -70,24 +70,21 @@ Robot fisik dimodelkan dalam `msd700_description/urdf/msd700_field.urdf.xacro` d
 ```mermaid
 flowchart TB
   subgraph RobotModel["msd700_field URDF"]
-    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.45 m (Mass: 60 kg)"]
-    DRIVE["Drive Wheels: Centered, Separation 0.60 m, Radius 0.10 m"]
-    CASTERS["4 Corner Passive Casters: Anti-tip Stability"]
-    LIDAR["Velodyne VLP-16 LiDAR: Mast Height 0.61 m"]
-    EKF["EKF Sensor Fusion: /robot_pose_ekf (Odom + IMU)"]
+    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.25 m (Mass: 150 kg)"]
+    DRIVE["4 Drive Wheels: x ±0.30 m, y ±0.30 m<br/>Radius 0.10 m, Separation 0.60 m"]
+    LIDAR["Velodyne VLP-16 LiDAR: 0.40 m above base_link<br/>0.50 m above footprint"]
+    EKF["EKF Sensor Fusion: /odometry/filtered (Odom + IMU)"]
   end
 
   CHASSIS --> DRIVE
-  CHASSIS --> CASTERS
   CHASSIS --> LIDAR
   DRIVE --> EKF
 ```
 
 ### Spesifikasi Fisik:
-- **Dimensi**: panjang 0,90 m, lebar 0,70 m, tinggi 0,45 m, massa 60 kg.
-- **Geometri Drive**: Skid-steer / differential drive terpusat di titik tengah untuk memastikan envelope belokan yang simetris.
-- **Empat Caster Sudut**: Menghilangkan osilasi pitching dan roll yang menyebabkan LiDAR planar menciptakan obstacle lantai palsu.
-- **LiDAR Velodyne VLP-16**: Ditinggikan 0,61 m di atas tanah pada mast mounting, menyamai unit fisik.
+- **Dimensi**: panjang 0,90 m, lebar 0,70 m, tinggi 0,25 m, massa 150 kg.
+- **Geometri Drive**: Empat roda penggerak (depan/belakang kiri/kanan); odometri mem-fusi-kannya sebagai pasangan diferensial.
+- **LiDAR Velodyne VLP-16**: 0,50 m di atas footprint pada mast mounting, menyamai unit fisik.
 - **Frame ROS Terstandarisasi**: Menggunakan konvensi frame standar (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Menjalankan Stack Simulasi
@@ -102,8 +99,8 @@ roslaunch msd700_simulation msd700_warehouse_nav.launch
 roslaunch msd700_simulation msd700_warehouse_slam.launch
 ```
 
-### 3. Parameterisasi Move Base (`sim_body`)
-Launch file menerima `sim_body:=field` (default untuk launch warehouse) untuk mengonfigurasi costmap bagi footprint 1,20 x 0,85 m, atau `sim_body:=waffle` untuk pengujian skala-kecil legacy.
+### 3. Parameterisasi Move Base (`robot_profile`)
+Launch file menerima `robot_profile:=field` (default untuk launch warehouse) untuk mengonfigurasi costmap bagi robot lapangan, `prototype`, atau `waffle` untuk pengujian skala-kecil legacy. `sim_body:=` tetap berfungsi tetapi merupakan alias deprecated untuk `robot_profile`.
 
 ## Dokumentasi Terkait
 

@@ -65,34 +65,9 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ## `createjs.Stage.prototype`パッチ
 
-`rosScriptLoader.ts`内の、canvasが構築される前に`createjs.Stage.prototype`をパッチするコードは、文脈なしに見ると奇妙に映るため、その存在理由を説明する価値がある。このダッシュボードのようなReact SPAでは、ページやモードの遷移中にコンポーネントが素早くマウント・アンマウントされる。標準の`ROS2D.js`は座標変換関数(`globalToRos`、`rosToGlobal`)を生成時にstageの*インスタンス*にバインドする。そのバインディングはReactの再レンダー時に失われることがあり、対処しないままだとオペレーターがcanvasをクリックした瞬間に致命的な`TypeError: this.stage.globalToRos is not a function`として表面化する。
+`mapComponent.tsx`内の、canvasが構築される前に`createjs.Stage.prototype`をパッチするコードは、文脈なしに見ると奇妙に映るため、その存在理由を説明する価値がある。EaselJSは`createjs.Stage`を、`ROS2D`の座標ヘルパー(`globalToRos`、`rosToGlobal`、`rosQuaternionToGlobalTheta`)を持たないまったく新しいコンストラクタとして再評価することがある。その後に構築されたビューアは、オペレーターがcanvasをクリックした瞬間に致命的な`TypeError: this.stage.globalToRos is not a function`として表面化する。
 
-canvasがこの形で決してクラッシュしないことを保証するため、`rosScriptLoader.ts`はインスタンス化に先立って、変換関数を`createjs.Stage.prototype`自体にパッチする。インスタンスごとのバインディングが毎回のremountを生き延びることに頼るのではない。
-
-```typescript
-// scripts/rosScriptLoader.ts
-export function patchEaselJSStage(): void {
-  if (typeof window === "undefined" || !(window as any).createjs) return;
-
-  const StageProto = (window as any).createjs.Stage.prototype;
-
-  if (!StageProto.globalToRos) {
-    StageProto.globalToRos = function (x: number, y: number) {
-      const rosX = (x - this.x) / (this.scaleX * this.ros2dViewer.scaleToDimensions);
-      const rosY = -(y - this.y) / (this.scaleY * this.ros2dViewer.scaleToDimensions);
-      return { x: rosX, y: rosY };
-    };
-  }
-
-  if (!StageProto.rosToGlobal) {
-    StageProto.rosToGlobal = function (rosX: number, rosY: number) {
-      const x = rosX * this.scaleX * this.ros2dViewer.scaleToDimensions + this.x;
-      const y = -rosY * this.scaleY * this.ros2dViewer.scaleToDimensions + this.y;
-      return { x, y };
-    };
-  }
-}
-```
+canvasがこの形で決してクラッシュしないことを保証するため、`mapComponent.tsx`内の`ensureStagePrototype()`はビューア生成の直前に、現在のプロトタイプへヘルパーを冪等に再適用する。計算は`public/script/ros2d.js`とまったく同じであり、ハッピーパスでの挙動は不変である(`rosScriptLoader.ts`は単なる逐次スクリプトローダーであり、パッチはそこには存在しない)。完全なスニペットについては[フロントエンド Canvas](/ja/development/frontend-canvas)を参照。
 
 本ページの各モードのクリック処理(ピンポイント配置、ホームベース配置、ポリゴン描画)は最終的にすべて`stage.globalToRos`を呼び出すため、このパッチは特定の1モードだけの詳細ではなく、そのすべての前提条件となる。
 

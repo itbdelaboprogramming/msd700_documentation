@@ -14,16 +14,16 @@ search: false
 ```mermaid
 flowchart TD
   subgraph RawSensors["Physical Sensor Hardware Suite"]
-    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.201)"]
+    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.231)"]
     IMU_HW["9-DOF IMU (I2C / Serial)<br/>3-Axis Accel, Gyro, Magnetometer"]
-    ENCODERS["Optical Quadrature Encoders<br/>Dual Channel (A/B) 4000 CPR"]
-    CAM["HD Optical Camera<br/>(/dev/video0, 1080p WebRTC)"]
+    ENCODERS["Wheel Encoders<br/>2400 PPR (msd700_odom)"]
+    CAM["USB Camera<br/>separate WebRTC device, not a URDF link"]
   end
 
   subgraph Preprocessing["ROS Preprocessing & Filtering"]
-    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: 0.46 to 0.96 m"]
-    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>Fuses Accel, Gyro & Gravity Vector"]
-    WHEEL_ODOM["msd700_hardware / serial_node<br/>Computes Forward Kinematics (/wheel/odom)"]
+    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: -0.30 to +0.30 m"]
+    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>gain 0.01, use_mag, fixed frame odom<br/>/imu/mag in, /imu/from_filter out"]
+    WHEEL_ODOM["msd700_hardware<br/>Computes Forward Kinematics (/wheel/odom)"]
   end
 
   subgraph StateEstimation["Continuous State Estimation (EKF)"]
@@ -44,18 +44,17 @@ flowchart TD
 
 ## 差動二輪駆動の順運動学
 
-実機ロボットは、4つの受動キャスターホイールに支持された2輪差動駆動プラットフォームとして動作する。
+フィールドロボットは4つの駆動輪(前後左右、$x = \pm 0.30\text{ m}$、$y = \pm 0.30\text{ m}$)を持ち、オドメトリはそれらを差動ペアとして融合する。
 
-### キネマティクスパラメータ:
-- ホイール半径: $r = 0.075\text{ m}$(ホイール直径: $0.150\text{ m}$)。
-- トラックゲージ(駆動輪センターライン間の距離): $L = 0.580\text{ m}$。
-- エンコーダー分解能: $CPR = 4000\text{ counts/revolution}$($4\times$クアドラチャデコード後)。
-- ギアボックス減速比: $N = 30:1$。
+### キネマティクスパラメータ(`msd700_hardware/config/odometry_config.yaml`):
+- ホイール半径: $r = 0.027\text{ m}$($2.7\text{ cm}$)。
+- トラックゲージ(車輪センターライン間の距離): $L = 0.23\text{ m}$($23\text{ cm}$)。
+- エンコーダー分解能: $PPR = 2400\text{ pulses/revolution}$。
 
 ### 制御周期$\Delta t$ごとの変位計算:
 左エンコーダー差分$\Delta \text{ticks}_L$と右エンコーダー差分$\Delta \text{ticks}_R$が与えられたとき:
 
-$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{CPR \cdot N}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{CPR \cdot N}$$
+$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{PPR}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{PPR}$$
 
 並進変位$\Delta s$と方位変化$\Delta \theta$:
 
@@ -74,14 +73,14 @@ $$\theta_{k+1} = \theta_k + \Delta \theta$$
 
 ## Madgwick AHRS IMUオリエンテーションフィルタ
 
-`/imu/data_raw`($50\text{ Hz}$)上の生IMUデータは、`imu_filter_madgwick`によって処理され、ドリフトフリーなクォータニオンオリエンテーション$\mathbf{q} = [q_w, q_x, q_y, q_z]^T$が導出される:
+`/imu/data_raw`上の生IMUデータは、`imu_filter_madgwick`によって処理され、ドリフトフリーなクォータニオンオリエンテーション$\mathbf{q} = [q_w, q_x, q_y, q_z]^T$が導出される。フィルタは`gain 0.01`、`use_mag true`、固定フレーム`odom`で動作し、`/imu/mag`を読み取り、融合結果を`/imu/from_filter`にパブリッシュする(これがEKFの`imu0`として消費される):
 
 ### 勾配降下法による最適化:
 $$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \right) \Delta t$$
 
 - $\mathbf{\omega}_{gyro} = [0, \omega_x, \omega_y, \omega_z]^T$: ジャイロスコープからの角速度ベクトル。
 - $\nabla \mathbf{f}$: 実測された加速度計の重力ベクトルを、基準地球座標系の重力$[0, 0, 1]^T$に整合させる目的関数の勾配。
-- $\beta = 0.05$: ジャイロスコープの応答性と加速度計の振動ノイズのバランスを取るフィルタ発散率パラメータ。
+- $\beta$(`gain`)$= 0.01$: ジャイロスコープの応答性と加速度計の振動ノイズのバランスを取るフィルタ発散率パラメータ。
 
 ---
 
@@ -113,8 +112,8 @@ $$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \left( \mathb
 
 $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}$$
 
-- $\mathbf{z}_k$: ホイールオドメトリからの速度$\dot{x}$と、IMUからの絶対ヨー$\psi$および角速度$\dot{\psi}$を融合した観測ベクトル。
-- $\mathbf{R}_k$: センサー分散に合わせてチューニングされた観測ノイズ共分散行列($R_{\dot{x}, \text{wheel}} = 10^{-3}$、$R_{\psi, \text{imu}} = 10^{-4}$)。
+- $\mathbf{z}_k$: ホイールオドメトリ(`odom0: /wheel/odom`)からの速度$\dot{x}$と、フィルタ済みIMU(`imu0`、フレーム`odom`)からのロール/ピッチおよびヨーレートを融合した観測ベクトル。ロールとピッチはIMU由来であり、フィルタは`odom`フレームで$30\text{ Hz}$動作する。
+- $\mathbf{R}_k$: `ekf_localization_config.yaml`由来の観測ノイズ共分散行列(プロセス共分散と初期共分散はファイル内。チューニング値はyamlを参照)。
 
 ---
 
@@ -124,12 +123,12 @@ Velodyne VLP-16センサーは16本のレーザーリングにわたって毎秒
 
 ```mermaid
 flowchart LR
-  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.15 m (0.46 m above floor)<br/>max_height: +0.35 m (0.96 m above floor)"]
-  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.20 m, max_range: 100.0 m<br/>angle_increment: 0.0087 rad (0.5 deg)"]
-  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 20 Hz, 720 points/rev)"]
+  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.30 m<br/>max_height: +0.30 m"]
+  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.40 m, max_range: 100.0 m<br/>scan_time: 0.1 s (10 Hz)<br/>angle_increment: 0.0087 rad (0.5 deg)"]
+  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 10 Hz)"]
 ```
 
-これにより、$0.46\text{ m}$から$0.96\text{ m}$の高さゾーン内にある障害物(テーブルの脚、低いパレット、立っている作業員など)が、床面反射のノイズを伴わずにナビゲーションコストマップへ確実に取り込まれる。
+センサー周辺の$\pm 0.30\text{ m}$バンドはナビゲーションコストマップに残し、それ以外(床面反射、天井)は落とす。第2のパイプライン(`cloud_hazard.launch`)は地面をフィットさせ、その上$0.08$–$0.65\text{ m}$バンドで穴や段差を監視し、`/scan_hazard`をパブリッシュする。
 
 ## 関連ドキュメント
 

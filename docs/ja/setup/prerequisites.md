@@ -6,151 +6,157 @@ outline: deep
 
 <RoleBadge role="technician" />
 
-このドキュメントでは、**MSD700 サーバー**または **MSD700 物理ロボットユニット**をデプロイする前に必要となるハードウェア仕様、オペレーティングシステム要件、ネットワークルール、およびソフトウェア依存関係について詳しく説明します。
+MSD700サーバーやロボットユニットをインストールする**前に**必要なハードウェア、OS、ネットワークポート、ソフトウェアです。
 
-## システム構成規模とハードウェア仕様
+## ハードウェア
 
 ```mermaid
 flowchart LR
-  subgraph ServerSpecs["1. Cloud Server Requirements"]
-    S_CPU["4+ vCPUs (x86_64)"]
-    S_RAM["8 GB+ ECC / Non-ECC RAM"]
-    S_DISK["50 GB+ SSD NVMe Storage"]
-    S_NET["Public IPv4 / DNS Domain"]
+  subgraph ServerSpecs["1. クラウドサーバー"]
+    S_CPU["4〜8 vCPU (x86_64)"]
+    S_RAM["RAM 8〜16 GB"]
+    S_DISK["NVMe 100 GB"]
+    S_NET["パブリックIPv4 + DNSドメイン"]
   end
 
-  subgraph UnitSpecs["2. Robot Unit Hardware"]
-    U_SBC["NVIDIA Jetson (Orin / Xavier / Nano)"]
-    U_LIDAR["Velodyne VLP-16 3D LiDAR (Ethernet)"]
-    U_IMU["9-DOF IMU (Accelerometer, Gyro, Mag)"]
-    U_MOTOR["Dual High-Torque Motors + Encoders"]
-    U_BAT["24V LiFePO4 Battery Pack (20Ah+)"]
+  subgraph UnitSpecs["2. ロボットユニット"]
+    U_SBC["NVIDIA Jetson (ARM64)"]
+    U_LIDAR["Velodyne VLP-16 LiDAR (Ethernet)"]
+    U_IMU["9軸IMU"]
+    U_MOTOR["デュアルモーター+エンコーダー"]
+    U_BAT["バッテリー+E-Stop (BOMで確認)"]
   end
 ```
 
-### 1. サーバーハードウェア仕様(クラウドホスト)
+### 1. クラウドサーバー
 
-| コンポーネント | 最小仕様 | 推奨本番仕様 |
+| 項目 | 最小 | 推奨 |
 | --- | --- | --- |
-| **プロセッサ** | 2 vCPU(x86_64 / amd64) | 4〜8 vCPU |
-| **システムメモリ** | RAM 4 GB | RAM 8〜16 GB |
-| **ディスクストレージ** | SSD 30 GB | NVMe 100 GB(地図アーカイブとメディアログ用) |
-| **ネットワークイングレス** | ポート 443、8883 をフォワードした静的パブリック IPv4 | 100 Mbps 以上の全二重リンク |
+| **CPU** | 2 vCPU (x86_64) | 4〜8 vCPU |
+| **RAM** | 4 GB | 8〜16 GB |
+| **ディスク** | SSD 30 GB | NVMe 100 GB (地図アーカイブ、メディアログ用) |
+| **ネットワーク** | 固定パブリックIPv4、ポート443+8883を転送 | 100 Mbps以上全二重 |
 
-### 2. 物理ロボットユニット仕様(Jetson SBC)
+### 2. ロボットユニット (Jetson)
 
-| コンポーネント | ハードウェア仕様 | 用途 |
-| --- | --- | --- |
-| **シングルボードコンピュータ** | NVIDIA Jetson(JetPack 5.x / 6.x) | Docker 上で ROS Noetic ランタイム、センサーフュージョン、ローカル Web スタックを実行。 |
-| **メイン 3D LiDAR** | Velodyne VLP-16(16 チャンネル、Ethernet) | 360 度の環境マッピングと 100 m 範囲の障害物検知。 |
-| **状態推定用 IMU** | 9 軸 MEMS センサー(I2C/UART) | Madgwick フィルタでホイールオドメトリと融合し高レートな姿勢推定を実現。 |
-| **モーター用マイクロコントローラ** | Arduino / Teensy 組み込みコントローラ | 閉ループ PID 速度制御とエンコーダのティック割り込みを実行。 |
-| **シャーシ & 駆動方式** | 4 個の自在キャスターを備えた差動駆動 | 物理シャーシフットプリント 0.90 x 0.70 m、設計最大速度 2.5 m/s。 |
-| **電源段** | 24V LiFePO4 バッテリーパック | 4〜6 時間の連続自律稼働、ハードウェア E-Stop リレー。 |
+| 項目 | 内容 |
+| --- | --- |
+| **コンピューター** | NVIDIA Jetson (ARM64)。機種に合ったBSP/カーネルが必要 |
+| **LiDAR** | Velodyne VLP-16 (Ethernet接続)。ホスト`192.168.103.100/24`、センサー`192.168.103.231`、UDP `2368` |
+| **IMU** | 姿勢フィルタとオドメトリ融合用 |
+| **モーター** | STM32コントローラー(`/dev/stm32`として認識、udevルールが必要) |
+| **電源** | バッテリー、保護回路、E-Stop:ユニットBOMと照合すること |
 
 ---
 
-## ネットワークファイアウォールとポート一覧
+## ファイアウォールポート
 
-ネットワークルーターとセキュリティグループで、以下のトラフィックを許可してください。
+下の**パブリック**ポートを開けます。それ以外は信頼できるネットワークからのみ到達できるよう閉じてください。
 
 ```mermaid
 flowchart TD
-  subgraph PublicIngress["Public Ingress (Firewall Rules)"]
-    P443["TCP 443: HTTPS / WSS (Apache Proxy)"]
-    P8883["TCP 8883: MQTTS TLS (HiveMQ CE)"]
-    P3478["UDP/TCP 3478: STUN/TURN Signalling (coturn)"]
-    PRANGE["UDP 49152 to 65535: WebRTC Media Relays"]
+  subgraph PublicIngress["パブリック (ファイアウォールで開放)"]
+    P443["TCP 443: HTTPS / WSS (Apache)"]
+    P8883["TCP 8883: MQTTS (HiveMQ)"]
+    P3478["UDP/TCP 3478: STUN/TURN (coturn)"]
+    PRANGE["UDP 49152-65535: WebRTCメディアリレー"]
   end
 
-  subgraph LocalLoopback["Internal Loopback Only (127.0.0.1)"]
-    P3306["TCP 3306/3307: MySQL Central Database"]
-    P5000["TCP 5000: Express Backend API"]
-    P9090["TCP 9090: rosbridge WebSocket Server"]
-    P3003["TCP 3003: Media Server"]
+  subgraph LocalLoopback["内部 (アクセス制限)"]
+    P3306["TCP 3307: MySQL"]
+    P5000["TCP 5000: Backend API"]
+    P9090["TCP 9090: rosbridge"]
+    P3003["TCP 3003: メディアサーバー"]
   end
 ```
 
-| ポート | プロトコル | 範囲 | サービス | 用途 |
-| --- | --- | --- | --- | --- |
-| **`443`** | TCP | パブリック | Apache2 リバースプロキシ | Web ダッシュボードの HTTPS、REST API、rosbridge WebSocket ストリーム。 |
-| **`8883`** | TCP | パブリック | HiveMQ TLS ブローカー | ロボットとクラウドを接続する暗号化 MQTT コマンド・テレメトリブリッジ。 |
-| **`3478`** | UDP + TCP | パブリック | coturn TURN サーバー | ピアツーピアの NAT パンチが遮断された場合の WebRTC カメラ映像のトラバーサル。 |
-| **`49152 - 65535`** | UDP | パブリック | coturn 動的メディア範囲 | シンメトリック NAT を越えた WebRTC 映像ペイロードのリレー。 |
-| **`3307`** | TCP | Localhost | MySQL 本番 DB | アカウント、地図、ルート、レンタルプロファイルの中央リレーショナルストア。 |
-| **`5000`** | TCP | Localhost | Express バックエンド API | 内部 REST API と Docker コンテナオーケストレーター。 |
-| **`9090`** | TCP | Localhost | rosbridge WebSocket | Web キャンバスに供給する高頻度 ROS トピックのデシリアライザ。 |
+| ポート | プロトコル | 範囲 | サービス |
+| --- | --- | --- | --- |
+| **`443`** | TCP | パブリック | Apacheリバースプロキシ(ダッシュボード、API、rosbridge、シグナリング) |
+| **`8883`** | TCP | パブリック | HiveMQブローカー(ロボットの接続先) |
+| **`3478`** | UDP + TCP | パブリック | coturn TURNサーバー(NAT越えのカメラ映像) |
+| **`49152-65535`** | UDP | パブリック | coturnメディアリレー範囲(`.env`で狭められます) |
+| **`3307`** | TCP | 内部のみ | MySQL本番データベース |
+| **`5000`** | TCP | 内部のみ | バックエンドAPI |
+| **`9090`** | TCP | 内部のみ | rosbridge WebSocket |
+| **`3003`** | TCP | 内部のみ | メディアサーバー |
+| **`3001` / `3002`** | TCP | 内部のみ | シグナリングサーバー (WS / HTTP) |
+
+::: warning MySQLとバックエンドは自動的にはループバック専用になりません
+ComposeはMySQLをループバックバインドなしで公開し、バックエンドは全インターフェースで待ち受けます。内部に留めるのはファイアウォールの役割です。ホスト上で確認してください。
+:::
+
+開発用ポートはずれています:MySQL `3308`、バックエンド`5001`、rosbridge `9091`、MQTT `8884`、シグナリング`4001`/`4002`、メディア`4003`。TURNは本番専用です。
+
+**ユニット側**では、LAN上のオペレーターPCがダッシュボード`3000`、バックエンド`5002`、rosbridge `9090`、メディア`3003`、シグナリング`3001`、MQTT WebSocket `9001`を使います。ロボット自身のroscoreは`11321`(`--dev`付きで`11322`)で、クラウドの`11311`/`11312`とは別です。
 
 ---
 
-## ホスト OS と依存関係
+## OSと依存ソフト
 
-### クラウドサーバー向け:
-1. **オペレーティングシステム**: Ubuntu 22.04 LTS または Ubuntu 24.04 LTS(x86_64)。
-2. **Docker Engine**: Compose プラグイン(`docker compose` v2)付き Docker CE 20.10 以降。
-3. **Web サーバー**: Apache 2.4 以降(`a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias`)。
-4. **SSL 証明書**: Let's Encrypt の自動更新のために Certbot をインストール。
+### クラウドサーバー
 
-### 物理 Jetson ユニット向け:
-1. **オペレーティングシステム**: Ubuntu 20.04 / 22.04 LTS(ARM64 上の JetPack 5.x / 6.x)。
-2. **Docker Engine**: `network_mode: host` をサポートする Docker CE。
-3. **USB デバイスルール**: `/dev/ttyUSB*`(モーターコントローラ)への非 root アクセスを許可する `udev` ルール。
-4. **静的 IP 設定**: 専用 LiDAR Ethernet ポート(`end0`)に静的 IP `192.168.103.100` を設定。
+1. **OS**: Ubuntu 22.04または24.04 LTS (x86_64)。
+2. **Docker**: Docker CE 20.10以上+Composeプラグイン(`docker compose` v2)。
+3. **Apache**: 2.4以上(`ssl proxy proxy_http proxy_wstunnel headers rewrite alias`)。
+4. **Certbot**: Let's Encrypt証明書用。
+
+### Jetsonユニット
+
+1. **OS**: 機種対応BSPのARM64 Ubuntu。
+2. **Docker**: Docker CE + Compose v2。
+3. **udevルール**: `/dev/stm32`モーターコントローラーとRealSense USB用(`setup.sh`が導入、[ユニット構築](/ja/setup/unit-setup)参照)。
+4. **LiDAR接続**: 専用Ethernet。通常ホスト`192.168.103.100/24`、センサー`192.168.103.231`。インターフェース名は自動検出、必要なら`VELODYNE_IFACE`で上書き。
+5. **ホットスポット用ツール**: NetworkManager、`iw`、`dnsmasq`、`iptables`、systemd、udev、polkit。初回起動前に導入、[WiFiホットスポット](/ja/setup/wifi-hotspot)参照。
 
 ---
 
-## Ubuntu への Docker Engine のインストール
+## UbuntuへのDockerインストール
 
-クラウドサーバーと Jetson ユニットの両方で、Compose プラグイン(`docker compose` v2)付きの Docker CE が必要です。Ubuntu のデフォルトリポジトリにある `docker.io` パッケージ(バージョンが古く、Compose プラグインが同梱されないことが多い)ではなく、Docker 公式の `apt` リポジトリからインストールしてください。
+サーバーもJetsonもDocker公式aptリポジトリを使います。Ubuntu標準の`docker.io`パッケージは古く、Composeプラグインが無い場合があります。
 
 ```bash
-# 1. Remove any old or conflicting packages
+# 1. 競合パッケージを削除
 for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
   sudo apt-get remove -y $pkg
 done
 
-# 2. Install prerequisites and add Docker's official GPG key
+# 2. Docker公式鍵を追加
 sudo apt-get update
 sudo apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
 sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-# 3. Add the Docker apt repository
+# 3. Docker aptリポジトリを追加
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
   sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update
 
-# 4. Install Docker Engine, the CLI, containerd, and the Compose plugin
+# 4. Docker + Composeプラグインをインストール
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-# 5. Verify the installation
+# 5. 動作確認
 sudo docker run hello-world
 ```
 
-::: info `amd64` と `arm64` の両方で動作
-上記の手順はアーキテクチャに依存しません。`dpkg --print-architecture` はクラウドサーバーでは `amd64`、Jetson ユニットでは `arm64` に解決され、Docker のリポジトリはそれぞれに対応するパッケージを提供します。JetPack 用に別手順は不要です。
-:::
+`amd64`と`arm64`の両方で動作します(アーキテクチャは自動選択)。
 
-### インストール後: `sudo` なしで Docker を実行する
-
-`docker-manager.sh` と `run_msd.sh`([Docker コマンドリファレンス](/ja/setup/docker-reference)を参照)は、実行ユーザーが `sudo` なしで `docker` を実行できることを前提としています。ユーザーを `docker` グループに追加し、新しいシェルセッションを開始して反映させてください。
+### `sudo`なしでDockerを使う
 
 ```bash
 sudo usermod -aG docker $USER
 newgrp docker
-
-# Confirm access without sudo
 docker run hello-world
 ```
 
-::: warning それでも `sudo` を要求される場合はログアウトして再ログイン
-`newgrp docker` は現在のシェルにのみ新しいグループを適用します。他のシェル、SSH セッション、または systemd ユニットが `/var/run/docker.sock` への権限エラーで失敗し続ける場合は、完全にログアウトして再ログイン(またはリブート)し、グループメンバーシップがどこでも反映されるようにしてください。
+::: warning まだ`sudo`を求められる場合
+`newgrp docker`は現在のシェルのみに有効です。他のシェルやSSHセッションでは一度ログアウト・ログインし直してください。
 :::
 
-### 起動時に Docker を有効化
+### 起動時にDockerを有効化
 
 ```bash
 sudo systemctl enable docker.service
@@ -162,12 +168,12 @@ sudo systemctl enable containerd.service
 ## 安全チェックリスト
 
 ::: danger 安全第一
-1. **E-Stop を手の届く範囲に**: モーターテストを実行する前に、物理的な Emergency Stop のマッシュルームボタンがすぐ手の届く場所にあることを確認してください。
-2. **初回電源投入時はシャーシを持ち上げる**: 初期ファームウェアの立ち上げとモーター回転方向テストの際は、駆動輪が床に触れずに自由に回転するよう、ロボットシャーシを木製ブロックの上に置いてください。
-3. **LiDAR の目に対する安全性**: Velodyne VLP-16 はクラス 1 のアイセーフレーザー機器(波長 $905\text{ nm}$)です。稼働中の光学系の正面に光学拡大レンズを置かないでください。
+1. **E-Stopを手元に。** モーターテストの前に、赤い非常停止ボタンを手の届く場所に置いてください。
+2. **初回電源投入時は車体を浮かせる。** モーター方向テスト中、車輪が自由に回るよう台の上に載せてください。
+3. **LiDARレーザー。** Velodyne VLP-16はClass 1アイセーフです。それでも動作中に拡大光学系を前に置かないでください。
 :::
 
 ## 次のステップ
 
-- クラウドバックエンドをデプロイするには [サーバーセットアップ](/ja/setup/server-setup) に進みます。
-- サーバーが既に稼働している場合は、直接 [ユニットセットアップ](/ja/setup/unit-setup) に進んでください。
+- [サーバー構築](/ja/setup/server-setup):クラウドバックエンドをデプロイします。
+- [ユニット構築](/ja/setup/unit-setup):ロボットをセットアップします(サーバー稼働済みの場合)。

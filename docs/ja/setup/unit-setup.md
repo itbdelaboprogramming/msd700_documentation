@@ -2,117 +2,114 @@
 outline: deep
 ---
 
-# ユニットセットアップ
+# ユニット構築
 
 <RoleBadge role="technician" />
 
-このガイドでは、**MSD700 ユニット**(NVIDIA Jetson シングルボードコンピュータ上で動作する物理ロボット)のインストールと設定に関するステップバイステップの手順を説明します。
+**MSD700ユニット**(NVIDIA Jetson上の実機ロボット)のインストールと設定方法です。
 
-進める前に、稼働中の [MSD700 サーバー](/ja/setup/server-setup) が存在することを確認してください。
+稼働中の[サーバー](/ja/setup/server-setup)が先に必要です。以下のコマンドは全て**ユニット上**で実行します。クラウドサーバーではありません。
 
-::: info 本番環境を優先したアーキテクチャ
-このガイドは、**本番クラウド**に接続する実機ハードウェアロボットのデプロイをデフォルトとしています。シミュレーションオプション(`--simulator`)と開発クラウドへのルーティング(`--dev`)は [高度な設定](#advanced-configurations) セクションにあります。
+::: info 本番優先
+このページは実機ロボットを**本番クラウド**に接続します。シミュレーター(`--simulator`)と開発クラウド(`--dev`)は[高度な設定](#高度な設定)にあります。
 :::
 
-## システムトポロジー
+## システム構成
 
-![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![MSD700システム図](/images/MSD700-System-Diagram.jpg)
 
+## フォルダ構成
 
-
-## ディレクトリ構成の概要
-
-Jetson のワークスペースは、ロボットパッケージ、Web ブリッジ、オンボード Web UI をサブモジュールとして管理します。
+Jetsonワークスペースはロボットパッケージ、Webブリッジ、オンボードWeb UIを`src/`下の通常クローンとして保持します(サブモジュールではありません):
 
 ```
-~/msd700_noetic/                              # Main Jetson Orchestration Workspace
-├── setup.sh                                  # Host Dependency Installer (Docker, xhost)
+~/msd700_noetic/
+├── setup.sh
 ├── scripts/
-│   └── docker-manager.sh                     # Core Lifecycle CLI (build, up, down, logs)
+│   └── docker-manager.sh
 ├── docker/
-│   ├── Dockerfile                            # ROS 1 Noetic Desktop Full Container
-│   ├── docker-compose.yml                    # Robot Container Definition
-│   └── .env                                  # Local Environment Variables
-└── src/                                      # Catkin Workspace Submodules
-    ├── msd700_robot/                         # Navigation, EKF Control, Hardware Drivers
-    ├── ros-web-ui/                           # Web Bridges, MQTT nodes, System Command
-    └── ROS-dashboard-next-ts/                # Local Operator Web Dashboard
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── .env
+└── src/
+    ├── msd700_robot/
+    ├── ros-web-ui/
+    └── ROS-dashboard-next-ts/
 ```
 
 ---
 
-## コアとなるステップバイステップのセットアップ
+## 構築手順
 
-物理ロボットをセットアップするため、以下の 6 つのステップを順番に実行します。ロボット自身の WiFi ホットスポットの設定も含みます。
+Step 1〜4、次にStep 6(ホットスポットプロビジョニング)、最後にStep 5(起動)の順です。ホットスポット用ファイルは初回起動前に必要です。
 
-### ステップ 1: ワークスペースとソースリポジトリをクローンする
-
-オーケストレーション用ワークスペース `msd700_noetic` をクローンし、続けて必要な 3 つのリポジトリを `src/` ディレクトリにクローンします。
+### Step 1: ワークスペースとソースのクローン
 
 ```bash
-# 1. Clone orchestration workspace
+# 1. オーケストレーションワークスペース
 git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
 
-# 2. Clone source packages into src/ on branch v2
-git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+# 2. ソースリポジトリをsrc/へ、ブランチv2
+git clone --recurse-submodules -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
 git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
 git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip なぜ `src/` に手動でクローンするのか
-`msd700_noetic` は `.gitignore` で `src/*/` を無視しており、Git-in-Git の衝突を避け、各サブリポジトリをそれぞれ独立したブランチで管理できるようにしています。
+::: tip なぜ手動で`src/`へクローンするのか?
+`msd700_noetic`は`src/*/`を無視するため、各リポジトリがGit-in-Gitの競合なく独自ブランチを保持できます。
 :::
 
 ---
 
-### ステップ 2: ホストの初回セットアップ
-
-ホストセットアップスクリプトを実行し、Docker グループの権限とグラフィックスフォワーディングを設定します。
+### Step 2: ホストの初期設定(初回のみ)
 
 ```bash
 cd ~/msd700_noetic
 ./setup.sh
 ```
 
-::: warning グループ権限を反映させる
-スクリプトがユーザーを `docker` グループに追加した場合は、ログアウトして再ログインするか、以下を実行してください。
-```bash
-newgrp docker
-```
+Dockerの導入(未導入時)、グループ権限と`xhost`の設定、スクリプトの実行権限付与、Velodyne有線リンク設定、STM32/RealSenseのudevルールとRealSense復旧サービス、シミュレーターワールドのダウンロードを行います。ホストを変更します。読み取り専用チェックではありません。
+
+::: warning Dockerグループ
+スクリプトがユーザーを`docker`グループに追加した場合、ログアウト・ログインし直すか、`newgrp docker`を実行します(現在のシェルのみ有効)。
 :::
 
 ---
 
-### ステップ 3: 環境設定(`docker/.env`)を確認する
+### Step 3: `docker/.env`の確認
 
-初回起動時、`./scripts/docker-manager.sh` は `docker/.env.example` から `docker/.env` を自動生成し、安全でループバック専用のローカル MySQL パスワードを生成します(`ensure_local_secrets`)。
+起動スクリプトは`docker/.env`を`docker/.env.example`から作成します(**存在しない場合のみ**)。プレースホルダーのMySQLパスワードはローカルDB未初期化時のみ置換されます。既存パスワードのローテーションではありません。
 
-起動前に手動で設定を事前構成・確認したい場合:
+::: warning このファイルの認証情報
+`docker/.env`はgit管理下です。初回使用前にユニット別の値を自分で確認します。表示・コミット・他ユニットへのコピーは禁止です。既存DBのパスワード変更はファイル編集だけでなく対応するSQLローテーションが必要です。
+:::
+
+起動前に手動確認する場合:
 
 ```bash
 cd ~/msd700_noetic
-cp docker/.env.example docker/.env
+test -e docker/.env || cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-`docker/.env` の主な設定項目:
+主な設定:
 
 ```ini
-# Storage path for map occupancy grids on the Jetson
+# Jetson上の地図保存先
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+# ローカルユーザーのUID/GID (空=自動検出: Jetson 2002、開発PC 1000)
 USER_UID=
 USER_GID=
 
-# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+# Gazeboシミュレーター (ロボットハードなしのマシンのみtrue)
 WITH_SIMULATOR=false
 
-# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+# 空のままにします。クラウド登録時に自動設定されます
 UNIT_ID=
 
-# Local Ports (Default settings for on-board local stack)
+# ローカルポート (オンボードスタックのデフォルト)
 MYSQL_PORT_LOCAL=3306
 MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
@@ -123,217 +120,178 @@ SIGNALLING_PORT_WS_LOCAL=3001
 SIGNALLING_PORT_HTTP_LOCAL=3002
 NETWORK_AGENT_PORT_LOCAL=5011
 
-# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+# 任意: 固定IPヒント (ダッシュボードはブラウザのアドレスに追従します)
 #LOCAL_IP=192.168.4.1
 ```
 
-::: info クラウド接続のルーティング
-クラウド接続パラメータ(本番クラウド `https://msd.nglobal.jp/services`、または `--dev` 経由の開発クラウド)は、起動時とエンロルメント時に `docker-manager.sh` が自動的に管理しており、`docker/.env` では設定しません。
+::: info どのクラウドに接続するか?
+デフォルトは`https://msd.nglobal.jp/services/rosbackend`、`--dev`で開発バックエンドです。`CLOUD_BASE_URL`で上書きできます。登録と同期は同じクラウドに向けてください。この設定だけではMQTTブローカーは移動しません。
 :::
 
 ---
 
-### ステップ 4: ロボットの Docker イメージをビルドする
+### Step 4: ロボットイメージのビルド
 
-ROS Noetic のロボットランタイムコンテナをビルドします。
+インターネットがあるうちにビルドします。ロボットのベースは`ros:noetic-robot`です。Dockerfileが`src/`をコピーして`catkin build`を実行します。
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh build
 ```
 
-これにより、ROS Noetic、ナビゲーションスタック、センサードライバ、Web ブリッジを含む `msd700:latest` イメージがビルドされます。
+`msd700:latest`、`ros-noetic-webui-app-local:latest`、`ros-dashboard-next-local:latest`をビルドし、MySQLとMosquittoをpullします。pull失敗は警告のみです。オフライン前に上流イメージに届くことを確認します。通常の`up`はイメージを再利用し、古い場合も警告のみです。ソース変更後は意図的にリビルドします。
+
+先に地図フォルダを作成し、自分のUID/GIDの所有にします。Dockerは存在しないバインド元をrootで作ってしまいます:
+
+```bash
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/ubuntu/ros_maps
+```
+
+**ホットスポットを使うユニットはStep 5の前にStep 6を済ませます。** スタックは`/run/msd700-hotspot-active`をバインドマウントします。そのファイルがない状態でDockerを起動するとフォルダが代わりに作られる場合があります。
 
 ---
 
-### ステップ 5: ロボットを起動しエンロルメントを完了する
-
-detached モードでロボットスタックを起動します。
+### Step 5: ロボットの起動と登録
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
-#### 自動エンロルメントフロー:
-1. 初回起動時、ロボットはクラウドサーバーに接続し、6 文字の **Claim Code**(例: `K7M2QP`)を出力します。
-2. 管理者が `https://msd.nglobal.jp/admin` を開いてログインします。
-3. **Pending Units** の下で一致するクレームコードを見つけ、そのユニットをアクティブな **Rental Profile** に割り当て、**Approve** をクリックします。
-4. ロボットは暗号署名された認証情報(`Certificates/robot/device.json`)を受け取り、TLS ポート 8883 経由で HiveMQ に接続し、フリートマップ上にライブで表示されます。
+ロボットコンテナと常時起動の`local_dev`スタック(データベース、MQTT、バックエンド/rosbridge、ネットワークエージェント、メディア、シグナリング、ダッシュボード)を起動します。名前に関わらず`local_dev`はどちらのクラウドにも使います。`-d`は起動と登録完了後に戻ります。`up`は起動時自動起動用の`msd700.service`も導入します。除外は`--no-autostart`です。
+
+**登録(初回起動のみ):**
+
+1. ロボットがクラウドに接続し、8文字の**クレームコード**を表示します(例`K7M2QP4R`)。表示用ラベルであり、秘密ではありません。
+2. 管理者がクラウド管理コンソール(`https://msd.nglobal.jp/admin`、`--dev`時はポート5001の開発バックエンド)を開きログインします。
+3. **Pending Units**でコードを探し、有効な**レンタルプロファイル**に新規ユニットとして登録するか、既存ユニットのULIDに**引き継ぎ(Adopt)**ます(ハード交換用パス。クラウドの地図は残ります)。
+4. ユニットはIDを`src/ros-web-ui/Certificates/robot/device.json`に、トークンを`token.cred`に保存します。両方とも秘密として扱います。次回以降の起動は再利用します。
+5. 本番ブリッジはHiveMQ TLSポート`8883`を指します。承認だけでは接続を証明しません。クラウドとローカルのダッシュボードを別々に確認します。
 
 ---
 
-### ステップ 6: WiFi ホットスポットをプロビジョニングする
+### Step 6: WiFiホットスポットのプロビジョニング
 
-すべてのユニットは、オペレーターが直接接続できるよう独自の WiFi ホットスポットをブロードキャストします(オンボードの無線は通常の WiFi クライアントのまま維持されます)。検証済みの USB WiFi ドングルを接続し、対話型ターミナルから次の 2 つのコマンドを実行します。
+プロビジョニング済みユニットはホットスポットを提供し、ドライバーが同時使用に対応していれば同じオンボード無線でWiFiクライアント接続も維持できます。チップ名ではなく実際のドライバーを確認します。初回`up`の**前に**、ローカルコンソールか有線接続から行います:NetworkManagerが再起動しWiFiが切れる場合があります。
 
 ```bash
 cd ~/msd700_noetic
 
-# 1. Install the dongle's driver (one-time, builds via DKMS so it survives kernel upgrades)
+# 任意: 予備ドングルドライバー (初回のみ、DKMS)。オンボード無線単独でホットスポット運用なら不要
 ./scripts/install-wifi-dongle-driver.sh
 
-# 2. Provision the hotspot
+# ホットスポットをプロビジョニング (udevルール、PolicyKitルール、hostapd/dnsmasqサービス)
 ./setup.sh --provision-network
 ```
 
-キーボードから直接実行すると(パイプ経由や非 TTY セッションではなく)、`--provision-network` は
-create-next-app のようなスタイルで各設定項目を順番に案内します。インターフェース名、SSID、パスワード
-は自動検出された `[デフォルト値]` として表示され、Enter を押せばそれぞれを受け入れ、あるいは新しい値を
-入力できます。ホットスポットのパスワードは確認のため 2 回入力しますが、`docker/.env` やディスク上の
-他のいかなるファイルにも書き込まれません。ホットスポットは、以降のすべての起動時に Docker や
-`docker-manager.sh` とは無関係に自動的に立ち上がります。
+`--provision-network`は端末で実行し、インターフェース名とSSIDを聞きます(検出済みデフォルト付き)。パスワード入力は非表示で、既存パスワードは`[keep current]`と表示され、中身は出ません。新パスワードは2回入力します。`/etc/hostapd/`下のhostapd設定(モード0600)に保存され、`docker/.env`には**書き戻されません**。上流クライアントネットワークはNetworkManagerプロファイルに入ります。以降ホットスポットはDockerなしで毎回起動時に自動で上がります。
 
-::: info 無人・スクリプトによるプロビジョニング
-TTY がない場合(または `MSD700_NONINTERACTIVE=1` が設定されている場合)、プロンプトはスキップされ、
-`--provision-network` は `docker/.env` と環境変数をそのまま使用します。そのため、
-`AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network` は自動化にもそのまま
-使用できます。完全なプロビジョニング手順、検証済みドングルハードウェア、トラブルシューティングに
-ついては [Wi-Fi ホットスポット + クライアント](/ja/setup/wifi-hotspot#ホットスポットのプロビジョニング-ユニットごとに一度)
-を参照してください。
+::: info 無人プロビジョニング
+TTYなし(または`MSD700_NONINTERACTIVE=1`)ではプロンプトをスキップします。既存hostapdパスワードが環境値より優先されます。インラインのパスワード指定はシェル履歴に漏れる場合があります。非表示の対話入力を使ってください。安全な無人パスワードローテーションは未解決です。詳細手順は[WiFiホットスポット](/ja/setup/wifi-hotspot#ホットスポットのプロビジョニング-ユニット毎に一度)。
 :::
 
 ---
 
-## ユニットをローカルで操作する(オフラインモード)
+## ローカル運用 (オフライン)
 
-ロボットがインターネット接続のない場所で稼働する場合は、ラップトップやタブレットをロボットのローカルネットワーク、またはステップ 6 でプロビジョニングした[ロボットの WiFi ホットスポット](/ja/setup/wifi-hotspot)に直接接続してください。
+インターネットがない場所では、ロボットのローカルネットワークかStep 6の[ホットスポット](/ja/setup/wifi-hotspot)に直接接続します:
 
-1. ブラウザを開き、`http://<jetson-ip>:3000` にアクセスします。
-2. ローカルダッシュボードでは、完全な遠隔操作、SLAM マッピング、ルート作成、エリアカバレッジ清掃が可能です。
-3. インターネット接続が復旧すると、ローカルで記録されたすべての地図は自動的に中央クラウドサーバーへ同期されます。
+1. `http://<jetson-ip>:3000`を開きます。
+2. クラウド登録と初回同期(レンタル割当+オペレーターアカウント)済みなら、ローカルダッシュボードで操縦・地図作成・ルート実行がオフラインで使えます。未登録ユニットはオフライン起動できません。
+3. インターネット復帰時、設定済みクラウドと地図・ルート・エリア・DB行を同期します。対象はこのユニットと有効レンタルプロファイルに限定されます。同期状態を確認します。全て送信済みと決め付けないでください。
 
 ---
 
 ## 高度な設定
 
 <details>
-<summary><b>シミュレーションモード(Gazebo Warehouse)</b></summary>
+<summary><b>シミュレーションモード (Gazebo倉庫)</b></summary>
 
-物理ロボットハードウェアなしでラップトップ上でアルゴリズムをテストするには:
+ロボットハードなしのPCでのテスト用です。`build --simulator`で`WITH_SIMULATOR=true`を設定し`msd700-simulator:latest`を選択します。`fetch_sim_worlds.sh`がオンライン中に倉庫ワールドをダウンロードします。選択ワールドのスポーン位置を使います。
 
-1. シミュレーター対応イメージをビルドする:
-   ```bash
-   ./scripts/docker-manager.sh build --simulator
-   ```
+```bash
+./scripts/docker-manager.sh build --simulator
+./scripts/docker-manager.sh up --simulator -d
+```
 
-2. シミュレーションスタックを起動する:
-   ```bash
-   ./scripts/docker-manager.sh up --simulator -d
-   ```
+`docker/.env`の`MSD700_SIM_HEADLESS=true`でGazeboをウィンドウなしで実行します。
 
 </details>
 
 <details>
-<summary><b>開発クラウドへのルーティング(`--dev`)</b></summary>
+<summary><b>開発クラウド (`--dev`)</b></summary>
 
-ユニットを本番ではなく開発クラウドサーバーに向けるには:
+本番ではなく開発クラウドに向けます:
 
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-これにより MQTT は開発用ポート `8884` に接続され、開発用データベースと同期します。
+クラウドブリッジが開発バックエンド(ポート5001)、MQTTが`8884`、このロボットのroscoreが`11322`に移動します。
 
-**開発クラウドでもブローカーのホスト名は `msd.nglobal.jp` のままです。** 開発環境と本番環境は同じ
-マシンであり、公開されているポートのみで区別されています。ブローカーの TLS 証明書はそのホスト名に
-対して発行されているため、MQTT を素の IP に向けると検証に失敗します。したがって、ログ行に
-`mqtts://msd.nglobal.jp:8884` と表示されていれば、それは **開発用** ブローカーです。ホスト名ではなく
-ポートを見てください。
+**ブローカーのホスト名は開発でも`msd.nglobal.jp`のままです。** 開発と本番は同マシンでポートのみ分離され、TLS証明書はその名前で発行されます。IP直指定では検証失敗します。ホスト名ではなくポートを見てください:
 
-| ピア | ブローカー | バックエンド | ROS マスター |
+| 相手 | ブローカー | バックエンド | ROSマスター |
 | --- | --- | --- | --- |
-| 本番(フラグなし) | `msd.nglobal.jp:8883` | `https://msd.nglobal.jp/services/rosbackend` | `11321` |
-| 開発(`--dev`) | `msd.nglobal.jp:8884` | `http://118.22.31.252:5001` | `11322` |
+| 本番 (フラグなし) | `msd.nglobal.jp:8883` | `https://msd.nglobal.jp/services/rosbackend` | `11321` |
+| 開発 (`--dev`) | `msd.nglobal.jp:8884` | `http://118.22.31.252:5001` | `11322` |
 
-::: danger このユニットをクラウドの ROS マスターに絶対に到達させないこと
-このロボットの roscore は `11321`/`11322` であり、クラウドサーバーの `11311`/`11312` とは意図的に
-分離されています。以前はこれらの番号を共有していたため、`localhost:11312` が指すマスターはマシンに
-よって異なっていました。VS Code Remote セッションや、サーバーのポートを転送する `ssh -L` だけで
-十分に問題が発生しました。`roscore` はバインドできずに終了しましたが、トンネルが応答していたため
-readiness プローブは通過してしまい、ユニットのスタック全体が**クラウド**側のマスターに登録されて
-しまったのです。ROS は名前が二重に取得された場合、古い方のノードを強制終了するため、サーバー自身の
-`/rosbridge_websocket` と `/backend_node` が追い出され、ライブトピックがクラウドダッシュボードから
-消失しました(マッピング地図が最初に消えました)。一方ローカルダッシュボードは正常に見えていました。
-これは 2026-09-10 に発生した事象です。
-
-現在は 2 つの保護策があります。ポートはもはや重複せず、`run_msd.sh` は、そのポート上で自分自身の
-`rosmaster` が稼働しており、かつそのマスターの `/msd700/stack_role` が `cloud` でない場合を除いて
-起動を拒否します(すべての roscore はこのパラメータをスタンプします。`run_msd.sh` はさらに
-`/msd700/stack_host` を追加します)。最後の保険として、クラウド側のノード名には `_cloud` という
-サフィックスが付与されるため、誤って間違ったマスターに行き着いたスタックがあっても、もはや何も
-追い出すことはありません。
+::: danger このユニットをクラウドのROSマスターに接続させないでください
+このロボットのroscoreは`11321`/`11322`で、クラウドの`11311`/`11312`とは意図的に別です。サーバーのROSポートをユニットへ転送しないでください(`ssh -L`やVS Codeの11311/11312転送を含む):ユニットスタックが**クラウド**マスターに登録され、サーバー自身のノードを追い出します。症状:ローカルダッシュボードは正常なのにクラウドダッシュボードが空になります(マッピング地図から先に消えます)。
 
 ```bash
-ss -ltnp | grep :11322                     # who owns the port
-rosparam get /msd700/stack_role            # whose master answers
-src/ros-web-ui/scripts/ros_doctor.sh       # owner, foreign nodes, rosbridge, in one verdict
+ss -ltnp | grep :11322
+docker exec -e ROS_MASTER_URI=http://localhost:11322 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
 ```
 
-そのフォワーディングを閉じる(VS Code の場合: PORTS パネル)か、
-`ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d` でこのロボットを移動させてください。
+転送を閉じるか(VS Code: PORTSパネル)、`ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d`でこのロボットを移動します。
 :::
 
-**このモードはリブートをまたいで記憶されます。** `up` は `msd700.service` を有効化し、2026 年 9 月の
-修正以降、その `up` の `--dev` と `--simulator` フラグはユニットの `ExecStart` に書き込まれます。それ
-以前は、起動ユニットは素の `up` を再実行していたため、`up --simulator --dev` で起動したロボットは
-リブート後に**本番環境に対する実機ハードウェア**として復帰してしまっていました。何が設定されている
-かは、以下で確認できます。
+**モードは再起動後も保持されます。** `up`は`--dev` / `--simulator`フラグを`msd700.service`に書き込むため、再起動後も同モードで戻ります。設定内容の確認:
 
 ```bash
-./scripts/docker-manager.sh print-autostart-unit --simulator --dev   # what would be written
-grep ExecStart /etc/systemd/system/msd700.service                    # what is armed now
+./scripts/docker-manager.sh print-autostart-unit --simulator --dev   # 書き込まれる内容
+grep ExecStart /etc/systemd/system/msd700.service                    # 現在の設定
 ```
 
-`up` はそれも出力します: `Boot autostart armed (DEV cloud, simulator)`。異なるフラグで `up` を再実行
-するとユニットが書き換えられ、`down` は完全に無効化します。
+異なるフラグで`up`再実行すると書き換えられます。`down`で自動起動は解除されます。
 
 </details>
 
 <details>
-<summary><b>非 Ubuntu / Arch ラップトップ向けのホストネットワーク修正</b></summary>
+<summary><b>非Ubuntu PC (sim/devのみ)</b></summary>
 
-Arch Linux や非標準のディストリビューションで実行する場合:
-
-1. **ホスト名の解決**:
-   ```bash
-   grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
-   ```
-
-2. **IPv6 ループバックマッピングの無効化**:
-   ```bash
-   sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
-   ```
-
-3. **共有マップディレクトリの作成**:
-   ```bash
-   sudo mkdir -p /home/ubuntu/ros_maps
-   sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
-   ```
+`docker/.env`の`MAPS_FOLDER_LOCAL`をJetson風`/home/ubuntu`ではなく実在の書込可能フォルダにします。イメージのUID/GIDに合わせます。`msd700_noetic/docker/docker-compose.yml:219`と`ros-web-ui/run_msd.sh:606-613`参照。
 
 </details>
 
 ---
 
-## 検証と診断
-
-以下の診断コマンドでロボットの健全性を確認します。
+## ロボットのヘルスチェック
 
 ```bash
-# 1. View overall container and service status
+# 1. ロボット+ローカルスタックの状態
 ./scripts/docker-manager.sh status
 
-# 2. Attach to the ROS tmux session inside the container
+# 2. コンテナ内のROSセッション
 ./scripts/docker-manager.sh shell
 tmux attach -t robot_services
 
-# 3. View real-time container logs
+# 3. ロボットログ (追跡)。ローカルスタック: local-logs
 ./scripts/docker-manager.sh logs -f
+
+# 4. スタックの健康状態 (マスター、外部ノード、rosbridge)
+docker exec -e ROS_MASTER_URI=http://localhost:11321 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
+
+# 5. ユニット上の同期状態
+curl -s http://localhost:5002/local/status
 ```
 
-## 関連ドキュメント
+## 関連
 
-- [サーバーセットアップ](/ja/setup/server-setup): クラウドバックエンドのインストール。
-- [システムセットアップ](/ja/setup/system-setup): センサーのキャリブレーションと検証。
-- [Docker コマンドリファレンス](/ja/setup/docker-reference): 網羅的な CLI 構文リファレンス。
-- [Wi-Fi ホットスポット + クライアント](/ja/setup/wifi-hotspot): ホットスポットの全体アーキテクチャ、ドングルハードウェア、トラブルシューティング。
+- [サーバー構築](/ja/setup/server-setup):クラウドバックエンド。
+- [システム構築](/ja/setup/system-setup):サーバー+ユニットの連携確認。
+- [Dockerリファレンス](/ja/setup/docker-reference):CLI完全リファレンス。
+- [WiFiホットスポット](/ja/setup/wifi-hotspot):ホットスポットの設定と対処。
+- [MT7922 Wi-Fi](/ja/setup/wifi-mt7922):オンボード無線のファームウェア修正。
+- [トラブル対処](/ja/setup/troubleshooting):広範な診断。

@@ -33,7 +33,7 @@ Keduanya sengaja dipisahkan agar berdirinya konsol admin tidak pernah bisa mengu
 deployment live dari robot miliknya sendiri; menegakkannya di batas login adalah pekerjaan
 tersendiri. Ini adalah mekanisme berbeda dari *rental profile yang ditangguhkan*, yang memang
 langsung menghapus sebuah unit dan datanya dari tampilan setiap anggota (lihat
-[Referensi API § Profil rental](/id/development/api-reference#rental-profiles)).
+[Admin Console § Rentals](/id/development/webui/admin-console/rentals)).
 :::
 
 ## Data operasional (per peta)
@@ -49,7 +49,7 @@ langsung menghapus sebuah unit dan datanya dari tampilan setiap anggota (lihat
 `maps_data` sengaja dikunci ke rental yang merekamnya, bukan ke unit: sebuah unit yang disewakan
 ulang ke tenant berbeda tidak menyerahkan peta tenant sebelumnya, dan tenant yang masa rentalnya
 berakhir tetap menyimpan peta miliknya meskipun mereka tidak lagi bisa mengendarai unit yang
-merekamnya. Lihat [Referensi API § Profil rental](/id/development/api-reference#rental-profiles)
+merekamnya. Lihat [Admin Console § Rentals](/id/development/webui/admin-console/rentals)
 untuk bagaimana ini berlaku di lapisan akses.
 
 Aturan itu menjawab "apakah saya boleh melihat baris ini sama sekali". Itu bukan pertanyaan yang
@@ -128,7 +128,7 @@ siapa yang menyentuh sebuah baris, tidak pernah untuk memutuskan siapa yang bole
 mengubahnya. Keduanya aman untuk bernilai `NULL`, dan seorang pembuat yang akunnya sudah tidak ada
 lagi dirender sebagai *tidak diketahui* alih-alih merusak baris tersebut. Akses itu sendiri
 sepenuhnya berjalan lewat rental profile (lihat
-[Referensi API § Profil rental](/id/development/api-reference#rental-profiles)).
+[Admin Console § Rentals](/id/development/webui/admin-console/rentals)).
 :::
 
 ## `created_at` / `modified_at`

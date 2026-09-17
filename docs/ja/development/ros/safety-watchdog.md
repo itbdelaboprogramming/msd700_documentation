@@ -11,10 +11,10 @@ search: false
 
 ```mermaid
 flowchart TB
-  PING["Incoming Heartbeat Ping<br/>(Every 1000 ms)"] --> RESET["Reset Watchdog Timer"]
-  RESET --> MONITOR["Watchdog Monitor Loop"]
+  PING["Incoming Heartbeat Ping<br/>(dashboard ping loop)"] --> RESET["Reset Watchdog Timer"]
+  RESET --> MONITOR["Watchdog Monitor Loop<br/>(presence / operation-elapsed based)"]
 
-  MONITOR -->|Ping missing for 10 s| PAUSE["10 Seconds: Motion Safety Pause<br/>Publish zero-twist on /emergency_pause (prio 255)"]
+  MONITOR -->|Ping missing for 10 s| PAUSE["10 Seconds: Motion Safety Pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
   PAUSE -->|Ping missing for 10 min| TEARDOWN["10 Minutes: Session Teardown<br/>Switch mode to idle, drop navigation stack"]
   TEARDOWN -->|Ping missing for 30 min| SHUTDOWN["30 Minutes: Hardware Shutdown<br/>De-energize motor stages"]
 
@@ -23,7 +23,7 @@ flowchart TB
 
 ## ハートビートウォッチドッグの時間階層
 
-1. **10秒(モーション一時停止)**: 10秒間有効なハートビートが届かない場合、`system_command.py`は優先度255でラッチされた`/emergency_pause`ツイストコマンドをアサートする。ロボットはアクティブな`move_base`ゴールをキャンセルすることなく完全停止まで減速する。通信が復旧すると一時停止は解除され、動作は自動的に再開される。
+1. **10秒(モーション一時停止)**: 10秒間(`ping_pause_timeout 10.0`)有効なハートビートが届かない場合、`system_command.py`は`/emergency_pause`(`std_msgs/Bool`)をラッチし、`emergency_stop_node`が優先度255で`/mux/emergency_vel`にゼロツイストを流し込む。ロボットはアクティブな`move_base`ゴールをキャンセルすることなく完全停止まで減速する。通信が復旧すると一時停止は解除され、動作は自動的に再開される。
 2. **10分(セッション終了)**: オペレーターが10分間切断されたままの場合、モーターの過熱を防ぐため、アクティブなナビゲーションまたはマッピングセッションは安全にアンロードされる。
 3. **30分(ハードウェアシャットダウン)**: 30分間継続して不在の場合、ハードウェアドライバは低電力スタンバイモードに移行して電源を落とす。
 

@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dokumen ini menyediakan spesifikasi algoritmik komprehensif untuk pipeline perencanaan cakupan Boustrophedon Cellular Decomposition, perhitungan clearance dual-geometri, manajemen obstacle lima-layer, dan alignment zero-spin Correlative Scan Matcher (CSM).
+Dokumen ini menyediakan spesifikasi algoritmik komprehensif untuk pipeline perencanaan cakupan Boustrophedon Cellular Decomposition, perhitungan clearance dual-geometri, manajemen obstacle lima-layer, dan alignment zero-spin particle align validator.
 
 ## Dua Geometri Robot
 
@@ -33,24 +33,27 @@ flowchart LR
 | **Physical Body** (`~body_footprint`) | panjang 0,90 m x lebar 0,70 m | Menentukan pitch lane dan perhitungan attainment area yang tersapu. |
 | **Costmap Safety Envelope** | panjang 1,20 m x lebar 0,85 m | Menegakkan clearance TEB local planner dan feasibility belokan. |
 
-Envelope costmap dalam `costmap_common_params.yaml` mencakup padding keselamatan yang disengaja (0,075 m lateral dan 0,150 m longitudinal per sisi). `path_coverage_node` membaca envelope langsung dari `/move_base/global_costmap/footprint` untuk mempertahankan sinkronisasi dengan planner navigasi.
+Envelope dan body berada di `costmap_common_params_field.yaml` dan `msd700_coverage/config/robot/field.yaml`. `path_coverage_node` membaca poligon footprint dari `/move_base/global_costmap/footprint` dan menurunkan inscribed/circumscribed radii darinya (`coverage_geometry.py`); pitch lane selalu berasal dari physical body, bukan envelope ber-padding.
 
-### Konstanta Clearance Turunan (`libs/coverage_geometry.py`)
+### Konstanta Clearance Turunan (`src/msd700_coverage/coverage_geometry.py`)
+
+Dengan TEB menyala (`min_obstacle_dist 0.10`, `safety_margin 0.0`):
 
 | Konstanta Clearance | Nilai | Formula Matematis |
 | --- | --- | --- |
-| `wall_clearance` | **0,575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `turn_clearance` | **0,885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `pitch` | **0,574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
+| `wall_clearance` | **0,450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `turn_clearance` | **0,670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `pitch` | **0,644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
-### Batas Geometris Fisik:
-- **Koridor tersempit yang dapat dimasuki robot**: **1,15 m** ($2 \times \text{wall\_clearance}$).
-- **Koridor tersempit dimana robot dapat pivot 180 derajat**: **1,77 m** ($2 \times \text{turn\_clearance}$).
-- **Koridor tersempit yang layak disapu 2-lane**: **1,72 m**.
-- **Strip batas yang tak terjangkau di sepanjang dinding**: **0,225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
+Tanpa TEB (fallback `min_obstacle_dist 0.15`): `wall_clearance 0.500 m`, `turn_clearance 0.720 m`.
+
+### Batas Geometris Fisik (TEB menyala):
+- **Koridor tersempit yang dapat dimasuki robot**: **0,90 m** ($2 \times \text{wall\_clearance}$).
+- **Koridor tersempit dimana robot dapat pivot 180 derajat**: **1,34 m** ($2 \times \text{turn\_clearance}$).
+- **Strip batas yang tak terjangkau di sepanjang dinding**: **0,10 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Cakupan Mentah
-Karena strip perimeter 0,225 m tidak dapat dilintasi tanpa collision, ruangan persegi panjang (misalnya 3 x 6 m) mencapai cakupan maksimum teoretis sebesar **78,6%**. Performa sistem diukur menggunakan **Attainment Ratio** (fraksi lantai terjangkau yang benar-benar tersapu), bukan persentase area mentah yang tidak disesuaikan.
+Karena strip perimeter 0,10 m tidak dapat dilintasi tanpa collision, ruangan persegi panjang (misalnya 3 x 6 m) mencapai cakupan maksimum teoretis sekitar **90%**. Performa sistem diukur menggunakan **Attainment Ratio** (fraksi lantai terjangkau yang benar-benar tersapu), bukan persentase area mentah yang tidak disesuaikan.
 :::
 
 ---
@@ -61,10 +64,10 @@ Planner cakupan mendekomposisi batas poligonal konkaf sembarang dengan obstacle 
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.575 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
-  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.574 m pitch"]
+  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
   E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
   F --> G["Goal Dispatch to move_base"]
 ```
@@ -93,17 +96,17 @@ flowchart TB
 
 ---
 
-## Alignment Orientasi Zero-Spin (Correlative Scan Matching)
+## Alignment Orientasi Zero-Spin (Particle Align Validator)
 
 Ketika robot ditempatkan pada pose yang tidak diketahui di atas peta yang telah direkam sebelumnya, AMCL tradisional memerlukan rotasi di tempat 360 derajat untuk mengumpulkan dispersi partikel.
 
-MSD700 mengimplementasikan **Correlative Scan Matching (CSM)** untuk menghitung orientasi dan posisi secara instan tanpa gerakan:
+MSD700 mengimplementasikan **pencarian partikel coarse-to-fine** (`particle_align_validator.py`) untuk menghitung orientasi dan posisi secara instan tanpa gerakan. Dashboard memicunya lewat service `/align/solve_pose` (tombol Auto Align milik Map Sync, via `align_checker`):
 
 ```mermaid
 flowchart LR
-  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Multi-Resolution 2D Grid Search<br/>Over Search Space: (dx, dy, dyaw)"]
+  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Coarse-to-Fine Particle Search<br/>Over Search Space: (dx, dy, dyaw)"]
   GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
-  SCORE --> CONF{"Confidence >= 65%?"}
+  SCORE --> CONF{"Confidence >= 65%<br/>(solve_confidence_threshold)?"}
   CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
   CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
@@ -120,48 +123,20 @@ Ketika confidence skor kecocokan melebihi $65\%$, pose estimasi dipublikasikan k
 
 ---
 
-## Rotasi di Tempat Ditolak Secara Default
+## Rotasi di Tempat: Guard Dihapus, Sumber Diperbaiki
 
-Zero-spin alignment menghilangkan *alasan* untuk berputar. Rotation guard menghilangkan *kemampuan*-nya, karena beberapa bagian dari stack masih mencoba melakukan spin sendiri.
+Zero-spin alignment menghilangkan *alasan* untuk berputar. Dulu ada node `rotation_guard` di antara `twist_mux` dan base yang menol-kan belokan di tempat yang otonom; node itu **telah dihapus** (`twist_mux.launch` mendokumentasikan penghapusannya). Setiap spin yang dulu ditangkapnya kini dihentikan di sumbernya masing-masing, dan guard tersebut terukur bukan penyebab kegagalan belokan.
 
-`rotation_guard` (`msd700_control`) berada di antara `twist_mux` dan base, pada jalur `cmd_vel` yang dibagikan, sehingga ia mencakup setiap sumber rotasi sekaligus alih-alih satu plugin per satu waktu. Sebuah perintah dihitung sebagai rotasi di tempat ketika `|angular.z| > 0.05` dan `|linear.x| <= 0.05`; busur dan gerakan garis-lurus lolos tanpa perubahan, karena keduanya mentranslasikan footprint sekaligus memutarnya, dan local planner sudah menangani kasus itu.
-
-Rotasi di tempat mencapai roda hanya jika **kedua** gerbang setuju:
-
-```mermaid
-flowchart TD
-  CMD["Twist from twist_mux"] --> INPLACE{"Pure in-place rotation?"}
-  INPLACE -->|"No, it is an arc"| PASS["Pass through unchanged"]
-  INPLACE -->|Yes| CONSENT{"Live matching command on<br/>/mux/allign or /mux/key_vel?"}
-  CONSENT -->|"No, it is autonomous"| ZERO["angular.z = 0<br/>linear.x preserved"]
-  CONSENT -->|Yes| SWEEP{"Swept footprint clear<br/>on the live scan?"}
-  SWEEP -->|No| ZERO
-  SWEEP -->|Yes| PASS
-```
-
-**Gerbang 1, consent.** Rotasi yang dihormati hanya yang diminta oleh manusia: **Auto Align** dari Map Sync (`/mux/allign`, dipublikasikan oleh `align_checker` setelah operator menekan tombol) dan **manual WASD** (`/mux/key_vel`, diketik secara lokal atau di-relay dari dashboard). Twist keluaran harus berputar dengan arah sama dan tidak lebih cepat dari yang diminta sumber tersebut, dalam toleransi 5%, dan consent kedaluwarsa 1 detik setelah sumber berhenti mempublikasikan. `/mux/nav_vel` sengaja tidak disertakan: semua yang otonom tiba di sana.
-
-**Gerbang 2, geometri.** Footprint yang tersapu diuji terhadap live scan, bukan terhadap costmap. Gerbang ini didokumentasikan secara lengkap di `rotation_guard.py`; versi singkatnya adalah bahwa costmap merupakan oracle yang salah untuk rotasi, karena pita sapuan berada di dalam jangkauan minimum LiDAR dan obstacle layer meng-raytrace tanda tersebut hilang saat robot mendekatinya.
-
-### Apa yang Dimatikan Ini
+### Apa yang Dimatikan di Sumbernya
 
 | Sumber | Sebelumnya | Sekarang |
 | --- | --- | --- |
 | `rotate_recovery` | Anak tangga terakhir dari tangga recovery move_base | Tidak dimuat. `recovery_behaviors` hanya mencantumkan dua reset costmap, tak satu pun memerintahkan gerakan |
-| TEB terminal pivot | Berputar menghadap heading goal di setiap waypoint | Hilang. `yaw_goal_tolerance: 3.15` menerima heading akhir apa pun |
-| TEB initial pivot | Berputar di tempat ketika jalur mengarah ke belakang robot | Mundur sebagai gantinya. `allow_init_with_backwards_motion: true` |
+| TEB terminal pivot | Berputar menghadap heading goal di setiap waypoint | Ketat. `yaw_goal_tolerance: 0.15` (run coverage: `0.10`) — waypoint kini membawa heading nyata dari click-drag, sehingga pivot mendarat pada orientasi pilihan operator |
+| TEB initial pivot | Berputar di tempat ketika jalur mengarah ke belakang robot | Mundur sebagai gantinya. `allow_init_with_backwards_motion: false` |
 | Perintah `SYNC` (`nav_controller`) | 10 detik open-loop `0.5 rad/s`, tanpa pengecekan obstacle | No-op. Gunakan Auto Align, yang melakukan scan-match terlebih dahulu |
 
-::: warning Heading Waypoint
-`yaw_goal_tolerance: 3.15` hanya benar karena tidak ada waypoint dalam sistem ini yang membawa heading yang dipilih siapa pun. Dashboard membangun setiap pin dari klik peta dan mengisi quaternion dengan identity, sehingga toleransi ketat sebenarnya hanya membeli pivot di setiap pin untuk memenuhi field struct yang tidak diset. Jika waypoint suatu saat memperoleh heading yang nyata, ini harus dipertimbangkan ulang, dan pivot di setiap pin akan kembali bersamanya.
-:::
-
-### Escape Hatch
-
-- `rotation_guard/allow_in_place: true` mengembalikan ke gerbang geometri saja, sehingga sumber mana pun dapat berputar selama sapuan bersih.
-- `twist_mux.launch guard_rotation:=false` menghapus node sepenuhnya dan mengembalikan wiring pra-guard, tanpa pengecekan apa pun.
-
-Tak satu pun keduanya sesuai untuk robot lapangan. Local planner yang memutuskan harus pivot sebelum dapat melanjutkan kini akan diam saja dan akhirnya membatalkan goal-nya, dan trade-off itu disengaja: goal yang dibatalkan terlihat dan dapat dipulihkan, spin buta ke rak tidak.
+Arbitrasi gerakan kini berada di `twist_mux` semata: navigasi pada `/mux/nav_vel` (prioritas 10), keyboard pada inputnya sendiri (prioritas 90), emergency stop membanjiri `/mux/emergency_vel` (prioritas 255). Node yang menulis `/cmd_vel` langsung melewati tangga ini dan tidak dapat dihentikan olehnya.
 
 ## Dokumentasi Terkait
 

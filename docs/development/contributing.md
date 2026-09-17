@@ -22,12 +22,15 @@ The development stack uses dedicated port offsets to allow concurrent operation 
 
 | Service | Production Port | Development Port | Protocol |
 | --- | --- | --- | --- |
-| **ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **Cloud ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **Unit ROS Master** | `11321` | `11322` | TCP (XML-RPC, `--dev` on the unit) |
 | **rosbridge** | `9090` | `9091` | WebSocket |
 | **HiveMQ MQTT** | `8883` | `8884` | TLS Encrypted MQTTS |
 | **MySQL Database** | `3307` | `3308` | TCP |
 | **Backend REST API** | `5000` | `5001` | HTTP |
 | **Next.js Dashboard**| `3000` | `3100` | HTTP |
+| **Signalling (WS / HTTP)** | `3001` / `3002` | `4001` / `4002` | WebSocket / HTTP |
+| **Media Server** | `3003` | `4003` | HTTP |
 
 A physical or simulated robot connects to the dev cloud peer by passing `--dev`:
 ```bash
@@ -56,7 +59,7 @@ Before committing documentation changes, run:
 
 ```bash
 # 1. Validate all Mermaid diagrams syntax
-node scripts/check_parse.mjs
+npm run docs:check-diagrams   # node scripts/check-mermaid.mjs docs
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build

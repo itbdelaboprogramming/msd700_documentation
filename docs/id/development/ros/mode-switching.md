@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci bagaimana robot MSD700 secara dinamis berpindah antara mode operasional (`idle`, `navigation`, `mapping`, `coverage`, dan `exploration`) saat runtime menggunakan `switch_mode.py`, `system_command.py`, dan `operation_supervisor.py` tanpa me-restart ROS core utama.
+Dokumen ini merinci bagaimana robot MSD700 secara dinamis berpindah antara mode operasional (`navigation`, `slam`, `explore`, `boustrophedon` — idle hanyalah "tidak ada launch stack") saat runtime menggunakan `switch_mode.py`, `system_command.py`, dan `operation_supervisor.py` tanpa me-restart ROS core utama. Nama mode berasal dari `switch_mode.yaml` dan harus cocok dengan string yang dikirim lewat service `/switch_mode`.
 
 ## Topologi Orkestrasi Mode
 
@@ -17,12 +17,12 @@ flowchart TD
 
   SYS_CMD -->|"Calls ROS Service: /switch_mode"| SWITCH["switch_mode.py<br/>(Dynamic Process Lifecycle Manager)"]
 
-  SWITCH -->|Spawn / Terminate via roslaunch Parent API| LAUNCH_STACKS
+  SWITCH -->|Spawn / Terminate via subprocess + killall| LAUNCH_STACKS
 
   subgraph LAUNCH_STACKS["Dynamic Launch Subsystems"]
     NAV_STACK["Navigation Stack (msd700_navigation.launch)<br/>map_server, amcl, move_base, TEB planner"]
-    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping, teleop_twist_keyboard"]
-    COV_STACK["Area Coverage Stack (msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
+    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping (teleop is a separate robot_teleop.launch)"]
+    COV_STACK["Area Coverage Stack (msd700_coverage/msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
     EXP_STACK["Exploration Stack (msd700_explore.launch)<br/>explore_lite, frontier exploration"]
   end
 
@@ -34,53 +34,30 @@ flowchart TD
 
 ## Mode Operasi dan Stack Node Aktif
 
-| Mode Operasional | Node ROS Aktif | Node Nonaktif / Direaping | Jejak Memori & CPU |
-| --- | --- | --- | --- |
-| **`idle`** | `roscore`, `serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`. | `move_base`, `amcl`, `slam_gmapping`, `path_coverage_node`. | Minimal (kira-kira 5% CPU, 200 MB RAM). |
-| **`navigation`** | Semua node `idle` + `map_server`, `amcl`, `move_base`, `costmap_2d`. | `slam_gmapping`, `explore_lite`. | Navigasi standar (kira-kira 25% CPU). |
-| **`mapping`** | Semua node `idle` + `slam_gmapping`, `teleop`. | `amcl`, `map_server` (membaca peta live sebagai gantinya). | Sedang (kira-kira 35% CPU). |
-| **`coverage`** | Semua node `navigation` + `path_coverage_node`. | `explore_lite`. | Beban misi penuh (kira-kira 40% CPU). |
-| **`exploration`** | Semua node `mapping` + pencarian frontier `explore_lite`. | `amcl`. | Beban algoritmik tinggi (kira-kira 45% CPU). |
+| Mode (`switch_mode.yaml`) | Launch file | Catatan |
+| --- | --- | --- |
+| (idle — tanpa stack) | — | Node dasar tetap berjalan (`serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`). |
+| **`navigation`** | `msd700_navigation.launch` | `map_server`, `amcl`, `move_base`, costmap. |
+| **`slam`** | `msd700_slam.launch` | Pemetaan live; teleop adalah launch terpisah, bukan bagian dari stack. |
+| **`explore`** | `msd700_explore.launch` | Pencarian frontier `explore_lite`. |
+| **`boustrophedon`** | `msd700_coverage/msd700_boustrophedon.launch` | `path_coverage_node`; `use_autocover` mati secara default. |
 
 ---
 
-## Siklus Hidup Proses Dinamis via `roslaunch` Parent API
+## Siklus Hidup Proses Dinamis via `subprocess`
 
-Alih-alih mengeksekusi perintah shell seperti `system("roslaunch ...")` yang meninggalkan proses zombie terlepas, `switch_mode.py` memanfaatkan API Python native `roslaunch.parent.ROSLaunchParent`:
+`switch_mode.py` men-spawn setiap stack dengan `subprocess.Popen(cmd_list, ...)` dan menghentikannya dengan timeout dari `switch_mode.yaml`:
 
-```python
-import roslaunch
-import rospy
-
-class ModeSwitcher:
-    def __init__(self):
-        self.current_mode = "idle"
-        self.active_launch_parent = None
-
-    def transition_to(self, target_mode, launch_file_path):
-        # 1. Gracefully terminate active launch stack
-        if self.active_launch_parent is not None:
-            rospy.loginfo(f"Stopping active stack for mode: {self.current_mode}")
-            self.active_launch_parent.shutdown()
-            self.active_launch_parent = None
-
-        # 2. Instantiate and start new launch parent
-        if target_mode != "idle":
-            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-            roslaunch.configure_logging(uuid)
-            self.active_launch_parent = roslaunch.parent.ROSLaunchParent(
-                uuid, [launch_file_path]
-            )
-            self.active_launch_parent.start()
-
-        self.current_mode = target_mode
-        rospy.loginfo(f"Successfully transitioned to mode: {target_mode}")
+```yaml
+timeouts:
+  graceful_shutdown: 3   # seconds before escalation
+  force_kill: 1          # seconds before SIGKILL
 ```
 
 ### Graceful Teardown dan Pencegahan Zombie:
-1. **Dispatch SIGINT**: `launch_parent.shutdown()` mengirim `SIGINT` ke semua proses child yang dikelola dalam urutan dependency terbalik.
-2. **Grace Window 5 Detik**: Node diberi waktu hingga 5 detik untuk flush buffer disk (misalnya `map_saver` menulis gambar `.pgm` dan `.yaml`).
-3. **Eskalasi**: Jika sebuah node gagal exit secara bersih dalam grace period, proses parent akan eskalasi ke `SIGTERM` dan `SIGKILL`, memastikan tidak ada node zombie yang tersisa di graph ROS master.
+1. **Terminate**: process group dari stack aktif diminta shutdown secara graceful.
+2. **Grace Window 3 Detik**: Node diberi waktu hingga 3 detik untuk flush state (misalnya `map_saver` menulis `.pgm`/`.yaml`).
+3. **Eskalasi**: melewati grace window, switcher eskalasi ke force-kill (`1 s`), dan sisa simulator di-reap dengan `killall`, memastikan tidak ada node zombie yang tersisa di graph ROS master.
 
 ---
 

@@ -21,9 +21,9 @@ Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajua
 
 ### Agustus 2026: Overhaul Dokumentasi & Kinematika Presisi
 - **Arsitektur Dokumentasi Modular**: Penulisan ulang menyeluruh semua halaman dokumentasi dengan diagram SVG Mermaid responsif, formulasi matematis, dan operasi zero-downtime.
-- **Simulasi Gazebo Skala Nyata**: Meningkatkan model simulator ke `msd700_field` (jejak badan $0,90 \times 0,70\text{ m}$ dengan 4 caster) beroperasi di AWS RoboMaker Small Warehouse.
-- **Correlative Scan Matching (Auto-Align)**: Mengimplementasikan penyelarasan pose awal tanpa putaran (< 50 ms) untuk menghilangkan rotasi 360 derajat di koridor sempit.
-- **Pendaftaran Kriptografis Nonce 32-Byte**: Menegakkan protokol hashing nonce CSPRNG untuk autentikasi perangkat robot.
+- **Simulasi Gazebo Skala Nyata**: Meningkatkan model simulator ke `msd700_field` (badan $0,90 \times 0,70\text{ m}$, 4 roda penggerak, 150 kg) beroperasi di AWS RoboMaker Small Warehouse.
+- **Auto-Align Zero-Spin**: Mengimplementasikan penyelarasan pose awal coarse-to-fine `particle_align_validator.py` (< 50 ms) untuk menghilangkan rotasi 360 derajat di koridor sempit.
+- **Pendaftaran Kriptografis Nonce**: Menegakkan protokol hashing nonce CSPRNG untuk autentikasi perangkat robot. Tiga secret berbeda, jangan dicampuradukkan: nonce klaim 32-byte milik robot, kode klaim admin 8-karakter (`K7M2QP4R`), dan device secret 32-byte yang dicetak saat handover.
 
 ### Juli 2026: Keamanan Rental Multi-Tenant & Migrasi ULID
 - **Otorisasi Profil Rental**: Menambahkan middleware Express `attachUnit` untuk menegakkan isolasi tenant yang ketat di seluruh peta dan unit.
@@ -46,7 +46,7 @@ Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajua
 Untuk log commit baris demi baris, lihat repositori GitHub masing-masing:
 
 - [Commit msd700_documentation](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [Commit ros-web-ui](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
-- [Commit msd700_robot](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
-- [Commit ROS-dashboard-next-ts](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
-- [Commit msd700_noetic](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)
+- [Commit ros-web-ui](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
+- [Commit msd700_robot](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
+- [Commit ROS-dashboard-next-ts](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
+- [Commit msd700_noetic](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)

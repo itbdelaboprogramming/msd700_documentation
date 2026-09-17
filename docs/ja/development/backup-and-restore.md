@@ -70,25 +70,30 @@ msd700_backup_01JZ8QK2H.tar.gz
 
 ## REST API のバックアップ操作
 
-### 1. アーカイブのエクスポート
-`POST /api/backup/export`
+すべてのバックアップルートは`/admin/api`配下にある(管理者トークンが必要)。`/api/backup/export`や`/api/backup/import`というエンドポイントは存在しない。
 
-`.tar.gz` アーカイブを生成し、ダウンロードします。
+### 1. バックアップの作成
+`POST /admin/api/profiles/:id/backups`(プロファイルスコープ)または`POST /admin/api/units/:id/backups`(ユニットスコープ)
 
-- **リクエストボディ**:
-```json
-{
-  "scope": "profile",
-  "profile_id": "01JZ7YV5CQPROF00000000000"
-}
-```
+プロファイルまたはユニットのバックアップレコードを作成する。
 
-### 2. アーカイブのインポートとリストア
-`POST /api/backup/import`
+### 2. アーカイブのダウンロード
+`GET /admin/api/backups/:id/download`
 
-アーカイブをアップロードし、アディティブに適用します。
+`.tar.gz`アーカイブをダウンロードする。
 
-- **リクエストペイロード**: `file: <archive.tar.gz>` と対象の `profile_id` を含む multipart form-data。
+### 3. アーカイブのアップロード
+`POST /admin/api/backups/upload`
+
+アーカイブをアップロードする(生ボディ)。事前に`POST /admin/api/backups/:id/plan`でプランをプレビューする。
+
+### 4. アーカイブのリストア
+`POST /admin/api/backups/:id/restore`
+
+アップロードされたアーカイブをアディティブに適用する。
+
+### 5. バックアップの一覧
+`GET /admin/api/backups`
 
 ## スキーママイグレーションスクリプト
 
@@ -96,10 +101,10 @@ msd700_backup_01JZ8QK2H.tar.gz
 
 | スクリプト名 | 用途 | 実行コマンド |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` | 従来の username/unitname パスを ULID アドレス指定へ移行する。 | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | 32バイト nonce 認証のために `pending_units` と `unit_devices` テーブルを作成する。 | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` | オフラインデータ同期のために `sync_state` と `sync_tombstones` テーブルをインストールする。 | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | `profile_backups` テーブルに `scope` カラムを追加してアップグレードする。 | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | 従来の username/unitname パスを ULID アドレス指定へ移行する。 | `node migrate_unit_id_refactor.js --profile server_dev --apply` |
+| `migrate_enrolment.js` | nonce 認証のために `pending_units` と `unit_devices` テーブルを作成する。 | `node migrate_enrolment.js --profile server_dev --apply` |
+| `migrate_sync.js` | オフラインデータ同期のために `sync_state` と `sync_tombstones` テーブルをインストールする。 | `node migrate_sync.js --profile server_dev --apply` |
+| `migrate_backup_scope.js` | `profile_backups` テーブルに `scope` カラムを追加してアップグレードする。 | `node migrate_backup_scope.js --profile server_dev --apply` |
 
 ::: danger マイグレーションのテストルール
 マイグレーションスクリプトは、port 3307 の本番環境に適用する前に、必ず port 3308 の開発用データベースに対してテストしてください。マイグレーションスクリプトは、対象の取り違えを誤って起こさないよう、明示的な `--profile` 引数を必要とします。

@@ -33,24 +33,27 @@ flowchart LR
 | **Physical Body** (`~body_footprint`) | 0.90 m length x 0.70 m width | Determines lane pitch and swept-area attainment calculations. |
 | **Costmap Safety Envelope** | 1.20 m length x 0.85 m width | Enforces TEB local planner clearances and turning feasibility. |
 
-The costmap envelope in `costmap_common_params.yaml` includes intentional safety padding (0.075 m lateral and 0.150 m longitudinal per side). `path_coverage_node` reads the envelope directly from `/move_base/global_costmap/footprint` to maintain synchronization with navigation planners.
+The envelope and body live in `costmap_common_params_field.yaml` and `msd700_coverage/config/robot/field.yaml`. `path_coverage_node` reads the footprint polygon from `/move_base/global_costmap/footprint` and derives inscribed/circumscribed radii from it (`coverage_geometry.py`); lane pitch always comes from the physical body, never the padded envelope.
 
-### Derived Clearance Constants (`libs/coverage_geometry.py`)
+### Derived Clearance Constants (`src/msd700_coverage/coverage_geometry.py`)
+
+With TEB up (`min_obstacle_dist 0.10`, `safety_margin 0.0`):
 
 | Clearance Constant | Value | Mathematical Formula |
 | --- | --- | --- |
-| `wall_clearance` | **0.575 m** | $r_{\text{inscribed}} (0.425\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `turn_clearance` | **0.885 m** | $r_{\text{circumscribed}} (0.735\text{ m}) + d_{\min} (0.150\text{ m})$ |
-| `pitch` | **0.574 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.18))$ |
+| `wall_clearance` | **0.450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `turn_clearance` | **0.670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `pitch` | **0.644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
-### Physical Geometric Limits:
-- **Narrowest corridor robot can enter**: **1.15 m** ($2 \times \text{wall\_clearance}$).
-- **Narrowest corridor robot can pivot 180 degrees**: **1.77 m** ($2 \times \text{turn\_clearance}$).
-- **Narrowest corridor worth 2-lane sweeping**: **1.72 m**.
-- **Unreachable boundary strip along walls**: **0.225 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
+Without TEB (fallback `min_obstacle_dist 0.15`): `wall_clearance 0.500 m`, `turn_clearance 0.720 m`.
+
+### Physical Geometric Limits (TEB up):
+- **Narrowest corridor robot can enter**: **0.90 m** ($2 \times \text{wall\_clearance}$).
+- **Narrowest corridor robot can pivot 180 degrees**: **1.34 m** ($2 \times \text{turn\_clearance}$).
+- **Unreachable boundary strip along walls**: **0.10 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Raw Coverage
-Because the 0.225 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of **78.6%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
+Because the 0.10 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of about **90%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
 :::
 
 ---
@@ -61,10 +64,10 @@ The coverage planner decomposes arbitrary concave polygonal boundaries with inte
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.575 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
-  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.574 m pitch"]
+  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
   E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
   F --> G["Goal Dispatch to move_base"]
 ```
@@ -93,17 +96,17 @@ flowchart TB
 
 ---
 
-## Zero-Spin Orientation Alignment (Correlative Scan Matching)
+## Zero-Spin Orientation Alignment (Particle Align Validator)
 
 When the robot is placed in an unknown pose on a pre-recorded map, traditional AMCL requires a 360-degree in-place rotation to collapse particle dispersion.
 
-MSD700 implements **Correlative Scan Matching (CSM)** to calculate orientation and position instantly without motion:
+MSD700 implements a **coarse-to-fine particle search** (`particle_align_validator.py`) to calculate orientation and position instantly without motion. The dashboard triggers it over the `/align/solve_pose` service (Map Sync's Auto Align button, via `align_checker`):
 
 ```mermaid
 flowchart LR
-  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Multi-Resolution 2D Grid Search<br/>Over Search Space: (dx, dy, dyaw)"]
+  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Coarse-to-Fine Particle Search<br/>Over Search Space: (dx, dy, dyaw)"]
   GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
-  SCORE --> CONF{"Confidence >= 65%?"}
+  SCORE --> CONF{"Confidence >= 65%<br/>(solve_confidence_threshold)?"}
   CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
   CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
 ```
@@ -120,48 +123,20 @@ When the match score confidence exceeds $65\%$, the estimated pose is published 
 
 ---
 
-## In-Place Rotation Is Denied By Default
+## In-Place Rotation: Guard Removed, Sources Fixed
 
-Zero-spin alignment removed the *reason* to rotate. The rotation guard removes the *ability*, because several parts of the stack still reached for a spin on their own.
+Zero-spin alignment removed the *reason* to rotate. There used to be a `rotation_guard` node between `twist_mux` and the base zeroing autonomous in-place turns; **it is deleted** (`twist_mux.launch` documents the removal). Each spin it existed to catch is now stopped at its own source, and the guard was measured not to be the cause of turn failures.
 
-`rotation_guard` (`msd700_control`) sits between `twist_mux` and the base, on the shared `cmd_vel` path, so it covers every rotation source at once rather than one plugin at a time. A command counts as in-place rotation when `|angular.z| > 0.05` and `|linear.x| <= 0.05`; arcs and straight-line motion pass through untouched, because they translate the footprint as well as turning it and the local planner already owns that case.
-
-An in-place rotation reaches the wheels only if **both** gates agree:
-
-```mermaid
-flowchart TD
-  CMD["Twist from twist_mux"] --> INPLACE{"Pure in-place rotation?"}
-  INPLACE -->|"No, it is an arc"| PASS["Pass through unchanged"]
-  INPLACE -->|Yes| CONSENT{"Live matching command on<br/>/mux/allign or /mux/key_vel?"}
-  CONSENT -->|"No, it is autonomous"| ZERO["angular.z = 0<br/>linear.x preserved"]
-  CONSENT -->|Yes| SWEEP{"Swept footprint clear<br/>on the live scan?"}
-  SWEEP -->|No| ZERO
-  SWEEP -->|Yes| PASS
-```
-
-**Gate 1, consent.** The only rotations honoured are the ones a person asked for: Map Sync's **Auto Align** (`/mux/allign`, published by `align_checker` after the operator presses the button) and **manual WASD** (`/mux/key_vel`, typed locally or relayed from the dashboard). The outgoing twist must turn the same way and no faster than what that source asked for, within a 5% tolerance, and the consent expires 1 second after the source stops publishing. `/mux/nav_vel` is deliberately absent: everything autonomous arrives there.
-
-**Gate 2, geometry.** The swept footprint is tested against the live scan rather than the costmap. This gate is documented in full in `rotation_guard.py`; the short version is that the costmap is the wrong oracle for rotation, because the swept band sits inside the LiDAR's minimum range and the obstacle layer raytraces the mark away as the robot closes on it.
-
-### What this turned off
+### What was turned off at the source
 
 | Source | Was | Now |
 | --- | --- | --- |
 | `rotate_recovery` | Last rung of move_base's recovery ladder | Not loaded. `recovery_behaviors` lists only the two costmap resets, neither of which commands motion |
-| TEB terminal pivot | Turned to face the goal heading at every waypoint | Gone. `yaw_goal_tolerance: 3.15` accepts any final heading |
-| TEB initial pivot | Turned on the spot when the path led off behind the robot | Reverses instead. `allow_init_with_backwards_motion: true` |
+| TEB terminal pivot | Turned to face the goal heading at every waypoint | Tight. `yaw_goal_tolerance: 0.15` (coverage run: `0.10`) — waypoints now carry a real heading from click-drag, so the pivot lands on an operator-chosen orientation |
+| TEB initial pivot | Turned on the spot when the path led off behind the robot | Reverses instead. `allow_init_with_backwards_motion: false` |
 | `SYNC` command (`nav_controller`) | 10 s of open-loop `0.5 rad/s`, no obstacle check | No-op. Use Auto Align, which scan-matches first |
 
-::: warning Waypoint headings
-`yaw_goal_tolerance: 3.15` is correct only because no waypoint in this system carries a heading anyone chose. The dashboard builds every pin from a map click and fills the quaternion with the identity, so a tight tolerance was buying a pivot at every pin to satisfy an unset struct field. If waypoints ever gain a real heading, this has to be reconsidered, and a pivot at each one comes back with it.
-:::
-
-### Escape hatches
-
-- `rotation_guard/allow_in_place: true` reverts to the geometry gate alone, so any source may spin as long as the sweep is clear.
-- `twist_mux.launch guard_rotation:=false` removes the node entirely and restores the pre-guard wiring, with no checks of any kind.
-
-Neither is appropriate for the field robot. A local planner that decides it must pivot before it can proceed will now sit still and eventually abort its goal, and that trade is deliberate: an aborted goal is visible and recoverable, a blind spin into a shelf is neither.
+Motion arbitration lives in `twist_mux` alone now: navigation on `/mux/nav_vel` (priority 10), keyboard on its own input (priority 90), emergency stop flooding `/mux/emergency_vel` (priority 255). A node that writes `/cmd_vel` directly bypasses the ladder and cannot be stopped by it.
 
 ## Related Documentation
 

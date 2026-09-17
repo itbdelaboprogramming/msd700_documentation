@@ -26,14 +26,14 @@ flowchart TB
   end
 
   subgraph CloudDomain["Cloud Server Trust Domain"]
-    KEYRING["JWT Secret Keyring<br/>/srv/msd/secrets/jwt_keyring"]
+    KEYRING["JWT Secret Keyring<br/>/run/secrets/jwt_keyring (container)<br/>dev: jwt_keyring.dev.json mount<br/>prod: JWT_SECRET_KEY env fallback"]
     AUTH_MW["Express verifyToken Middleware"]
     ATTACH_MW["attachUnit Authorization Middleware"]
     MYSQL[("Central MySQL DB (:3307)<br/>Bcrypt Passwords")]
   end
 
   subgraph RobotDomain["Physical Robot Trust Domain (Jetson)"]
-    DEV_SECRET["Device Secret (HMAC-SHA256)<br/>Certificates/robot/device.json"]
+    DEV_SECRET["Device Secret (bcrypt hash, server-side)<br/>32 random bytes at enrolment"]
     ROBOT_TOKEN["Onboard Token Cache (12h TTL)<br/>Certificates/robot/token.cred"]
     LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets"]
   end
@@ -54,44 +54,36 @@ flowchart TB
 
 | 信頼ドメイン | 発行者 | トークンの目的 | 検証エンドポイント | 分離ルール |
 | --- | --- | --- | --- | --- |
-| **Operator Domain** | クラウドサーバーバックエンド (`backend_node`) | Webダッシュボードにアクセスする人間のオペレーターを認証する。 | すべての `/api/*` ルートでの `verifyToken` | ロボットが直接使うことはできない。`/local/*` ルートでは拒否される。 |
+| **Operator Domain** | クラウドサーバーバックエンド (`backend_node`) | Webダッシュボードにアクセスする人間のオペレーターを認証する。 | すべての `/api/*` ルートでの `verifyToken` | オペレータートークンは `/api/*` 用。`/local/*` ルートにはトークンチェック自体がなく(一部はループバック制限)、受け付けも拒否もしない。 |
 | **Robot Cloud Domain** | クラウド登録サービス (`/enroll/token`) | HiveMQおよびクラウドメディアサーバーに接続する物理ロボットを認証する。 | HiveMQ TLS + クラウド `media-server` | 当該ロボットに割り当てられたULIDに厳密に限定される。有効期間は12時間。 |
-| **Unit Local Domain** | オンボードローカルバックエンド (`backend_local`) | ローカルLAN上のオペレーターとオンボードの動画ストリーミングクライアントを認証する。 | `/local/*` エンドポイント | ローカルのオフライン主権を確保するため、クラウドトークンは厳格に拒否される。 |
+| **Unit Local Domain** | オンボードローカルバックエンド (`backend_local`) | ローカルLAN上のオペレーターとオンボードの動画ストリーミングクライアントに提供する。 | `/local/*` エンドポイント(認証ミドルウェアなし) | オフライン利用のためローカルエンドポイントは設計上トークンなしで到達可能。分離はトークン拒否ではなくLAN境界による。 |
 
-上表のOperator Domainの行は、[概要](/ja/development/webui/accounts/overview)で説明したオペレーターログ
-インの信頼境界である。このドメインのトークンは `/api/*` 全体で機能するが、`/local/*` では完全に拒否され
-る。このモデルは管理コンソール自身のログイン用に別行を設けているわけではない。このモデルが定めているの
-は、ロボット自身がブラウザ発行のトークンをいかなる種類であっても決して受け付けず、
+この表が定めているのは、ロボット自身がブラウザ発行のトークンをいかなる種類であっても決して受け付けず、
 [ハードウェア登録](/ja/development/webui/accounts/enrolment)で扱う登録フローを通じて発行された認証情
 報のみを受け付けるということである。
 
 ## JWTキーリングとダウンタイムゼロの鍵ローテーション
 
-認証トークンは、単一の静的な環境変数ではなく、`/srv/msd/secrets/jwt_keyring` に保存された**JWTキーリ
-ング**に対して検証される。
+認証トークンは、単一の静的な環境変数ではなく**JWTキーリング**に対して検証される。コンテナ内でのファ
+イルは `/run/secrets/jwt_keyring` であり、パーサーは `msd-jwt-keyring` 文書でないものを拒否し、古い秘密鍵
+で動き続けずにプロセスを終了する。
 
 ```json
 {
-  "active_kid": "key_2026_08_a",
-  "keys": {
-    "key_2026_08_a": {
-      "secret": "9a8b7c6d5e4f3a2b1c0d...",
-      "created_at": "2026-08-01T00:00:00Z"
-    },
-    "key_2026_07_b": {
-      "secret": "1f2e3d4c5b6a7f8e9d0c...",
-      "created_at": "2026-07-01T00:00:00Z"
-    }
-  }
+  "format": "msd-jwt-keyring",
+  "keys": [
+    { "kid": "key_2026_08_a", "secret": "9a8b7c6d5e4f3a2b1c0d...", "status": "active" },
+    { "kid": "key_2026_07_b", "secret": "1f2e3d4c5b6a7f8e9d0c...", "status": "accepted" }
+  ]
 }
 ```
 
 ### キーリングのローテーションルール
 
 1. **アクティブ署名鍵**: 新たに発行されるアクセストークンとリフレッシュトークンはすべて、
-   `active_kid` で識別される鍵で署名される。
-2. **猶予ウィンドウ検証**: トークンが届くと、`verifyToken` はその署名を `active_kid` に対して検証する。
-   検証に失敗した場合、HTTP 401で拒否する前に、キーリング内の過去の鍵を順に試す。
+   `status` が `active` の鍵で署名される。
+2. **猶予ウィンドウ検証**: トークンが届くと、`verifyToken` はその署名をまずアクティブ鍵に対して検証し、
+   次に猶予ウィンドウ内の `accepted` 鍵を試してからHTTP 401で拒否する。
 3. **セッション中断ゼロ**: 本番環境で鍵をローテーションしても、アクティブな全オペレーターが一斉に再ログ
    インを強制されることはない。
 
@@ -101,7 +93,7 @@ flowchart TB
    (`/etc/letsencrypt/live/`) の証明書を使い、Apacheの443番ポートでTLSを終端する。
 2. **HiveMQの相互トランスポートセキュリティ**: ロボットはHiveMQの8883番ポートにTLS経由で接続する。
    PKCS#12形式のキーストア証明書は `/srv/msd/secrets/hivemq/keystore.p12` に置かれている。
-3. **コンテナ分離**: バックエンドコンテナはDocker内部のブリッジネットワーク(`ros_backend_net`)を介し
+3. **コンテナ分離**: バックエンドコンテナはDocker内部のブリッジネットワーク(`ros_webui_prod_net` / `ros_webui_dev_net`)を介し
    て通信し、内部データベースやrosbridgeのポートを公開インターネットに直接露出させない。
 
 ## 関連項目

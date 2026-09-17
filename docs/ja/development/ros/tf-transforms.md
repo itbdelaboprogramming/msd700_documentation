@@ -18,15 +18,15 @@ flowchart TD
   MAP["map<br/>(Global Fixed World Frame, Origin at Homebase)"] -->|"AMCL / SLAM Global Correction (10 Hz)"| ODOM["odom<br/>(Smooth Continuous Local Odometry Frame)"]
   ODOM -->|"EKF Fusion: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(Chassis 2D Projection on Floor Plane)"]
 
-  BASE_FP -->|"Static TF: z = +0.010 m"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
+  BASE_FP -->|"Static TF: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
 
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEEL_L["wheel_left_link (y = +0.144 m)"]
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEEL_R["wheel_right_link (y = -0.144 m)"]
+  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEELS["4 drive wheels: wheel_front/back_left/right_link<br/>(x = ±0.30 m, y = ±0.30 m)"]
 
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.200]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
-  BASE_LINK -->|"Static TF: xyz = [0.25, 0.00, 0.610]"| BASE_SCAN["base_scan / velodyne (3D LiDAR)"]
-  BASE_LINK -->|"Static TF: xyz = [0.45, 0.00, 0.350]"| CAM_LINK["camera_link (HD Camera Optical Frame)"]
+  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.085]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
+  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.40]"| BASE_SCAN["base_scan (3D LiDAR, 0.50 m above footprint)<br/>+ laser alias frame for bag replay"]
 ```
+
+フィールドロボットには`camera_link`は存在しない。カメラはURDFリンクではなく、別のUSB/WebRTCデバイスである。
 
 ---
 
@@ -36,10 +36,9 @@ flowchart TD
 | --- | --- | --- | --- | --- |
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | 静的なレーザーoccupancy gridに対してオドメトリドリフトを補正する。 | 位置推定が確定すると離散的にジャンプする。レーザースキャンが途絶えた場合は最後のトランスフォームを維持する。 |
 | `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | ホイールエンコーダー速度とIMUのヨー/角速度を連続的に融合する。 | 連続的、滑らか、かつドリフトのない短期軌道。 |
-| `base_footprint -> base_link` | `robot_state_publisher` | 静的 | 固定の高さオフセット($z = 0.010\text{ m}$)。 | URDFからの固定トランスフォーム。 |
-| `base_link -> base_scan` | `robot_state_publisher` | 静的 | 物理的なマスト取り付け座標($x = 0.250\text{ m}, z = 0.610\text{ m}$)。 | URDFからの固定トランスフォーム。 |
-| `base_link -> imu_link` | `robot_state_publisher` | 静的 | 物理シャーシへの取り付け位置($z = 0.200\text{ m}$)。 | URDFからの固定トランスフォーム。 |
-| `base_link -> camera_link` | `robot_state_publisher` | 静的 | シャーシ前部への取り付け位置($x = 0.450\text{ m}, z = 0.350\text{ m}$)。 | URDFからの固定トランスフォーム。 |
+| `base_footprint -> base_link` | `robot_state_publisher` | 静的 | 固定の高さオフセット($z = 0.10\text{ m}$ = ホイール半径)。 | URDFからの固定トランスフォーム。 |
+| `base_link -> base_scan` | `robot_state_publisher` | 静的 | LiDARマスト($x = 0$、`base_link`から$z = 0.40\text{ m}$、footprintから$0.50\text{ m}$)。bag再生用の`laser`エイリアスフレーム付き。 | URDFからの固定トランスフォーム。 |
+| `base_link -> imu_link` | `robot_state_publisher` | 静的 | 物理シャーシへの取り付け位置($z \approx 0.085\text{ m}$ = `body_center_z`)。 | URDFからの固定トランスフォーム。 |
 
 ---
 
@@ -75,7 +74,7 @@ sequenceDiagram
   autonumber
   participant Robot as Robot Jetson (Clock Domain A)
   participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_<ULID> (Cloud Server Domain B)
+  participant Relay as rosweb_unit_<u>_<unit>_nakayama (Cloud Server Domain B)
   participant Canvas as Browser ROS2D Canvas
 
   Robot->>Robot: Stamp Pose with Jetson Time (t_robot)

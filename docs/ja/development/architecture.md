@@ -32,17 +32,17 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 
 | コンポーネント | 技術 | 責務 | ホストの場所 |
 | --- | --- | --- | --- |
-| **フロントエンドダッシュボード** | Next.js、React、TypeScript | マップキャンバス、テレメトリウィジェット、手動テレオペ、ナビゲーションコントロールを備えたシングルページのオペレーターインターフェース。 | `ROS-dashboard-next-ts`(クラウドでは `frontend_prod`、ユニットでは `frontend_local` としてビルド) |
-| **backend_node** | Node.js、Express | 認証ミドルウェア、マップ/ルート/エリア/プレイリストの CRUD、ロボットコマンドのディスパッチ、同期の調整。 | `ros-web-ui/source/dependencies/ROS-dashboard-backend` |
-| **multi_unit.py / cloud_multi.launch** | Python、ROS 1 Noetic | `/unit_<ULID>/...` 名前空間を介して、単一の統合 ROS ランタイム内ですべてのロボットにサービスを提供する、マルチユニット・テンプレート化リレーノード。 | フリートリレーコンテナ(`rosweb_unit_relays`)。コードデプロイがフリート全体のデータプレーン障害にならないよう、意図的にバックエンドから分離されている | 
-| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python、ROS 1 Noetic | MQTT ブリッジのトピックマップをユニットのロスターにわたって展開し、1つの `mqtt_client` nodelet と1つの TLS 接続がフリート全体にサービスを提供できるようにする。 | フリートリレーコンテナ(`rosweb_unit_relays`) |
+| **フロントエンドダッシュボード** | Next.js、React、TypeScript | マップキャンバス、テレメトリウィジェット、手動テレオペ、ナビゲーションコントロールを備えたシングルページのオペレーターインターフェース。 | `ROS-dashboard-next-ts`(クラウドでは `frontend_prod`/`frontend_dev`、ユニットでは `frontend_local` としてビルド) |
+| **backend_node** | Node.js、Express | 認証ミドルウェア、マップ/ルート/エリア/プレイリストの CRUD、ロボットコマンドのディスパッチ、同期の調整。 | `nakayama_cloud` サービス内のプロセス(`ros-web-ui/source/dependencies/ROS-dashboard-backend`) |
+| **multi_unit.py / cloud_multi.launch** | Python、ROS 1 Noetic | `/unit_<ULID>/...` 名前空間を介して、単一の統合 ROS ランタイム内ですべてのロボットにサービスを提供する、マルチユニット・テンプレート化リレーノード。 | フリートリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`)。コードデプロイがフリート全体のデータプレーン障害にならないよう、意図的にバックエンドから分離されている | 
+| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python、ROS 1 Noetic | MQTT ブリッジのトピックマップをユニットのロスターにわたって展開し、1つの `mqtt_client` nodelet と1つの TLS 接続がフリート全体にサービスを提供できるようにする。 | フリートリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`) |
 | **unit_manager.js(レガシー)** | Node.js(Docker API) | (非推奨)ロボット1台につき1コンテナをインスタンス化していたレガシーな動的コンテナマネージャー。単一 ROS ランタイムのマルチユニットリレーに置き換えられた。 | `backend_node` に組み込み |
-| **rosbridge** | `rosbridge_suite`(WebSocket) | port 9090 経由で、すべてのユニットのライブ ROS トピックをブラウザキャンバスへストリーミングする統合 WebSocket ブリッジ。 | クラウドコンテナ(`nakayama_cloud`)およびユニットのローカルスタック |
+| **rosbridge** | `rosbridge_suite`(WebSocket) | port 9090(開発9091)経由で、すべてのユニットのライブ ROS トピックをブラウザキャンバスへストリーミングする統合 WebSocket ブリッジ。 | `nakayama_cloud` コンテナ内およびユニットのローカルスタック |
 | **HiveMQ(MQTT)** | HiveMQ CE(Java) | port 8883(TLS)経由でロボットとサーバーを接続する、暗号化された高スループットのメッセージブローカー。 | サーバーコンテナ(`hivemq` / `hivemq_dev`) |
 | **MySQL データベース** | MySQL 8.0 | ユーザーアカウント、レンタルプロファイル、登録済みユニットレコード、ルートジオメトリ、カスタムエリア境界、同期ジャーナルを保存する。 | サーバー(`db` / `db_dev`)およびユニット(`db_local`) |
 | **media-server** | Node.js、Express | マップアセットのアップロード、サムネイル生成を管理し、静的な `.pgm` および `.yaml` マップファイルを配信する。 | サーバーコンテナおよびユニットコンテナ(`media_local`) |
 | **signalling_server** | Node.js(WebSocket) | ロボットカメラとオペレーターのブラウザ間の直接ビデオストリーミングを仲介する WebRTC ピアネゴシエーションサーバー。 | サーバーコンテナ(`signalling`)およびユニットコンテナ(`signalling_local`) |
-| **coturn** | Coturn(C) | NAT トラバーサルが直接のピアツーピア WebRTC ビデオを妨げる際のメディアフォールバックを提供する、RFC 5766 TURN / STUN リレーサーバー。 | サーバーホスト(`coturn` サービス、ホストネットワーキング) |
+| **coturn** | Coturn(C) | NAT トラバーサルが直接のピアツーピア WebRTC ビデオを妨げる際のメディアフォールバックを提供する、RFC 5766 TURN / STUN リレーサーバー。 | コンテナ化された`coturn`サービス(`ros_web_ui_v2_coturn`、`network_mode: host`、本番専用プロファイル) — コンテナ切り替え前はsystemdサービスがこの役割を担っていた |
 | **Apache2** | Apache HTTP Server | TLS 終端、セキュリティヘッダーの処理、`/services/...` パス経由のすべての公開トラフィックのルーティングを担当する。 | サーバーホスト(ネイティブサービス) |
 | **ROS ロボットパッケージ** | C++、Python、ROS 1 Noetic | `msd700_robot`(ナビゲーション、SLAM、ボウストロフェドン・カバレッジ、EKF、センサードライバー)と `ros-web-ui` のブリッジパッケージ(`topic2string`、`system_command`、`operation_supervisor`)。 | Jetson SBC(`msd700` コンテナ) |
 
@@ -57,14 +57,14 @@ flowchart TB
   subgraph ServerHost["MSD700 Server Host (Cloud)"]
     APACHE["Apache2 Reverse Proxy (:443)<br/>TLS Termination & URL Routing"]
     FE_PROD["frontend_prod (:3000)"]
-    BE_PROD["backend_node (:5000)<br/>REST API + unit_manager.js"]
-    DB_PROD[("MySQL Central (:3307)")]
+    BE_PROD["backend_node (:5000)<br/>REST API + unit_manager.js<br/>(process inside nakayama_cloud)"]
+    DB_PROD[("MySQL Central (:3307 host)<br/>3306 inside the container")]
     HIVEMQ["HiveMQ Broker (:8883 TLS)"]
     ROSBRIDGE["rosbridge_suite (:9090)"]
     MEDIA["media-server (:3003)"]
     SIG["signalling_server (:3001)"]
     COTURN["coturn (:3478 / UDP Relay)"]
-    UNIT_RELAY["rosweb_unit_<ULID><br/>MQTT-to-ROS Deserializer"]
+    UNIT_RELAY["rosweb_unit_<u>_<unit>_nakayama<br/>MQTT-to-ROS Deserializer<br/>(legacy per-unit; default is the fleet relay)"]
   end
 
   subgraph UnitHost["MSD700 Unit (Jetson SBC)"]
@@ -101,7 +101,7 @@ flowchart TB
 ### アーキテクチャ上の主要ルール:
 1. **単一の公開入り口としての Apache**: すべての HTTP および WebSocket リクエストは Apache の port 443 を通って入ります。バックエンドサービスは内部ポートまたはループバックアドレスにバインドします。ロボットが直接到達する唯一の外部ポートは、port 8883(TLS)の HiveMQ です。
 2. **コマンドは ROS ではなく MQTT 経由で流れる**: `backend_node` がディスパッチするコマンドは `/unit_<ULID>/system_command` MQTT トピックに乗り、`/unit_<ULID>/system_feedback` 経由で確認応答されます。クラウド上の ROS トピックは、ブラウザのマップキャンバスとテレメトリ表示に供給するためだけに存在します。
-3. **デシリアライザーとしてのユニット単位コンテナ**: コンテナ `rosweb_unit_<ULID>` はオンデマンドで実行され、MQTT からの JSON/文字列ペイロードをネイティブな ROS メッセージ(`nav_msgs/OccupancyGrid`、`geometry_msgs/PoseStamped`、`sensor_msgs/LaserScan`)へ変換し戻すことで、`rosbridge` がそれをダッシュボードへストリーミングできるようにします。
+3. **デシリアライザーとしてのユニット単位コンテナ**: コンテナ `rosweb_unit_<u>_<unit>_nakayama`(レガシーなユニット単位の経路。フリートのデフォルト`ros_web_ui_v2_unit_relays`が代わりに全ユニットにサービス提供する)はオンデマンドで実行され、MQTT からの JSON/文字列ペイロードをネイティブな ROS メッセージ(`nav_msgs/OccupancyGrid`、`geometry_msgs/PoseStamped`、`sensor_msgs/LaserScan`)へ変換し戻すことで、`rosbridge` がそれをダッシュボードへストリーミングできるようにします。
 
 ## 2つの診断チャネル
 
@@ -114,7 +114,7 @@ flowchart LR
   end
 
   subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
-    R1["Serialized ROS Topics"] --> R2["rosweb_unit_<ULID>"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
+    R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_<u>_<unit>_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
   end
 ```
 
@@ -122,7 +122,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS(8883) | コマンド、確認応答、ポーズ文字列、ステータス ping。 | コンソール上でロボットが**オフライン**と表示される。コマンドは即座に HTTP 504 で失敗する。 |
 | **rosbridge** | WebSocket(WSS) | 型付き ROS メッセージ(`/map`、`/robot_pose`、`/scan`、`/global_plan`)。 | ロボットは**オンライン**と表示されコマンドも受け付けるが、マップキャンバスは空のまま。 |
-| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、`rosweb_unit_<ULID>` が停止または非アクティブによって reap されているため、キャンバスは空のまま。 |
+| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、フリートリレーがダウンしている — あるいはレガシーなユニット単位の経路では `rosweb_unit_<u>_<unit>_nakayama` が停止または非アクティブによって reap されている — ため、キャンバスは空のまま。 |
 
 ## エンドツーエンドのコマンド実行フロー
 
@@ -192,7 +192,7 @@ stateDiagram-v2
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000`(30分) | コンテナが reap されるまでのオペレーター非アクティブ時間。 |
 | `UNIT_REAP_INTERVAL_MS` | `60000`(1分) | バックグラウンドリーパー掃引の頻度。 |
 | `UNIT_REMOVE_ON_REAP` | `false` | true の場合コンテナを削除し、false の場合は停止状態を保持する。 |
-| `UNIT_MODE` | `prod`(または `dev`) | ポートオフセットを選択する(ROS master 11311/11312、rosbridge 9090/9091)。 |
+| `UNIT_MODE` | `prod`(または `dev`) | ポートオフセットを選択する(クラウドROS master 11311/11312、rosbridge 9090/9091)。ユニット自身のroscoreは11321/11322であり、これらではない。 |
 
 ::: warning Autopilot 保持ガード
 ロボットが **Autopilot モード**で自律ミッションを実行している間、そのリレーコンテナは **Retained** 状態に入ります。Retained 状態のコンテナはアイドルタイムアウトの対象外となり、オペレーターがログアウトしたりブラウザを閉じたりしても終了されず、継続的なミッション監視が保証されます。
@@ -233,8 +233,8 @@ MSD700 アーキテクチャは、3つの異なるセキュリティトラスト
 ```mermaid
 flowchart TB
   subgraph CloudDomain["Cloud Server Trust Domain"]
-    KEYRING["JWT Keyring<br/>/srv/msd/secrets/jwt_keyring"]
-    OP_TOKENS["Operator JWTs (typ=operator)"]
+    KEYRING["JWT Keyring<br/>/run/secrets/jwt_keyring (container)<br/>dev mount, else JWT_SECRET_KEY/JWT_SECRET env"]
+    OP_TOKENS["Operator JWTs (typ=access)"]
     ADMIN_TOKENS["Admin JWTs (typ=admin)"]
     ROBOT_TOKENS["Robot Cloud Tokens (/enroll)"]
   end
@@ -253,8 +253,8 @@ flowchart TB
   ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
 ```
 
-1. **オペレータートークン**: `/srv/msd/secrets/` キーリングに対して検証される標準の HS256 JWT。トークンにはユーザー ID とアカウントスコープが含まれます。管理者トークン(`typ=admin`)は標準のロボット操作ルートによって拒否されます。
-2. **ロボットクラウドトークン**: 物理ロボットの登録時に生成されたデバイスシークレットを使って `/enroll/token` によって発行されます。有効期間は12時間で、システム起動のたびに、またロボットが稼働中は6時間ごとに更新されます。リフレッシャーと起動時のアイデンティティ解決器は**同じ**バックエンド(`run_msd.sh` の `ENROLL_BASE_URL`)を対象とします。バックグラウンドのリフレッシュ中に発生した `401 reenroll` はログに記録されるだけで、`device.json` には一切触れません。
+1. **オペレータートークン**: コンテナ内の`/run/secrets/jwt_keyring`にあるキーリングに対して検証される標準の HS256 JWT(`typ=access`)(devサービスでは`${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json`からマウント。本番では`JWT_SECRET_KEY`/`JWT_SECRET`にフォールバック)。トークンにはユーザー ID とアカウントスコープが含まれます。管理者トークン(`typ=admin`)は標準のロボット操作ルートによって拒否されます。
+2. **ロボットクラウドトークン**: 物理ロボットの登録時に生成されたデバイスシークレットを使って `/enroll/token` によって発行されます。有効期間は12時間(`ACCESS_TOKEN_TTL`)で、システム起動のたびに更新されます。リフレッシャーと起動時のアイデンティティ解決器は**同じ**バックエンド(`run_msd.sh` の `ENROLL_BASE_URL`)を対象とします。バックグラウンドのリフレッシュ中に発生した `401 reenroll` はログに記録されるだけで、`device.json` には一切触れません。
 3. **ユニットローカルトークン**: Jetson コンピュータ上の `backend_local` によってローカルに発行されます。クラウド署名済みのトークンは、ネットワーク分断中の完全なローカル自律性を確保するため、ローカルエンドポイントによって意図的に拒否されます。
 
 ## Operating Lease: マルチオペレーター競合の防止

@@ -75,7 +75,7 @@ Pada build dashboard lokal (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), header kanan a
 
 ```mermaid
 flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 30 s)"]
+  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
   STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
   BADGE --> CLICK["Click Badge: Opens Modal Menu"]
   CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]

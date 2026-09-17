@@ -30,7 +30,7 @@ Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-トークンは HS256 で暗号署名され、共有キーリング(`/srv/msd/secrets/jwt_keyring`)に対して検証される。アクティブな秘密鍵が新しいトークンに署名する一方、直近でローテーションされた鍵も移行猶予期間中は有効なままとなる。
+トークンは HS256 で暗号署名され、共有キーリングに対して検証される。コンテナ内でのキーリングファイルは `/run/secrets/jwt_keyring` である(`*_dev` サービスでは `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` をマウント、本番は `JWT_SECRET_KEY`/`JWT_SECRET` 環境変数にフォールバック)。アクティブな秘密鍵が新しいトークンに署名する一方、直近でローテーションされた鍵も移行猶予期間中は有効なままとなる。
 
 ```mermaid
 sequenceDiagram
@@ -42,7 +42,7 @@ sequenceDiagram
   Client->>Backend: POST /user/login { username, password }
   Backend->>DB: Query user credentials & rental profiles
   DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { token, refresh_token, user_id, profile_id }
+  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
   Note over Client: Include token in Bearer header on subsequent calls
 
   Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
@@ -54,7 +54,7 @@ sequenceDiagram
 
 | トークンクレーム `typ` | スコープと受理条件 | 拒否ルール |
 | --- | --- | --- |
-| **Standard Operator**(不在または `operator`) | 割り当てられたロボット群の運用とマップへのフルアクセス。 | 期限切れ、または無効な秘密鍵で署名されている場合は拒否。 |
+| `access`(標準オペレータートークン) | 割り当てられたロボット群の運用とマップへのフルアクセス。 | 期限切れ、または無効な秘密鍵で署名されている場合は拒否。 |
 | `refresh` | `/user/refresh` でのみ受理。 | 標準の API ミドルウェアは HTTP 401 で拒否。 |
 | `admin` | 管理系ルート(`/admin/api/*`)で受理。 | ユーザーコンテキストを持たないため、標準のロボットオペレータールートでは拒否。 |
 
@@ -128,13 +128,16 @@ flowchart TB
 ```json
 {
   "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "msg": "Login user success",
+  "username": "operator1",
+  "full_name": "Operator One",
   "user_id": "01JZ7YV5CQUSER00000000000",
-  "role": "operator",
-  "profile_id": 4
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
+
+レスポンスに `role` や `profile_id` はない。呼び出し元が操作できるユニットは、ログインペイロードではなくリクエストごとにレンタルプロファイルから解決される(下記 `attachUnit` 参照)。
 
 ### 2. トークンリフレッシュ
 `POST /user/refresh`
@@ -159,9 +162,9 @@ flowchart TB
 ## ユニット管理とフリート運用
 
 ### 1. アクセス可能なユニットの一覧取得
-`GET /api/units`
+`GET /unit/all`
 
-認証済みユーザーのアクティブなレンタルプロファイルに割り当てられた、登録済みロボットをすべて返す。
+認証済みユーザーのアクティブなレンタルプロファイルに割り当てられた、登録済みロボットをすべて返す。(`GET /api/units` は存在しない。バッテリ等のライブステータスはこの一覧ではなくハートビート ping から取得する。)
 
 - **ヘッダー**: `Authorization: Bearer <token>`
 - **レスポンス (200 OK)**:
@@ -170,22 +173,20 @@ flowchart TB
   "success": true,
   "data": [
     {
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
+      "id": "01JZ8P9WZ0UNIT00000000000",
       "unit_name": "Unit 01",
-      "model": "MSD700",
-      "status": "online",
-      "is_in_use": false,
-      "active_page": "navigation",
-      "battery": 94.2
+      "topic_root": "/unit_01JZ8P9WZ0UNIT00000000000",
+      "profile_name": "Nakayama",
+      "created_at": "2026-08-10T14:20:00Z"
     }
   ]
 }
 ```
 
 ### 2. ロボットハートビート Ping
-`POST /api/units/ping`
+`POST /api/hardware/ping`
 
-生存確認のハートビートを送信し、運用リースを更新し、現在のテレメトリを返す。
+MQTT 経由でロボットに生存確認ハートビートを送り(ラウンドトリップ)、呼び出し元の運用リースを維持する。`page` フィールドが ping の維持対象を決める。ユニット一覧はステータスの読み取りのみ、操作ページはアイドル/シャットダウンのウォッチドッグ tier を抑止する。
 
 - **ヘッダー**: `Authorization: Bearer <token>`
 - **リクエストボディ**:
@@ -199,35 +200,20 @@ flowchart TB
   "force_takeover": false
 }
 ```
-- **レスポンス (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "status": true,
-    "robot_activity": "navigation_point_published",
-    "battery": 91.0,
-    "uptime": 128.5,
-    "hw_status": "ready",
-    "manual_override": false,
-    "autopilot": false,
-    "in_use": false,
-    "origin_conflict": false
-  }
-}
-```
+
+関連するが別物として、`POST /api/unit/heartbeat` はユニット単位リレーコンテナ用のコンテナキープアライブである。リースのフィールドは受け付けず `{ "success": true }` のみ返す。
 
 ### 3. 緊急停止 / 一時停止
-`POST /api/hardware/emergency`
+`POST /api/emergency_stop`
 
-ハードウェア緊急停止または動作の一時停止を切り替える。
+ハードウェア緊急停止または動作の一時停止を切り替える。真偽値がロボットコマンドに対応する。`true` は `activate`、`false` は `deactivate` を他のすべてと同じ `system_command`/`system_feedback` トピック経由で送る。
 
 - **ヘッダー**: `Authorization: Bearer <token>`
 - **リクエストボディ**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "action": "activate"
+  "enable": true
 }
 ```
 - **レスポンス (200 OK)**:
@@ -303,35 +289,38 @@ flowchart TB
 
 ## マッピング (SLAM) 操作
 
-### 1. マッピングセッションの開始
-`POST /api/mapping/start`
+### 1. マッピング制御
+`POST /api/mapping`
 
-対象ユニットで SLAM (gmapping) モードを開始する。
+1つのエンドポイントがマッピングセッション全体を駆動する。1回のコールでは `start`、`pause`、`stop` のちょうど1つを true にする。停止時はアクティブな占有格子地図を保存し、サムネイルのメタデータを生成し、アセットをアップロードする。保存名のフィールドは `display_map_name` ではなく `map_name` である。
 
-- **リクエストボディ**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
-
-### 2. マッピングの停止とマップの保存
-`POST /api/mapping/stop`
-
-アクティブな占有格子地図を保存し、サムネイルのメタデータを生成し、アセットをアップロードする。
-
-- **リクエストボディ**:
+- **リクエストボディ**(停止+保存の例):
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
   "homebase_x": 0.0,
-  "homebase_y": 0.0
+  "homebase_y": 0.0,
+  "homebase_z": 0.0,
+  "homebase_ox": 0.0,
+  "homebase_oy": 0.0,
+  "homebase_oz": 0.0,
+  "homebase_ow": 1.0
 }
 ```
-- **レスポンス (200 OK)**:
-```json
-{
-  "success": true,
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
-}
-```
+
+### 2. マッピングセッションの破棄
+`POST /api/mapping/discard`
+
+保存せずにアクティブなセッションを破棄する。
+
+- **リクエストボディ**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+
+### 3. マッピング保存の進捗 (SSE)
+`GET /api/mapping/progress/:request_id?token=<jwt>`
+
+停止が引き起こした保存処理の Server-Sent Events ストリーム。`EventSource` はヘッダを設定できないため JWT はクエリ文字列に入れる。
 
 ## マップとルートのデータ管理
 

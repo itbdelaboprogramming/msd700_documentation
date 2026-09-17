@@ -21,7 +21,7 @@ flowchart TD
   Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
   Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
 
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is rosweb_unit_<ULID> running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
+  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_<u>_<unit>_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
   Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
 
   Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]
@@ -40,10 +40,10 @@ flowchart TD
 
 ### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
 - **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
-- **Root Cause**: The on-demand relay container `rosweb_unit_<ULID>` was stopped by the idle reaper, or Apache WebSocket proxying is blocked.
+- **Root Cause**: The fleet relay container (`ros_web_ui_v2_unit_relays`) is down — or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper — or Apache WebSocket proxying is blocked.
 - **Diagnostic Steps**:
-  1. Verify if the per-unit container is running on the server: `docker ps | grep rosweb_unit`.
-  2. If absent, reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`.
+  1. Check the fleet relay first: `docker ps | grep unit_relays`. On the legacy path, check the per-unit container instead: `docker ps | grep rosweb_unit`.
+  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In fleet mode the roster comes from the `units` table, so no touch event is needed — an enrolled robot is reachable.
   3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
 ### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
@@ -62,7 +62,7 @@ flowchart TD
 
 ### 5. Keep-Out Costmap Deadlock
 - **Symptom**: Goals are accepted by `move_base`, but the robot never drives forward.
-- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
+- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params_field.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
 - **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
 
 ### 6. Local Sync Reports "Access Denied" (Local Database Credential Drift)

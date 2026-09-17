@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、MSD700ロボットが`switch_mode.py`、`system_command.py`、`operation_supervisor.py`を用いて、メインのROS coreを再起動することなく実行時に運用モード(`idle`、`navigation`、`mapping`、`coverage`、`exploration`)を動的に切り替える仕組みを詳述する。
+本ドキュメントは、MSD700ロボットが`switch_mode.py`、`system_command.py`、`operation_supervisor.py`を用いて、メインのROS coreを再起動することなく実行時に運用モード(`navigation`、`slam`、`explore`、`boustrophedon` — idleは単に「launchスタックなし」)を動的に切り替える仕組みを詳述する。モード名は`switch_mode.yaml`由来であり、`/switch_mode`サービス経由で送られる文字列と一致しなければならない。
 
 ## モードオーケストレーションのトポロジー
 
@@ -17,12 +17,12 @@ flowchart TD
 
   SYS_CMD -->|"Calls ROS Service: /switch_mode"| SWITCH["switch_mode.py<br/>(Dynamic Process Lifecycle Manager)"]
 
-  SWITCH -->|Spawn / Terminate via roslaunch Parent API| LAUNCH_STACKS
+  SWITCH -->|Spawn / Terminate via subprocess + killall| LAUNCH_STACKS
 
   subgraph LAUNCH_STACKS["Dynamic Launch Subsystems"]
     NAV_STACK["Navigation Stack (msd700_navigation.launch)<br/>map_server, amcl, move_base, TEB planner"]
-    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping, teleop_twist_keyboard"]
-    COV_STACK["Area Coverage Stack (msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
+    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping (teleop is a separate robot_teleop.launch)"]
+    COV_STACK["Area Coverage Stack (msd700_coverage/msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
     EXP_STACK["Exploration Stack (msd700_explore.launch)<br/>explore_lite, frontier exploration"]
   end
 
@@ -34,53 +34,30 @@ flowchart TD
 
 ## 運用モードと稼働ノードスタック
 
-| 運用モード | 稼働中のROSノード | 非稼働 / 回収されたノード | メモリ & CPUフットプリント |
-| --- | --- | --- | --- |
-| **`idle`** | `roscore`、`serial_node`、`imu_filter`、`robot_state_publisher`、`aws_mqtt`、`camera_client`。 | `move_base`、`amcl`、`slam_gmapping`、`path_coverage_node`。 | 最小(約5% CPU、200 MB RAM)。 |
-| **`navigation`** | すべての`idle`ノード + `map_server`、`amcl`、`move_base`、`costmap_2d`。 | `slam_gmapping`、`explore_lite`。 | 標準的なナビゲーション(約25% CPU)。 |
-| **`mapping`** | すべての`idle`ノード + `slam_gmapping`、`teleop`。 | `amcl`、`map_server`(代わりにライブマップを読み込む)。 | 中程度(約35% CPU)。 |
-| **`coverage`** | すべての`navigation`ノード + `path_coverage_node`。 | `explore_lite`。 | フルミッション負荷(約40% CPU)。 |
-| **`exploration`** | すべての`mapping`ノード + `explore_lite`のフロンティア探索。 | `amcl`。 | 高いアルゴリズム負荷(約45% CPU)。 |
+| モード(`switch_mode.yaml`) | Launchファイル | 備考 |
+| --- | --- | --- |
+| (idle — スタックなし) | — | ベースノードは動き続ける(`serial_node`、`imu_filter`、`robot_state_publisher`、`aws_mqtt`、`camera_client`)。 |
+| **`navigation`** | `msd700_navigation.launch` | `map_server`、`amcl`、`move_base`、コストマップ。 |
+| **`slam`** | `msd700_slam.launch` | ライブマッピング。テレオペはスタックの一部ではなく別のlaunch。 |
+| **`explore`** | `msd700_explore.launch` | `explore_lite`によるフロンティア探索。 |
+| **`boustrophedon`** | `msd700_coverage/msd700_boustrophedon.launch` | `path_coverage_node`。`use_autocover`はデフォルトでオフ。 |
 
 ---
 
-## `roslaunch` Parent APIによる動的プロセスライフサイクル
+## `subprocess`による動的プロセスライフサイクル
 
-`system("roslaunch ...")`のようなシェルコマンドの実行はデタッチされたゾンビプロセスを残してしまうため、`switch_mode.py`はネイティブのPython API `roslaunch.parent.ROSLaunchParent`を利用する:
+`switch_mode.py`は各スタックを`subprocess.Popen(cmd_list, ...)`で起動し、`switch_mode.yaml`のタイムアウトで終了させる:
 
-```python
-import roslaunch
-import rospy
-
-class ModeSwitcher:
-    def __init__(self):
-        self.current_mode = "idle"
-        self.active_launch_parent = None
-
-    def transition_to(self, target_mode, launch_file_path):
-        # 1. Gracefully terminate active launch stack
-        if self.active_launch_parent is not None:
-            rospy.loginfo(f"Stopping active stack for mode: {self.current_mode}")
-            self.active_launch_parent.shutdown()
-            self.active_launch_parent = None
-
-        # 2. Instantiate and start new launch parent
-        if target_mode != "idle":
-            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
-            roslaunch.configure_logging(uuid)
-            self.active_launch_parent = roslaunch.parent.ROSLaunchParent(
-                uuid, [launch_file_path]
-            )
-            self.active_launch_parent.start()
-
-        self.current_mode = target_mode
-        rospy.loginfo(f"Successfully transitioned to mode: {target_mode}")
+```yaml
+timeouts:
+  graceful_shutdown: 3   # seconds before escalation
+  force_kill: 1          # seconds before SIGKILL
 ```
 
 ### 安全な終了処理とゾンビプロセスの防止:
-1. **SIGINTのディスパッチ**: `launch_parent.shutdown()`は、管理下の全子プロセスに対して依存関係の逆順で`SIGINT`を送信する。
-2. **5秒間の猶予ウィンドウ**: 各ノードにはディスクバッファをフラッシュするための最大5秒の猶予が与えられる(例: `map_saver`が`.pgm`と`.yaml`の画像を書き込む場合)。
-3. **エスカレーション**: 猶予期間内にノードが正常終了しない場合、親プロセスは`SIGTERM`、続いて`SIGKILL`へとエスカレートし、ROSマスターのグラフ上にゾンビノードが一切残らないことを保証する。
+1. **Terminate**: アクティブなスタックのプロセスグループに正常終了を要求する。
+2. **3秒間の猶予ウィンドウ**: 各ノードには状態をフラッシュするための最大3秒の猶予が与えられる(例: `map_saver`が`.pgm`/`.yaml`を書き込む場合)。
+3. **エスカレーション**: 猶予を過ぎるとスイッチャーは強制終了(`1 s`)へエスカレートし、シミュレーターの残骸は`killall`で回収するため、ROSマスターのグラフ上にゾンビノードが一切残らない。
 
 ---
 

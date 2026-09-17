@@ -35,8 +35,8 @@ flowchart LR
 1. **Unreproducible Narrow-Aisle Issues**: Real-world reports of path planning failures in narrow warehouse corridors could not reproduce on a 0.133 m radius TurtleBot.
 2. **Configuration Leakage**: A legacy parameter (`robot_width: 0.32`) lingered in coverage configurations until true-scale modeling replaced it.
 3. **Environment Scale Mismatch**: Standard TurtleBot maps lacked adequate clearance for a 0.9 x 0.7 m robot:
-   - `turtlebot_world`: Maximum clearance 0.39 m (cannot fit a 0.425 m inscribed radius anywhere).
-   - `AWS RoboMaker Small Warehouse`: Maximum clearance **3.68 m** (58% traversable floor, 38% in-place pivotable).
+   - `turtlebot_world`: Maximum clearance 0.39 m (cannot fit a 0.425 m inscribed half-width anywhere).
+   - `AWS RoboMaker Small Warehouse`: Maximum clearance **3.83 m** from collision geometry (65% of the floor wide enough to stand, 46% to pivot), or **3.68 m** (58% / 38%) from the occupancy map AWS shipped — two independent ways of measuring that agree within tolerance.
 
 ## The Simulation World: AWS Small Warehouse
 
@@ -70,24 +70,21 @@ The physical robot is modeled in `msd700_description/urdf/msd700_field.urdf.xacr
 ```mermaid
 flowchart TB
   subgraph RobotModel["msd700_field URDF"]
-    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.45 m (Mass: 60 kg)"]
-    DRIVE["Drive Wheels: Centered, Separation 0.60 m, Radius 0.10 m"]
-    CASTERS["4 Corner Passive Casters: Anti-tip Stability"]
-    LIDAR["Velodyne VLP-16 LiDAR: Mast Height 0.61 m"]
-    EKF["EKF Sensor Fusion: /robot_pose_ekf (Odom + IMU)"]
+    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.25 m (Mass: 150 kg)"]
+    DRIVE["4 Drive Wheels: x ±0.30 m, y ±0.30 m<br/>Radius 0.10 m, Separation 0.60 m"]
+    LIDAR["Velodyne VLP-16 LiDAR: 0.40 m above base_link<br/>0.50 m above footprint"]
+    EKF["EKF Sensor Fusion: /odometry/filtered (Odom + IMU)"]
   end
 
   CHASSIS --> DRIVE
-  CHASSIS --> CASTERS
   CHASSIS --> LIDAR
   DRIVE --> EKF
 ```
 
 ### Physical Specifications:
-- **Dimensions**: 0.90 m length, 0.70 m width, 0.45 m height, mass 60 kg.
-- **Drive Geometry**: Skid-steer / differential drive centered on the midpoint to ensure symmetrical turning envelopes.
-- **Four Corner Casters**: Eliminates pitching and roll oscillations that cause planar LiDAR to create phantom floor obstacles.
-- **Velodyne VLP-16 LiDAR**: Elevated 0.61 m above ground on a mounting mast, matching the physical unit.
+- **Dimensions**: 0.90 m length, 0.70 m width, 0.25 m height, mass 150 kg.
+- **Drive Geometry**: Four drive wheels (front/back left/right); odometry fuses them as a differential pair.
+- **Velodyne VLP-16 LiDAR**: 0.50 m above the footprint on a mounting mast, matching the physical unit.
 - **Standardized ROS Frames**: Uses standard frame conventions (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Launching Simulation Stacks
@@ -102,8 +99,8 @@ roslaunch msd700_simulation msd700_warehouse_nav.launch
 roslaunch msd700_simulation msd700_warehouse_slam.launch
 ```
 
-### 3. Move Base Parameterization (`sim_body`)
-Launch files accept `sim_body:=field` (default for warehouse launch) to configure costmaps for the 1.20 x 0.85 m footprint, or `sim_body:=waffle` for legacy small-scale testing.
+### 3. Move Base Parameterization (`robot_profile`)
+Launch files accept `robot_profile:=field` (default for warehouse launch) to configure costmaps for the field robot, `prototype`, or `waffle` for legacy small-scale testing. `sim_body:=` still works but is a deprecated alias for `robot_profile`.
 
 ## Related Documentation
 

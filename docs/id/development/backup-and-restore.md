@@ -70,25 +70,30 @@ msd700_backup_01JZ8QK2H.tar.gz
 
 ## Operasi Backup REST API
 
-### 1. Ekspor Arsip
-`POST /api/backup/export`
+Semua rute backup berada di bawah `/admin/api` (membutuhkan token admin). Tidak ada endpoint `/api/backup/export` atau `/api/backup/import`.
 
-Menghasilkan dan mengunduh sebuah arsip `.tar.gz`.
+### 1. Buat Backup
+`POST /admin/api/profiles/:id/backups` (lingkup profil) atau `POST /admin/api/units/:id/backups` (lingkup unit)
 
-- **Request Body**:
-```json
-{
-  "scope": "profile",
-  "profile_id": "01JZ7YV5CQPROF00000000000"
-}
-```
+Membuat record backup untuk profil atau unit.
 
-### 2. Impor dan Restore Arsip
-`POST /api/backup/import`
+### 2. Unduh Arsip
+`GET /admin/api/backups/:id/download`
 
-Mengunggah sebuah arsip dan menerapkannya secara aditif.
+Mengunduh arsip `.tar.gz`.
 
-- **Request Payload**: Multipart form-data dengan `file: <archive.tar.gz>` dan `profile_id` target.
+### 3. Unggah Arsip
+`POST /admin/api/backups/upload`
+
+Mengunggah arsip (raw body). Pratinjau rencananya dulu dengan `POST /admin/api/backups/:id/plan`.
+
+### 4. Restore Arsip
+`POST /admin/api/backups/:id/restore`
+
+Menerapkan arsip yang diunggah secara aditif.
+
+### 5. Daftar Backup
+`GET /admin/api/backups`
 
 ## Script Migrasi Skema
 
@@ -96,10 +101,10 @@ Evolusi skema database dikelola oleh script otomatis di `ros-web-ui/source/depen
 
 | Nama Script | Tujuan | Perintah Eksekusi |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` | Memigrasikan path username/unitname lama ke pengalamatan ULID. | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | Membuat tabel `pending_units` dan `unit_devices` untuk autentikasi nonce 32-byte. | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` | Memasang tabel `sync_state` dan `sync_tombstones` untuk sinkronisasi data offline. | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | Meningkatkan tabel `profile_backups` dengan kolom `scope`. | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | Memigrasikan path username/unitname lama ke pengalamatan ULID. | `node migrate_unit_id_refactor.js --profile server_dev --apply` |
+| `migrate_enrolment.js` | Membuat tabel `pending_units` dan `unit_devices` untuk autentikasi nonce. | `node migrate_enrolment.js --profile server_dev --apply` |
+| `migrate_sync.js` | Memasang tabel `sync_state` dan `sync_tombstones` untuk sinkronisasi data offline. | `node migrate_sync.js --profile server_dev --apply` |
+| `migrate_backup_scope.js` | Meningkatkan tabel `profile_backups` dengan kolom `scope`. | `node migrate_backup_scope.js --profile server_dev --apply` |
 
 ::: danger Aturan Pengujian Migrasi
 Selalu uji script migrasi terhadap database pengembangan pada **port 3308** sebelum menerapkannya ke produksi pada port 3307. Script migrasi membutuhkan argumen `--profile` eksplisit untuk mencegah ketidakcocokan target yang tidak disengaja.

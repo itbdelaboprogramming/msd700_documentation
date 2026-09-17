@@ -7,120 +7,80 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dokumen ini menyediakan spesifikasi teknis mendalam untuk firmware mikrokontroler embedded, antarmuka driver motor, decoding encoder optik, algoritma kontrol kecepatan PID diskret, dan sirkuit telemetri analog yang diimplementasikan pada robot MSD700.
+Firmware mikrokontroler embedded (`msd700_firmware/firmware/firmware.ino`, Arduino) dan cara Jetson berbicara dengannya. Firmware menerima perintah dari **dua** sumber — receiver RC (Taranis X7) atau PC lewat ROS — dan menggerakkan kedua motor roda melalui loop PID per roda.
 
 ## Topologi Kontrol Embedded
 
 ```mermaid
 flowchart TD
   subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
-    SERIAL_NODE["serial_node.py (msd700_hardware)<br/>TTY Port: /dev/ttyUSB0 (115200 baud, 8N1)"]
-    CMD_PUB["Subscribes /cmd_vel (Twist)<br/>Publishes /wheel/odom & /battery_state"]
+    SERIAL_NODE["serial_node.py (rosserial_python)<br/>Port: /dev/stm32, 57600 baud"]
+    HW_IF["msd700_hardware interface<br/>Publishes /wheel/odom, /imu/data_raw,<br/>/imu/mag, /imu/data"]
   end
 
-  subgraph Microcontroller["Embedded Microcontroller (Arduino / Teensy)"]
-    UART_ISR["UART Receive ISR & Packet Checksum Validator"]
-    PID_LEFT["Left Wheel Discrete PID Controller (100 Hz)"]
-    PID_RIGHT["Right Wheel Discrete PID Controller (100 Hz)"]
-    ENC_ISR["Quadrature Encoder Pin Change ISRs (4000 CPR)"]
-    ADC_SENSE["10-Bit ADC Battery Voltage Sampling"]
-    WATCHDOG["Hardware Safety Watchdog Timer (500 ms)"]
+  subgraph Microcontroller["Microcontroller (Arduino, firmware.ino)"]
+    CMD_SEL["Command select: RC ch.3<br/>RC mode / hold mode / PC mode"]
+    FAILSAFE["Failsafe: RC ch.4<br/>ARMED only above 1400"]
+    PID_L["Left wheel PID (pidIr)<br/>10 ms control loop"]
+    PID_R["Right wheel PID (pidIr)<br/>10 ms control loop"]
+    ENC["Quadrature encoders<br/>PinChangeInterrupt pins"]
   end
 
-  subgraph PowerStage["Actuators and Power Electronics"]
-    H_BRIDGE_L["Left Motor H-Bridge Driver Stage"]
-    H_BRIDGE_R["Right Motor H-Bridge Driver Stage"]
-    MOTOR_L["Left High-Torque Brushed DC Motor"]
-    MOTOR_R["Right High-Torque Brushed DC Motor"]
-    BATTERY["24V LiFePO4 Battery Pack (25.6V Nominal)"]
-    ESTOP_RELAY["Hardware Safety Cutoff Relay"]
+  subgraph PowerStage["Actuators"]
+    H_BRIDGE_L["Left Motor Driver<br/>(REN / LEN / PWM)"]
+    H_BRIDGE_R["Right Motor Driver<br/>(REN / LEN / PWM)"]
   end
 
-  SERIAL_NODE <-->|Full-Duplex UART 115200| UART_ISR
-  CMD_PUB --> SERIAL_NODE
+  SERIAL_NODE <-->|rosserial, 57600 baud| CMD_SEL
+  CMD_SEL --> FAILSAFE
+  FAILSAFE -->|ARMED| PID_L
+  FAILSAFE -->|ARMED| PID_R
+  FAILSAFE -->|DISARMED| STOP["Motors stopped"]
 
-  UART_ISR --> PID_LEFT
-  UART_ISR --> PID_RIGHT
-  UART_ISR --> WATCHDOG
+  PID_L --> H_BRIDGE_L
+  PID_R --> H_BRIDGE_R
 
-  PID_LEFT --> H_BRIDGE_L --> MOTOR_L
-  PID_RIGHT --> H_BRIDGE_R --> MOTOR_R
+  H_BRIDGE_L --> ENC
+  H_BRIDGE_R --> ENC
+  ENC --> PID_L
+  ENC --> PID_R
 
-  MOTOR_L --> ENC_ISR
-  MOTOR_R --> ENC_ISR
-  ENC_ISR --> PID_LEFT
-  ENC_ISR --> PID_RIGHT
-  ENC_ISR --> UART_ISR
-
-  BATTERY --> ADC_SENSE --> UART_ISR
-  WATCHDOG --> ESTOP_RELAY
+  HW_IF --> SERIAL_NODE
 ```
 
----
-
-## Pinout dan Pengkabelan Elektrikal Hardware
-
-Komunikasi antara NVIDIA Jetson dan mikrokontroler berjalan melalui USB UART kecepatan tinggi dengan isolasi optik:
-
-| Fungsi Sinyal | Pin Mikrokontroler | Koneksi Driver / Periferal | Karakteristik Elektrikal |
-| --- | --- | --- | --- |
-| **Left Motor PWM** | Pin 5 (Timer 3) | Left H-Bridge Speed Gate | Logika 0 hingga 5V, PWM 20 kHz (Drive Senyap Tak Terdengar) |
-| **Left Motor DIR** | Pin 4 | Left H-Bridge Direction Input | Logic High: Maju, Logic Low: Mundur |
-| **Right Motor PWM** | Pin 6 (Timer 4) | Right H-Bridge Speed Gate | Logika 0 hingga 5V, PWM 20 kHz |
-| **Right Motor DIR** | Pin 7 | Right H-Bridge Direction Input | Logic High: Maju, Logic Low: Mundur |
-| **Left Encoder A** | Pin 2 (INT0) | Left Optical Encoder Channel A | Interrupt TTL 5V (Rising/Falling Edge) |
-| **Left Encoder B** | Pin 3 (INT1) | Left Optical Encoder Channel B | Interrupt TTL 5V |
-| **Right Encoder A** | Pin 18 (INT5) | Right Optical Encoder Channel A | Interrupt TTL 5V |
-| **Right Encoder B** | Pin 19 (INT4) | Right Optical Encoder Channel B | Interrupt TTL 5V |
-| **Battery Voltage ADC**| Pin A0 (ADC0) | Precision Resistor Divider Output | Tegangan Analog 0 hingga 5,0V |
-| **E-Stop Safety Line** | Pin 12 | Hardware Relay Gate Driver | Logic High: Motor Aktif, Low: Cutoff |
+Tidak ada topic `/battery_state` di mana pun dalam stack, dan tidak ada pembagi tegangan ADC baterai dalam firmware ini. Konstanta geometri roda dalam firmware (`WHEEL_RADIUS 2.75 cm`, `WHEEL_DISTANCE 23.0 cm`) cocok dengan konfigurasi odometri sisi host (`odometry_config.yaml`: radius `2.7 cm`, distance `23 cm`, `encoder_ppr 2400`).
 
 ---
 
-## Kontrol Kecepatan PID Diskret Closed-Loop
+## Pinout Hardware (`firmware.ino`)
 
-Firmware menjalankan dua loop kontrol PID diskret pada $100\text{ Hz}$ ($\Delta t = 0.01\text{ s}$) dengan clamping anti-windup untuk mengontrol kecepatan roda:
+| Fungsi Sinyal | Pin Mikrokontroler |
+| --- | --- |
+| **Right Motor REN / LEN / PWM** | Pin 4 / 5 / 9 |
+| **Left Motor REN / LEN / PWM** | Pin 6 / 7 / 8 |
+| **Right Encoder A / B** | Pin 52 / 12 |
+| **Left Encoder A / B** | Pin 11 / 10 |
+| **Status LED (merah / biru)** | Pin 30 / 31 |
+| **Servo kamera** | Pin 3 (rentang 125–175, langkah 10) |
+| **Ultrasonik (UART2 RX / TX)** | Pin 17 / 16 |
 
-### Formulasi Error Diskret:
-$$e_k = v_{\text{target}} - v_{\text{measured}}$$
-
-### Output Kontrol PID dengan Clamping:
-$$\text{PWM}_k = K_p \cdot e_k + K_i \sum_{j=0}^k e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
-
-### Proteksi Integrator Anti-Windup:
-Untuk mencegah integrator windup ketika motor dibebani sementara atau stall terhadap tanjakan:
-
-$$\sum e_j \cdot \Delta t = \text{clamp}\left( \sum e_j \cdot \Delta t, -I_{\max}, I_{\max} \right)$$
-
-$$\text{PWM}_k = \text{clamp}(\text{PWM}_k, -\text{PWM}_{\max}, \text{PWM}_{\max})$$
-
-Dimana $\text{PWM}_{\max} = 255$ (resolusi timer $8$-bit).
+Tautan Jetson adalah `Serial.begin(57600)`.
 
 ---
 
-## Sirkuit Sensing Tegangan Baterai
+## Kontrol Kecepatan PID Closed-Loop
 
-Robot ditenagai oleh baterai LiFePO4 24V (penuh: $29.2\text{ V}$, nominal: $25.6\text{ V}$, cutoff: $21.0\text{ V}$).
+Setiap roda menjalankan loop PID diskret (`pidIr`) pada periode kontrol 10 ms (`LOOP_TIME 10`):
 
-Voltage divider onboard menurunkan skala tegangan baterai ke rentang $0\text{ hingga }5\text{ V}$ dari ADC mikrokontroler:
+$$\text{PWM}_k = K_p \cdot e_k + K_i \sum e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
 
-$$V_{adc} = V_{bat} \cdot \frac{R_2}{R_1 + R_2}$$
-
-Dimana $R_1 = 30\text{ k}\Omega$ dan $R_2 = 5.1\text{ k}\Omega$ (Rasio Divider $K_{div} = 0.1453$).
-
-### Rekonstruksi Tegangan dalam Firmware:
-$$V_{bat} = \frac{\text{ADC\_RAW}}{1024} \cdot V_{ref} \cdot \left( \frac{R_1 + R_2}{R_2} \right)$$
-
-Dimana $V_{ref} = 5.00\text{ V}$.
+Output dijenuhkan (`constrain`) pada `MAX_PWM 250`, bukan 255 penuh 8-bit. Batas kecepatan adalah `MAX_RPM_MOVE 180` (longitudinal) dan `MAX_RPM_TURN 70` (rotasi). Kanal receiver RC melewati filter low-pass 0,25 Hz; sinyal encoder melewati filter low-pass 3 Hz.
 
 ---
 
-## Hardware Safety Watchdog
+## RC Failsafe (Arming)
 
-Untuk mencegah kondisi robot lepas kendali yang disebabkan oleh host OS lockup atau kabel serial terputus, mikrokontroler menjalankan hardware watchdog otonom:
-
-1. **Timer Expiry**: Register timer watchdog di-reset ke $500\text{ ms}$ pada setiap paket kecepatan yang terverifikasi checksum-nya.
-2. **Safety Cutoff**: Jika tidak ada paket yang tiba selama $500\text{ ms}$, mikrokontroler segera meng-clamp output PWM motor ke nol dan menjatuhkan gate line `ESTOP_RELAY`.
+Prototipe hanya menerima perintah gerak saat **ARMED**: kanal RC 4 harus membaca di atas 1400 (`update_failsafe()`). Di bawah itu statusnya DISARMED dan motor berhenti, apa pun perintah RC atau PC yang masuk. Sumber perintah mengikuti kanal RC 3: mode RC, mode hold, atau mode PC (ROS).
 
 ## Dokumentasi Terkait
 

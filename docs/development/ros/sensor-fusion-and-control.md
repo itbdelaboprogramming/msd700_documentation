@@ -14,16 +14,16 @@ This document provides an exhaustive mathematical and architectural specificatio
 ```mermaid
 flowchart TD
   subgraph RawSensors["Physical Sensor Hardware Suite"]
-    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.201)"]
+    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.231)"]
     IMU_HW["9-DOF IMU (I2C / Serial)<br/>3-Axis Accel, Gyro, Magnetometer"]
-    ENCODERS["Optical Quadrature Encoders<br/>Dual Channel (A/B) 4000 CPR"]
-    CAM["HD Optical Camera<br/>(/dev/video0, 1080p WebRTC)"]
+    ENCODERS["Wheel Encoders<br/>2400 PPR (msd700_odom)"]
+    CAM["USB Camera<br/>separate WebRTC device, not a URDF link"]
   end
 
   subgraph Preprocessing["ROS Preprocessing & Filtering"]
-    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: 0.46 to 0.96 m"]
-    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>Fuses Accel, Gyro & Gravity Vector"]
-    WHEEL_ODOM["msd700_hardware / serial_node<br/>Computes Forward Kinematics (/wheel/odom)"]
+    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: -0.30 to +0.30 m"]
+    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>gain 0.01, use_mag, fixed frame odom<br/>/imu/mag in, /imu/from_filter out"]
+    WHEEL_ODOM["msd700_hardware<br/>Computes Forward Kinematics (/wheel/odom)"]
   end
 
   subgraph StateEstimation["Continuous State Estimation (EKF)"]
@@ -44,18 +44,17 @@ flowchart TD
 
 ## Differential Drive Forward Kinematics
 
-The physical robot operates as a two-wheel differential drive platform supported by four passive caster wheels.
+The field robot has four drive wheels (front/back left/right at $x = \pm 0.30\text{ m}$, $y = \pm 0.30\text{ m}$); odometry fuses them as a differential pair.
 
-### Kinematic Parameters:
-- Wheel Radius: $r = 0.075\text{ m}$ (Wheel Diameter: $0.150\text{ m}$).
-- Track Gauge (Distance between drive wheel centerlines): $L = 0.580\text{ m}$.
-- Encoder Resolution: $CPR = 4000\text{ counts/revolution}$ (after $4\times$ quadrature decoding).
-- Gearbox Reduction Ratio: $N = 30:1$.
+### Kinematic Parameters (`msd700_hardware/config/odometry_config.yaml`):
+- Wheel Radius: $r = 0.027\text{ m}$ ($2.7\text{ cm}$).
+- Track Gauge (Distance between wheel centerlines): $L = 0.23\text{ m}$ ($23\text{ cm}$).
+- Encoder Resolution: $PPR = 2400\text{ pulses/revolution}$.
 
 ### Displacement Calculations per Control Period $\Delta t$:
 Given left encoder delta $\Delta \text{ticks}_L$ and right encoder delta $\Delta \text{ticks}_R$:
 
-$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{CPR \cdot N}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{CPR \cdot N}$$
+$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{PPR}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{PPR}$$
 
 Linear displacement $\Delta s$ and heading change $\Delta \theta$:
 
@@ -74,14 +73,14 @@ $$\theta_{k+1} = \theta_k + \Delta \theta$$
 
 ## Madgwick AHRS IMU Orientation Filter
 
-Raw IMU data on `/imu/data_raw` ($50\text{ Hz}$) is processed by `imu_filter_madgwick` to derive drift-free quaternion orientation $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$:
+Raw IMU data on `/imu/data_raw` is processed by `imu_filter_madgwick` to derive drift-free quaternion orientation $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$. The filter runs with `gain 0.01`, `use_mag true`, fixed frame `odom`, reading `/imu/mag` and publishing the fused output on `/imu/from_filter` (which is what the EKF consumes as `imu0`):
 
 ### Gradient Descent Optimization:
 $$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \right) \Delta t$$
 
 - $\mathbf{\omega}_{gyro} = [0, \omega_x, \omega_y, \omega_z]^T$: Angular rate vector from gyroscope.
 - $\nabla \mathbf{f}$: Objective function gradient aligning measured accelerometer gravity vector with reference earth-frame gravity $[0, 0, 1]^T$.
-- $\beta = 0.05$: Filter divergence rate parameter balancing gyroscope responsiveness against accelerometer vibration noise.
+- $\beta$ (`gain`) $= 0.01$: Filter divergence rate parameter balancing gyroscope responsiveness against accelerometer vibration noise.
 
 ---
 
@@ -113,8 +112,8 @@ $$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \left( \mathb
 
 $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}$$
 
-- $\mathbf{z}_k$: Measurement vector fusing velocity $\dot{x}$ from wheel odometry, and absolute yaw $\psi$ and angular velocity $\dot{\psi}$ from IMU.
-- $\mathbf{R}_k$: Measurement Noise Covariance Matrix tuned for sensor variance ($R_{\dot{x}, \text{wheel}} = 10^{-3}$, $R_{\psi, \text{imu}} = 10^{-4}$).
+- $\mathbf{z}_k$: Measurement vector fusing velocity $\dot{x}$ from wheel odometry (`odom0: /wheel/odom`), and roll/pitch plus yaw rate from the filtered IMU (`imu0`, frame `odom`). Roll and pitch come from the IMU; the filter runs at $30\text{ Hz}$ in the `odom` frame.
+- $\mathbf{R}_k$: Measurement Noise Covariance Matrix from `ekf_localization_config.yaml` (process and initial covariances in-file; see the yaml for the tuned values).
 
 ---
 
@@ -124,12 +123,12 @@ The Velodyne VLP-16 sensor produces 300,000 points/sec across 16 laser rings. To
 
 ```mermaid
 flowchart LR
-  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.15 m (0.46 m above floor)<br/>max_height: +0.35 m (0.96 m above floor)"]
-  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.20 m, max_range: 100.0 m<br/>angle_increment: 0.0087 rad (0.5 deg)"]
-  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 20 Hz, 720 points/rev)"]
+  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.30 m<br/>max_height: +0.30 m"]
+  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.40 m, max_range: 100.0 m<br/>scan_time: 0.1 s (10 Hz)<br/>angle_increment: 0.0087 rad (0.5 deg)"]
+  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 10 Hz)"]
 ```
 
-This ensures that obstacles (such as table legs, low pallets, and standing personnel) within the $0.46\text{ m}$ to $0.96\text{ m}$ elevation zone are captured into the navigation costmaps without floor-reflection clutter.
+This keeps the $\pm 0.30\text{ m}$ band around the sensor in the navigation costmaps while returns outside it (floor reflections, ceiling) are dropped. A second pipeline (`cloud_hazard.launch`) fits ground and watches the $0.08$–$0.65\text{ m}$ band above it for holes and drop-offs, publishing `/scan_hazard`.
 
 ## Related Documentation
 

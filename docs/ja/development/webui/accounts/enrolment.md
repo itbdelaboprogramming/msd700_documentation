@@ -29,11 +29,11 @@ sequenceDiagram
   Robot->>Robot: Generate 32 cryptographically random bytes (nonce)<br/>Compute nonce_hash = sha256(nonce)<br/>Compute fingerprint = sha256(hardware_serial)
   Robot->>Backend: POST /enroll/claim { fingerprint, nonce_hash, nonce, hostname, mac }
   Backend->>Backend: Store in pending_units table (status: pending)
-  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP" }
-  Note over Robot: Displays 6-character claim code on screen
+  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP4R" }
+  Note over Robot: Displays 8-character claim code on screen
 
   Note over Admin: Stage 2: Administrator Authorization
-  Admin->>Backend: Approve claim code "K7M2QP" for Unit ULID
+  Admin->>Backend: Approve claim code "K7M2QP4R" for Unit ULID
   Backend->>Backend: Update pending_units (status: approved)
 
   Note over Robot: Stage 3: Secret Handover Verification
@@ -41,7 +41,7 @@ sequenceDiagram
     Robot->>Backend: POST /enroll/status { fingerprint, nonce }
   end
   Backend->>Backend: Validate sha256(nonce) == stored nonce_hash
-  Backend->>Backend: Mint device_secret (random 64-byte token)
+  Backend->>Backend: Mint device_secret (32 random bytes, base64url)
   Backend->>Backend: Store bcrypt(device_secret) in unit_devices table
   Backend-->>Robot: HTTP 200 OK { unit_id, device_secret, initial_token }
   Robot->>Robot: Write Certificates/robot/device.json (mode 0600)
