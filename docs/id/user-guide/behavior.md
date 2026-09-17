@@ -98,7 +98,7 @@ Autopilot adalah cara Anda mengatakan "saya diizinkan untuk pergi." Dengan mode 
 
 - Robot tetap berjalan dengan **tanpa peramban yang terhubung sama sekali**.
 - Jeda akibat terputus, idle 10 menit, dan shutdown 30 menit semuanya ditangguhkan.
-- Robot itu sendiri yang mengambil alih untuk melangkah melalui waypoint Anda, bukan peramban yang melakukannya.
+- Robot itu sendiri yang mengambil alih untuk melangkah melalui titik henti Anda, bukan peramban yang melakukannya.
 - Logout **tidak** menghentikan proses yang berjalan.
 
 ```mermaid
@@ -136,11 +136,11 @@ sequenceDiagram
   Dashboard->>Robot: what are you doing?
   Robot-->>Dashboard: running a route on the Navigation tab
   Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which waypoint it is on
+  Robot-->>Dashboard: the full route, and which stop it is on
   Dashboard->>You: pins, map and progress restored
 ```
 
-Robot mengembalikan seluruh operasi: waypoint Anda, sedang di mana posisinya, peta, dan area
+Robot mengembalikan seluruh operasi: titik henti Anda, sedang di mana posisinya, peta, dan area
 cakupan apa pun. Tidak satu pun dari itu berasal dari peramban Anda, itulah sebabnya semuanya tetap bertahan di komputer yang berbeda.
 
 | Situasi | Yang Anda dapatkan kembali |

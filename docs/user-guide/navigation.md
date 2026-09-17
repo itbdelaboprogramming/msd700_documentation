@@ -18,7 +18,7 @@ The Navigation screen is where you drive and dispatch the robot on a map you've 
 
 Use manual control when you want to drive the robot yourself, step by step.
 
-1. Click the **Manual Control** button to activate it.
+1. Turn the **Manual Override** toggle ON in the Robot Control panel.
 2. Use the **W A S D** keys on your keyboard to drive:
    - **W**: move forward (`0.40 m/s`)
    - **S**: move backward
@@ -27,44 +27,44 @@ Use manual control when you want to drive the robot yourself, step by step.
 3. Release all keys (or click **Stop**) to halt the robot immediately.
 
 ::: info Note
-Manual control always takes priority over any automatic mission. If Autopilot is running, taking manual control will pause it.
+Manual Override always takes priority over any automatic mission: the two toggles are mutually exclusive, so turning it on pauses autonomous driving.
 :::
 
 ## Sending the Robot to a Point (Pinpoint)
 
-1. Make sure Manual Control is **off**.
+1. Make sure Manual Override is **OFF**.
 2. Click anywhere on the map where you want the robot to go.
-3. A pin appears at that location. Click **Go** (or confirm) to send the robot.
-4. The robot automatically plans a path and avoids obstacles along the way.
-5. Watch the **status bar** for progress: "Moving", "Arrived", or "Stuck" if something is blocking the way.
+3. A pin appears at that location. Confirm to send the robot.
+4. The robot automatically plans a path and steers around obstacles along the way.
+5. Watch the **status display** for progress: "On Progress", "Arrived", or "Robot Stuck" if something is blocking the way.
 
-You can also drop multiple pins in sequence: the robot visits them in order.
+You can queue several stops in order and save them as a reusable route (see [Routes & Coverage](/user-guide/routes-coverage)).
 
 ### Reading the Map Canvas
 
-While the robot is moving, the canvas overlays a few indicators worth knowing:
+While the robot is moving, the canvas shows a few indicators worth knowing:
 
 - **Blue line**: the planned path across the map.
-- **Green/red trajectory**: the short-range path the robot is actively following right now (up to a few meters ahead).
-- **Red dots**: live LiDAR points, showing what the robot currently sees.
-- **Translucent outline around the robot**: its safety footprint; the path planner keeps this clear of obstacles.
+- **Green/red short path**: the few meters the robot is actively following right now.
+- **Red dots**: what the robot's sensor currently sees around it.
+- **Translucent outline around the robot**: its safety zone; the robot keeps this clear of obstacles.
 
 ## Auto Align
 
 If the robot's position on the map looks slightly off (for example, after moving it by hand), use **Auto Align** to correct it without spinning in place:
 
 1. Click **Auto Align** on the toolbar.
-2. The robot matches its live LiDAR scan against the map to fine-tune its position, usually in well under a second, without moving. In a symmetric corridor it may jog a few centimeters forward and back to disambiguate heading.
+2. The robot compares what its sensor sees with the saved map to fix its position, usually in under a second and without moving.
 3. Wait for the confirmation message before sending a new goal.
 
 ## Autopilot (Unattended Missions)
 
-Autopilot lets the robot run a pre-planned route or playlist on its own, even if you close the browser tab.
+Autopilot keeps a running, unattended operation alive on the robot even after you close the browser tab — whether that's a route you're driving through or an [Operation Playlist](/user-guide/routes-coverage) sweep.
 
-1. Select a saved [route or playlist](/user-guide/routes-coverage).
-2. Click **Start Autopilot**.
-3. The robot works through each waypoint automatically. You can close the dashboard: the mission keeps running on the robot itself.
-4. To stop early, reopen the dashboard and click **Stop Autopilot**.
+1. Start the operation: load a saved route and click **Play**, or open **Operation Playlist** and click **Run Playlist**.
+2. Turn the **Autopilot** toggle ON in the Robot Control panel.
+3. The robot keeps working through it automatically. You can close the dashboard: the mission keeps running on the robot itself.
+4. To stop early, reopen the dashboard and turn **Autopilot** OFF (you'll be asked to confirm).
 
 ## Pausing and Resuming
 
@@ -78,7 +78,7 @@ Autopilot lets the robot run a pre-planned route or playlist on its own, even if
 : Something is blocking the planned path. Check the live camera, clear the obstacle if possible, then click Resume.
 
 **Clicking on the map does nothing**
-: Manual Control may still be active: turn it off first, or check that you're connected to the correct robot (see the connection indicator).
+: Manual Override may still be ON: turn it off first, or check that you're connected to the correct robot (see the connection indicator).
 
 **Robot pauses before turning instead of spinning on the spot**
 : This is expected: the planner prefers a safe path over turning in place. Give it a moment to find its way.

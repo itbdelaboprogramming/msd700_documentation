@@ -18,7 +18,7 @@ The **ROS Web UI** dashboard is the operator interface for the MSD700 platform, 
 
 With the ROS Web UI, you can:
 
-- **Create Maps**: Drive the robot through a new area to automatically build a digital floor plan (SLAM)
+- **Create Maps**: Drive the robot through a new area to automatically build a digital floor plan
 - **Navigate**: Click anywhere on a map to send the robot to that location with obstacle avoidance
 - **Cover Areas**: Draw zones and command the robot to systematically sweep entire rooms or corridors
 - **Monitor Live**: Watch the robot's camera feed in real time with ultra-low latency streaming
@@ -68,7 +68,7 @@ flowchart LR
 
 ## System Requirements
 
-- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge (modern Chromium-based browser with WebRTC support).
+- **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge.
 - **Desktop only**: Use a laptop or desktop with a window at least 1366 x 768. Phones and tablets are blocked with a full-page notice, and smaller desktop windows are covered by a blocking overlay: a half-visible control bar must never drive a live robot.
 - **Network**: Internet access for the cloud dashboard (`msd.nglobal.jp`), or a local Wi-Fi connection when operating robots offline in the field.
 

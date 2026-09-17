@@ -21,28 +21,29 @@ Sebelum memulai, pastikan Anda memiliki:
 ## Langkah 1: Masuk ke Dashboard
 
 1. Buka peramban Anda dan navigasikan ke: `https://msd.nglobal.jp`.
-2. Masukkan nama pengguna dan kata sandi Anda, lalu klik **Sign In**.
+2. Masukkan nama pengguna dan kata sandi Anda, lalu klik **Proceed**.
 
 ```mermaid
 flowchart LR
-  LOGIN["1. Sign In at msd.nglobal.jp"] --> FLEET["2. Fleet Overview Page"]
-  FLEET --> SELECT["3. Select Assigned Unit"]
-  SELECT --> NAV["4. Open Navigation Workspace"]
+  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
+  FLEET --> SELECT["3. Click Start"]
+  SELECT --> NAV["4. Navigation or Mapping Opens"]
 ```
 
 ---
 
 ## Langkah 2: Pilih Unit Robot
 
-Setelah masuk, **Fleet Dashboard** menampilkan semua robot yang ditetapkan ke profil penyewaan Anda:
+Setelah masuk, sebuah tabel menampilkan semua robot yang ditetapkan ke profil penyewaan Anda:
 
-| Lencana Status | Arti | Aksi yang Diizinkan |
+| Status | Arti | Yang Harus Dilakukan |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | Robot aktif, terhubung, dan siap menerima perintah. | Klik kartu unit untuk membuka dashboard. |
-| <Badge type="warning" text="In Use" /> | Operator lain sedang terhubung aktif. | Anda dapat membuka unit dalam mode lihat saja atau meminta pengambilalihan kendali. |
-| <Badge type="danger" text="Offline" /> | Robot mati atau terputus dari jaringan. | Tunggu unit terhubung kembali atau periksa daya perangkat keras. |
+| **Ready** | Robot terhubung dan bebas. | Pilih barisnya dan klik **Start**. |
+| **In Use** | Operator lain sedang mengendalikannya. | Tunggu, atau koordinasikan dengan mereka. |
+| **Pinging** | Dashboard masih memeriksa statusnya. | Tunggu beberapa detik; status akan terbarui otomatis. |
+| **Not Set** | Robot tidak bisa dijangkau saat ini. | Tunggu hingga terhubung kembali atau periksa daya perangkat keras. |
 
-Klik kartu robot mana pun yang berstatus **Online** untuk masuk ke ruang kerja kendalinya.
+Pilih baris berstatus **Ready** dan klik **Start**: dashboard akan membuka [Navigasi](/id/user-guide/navigation) (atau [Pemetaan](/id/user-guide/mapping), jika itu yang sedang dilakukan robot).
 
 ---
 
@@ -53,10 +54,10 @@ Antarmuka operator dibagi menjadi tiga panel operasional utama:
 ```mermaid
 flowchart TD
   subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["Panel Kanan Bawah: Kontrol & Telemetri<br/>Drive Keyboard WASD (Shift = lambat), Mode Selector, Goal Dispatcher"]
+    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
+    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
+    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
+    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
 ```
 
@@ -64,9 +65,9 @@ flowchart TD
 
 ## Langkah 4: Memuat Peta
 
-1. Pada header panel kiri, klik dropdown **Select Map**.
-2. Pilih peta yang sudah direkam sebelumnya dari daftar (misalnya `Warehouse_Floor_1`).
-3. Denah lantai 2D ditampilkan pada kanvas beserta posisi robot saat ini (ikon lingkaran biru dengan panah arah).
+1. Buka peta dari halaman **Database** (atau pemilih peta di layar Navigasi).
+2. Pilih peta tersimpan (misalnya `Warehouse_Floor_1`).
+3. Denah lantai 2D ditampilkan pada kanvas beserta posisi robot saat ini (ikon robot dengan panah arah).
 
 ::: tip Tidak ada peta yang tersedia?
 Jika tidak ada peta dalam dropdown, lihat [Pemetaan](/id/user-guide/mapping) untuk membuat peta pertama Anda.
@@ -101,7 +102,7 @@ flowchart LR
 
 Untuk mengirim robot ke tujuan target secara otonom:
 
-1. Klik tombol **Navigate Goal** pada toolbar kanvas.
+1. Klik **Single Pinpoint** pada toolbar kanvas.
 2. Klik titik tujuan yang diinginkan pada peta.
 3. Klik dan seret ke luar untuk mengatur arah panah heading target, lalu lepaskan.
 4. Robot menghitung jalur global bebas tabrakan (garis biru) dan menavigasi secara otonom ke target.

@@ -16,18 +16,18 @@ The Admin Console is only visible to accounts with **Administrator** access. It'
 
 ## Units & Fleet
 
-The Admin Console itself has four tabs: **Operators**, **Rentals**, **Backups**, and **Admins** (superadmin only). There is no separate Units tab: robots appear in the **fleet list** you see right after logging in.
+The **Units** tab has two views: **Fleet** (every registered robot) and **Pending** (new robots waiting for approval).
 
-- **Status**: Online, Offline, or In Use, updated live.
-- **Battery**: Current charge level.
-- Click a unit to connect to it and see its details, including which rental it currently belongs to.
+- A brand-new robot shows up under **Pending** first. An administrator reviews it there and clicks **Register** (or **Adopt**) to accept it into the fleet. Registering alone grants nobody access: who may drive it is decided by its rental assignment.
+- The **Fleet** view lists every registered robot: which rental it's rented to, its operator and map counts, when it was registered, and per-unit actions (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). It doesn't show live connection status — that's only in the operator's unit table.
+- Operators see the same robots in the unit table right after logging in: select a **Ready** row and click **Start** to connect.
 
 ## Rentals
 
 A **rental** groups together the maps, routes, and operators associated with a specific site or contract.
 
 1. Go to **Rentals** to see all active rental profiles.
-2. Click **New Rental** to set up a new site, then assign robots and operators to it.
+2. Create a new rental profile to set up a new site, then assign robots and operators to it.
 3. Use **Backup** on a rental to archive all of its maps and routes: useful before making major changes or ending a contract.
 
 ## Backups

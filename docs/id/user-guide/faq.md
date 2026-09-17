@@ -12,7 +12,7 @@ Jawaban untuk pertanyaan operasional umum mengenai platform robotik MSD700.
 ---
 
 ::: details 1. Apa yang dirancang untuk dilakukan robot MSD700?
-MSD700 adalah platform robot mobile otonom yang dirancang untuk pemetaan lingkungan (SLAM), transportasi titik-ke-titik otonom, dan cakupan area sistematis (misalnya pembersihan lantai, disinfeksi, atau pemindaian permukaan) di fasilitas indoor seperti gudang, koridor kantor, dan pabrik industri.
+MSD700 adalah robot self-driving untuk ruang indoor seperti gudang, koridor kantor, dan pabrik. Robot ini membangun denah peta sambil berjalan, menjalankan perjalanan titik-ke-titik secara mandiri, dan mencakup area secara sistematis (misalnya untuk pembersihan atau inspeksi).
 :::
 
 ::: details 2. Saya sudah masuk ke dashboard, tetapi daftar armada kosong. Mengapa?
@@ -28,18 +28,15 @@ Tidak. Untuk menjamin keselamatan, setiap robot diatur oleh **lease operasi eksk
 ::: details 4. Apa yang terjadi jika laptop saya kehilangan Wi-Fi atau tertutup saat robot sedang bergerak?
 Sistem merespons berdasarkan mode operasi yang aktif:
 - **Mode Manual Standar / Navigasi**: Jika robot kehilangan kontak dengan peramban Anda selama **10 detik**, ia secara otomatis menjalankan **Safety Motion Pause** dan berhenti sambil tetap menyimpan misi di memori. Menyambungkan kembali peramban Anda secara otomatis melanjutkan misi.
-- **Mode Autopilot ON**: Jika Autopilot diaktifkan, robot mengabaikan terputusnya peramban dan secara otonom menyelesaikan seluruh urutan waypoint atau playlist cakupan area sebelum kembali ke homebase-nya.
+- **Mode Autopilot ON**: Jika Autopilot diaktifkan, robot mengabaikan terputusnya peramban dan menyelesaikan seluruh rute atau playlist-nya secara mandiri sebelum kembali ke homebase-nya.
 :::
 
 ::: details 5. Apa itu titik Homebase dan mengapa penting?
-Saat membuat peta selama sesi SLAM, mengklik **Set Homebase Here** merekam koordinat stasiun docking fisik robot $(x=0, y=0, \theta=0)$. Playlist otomatis di masa mendatang menggunakan koordinat ini untuk secara otomatis menavigasikan robot kembali ke stasiun pengisian dayanya setelah menyelesaikan misi.
+Di mana pun robot berdiri saat Anda klik Play untuk memulai peta baru, itu menjadi home base peta tersebut (posisi nol). Jadi parkirkan dulu di titik pengisian daya atau docking-nya. Playlist di masa mendatang menggunakan titik ini untuk secara otomatis mengirim robot kembali ke stasiun pengisian dayanya saat sebuah misi selesai. Jika lupa, Anda bisa memperbaikinya nanti dari [Navigasi](/id/user-guide/navigation) dengan **Set Home Base**.
 :::
 
 ::: details 6. Bagaimana robot menangani dinding kaca, cermin, atau area terjun (drop-off)?
-Sinar LiDAR 2D/3D optik dapat menembus kaca bening atau memantul dari cermin reflektif, yang dapat menyebabkan batas tak terlihat pada peta SLAM mentah. Untuk melindungi robot:
-1. Buka peta di dashboard.
-2. Gunakan alat **Keep-Out Zone** untuk menggambar batas eksklusi virtual berwarna merah di sepanjang semua partisi kaca dan area terjun.
-3. Perencana gerak memperlakukan garis virtual ini sebagai dinding padat yang tidak dapat ditembus.
+Sensor robot dapat menembus kaca bening atau menjadi bingung karena cermin, sehingga dinding kaca bisa hilang dari peta. Untuk melindungi robot, gambar **Avoided Area** di atas semua partisi kaca dan area terjun (lihat [Rute & Cakupan](/id/user-guide/routes-coverage)): robot akan memperlakukan zona itu sebagai area terlarang.
 :::
 
 ::: details 7. Seberapa cepat robot berjalan?

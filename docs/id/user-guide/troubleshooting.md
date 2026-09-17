@@ -23,13 +23,13 @@ Untuk error server tingkat rendah, log kontainer Docker, atau diagnostik driver 
 flowchart TD
   START["Identify Operator Issue"] --> Q1{"Can you see the live<br/>2D Map Canvas?"}
 
-  Q1 -->|No| MAP_BLANK["1. Check Map Selector<br/>Select map from dropdown.<br/>Refresh browser to reload rosbridge."]
+  Q1 -->|No| MAP_BLANK["1. Check Map Selector<br/>Open a map from the Database page.<br/>Refresh browser to reload the connection."]
   Q1 -->|Yes| Q2{"Is the Live Camera Video<br/>streaming smoothly?"}
 
   Q2 -->|No| CAM_STALL["2. Camera Stalled<br/>Click video refresh icon.<br/>Check robot Wi-Fi bandwidth."]
   Q2 -->|Yes| Q3{"Does the robot accept<br/>Navigation Goals?"}
 
-  Q3 -->|No| GOAL_FAIL["3. Goal Rejected / Aborted<br/>Check if goal is in grey/black zone.<br/>Verify robot position with Auto-Align."]
+  Q3 -->|No| GOAL_FAIL["3. Goal Rejected / Aborted<br/>Goal is inside a wall or too close to one.<br/>Check robot position with Auto-Align."]
   Q3 -->|Yes| Q4{"Is the 'Robot Stuck'<br/>banner displayed?"}
 
   Q4 -->|Yes| STUCK_CHK["4. Robot Stuck Warning<br/>Check camera for dynamic obstacle.<br/>Cancel goal and jog robot manually."]
@@ -43,12 +43,12 @@ flowchart TD
 ### 1. Kanvas Peta Kosong atau Loading Spinner Tanpa Henti
 - **Gejala**: Halaman navigasi terbuka, tetapi area tengah tetap berupa layar abu-abu gelap dengan loader berputar.
 - **Kemungkinan Penyebab**:
-  - Belum ada peta aktif yang dipilih untuk unit ini.
-  - Koneksi WebSocket peramban ke `rosbridge` sempat terputus sementara.
+  - Belum ada peta yang terbuka untuk unit ini saat ini.
+  - Koneksi langsung peramban ke robot sempat terputus sementara.
 - **Tindakan Operator**:
-  1. Lihat dropdown **Select Map** di kiri atas. Jika menampilkan "No Map Loaded", klik dan pilih peta fasilitas Anda.
+  1. Buka peta fasilitas Anda dari halaman **Database** (atau pemilih peta di layar Navigasi).
   2. Jika peta sudah dipilih tetapi masih kosong, refresh tab peramban Anda (`Ctrl + F5` atau `Cmd + Shift + R`).
-  3. Verifikasi bahwa lencana status unit di header menampilkan **Online** (hijau).
+  3. Verifikasi bahwa lencana koneksi di header menampilkan **Connected** (hijau).
 
 ---
 
@@ -56,9 +56,9 @@ flowchart TD
 - **Gejala**: Jendela kamera menampilkan frame beku, roda berputar, atau kotak hitam.
 - **Kemungkinan Penyebab**:
   - Kehilangan paket sementara pada tautan Wi-Fi antara robot dan server.
-  - Peramban memblokir negosiasi WebRTC ICE.
+  - Peramban memblokir koneksi video.
 - **Tindakan Operator**:
-  1. Klik ikon kecil **Refresh Stream** di header kamera.
+  1. Klik **Restart camera** (atau **Try Again**) jika muncul di atas video; jika tidak, feed akan tersambung ulang secara otomatis setelah beberapa saat.
   2. Jika menggunakan Chrome, pastikan akselerasi perangkat keras diaktifkan di pengaturan peramban.
   3. Jika beroperasi di jaringan fasilitas lokal tanpa internet, pastikan Anda terhubung ke Wi-Fi lokal robot dan mengakses `http://<unit-ip>:3000`.
 
@@ -67,24 +67,24 @@ flowchart TD
 ### 3. Goal Navigasi Dibatalkan / Robot Menolak Bergerak
 - **Gejala**: Anda mengatur 2D Nav Goal atau memulai rute, tetapi robot berbunyi bip dan status langsung berubah dari `On Progress` kembali ke `Idle` atau `Goal Aborted`.
 - **Kemungkinan Penyebab**:
-  - Titik tujuan berada di dalam dinding hitam, di dalam halangan, atau dalam buffer inflasi mematikan (dalam jarak 0,575 m dari dinding).
-  - Robot kehilangan koordinat lokalisasinya terhadap peta.
+  - Titik tujuan berada di dalam dinding, di dalam halangan, atau terlalu dekat dengan dinding. Bidik area lantai yang terbuka lebar.
+  - Robot tidak lagi tahu posisinya di peta.
 - **Tindakan Operator**:
   1. Klik goal di ruang kosong terbuka yang luas (area abu-abu terang), jauh dari dinding dan tiang.
-  2. Klik tombol **Auto Align** pada toolbar untuk menyinkronkan ulang pemindaian LiDAR robot dengan peta statis.
+  2. Klik tombol **Auto Align** pada toolbar untuk mencocokkan apa yang dilihat sensor dengan peta tersimpan.
   3. Jika Auto-Align gagal, kendarai robot maju 0,5 meter secara manual lalu picu ulang Auto-Align.
 
 ---
 
 ### 4. Banner "Robot Stuck" Tidak Kunjung Hilang
-- **Gejala**: Banner kuning kecoklatan (amber) di bagian atas kanvas bertuliskan "Robot Stuck: Recovery in Progress".
+- **Gejala**: Banner kuning kecoklatan (amber) bertuliskan "Robot Stuck - Please adjust the robot position manually".
 - **Kemungkinan Penyebab**:
-  - Seseorang, forklift, atau kotak yang baru diletakkan menghalangi jalur trajektori yang direncanakan.
+  - Seseorang, forklift, atau kotak yang baru diletakkan menghalangi jalur yang direncanakan.
   - Robot mencoba sesi penyapuan cakupan area di koridor sempit yang lebih kecil dari 1,15 meter.
 - **Tindakan Operator**:
-  1. Periksa feed kamera langsung dan titik LiDAR merah pada kanvas untuk mencari halangan fisik terdekat.
+  1. Periksa feed kamera langsung dan titik sensor merah pada kanvas untuk mencari halangan terdekat.
   2. Jika jalur terhalang oleh objek sementara, tunggu 10 detik; perencana lokal secara otomatis mengarahkan robot mengelilingi halangan setelah jalur terbuka.
-  3. Jika robot tidak dapat mengatasi kebuntuan itu, klik **Pause / Cancel Goal**, beralih ke **Manual Drive**, dan kendarai robot ke ruang lantai terbuka sebelum melanjutkan.
+  3. Jika robot tidak dapat mengatasi kebuntuan itu, klik **Pause**, nyalakan **Manual Override**, dan kendarai robot ke ruang lantai terbuka sebelum melanjutkan.
 
 ---
 
@@ -128,5 +128,5 @@ flowchart TD
 
 Jika langkah-langkah di atas tidak menyelesaikan masalah:
 1. Hubungi **Teknisi Lapangan** di lokasi Anda untuk memeriksa daya perangkat keras fisik dan sensor.
-2. Berikan ULID robot kepada teknisi (ditampilkan di header dashboard, misalnya `01JZ8P9WZ...`).
+2. Berikan ID robot kepada teknisi (ditampilkan di header dashboard).
 3. Arahkan teknisi ke [Panduan Pemecahan Masalah Teknisi](/id/setup/troubleshooting).

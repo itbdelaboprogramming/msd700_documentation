@@ -11,33 +11,33 @@ search: false
 
 The **MSD700** is an industrial-grade autonomous mobile robot designed and manufactured by **Nakayama Iron Works Ltd.** The **ROS Web UI** dashboard used to operate it is developed by **ITB de Labo**. It is specifically engineered to perform autonomous environmental mapping, point-to-point navigation, and systematic area coverage in complex indoor environments such as warehouses, office corridors, tunnels, and open industrial floors.
 
-Equipped with 360-degree 3D LiDAR sensors, inertial measurement units (IMUs), and high-resolution optical cameras, the robot builds centimeter-accurate occupancy grid maps in real time using Simultaneous Localization and Mapping (SLAM).
+Equipped with a 360-degree laser sensor and a camera, the robot builds an accurate digital floor plan in real time as you drive it around. (The technique is called SLAM: the robot figures out where it is while drawing the map.)
 
 ```mermaid
 flowchart LR
-  subgraph PhysicalRobot["MSD700 Robot Hardware"]
-    SENSORS["3D LiDAR & 9-DOF IMU<br/>Optical Encoders & HD Camera"]
-    CHASSIS["Heavy-Duty Differential Drive<br/>4 Passive Swivel Casters"]
+  subgraph PhysicalRobot["MSD700 Robot"]
+    SENSORS["Laser Sensor & Camera"]
+    CHASSIS["Sturdy Wheels<br/>for Indoor Floors"]
   end
 
   subgraph CloudPlatform["Cloud Dashboard & Fleet Hub"]
     MAPS["Map & Route Database"]
-    RENTALS["Rental Profiles & Tenancy"]
-    LIVE["Real-Time Canvas & Telemetry"]
+    RENTALS["Rental Profiles"]
+    LIVE["Live Map & Robot Status"]
   end
 
-  PhysicalRobot <-->|"Encrypted TLS Link"| CloudPlatform
+  PhysicalRobot <-->|"Secure Link"| CloudPlatform
 ```
 
 ## Key Operator Capabilities
 
-1. **Simultaneous Localization and Mapping (SLAM)**: Drive the robot through a new environment to create a 2D floorplan.
-2. **Point-to-Point Navigation**: Click anywhere on the map to dispatch the robot to that location with autonomous obstacle avoidance.
-3. **Boustrophedon Area Sweeps**: Draw polygons around rooms or corridors and command the robot to sweep the entire floor area systematically in parallel lanes.
-4. **Automated Mission Playlists**: Chain multiple waypoint routes and cleaning areas into unattended sequence playlists.
-5. **Zero-Spin Heading Alignment (Auto-Align)**: Place the robot in a mapped room and align its position instantly without disruptive 360-degree rotations.
-6. **Live HD Video Streaming**: Monitor the robot's point-of-view in real time through ultra-low latency WebRTC streaming.
-7. **Offline Standalone Operation**: When working in remote facilities without internet access, connect directly to the robot's local Wi-Fi to use the full dashboard offline.
+1. **Mapping**: Drive the robot through a new space to create a digital floor plan.
+2. **Point-to-Point Navigation**: Click anywhere on the map to send the robot there; it steers around obstacles on its own.
+3. **Area Sweeps**: Outline a room or corridor and the robot cleans or scans the whole zone lane by lane.
+4. **Mission Playlists**: Chain several routes and zones into one unattended sequence.
+5. **Auto-Align**: If the robot's position on the map looks off, fix it in place without spinning the robot around.
+6. **Live Video**: Watch what the robot sees in real time.
+7. **Offline Operation**: No internet on site? Connect directly to the robot's Wi-Fi and use the full dashboard.
 
 ## System Architecture for Users
 
@@ -45,14 +45,14 @@ The system is composed of two primary layers:
 
 | Layer | Component | User Interaction |
 | --- | --- | --- |
-| **Cloud Dashboard** | Central Server (`https://msd.nglobal.jp`) | The central web application where you log in, manage maps, assign routes, and monitor fleet status across all rented robots. |
-| **Physical Robot (Unit)** | Onboard Jetson Computer | The physical machine executing your navigation goals. Each unit has a unique identifier (ULID) and connects securely to the cloud. |
+| **Cloud Dashboard** | Central Server (`https://msd.nglobal.jp`) | The website where you log in, manage maps, assign routes, and check all rented robots. |
+| **Physical Robot (Unit)** | Onboard Computer | The machine that carries out your commands. Each robot has a unique ID and connects securely to the cloud. |
 
 ## User Roles and Access
 
 Access to robots is governed by **Rental Profiles**:
 
-- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and monitor telemetry.
+- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and watch robot status.
 - **Lab Administrators**: Manage tenant rental profiles, provision operator accounts, and approve new hardware robot registrations.
 
 ## Next Steps

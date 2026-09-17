@@ -12,7 +12,7 @@ Answers to common operational questions regarding the MSD700 robotic platform.
 ---
 
 ::: details 1. What is the MSD700 robot designed to do?
-The MSD700 is an autonomous mobile robot platform designed for environmental mapping (SLAM), autonomous point-to-point transport, and systematic area coverage (e.g. floor cleaning, disinfection, or surface scanning) in indoor facilities such as warehouses, office corridors, and industrial plants.
+The MSD700 is a self-driving robot for indoor spaces like warehouses, office corridors, and plants. It builds floor plans as it drives, carries out point-to-point trips on its own, and systematically covers zones (e.g. for cleaning or inspection).
 :::
 
 ::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
@@ -28,18 +28,15 @@ No. To ensure safety, each robot is governed by an **exclusive operating lease**
 ::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
 The system responds based on the active operating mode:
 - **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
-- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and autonomously completes its entire waypoint sequence or area coverage playlist before returning to its homebase.
+- **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and finishes its whole route or playlist on its own before returning to its homebase.
 :::
 
 ::: details 5. What is the Homebase point and why is it important?
-When creating a map during a SLAM session, clicking **Set Homebase Here** records the robot's physical docking station coordinates $(x=0, y=0, \theta=0)$. Future automated playlists use this coordinate to automatically navigate the robot back to its charging station upon completing a mission.
+Wherever the robot is standing when you click Play to start a new map becomes that map's home base (position zero). So park it at its charging or docking spot first. Future playlists use this point to send the robot back to its charging station automatically when a mission finishes. If you forget, you can correct it later from [Navigation](/user-guide/navigation) with **Set Home Base**.
 :::
 
 ::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?
-Optical 2D/3D LiDAR beams can penetrate clear glass or scatter off reflective mirrors, which may cause invisible boundaries on a raw SLAM map. To protect the robot:
-1. Open the map in the dashboard.
-2. Use the **Keep-Out Zone** tool to draw virtual red exclusion boundaries along all glass partitions and drop-offs.
-3. The motion planner treats these virtual lines as solid impenetrable walls.
+The robot's sensor can see through clear glass or get confused by mirrors, so glass walls may be missing from the map. To protect the robot, draw an **Avoided Area** over all glass partitions and drop-offs (see [Routes & Coverage](/user-guide/routes-coverage)): the robot will treat that zone as off-limits.
 :::
 
 ::: details 7. How fast does the robot drive?

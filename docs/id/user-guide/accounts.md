@@ -9,10 +9,10 @@ search: false
 ## Masuk (Login)
 
 1. Buka URL dashboard di browser Anda (tanyakan alamatnya ke administrator jika belum punya).
-2. Masukkan **email/username** dan **password** Anda.
-3. Klik **Masuk**.
+2. Masukkan **username** dan **password** Anda.
+3. Klik **Proceed**.
 
-Jika belum punya akun, klik **Daftar** dan isi data Anda. Administrator armada mungkin perlu menyetujui akun Anda atau menetapkan Anda ke suatu penyewaan sebelum Anda bisa melihat robot mana pun.
+Jika belum punya akun, klik **Sign Up** dan isi username, nama lengkap, email, dan password (dua kali untuk konfirmasi). Administrator harus menetapkan akun baru Anda ke suatu penyewaan sebelum robot mana pun muncul untuk Anda.
 
 ## Operator vs. Administrator
 
@@ -29,7 +29,7 @@ Peran Anda ditetapkan oleh administrator: Anda tidak bisa mengubahnya sendiri.
 
 Jika akun Anda memiliki akses ke lebih dari satu robot, Anda akan melihat daftar setelah login:
 
-1. Setiap robot menampilkan **nama**, **status** (Online / Offline / Sedang Digunakan), dan level baterai.
+1. Setiap robot menampilkan **nama**, **status** (Ready / In Use / Pinging / Not Set), dan level baterai.
 2. Klik sebuah robot untuk terhubung.
 3. Jika sebuah robot menampilkan **"In Use"**, ada sesi lain yang sedang mengendalikannya: Anda tetap bisa membukanya, tetapi untuk mengendarai Anda harus mengambil alih secara eksplisit. Dialog ("This unit is already being operated from …") menawarkan **Take over control** (sesi lain diakhiri secara terlihat) atau **Leave it running**.
 
@@ -43,12 +43,12 @@ Jika Anda berada di lokasi fasilitas tanpa akses internet, Anda tetap bisa mengg
 
 ## Keluar (Logout)
 
-Klik nama akun Anda di pojok atas, lalu **Keluar**. Jika robot sedang menjalankan misi tanpa pengawasan (Autopilot), logout **tidak** menghentikannya: misi tetap berjalan agar tidak terganggu secara tidak sengaja.
+Logout **tidak** menghentikan misi tanpa pengawasan (Autopilot) yang sedang berjalan: misi tetap berjalan agar tidak terganggu secara tidak sengaja.
 
 ## Pemecahan Masalah
 
-**"Kredensial tidak valid" saat login**
-: Periksa kembali email dan password Anda. Jika lupa password, hubungi administrator.
+**"The username or password you entered is incorrect"**
+: Periksa kembali username dan password Anda. Jika lupa password, hubungi administrator. (Jika halaman malah menyebut server tidak terjangkau, bukan berarti ada yang salah dengan yang Anda ketik: periksa koneksi Anda.)
 
 **Tidak ada robot yang muncul setelah login**
 : Akun Anda mungkin belum ditetapkan ke penyewaan mana pun. Hubungi administrator untuk ditambahkan.

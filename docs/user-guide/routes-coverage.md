@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="user" />
 
-Once you have a map, you can save reusable **routes** (a sequence of points) and **areas** (a zone to sweep), then chain them into a **playlist** the robot runs automatically.
+Once you have a map, you can save reusable **routes** (a sequence of pins) and **areas** (a zone to sweep). Saved areas can also be chained into an **Operation Playlist** that sweeps all of them in one run.
 
 ## Saving a Route
 
@@ -25,7 +25,7 @@ Coverage areas tell the robot to systematically sweep an entire zone: for exampl
 3. In the save dialog, choose the area type: **Covered Area** (the robot sweeps it) or **Avoided Area** (the robot stays out of it entirely, e.g. around glass partitions or drop-offs).
 4. Enter an area name and click **Save**.
 
-The robot will plan an efficient back-and-forth (boustrophedon) sweep pattern that covers the full zone while avoiding any keep-out areas.
+The robot will plan an efficient back-and-forth sweep pattern that covers the full zone while staying out of any Avoided Areas.
 
 ::: tip Getting full coverage
 Adjacent sweep passes overlap so no strip is missed. For the fewest turns, draw the area so its long edge roughly matches the direction you'd naturally sweep the room in.
@@ -38,27 +38,27 @@ Adjacent sweep passes overlap so no strip is missed. For the fewest turns, draw 
 3. The robot sweeps the area lane by lane. Progress is shown as a percentage or a highlighted overlay on the map.
 4. When finished, the status changes to **Complete**.
 
-## Building a Playlist
+## Building an Operation Playlist
 
-A playlist chains multiple routes and coverage areas into one unattended sequence.
+An Operation Playlist chains multiple saved **areas** into one run — it doesn't include routes, only cover and avoided areas.
 
-1. Go to **Playlists** and click **New Playlist**.
-2. Add routes and/or coverage areas in the order you want them run.
-3. Optionally set a pause (dwell time) at a specific waypoint, for example to wait 30 seconds at an inspection checkpoint.
-4. Save the playlist with a descriptive name.
-5. From [Navigation](/user-guide/navigation), select the playlist and click **Start Autopilot** to run the whole sequence automatically.
+1. Click **Operation Playlist** on the Navigation toolbar.
+2. Add cover areas from your saved areas, in the order you want them swept (drag to reorder). Add any avoided areas too: they apply as keep-outs across the whole run, not as a sequence step.
+3. Type a name and click **Save New** (or pick an existing playlist and click **Update**; rename it with the pencil icon, or **Delete** it).
+4. Click **Run Playlist** to sweep the whole sequence in one dispatch. At least one cover area is required — a playlist made only of avoided areas is rejected before it reaches the robot.
+5. To keep the run going after you close the dashboard, turn on **Autopilot** in the Robot Control panel.
 
 ## Renaming or Deleting
 
-Double-click a route, area, or playlist name to rename it (duplicate names are handled automatically). Use the delete icon to remove one you no longer need.
+Double-click a route, area, or playlist name to rename it (duplicate names are handled automatically). Use the delete icon (or the **Delete** button, for playlists) to remove one you no longer need.
 
 ## Troubleshooting
 
 **Robot skips part of the area**
-: A keep-out zone may overlap the coverage area. Review the area's shape and any overlapping keep-out zones.
+: An Avoided Area may overlap the coverage zone. Review the area's shape and any overlapping Avoided Areas.
 
 **Coverage sweep stops early / shows "Complete" but the area looks unfinished**
 : The robot may have given up after repeated obstacles blocked its path. Check the live camera for anything blocking the aisle, clear it, and re-run coverage.
 
-**Playlist doesn't continue to the next item**
-: Make sure Autopilot is still active: pausing manually will pause the whole playlist, not just the current step. Click Resume to continue.
+**"Save New" / "Run Playlist" is disabled**
+: A playlist needs at least one cover area and a name before it can be saved or run; avoided areas alone aren't enough.

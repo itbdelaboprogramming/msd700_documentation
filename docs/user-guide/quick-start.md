@@ -21,28 +21,29 @@ Before starting, ensure you have:
 ## Step 1: Log In to the Dashboard
 
 1. Open your browser and navigate to: `https://msd.nglobal.jp`.
-2. Enter your username and password, then click **Sign In**.
+2. Enter your username and password, then click **Proceed**.
 
 ```mermaid
 flowchart LR
-  LOGIN["1. Sign In at msd.nglobal.jp"] --> FLEET["2. Fleet Overview Page"]
-  FLEET --> SELECT["3. Select Assigned Unit"]
-  SELECT --> NAV["4. Open Navigation Workspace"]
+  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
+  FLEET --> SELECT["3. Click Start"]
+  SELECT --> NAV["4. Navigation or Mapping Opens"]
 ```
 
 ---
 
 ## Step 2: Select a Robot Unit
 
-After logging in, the **Fleet Dashboard** displays all robots assigned to your rental profile:
+After logging in, a table lists all robots assigned to your rental profile:
 
-| Status Badge | Meaning | Action Allowed |
+| Status | Meaning | What to do |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | Robot is active, connected, and ready for commands. | Click unit card to open dashboard. |
-| <Badge type="warning" text="In Use" /> | Another operator is actively connected. | You may open the unit in view mode or request control takeover. |
-| <Badge type="danger" text="Offline" /> | Robot is powered down or disconnected from the network. | Wait for the unit to reconnect or check hardware power. |
+| **Ready** | Robot is connected and free. | Select its row and click **Start**. |
+| **In Use** | Another operator is driving it. | Wait, or coordinate with them. |
+| **Pinging** | The dashboard is still checking on it. | Wait a few seconds; it updates automatically. |
+| **Not Set** | Robot can't be reached right now. | Wait for it to reconnect or check hardware power. |
 
-Click on any **Online** robot card to enter its control workspace.
+Select a **Ready** row and click **Start**: the dashboard opens [Navigation](/user-guide/navigation) (or [Mapping](/user-guide/mapping), if that is what the robot is doing).
 
 ---
 
@@ -53,10 +54,10 @@ The operator interface is divided into three main operational panels:
 ```mermaid
 flowchart TD
   subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["Bottom Right Panel: Controls & Telemetry<br/>WASD Keyboard Drive (Shift = slow), Mode Selector, Goal Dispatcher"]
+    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
+    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
+    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
+    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
 ```
 
@@ -64,9 +65,9 @@ flowchart TD
 
 ## Step 4: Load a Map
 
-1. In the left panel header, click the **Select Map** dropdown.
-2. Choose a pre-recorded map from the list (e.g. `Warehouse_Floor_1`).
-3. The 2D floorplan renders on the canvas along with the robot's current position (blue circular icon with direction arrow).
+1. Open a map from the **Database** page (or the map selector on the Navigation screen).
+2. Choose a saved map (e.g. `Warehouse_Floor_1`).
+3. The 2D floor plan appears on the canvas along with the robot's current position (robot icon with direction arrow).
 
 ::: tip No map available?
 If no maps exist in the dropdown, see [Mapping](/user-guide/mapping) to create your first map.
@@ -101,7 +102,7 @@ flowchart LR
 
 To send the robot to a target destination autonomously:
 
-1. Click the **Navigate Goal** button on the canvas toolbar.
+1. Click **Single Pinpoint** on the canvas toolbar.
 2. Click on the desired destination point on the map.
 3. Click and drag outward to orient the target heading arrow, then release.
 4. The robot calculates a collision-free global path (blue line) and navigates autonomously to the target.

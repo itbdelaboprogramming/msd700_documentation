@@ -10,13 +10,12 @@ The Live Camera view streams the robot's onboard video feed directly to your bro
 
 ## Opening the Live View
 
-1. From the main menu (or from the Navigation screen), click the **camera icon**.
-2. The video feed loads within a few seconds. A small indicator shows the connection quality.
+On the Navigation (or Mapping) screen, the **Camera - Front View** panel sits beside the map. The video feed loads within a few seconds.
 
 ## Using the Live View
 
 - **Full screen**: Click the expand icon to fill your screen with the video for a clearer view.
-- **Picture-in-picture**: Keep the camera open in a small window while working on the map, so you can watch and navigate at the same time.
+- **Watch while navigating**: The camera stays visible next to the map, so you can watch and drive at the same time.
 
 ## When to Use It
 

@@ -23,13 +23,13 @@ search: false
 flowchart TD
   START["Identify Operator Issue"] --> Q1{"Can you see the live<br/>2D Map Canvas?"}
 
-  Q1 -->|No| MAP_BLANK["1. Check Map Selector<br/>Select map from dropdown.<br/>Refresh browser to reload rosbridge."]
+  Q1 -->|No| MAP_BLANK["1. Check Map Selector<br/>Open a map from the Database page.<br/>Refresh browser to reload the connection."]
   Q1 -->|Yes| Q2{"Is the Live Camera Video<br/>streaming smoothly?"}
 
   Q2 -->|No| CAM_STALL["2. Camera Stalled<br/>Click video refresh icon.<br/>Check robot Wi-Fi bandwidth."]
   Q2 -->|Yes| Q3{"Does the robot accept<br/>Navigation Goals?"}
 
-  Q3 -->|No| GOAL_FAIL["3. Goal Rejected / Aborted<br/>Check if goal is in grey/black zone.<br/>Verify robot position with Auto-Align."]
+  Q3 -->|No| GOAL_FAIL["3. Goal Rejected / Aborted<br/>Goal is inside a wall or too close to one.<br/>Check robot position with Auto-Align."]
   Q3 -->|Yes| Q4{"Is the 'Robot Stuck'<br/>banner displayed?"}
 
   Q4 -->|Yes| STUCK_CHK["4. Robot Stuck Warning<br/>Check camera for dynamic obstacle.<br/>Cancel goal and jog robot manually."]
@@ -43,12 +43,12 @@ flowchart TD
 ### 1. マップキャンバスが空白、または読み込みスピナーが終わらない
 - **症状**: ナビゲーションページは開くものの、中央エリアが暗いグレーの画面のままで、スピナーが回り続けます。
 - **考えられる原因**:
-  - このユニットに対してアクティブなマップが選択されていません。
-  - `rosbridge` へのブラウザWebSocket接続が一時的に中断されました。
+  - このユニットに対して現在開いているマップがありません。
+  - ロボットへのブラウザのライブ接続が一時的に中断されました。
 - **オペレーターが行う操作**:
-  1. 左上の **Select Map** ドロップダウンを確認します。「No Map Loaded」と表示されている場合はクリックして施設のマップを選択します。
+  1. **Database** ページ(またはナビゲーション画面のマップ選択)から施設のマップを開きます。
   2. マップは選択済みだが空白のままの場合は、ブラウザタブをリロードします(`Ctrl + F5` または `Cmd + Shift + R`)。
-  3. ヘッダーのユニットステータスバッジが **Online**(緑)と表示されていることを確認します。
+  3. ヘッダーの接続バッジが **Connected**(緑)と表示されていることを確認します。
 
 ---
 
@@ -56,9 +56,9 @@ flowchart TD
 - **症状**: カメラウィンドウにフリーズしたフレーム、回転するホイール、または黒い矩形が表示されます。
 - **考えられる原因**:
   - ロボットとサーバー間のWi-Fiリンクでの一時的なパケットロス。
-  - ブラウザがWebRTCのICEネゴシエーションをブロックしています。
+  - ブラウザが映像接続をブロックしています。
 - **オペレーターが行う操作**:
-  1. カメラヘッダーにある小さな **Refresh Stream** アイコンをクリックします。
+  1. 映像の上に **Restart camera**(または **Try Again**)が表示されていればクリックします。表示されていない場合は、しばらくすると自動的に再接続されます。
   2. Chromeを使用している場合は、ブラウザ設定でハードウェアアクセラレーションが有効になっていることを確認します。
   3. インターネットのないローカル施設ネットワークで運用している場合は、ロボットのローカルWi-Fiに接続し、`http://<unit-ip>:3000` にアクセスしていることを確認します。
 
@@ -67,24 +67,24 @@ flowchart TD
 ### 3. ナビゲーションゴールが中断される / ロボットが動こうとしない
 - **症状**: 2D Nav Goalを設定するかルートを開始しても、ロボットがビープ音を鳴らし、ステータスが直ちに `On Progress` から `Idle` または `Goal Aborted` に戻ります。
 - **考えられる原因**:
-  - 目的地点が黒い壁の内側、障害物の内側、または致死インフレーションバッファ内(壁から0.575 m以内)にあります。
-  - ロボットがマップに対する自己位置推定座標を失っています。
+  - 目的地点が壁の内側、障害物の内側、または壁に近すぎる位置にあります。広く開けた床エリアを狙ってください。
+  - ロボットがマップ上の自己位置を見失っています。
 - **オペレーターが行う操作**:
   1. 壁や柱から十分に離れた、広く開けた空きスペース(明るいグレーの領域)にゴールを設定します。
-  2. ツールバーの **Auto Align** ボタンをクリックし、ロボットのLiDARスキャンを静的マップと再同期させます。
+  2. ツールバーの **Auto Align** ボタンをクリックし、センサーで見えているものを保存済みのマップと照合します。
   3. Auto-Alignが失敗する場合は、ロボットを手動で0.5メートル前進させてからAuto-Alignを再実行します。
 
 ---
 
 ### 4. 「Robot Stuck」バナーが消えない
-- **症状**: キャンバス上部にアンバー色のバナーで「Robot Stuck: Recovery in Progress」と表示されます。
+- **症状**: アンバー色のバナーで「Robot Stuck - Please adjust the robot position manually」と表示されます。
 - **考えられる原因**:
-  - 人、フォークリフト、または新しく置かれた箱が計画された走行経路を塞いでいます。
+  - 人、フォークリフト、または新しく置かれた箱が計画された経路を塞いでいます。
   - ロボットが1.15メートルより狭い通路でエリアカバレッジ清掃を試みています。
 - **オペレーターが行う操作**:
-  1. ライブカメラ映像とキャンバス上の赤いLiDARドットを確認し、近くに物理的な障害物がないか調べます。
+  1. ライブカメラ映像とキャンバス上の赤いセンサードットを確認し、近くに障害物がないか調べます。
   2. 一時的な物体によって経路が塞がれている場合は10秒待ちます。ローカルプランナーは経路が開き次第、自動的に障害物を回避します。
-  3. ロボットが詰まりを解消できない場合は、**Pause / Cancel Goal** をクリックし、**Manual Drive** に切り替え、再開する前にロボットを開けた床スペースへジョグ操作で移動させます。
+  3. ロボットが詰まりを解消できない場合は、**Pause** をクリックし、**Manual Override** を ON にして、再開する前にロボットを開けた床スペースへジョグ操作で移動させます。
 
 ---
 
@@ -128,5 +128,5 @@ flowchart TD
 
 上記の手順で問題が解決しない場合:
 1. 現地の**フィールド技術者**に連絡し、物理ハードウェアの電源とセンサーを点検してもらいます。
-2. ロボットのULID(ダッシュボードヘッダーに表示、例: `01JZ8P9WZ...`)を技術者に伝えます。
+2. ロボットのID(ダッシュボードヘッダーに表示)を技術者に伝えます。
 3. 技術者を[技術者向けトラブルシューティングガイド](/ja/setup/troubleshooting)へ案内します。

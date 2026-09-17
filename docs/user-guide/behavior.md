@@ -98,7 +98,7 @@ Autopilot is how you say "I am allowed to walk away." With it on:
 
 - The robot keeps running with **no browser attached at all**.
 - The disconnect pause, the 10 minute idle and the 30 minute shutdown are all suspended.
-- The robot itself takes over stepping through your waypoints, instead of the browser doing it.
+- The robot itself takes over stepping through your stops, instead of the browser doing it.
 - Logging out does **not** stop the run.
 
 ```mermaid
@@ -136,11 +136,11 @@ sequenceDiagram
   Dashboard->>Robot: what are you doing?
   Robot-->>Dashboard: running a route on the Navigation tab
   Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which waypoint it is on
+  Robot-->>Dashboard: the full route, and which stop it is on
   Dashboard->>You: pins, map and progress restored
 ```
 
-The robot hands back the whole operation: your waypoints, which one it is on, the map, and any
+The robot hands back the whole operation: your stops, which one it is on, the map, and any
 coverage areas. None of that came from your browser, which is why it survives a different computer.
 
 | Situation | What you get back |

@@ -10,13 +10,12 @@ Tampilan Kamera Langsung menyiarkan rekaman video dari kamera robot langsung ke 
 
 ## Membuka Tampilan Langsung
 
-1. Dari menu utama (atau dari layar Navigasi), klik **ikon kamera**.
-2. Rekaman video akan termuat dalam beberapa detik. Indikator kecil menunjukkan kualitas koneksi.
+Di layar Navigasi (atau Pemetaan), panel **Camera - Front View** berada di samping peta. Rekaman video akan termuat dalam beberapa detik.
 
 ## Menggunakan Tampilan Langsung
 
 - **Layar penuh**: Klik ikon perbesar untuk memenuhi layar dengan video demi tampilan yang lebih jelas.
-- **Picture-in-picture**: Biarkan kamera tetap terbuka dalam jendela kecil sambil bekerja di peta, sehingga Anda bisa memantau dan bernavigasi secara bersamaan.
+- **Pantau sambil bernavigasi**: Kamera tetap terlihat di samping peta, sehingga Anda bisa memantau dan mengendarai robot secara bersamaan.
 
 ## Kapan Menggunakannya
 

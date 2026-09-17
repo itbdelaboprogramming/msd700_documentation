@@ -16,18 +16,18 @@ Konsol Admin hanya terlihat untuk akun dengan akses **Administrator**. Digunakan
 
 ## Unit & Armada
 
-Konsol Admin sendiri memiliki empat tab: **Operators**, **Rentals**, **Backups**, dan **Admins** (khusus superadmin). Tidak ada tab Unit tersendiri: robot muncul di **daftar armada (fleet list)** yang Anda lihat tepat setelah login.
+Tab **Units** memiliki dua tampilan: **Fleet** (semua robot yang sudah terdaftar) dan **Pending** (robot baru yang menunggu persetujuan).
 
-- **Status**: Online, Offline, atau In Use, diperbarui secara langsung.
-- **Baterai**: Level daya saat ini.
-- Klik sebuah unit untuk terhubung dan melihat detailnya, termasuk penyewaan mana yang saat ini menggunakannya.
+- Robot yang benar-benar baru muncul dulu di **Pending**. Administrator meninjaunya di sana dan klik **Register** (atau **Adopt**) untuk menerimanya ke dalam armada. Registrasi saja tidak memberi akses ke siapa pun: siapa yang boleh mengendarainya ditentukan oleh penetapan penyewaannya.
+- Tampilan **Fleet** mendaftar semua robot terdaftar: penyewaan mana yang menyewanya, jumlah operator dan peta, kapan didaftarkan, dan aksi per-unit (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). Tampilan ini tidak menunjukkan status koneksi langsung — itu hanya ada di tabel unit milik operator.
+- Operator melihat robot yang sama di tabel unit tepat setelah login: pilih baris berstatus **Ready** dan klik **Start** untuk terhubung.
 
 ## Penyewaan (Rental)
 
 **Penyewaan** mengelompokkan peta, rute, dan operator yang terkait dengan lokasi atau kontrak tertentu.
 
 1. Buka **Penyewaan** untuk melihat semua profil penyewaan aktif.
-2. Klik **Penyewaan Baru** untuk membuat lokasi baru, lalu tetapkan robot dan operator ke dalamnya.
+2. Buat profil penyewaan baru untuk mendirikan lokasi baru, lalu tetapkan robot dan operator ke dalamnya.
 3. Gunakan **Backup** pada suatu penyewaan untuk mengarsipkan semua peta dan rutenya: berguna sebelum melakukan perubahan besar atau mengakhiri kontrak.
 
 ## Backup

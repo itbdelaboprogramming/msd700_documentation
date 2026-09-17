@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="user" />
 
-Setelah memiliki peta, Anda bisa menyimpan **rute** (urutan titik) dan **area** (zona untuk disapu) yang bisa dipakai ulang, lalu merangkainya menjadi **playlist** yang dijalankan robot secara otomatis.
+Setelah memiliki peta, Anda bisa menyimpan **rute** (urutan pin) dan **area** (zona untuk disapu) yang bisa dipakai ulang. Area tersimpan juga bisa dirangkai menjadi **Operation Playlist** yang menyapu semuanya dalam satu kali jalan.
 
 ## Menyimpan Rute
 
@@ -25,7 +25,7 @@ Area cakupan memberi tahu robot untuk menyapu seluruh zona secara sistematis: mi
 3. Pada dialog penyimpanan, pilih jenis area: **Covered Area** (robot menyapunya) atau **Avoided Area** (robot tidak memasukinya sama sekali, misalnya di sekitar partisi kaca atau area terjun).
 4. Masukkan nama area lalu klik **Save**.
 
-Robot akan merencanakan pola penyapuan bolak-balik (boustrophedon) yang efisien untuk mencakup seluruh zona sambil menghindari area larangan.
+Robot akan merencanakan pola penyapuan bolak-balik yang efisien untuk mencakup seluruh zona sambil tetap menghindari Avoided Area.
 
 ::: tip Agar cakupan penuh
 Jalur sapuan yang bersebelahan saling tumpang tindih sehingga tidak ada bagian yang terlewat. Agar belokan seminimal mungkin, gambar area sedemikian rupa sehingga sisi terpanjangnya kurang lebih sejajar dengan arah penyapuan alami ruangan.
@@ -38,27 +38,27 @@ Jalur sapuan yang bersebelahan saling tumpang tindih sehingga tidak ada bagian y
 3. Robot menyapu area jalur demi jalur. Progres ditampilkan sebagai persentase atau overlay yang disorot pada peta.
 4. Setelah selesai, status berubah menjadi **Selesai**.
 
-## Membangun Playlist
+## Membangun Operation Playlist
 
-Playlist merangkai beberapa rute dan area cakupan menjadi satu urutan tanpa pengawasan.
+Operation Playlist merangkai beberapa **area** tersimpan menjadi satu kali jalan — tidak termasuk rute, hanya area cover dan avoided.
 
-1. Buka **Playlist** dan klik **Playlist Baru**.
-2. Tambahkan rute dan/atau area cakupan sesuai urutan yang diinginkan.
-3. Atur jeda (waktu tunggu) opsional pada waypoint tertentu, misalnya menunggu 30 detik di titik pemeriksaan inspeksi.
-4. Simpan playlist dengan nama yang deskriptif.
-5. Dari [Navigasi](/id/user-guide/navigation), pilih playlist tersebut dan klik **Mulai Autopilot** untuk menjalankan seluruh urutan secara otomatis.
+1. Klik **Operation Playlist** pada toolbar Navigasi.
+2. Tambahkan area cover dari daftar area tersimpan Anda, sesuai urutan penyapuan yang diinginkan (seret untuk mengubah urutan). Tambahkan juga area avoided bila perlu: area ini berlaku sebagai keep-out untuk seluruh proses, bukan sebagai langkah berurutan.
+3. Ketik nama lalu klik **Save New** (atau pilih playlist yang sudah ada dan klik **Update**; ganti nama lewat ikon pensil, atau **Delete** untuk menghapus).
+4. Klik **Run Playlist** untuk menyapu seluruh urutan dalam satu kali dispatch. Minimal satu area cover diperlukan — playlist yang hanya berisi area avoided akan ditolak sebelum sampai ke robot.
+5. Agar tetap berjalan setelah Anda menutup dashboard, nyalakan **Autopilot** di panel Robot Control.
 
 ## Mengganti Nama atau Menghapus
 
-Klik dua kali pada nama rute, area, atau playlist untuk mengganti namanya (nama duplikat ditangani otomatis). Gunakan ikon hapus untuk menghilangkan yang sudah tidak diperlukan.
+Klik dua kali pada nama rute, area, atau playlist untuk mengganti namanya (nama duplikat ditangani otomatis). Gunakan ikon hapus (atau tombol **Delete** untuk playlist) untuk menghilangkan yang sudah tidak diperlukan.
 
 ## Pemecahan Masalah
 
 **Robot melewati sebagian area**
-: Zona larangan mungkin tumpang tindih dengan area cakupan. Periksa bentuk area dan zona larangan yang mungkin tumpang tindih.
+: Sebuah Avoided Area mungkin tumpang tindih dengan zona cakupan. Periksa bentuk area dan Avoided Area yang mungkin tumpang tindih.
 
 **Penyapuan cakupan berhenti lebih awal / menampilkan "Selesai" tapi area terlihat belum tuntas**
 : Robot mungkin menyerah setelah berulang kali terhalang rintangan. Periksa kamera langsung untuk melihat sesuatu yang menghalangi lorong, singkirkan, lalu jalankan ulang cakupan.
 
-**Playlist tidak lanjut ke item berikutnya**
-: Pastikan Autopilot masih aktif: menjeda secara manual akan menjeda seluruh playlist, bukan hanya langkah saat ini. Klik Lanjutkan untuk melanjutkan.
+**"Save New" / "Run Playlist" tidak bisa diklik**
+: Playlist butuh minimal satu area cover dan sebuah nama sebelum bisa disimpan atau dijalankan; area avoided saja tidak cukup.

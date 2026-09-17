@@ -21,28 +21,29 @@ search: false
 ## ステップ1: ダッシュボードにログイン
 
 1. ブラウザを開き、`https://msd.nglobal.jp` にアクセスします。
-2. ユーザー名とパスワードを入力し、**Sign In** をクリックします。
+2. ユーザー名とパスワードを入力し、**Proceed** をクリックします。
 
 ```mermaid
 flowchart LR
-  LOGIN["1. Sign In at msd.nglobal.jp"] --> FLEET["2. Fleet Overview Page"]
-  FLEET --> SELECT["3. Select Assigned Unit"]
-  SELECT --> NAV["4. Open Navigation Workspace"]
+  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
+  FLEET --> SELECT["3. Click Start"]
+  SELECT --> NAV["4. Navigation or Mapping Opens"]
 ```
 
 ---
 
 ## ステップ2: ロボットユニットを選択
 
-ログイン後、**Fleet Dashboard** にレンタルプロファイルへ割り当てられたすべてのロボットが表示されます。
+ログイン後、テーブルにレンタルプロファイルへ割り当てられたすべてのロボットが表示されます。
 
-| ステータスバッジ | 意味 | 実行可能な操作 |
+| ステータス | 意味 | すべきこと |
 | --- | --- | --- |
-| <Badge type="tip" text="Online" /> | ロボットはアクティブで接続済み、コマンド受付可能です。 | ユニットカードをクリックしてダッシュボードを開きます。 |
-| <Badge type="warning" text="In Use" /> | 他のオペレーターがアクティブに接続中です。 | 閲覧モードでユニットを開くか、制御権の引き継ぎをリクエストできます。 |
-| <Badge type="danger" text="Offline" /> | ロボットの電源が切れているか、ネットワークから切断されています。 | ユニットが再接続するのを待つか、ハードウェアの電源を確認してください。 |
+| **Ready** | ロボットは接続済みで空いています。 | その行を選択して **Start** をクリックします。 |
+| **In Use** | 他のオペレーターが操作中です。 | 待つか、相手と調整してください。 |
+| **Pinging** | ダッシュボードがまだ確認中です。 | 数秒待ってください。自動的に更新されます。 |
+| **Not Set** | ロボットに現在到達できません。 | 再接続を待つか、ハードウェアの電源を確認してください。 |
 
-**Online** 状態のロボットカードをクリックすると、その制御ワークスペースに入ります。
+**Ready** の行を選んで **Start** をクリックすると、ダッシュボードが [ナビゲーション](/ja/user-guide/navigation)(またはロボットがマッピング中であれば [マッピング](/ja/user-guide/mapping))を開きます。
 
 ---
 
@@ -53,10 +54,10 @@ flowchart LR
 ```mermaid
 flowchart TD
   subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Voltage, Connection Quality, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floorplan, Robot Icon, LiDAR Points, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Low-Latency Video Stream with Zoom/Pan"]
-    RIGHT_BOT["右下パネル: 操作 & テレメトリ<br/>WASDキーボード操作 (Shift = 低速)、モード選択、ゴール送信"]
+    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
+    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
+    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
+    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
 ```
 
@@ -64,9 +65,9 @@ flowchart TD
 
 ## ステップ4: マップを読み込む
 
-1. 左パネルのヘッダーで **Select Map** ドロップダウンをクリックします。
-2. リストから事前に記録済みのマップを選択します(例: `Warehouse_Floor_1`)。
-3. 2D床図がキャンバスにレンダリングされ、ロボットの現在位置(方向矢印付きの青い円形アイコン)も表示されます。
+1. **Database** ページ(またはナビゲーション画面のマップ選択)からマップを開きます。
+2. 保存済みのマップを選択します(例: `Warehouse_Floor_1`)。
+3. 2D床図がキャンバスに表示され、ロボットの現在位置(方向矢印付きのロボットアイコン)も表示されます。
 
 ::: tip 利用できるマップがない場合
 ドロップダウンにマップが存在しない場合は、[マッピング](/ja/user-guide/mapping)を参照して最初のマップを作成してください。
@@ -101,7 +102,7 @@ flowchart LR
 
 ロボットを目標地点へ自律的に移動させるには、以下を行います。
 
-1. キャンバスツールバーの **Navigate Goal** ボタンをクリックします。
+1. キャンバスツールバーの **Single Pinpoint** をクリックします。
 2. マップ上で目的の目標地点をクリックします。
 3. 外側にクリック&ドラッグして目標の向きの矢印を設定し、離します。
 4. ロボットは衝突のないグローバル経路(青い線)を計算し、目標地点まで自律的にナビゲートします。

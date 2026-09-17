@@ -98,7 +98,7 @@ timeline
 
 - ロボットは**ブラウザが一切接続されていない状態**でも走行を続けます。
 - 切断時の一時停止、10分のアイドル、30分のシャットダウンはすべて停止(一時的に無効化)されます。
-- ウェイポイントを進める処理は、ブラウザではなくロボット自身が引き継ぎます。
+- 停止ポイントを進める処理は、ブラウザではなくロボット自身が引き継ぎます。
 - ログアウトしても実行中のミッションは**停止しません**。
 
 ```mermaid
@@ -136,11 +136,11 @@ sequenceDiagram
   Dashboard->>Robot: what are you doing?
   Robot-->>Dashboard: running a route on the Navigation tab
   Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which waypoint it is on
+  Robot-->>Dashboard: the full route, and which stop it is on
   Dashboard->>You: pins, map and progress restored
 ```
 
-ロボットは操作全体を返します。ウェイポイント、現在どこにいるか、マップ、カバレッジエリアなど
+ロボットは操作全体を返します。停止ポイント、現在どこにいるか、マップ、カバレッジエリアなど
 すべてです。これらはいずれもあなたのブラウザ由来のものではないため、別のコンピュータでも
 そのまま引き継がれます。
 

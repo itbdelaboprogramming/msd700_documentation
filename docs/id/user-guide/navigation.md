@@ -18,7 +18,7 @@ Layar Navigasi adalah tempat Anda mengendarai dan mengirim robot pada peta yang 
 
 Gunakan kendali manual saat Anda ingin mengendarai robot sendiri, langkah demi langkah.
 
-1. Klik tombol **Kendali Manual** untuk mengaktifkannya.
+1. Nyalakan toggle **Manual Override** di panel Robot Control.
 2. Gunakan tombol **W A S D** pada keyboard untuk mengendarai:
    - **W**: maju (`0.40 m/s`)
    - **S**: mundur
@@ -27,44 +27,44 @@ Gunakan kendali manual saat Anda ingin mengendarai robot sendiri, langkah demi l
 3. Lepaskan semua tombol (atau klik **Stop**) untuk menghentikan robot seketika.
 
 ::: info Catatan
-Kendali manual selalu memiliki prioritas lebih tinggi dari misi otomatis apa pun. Jika Autopilot sedang berjalan, mengambil kendali manual akan menjeda Autopilot.
+Manual Override selalu memiliki prioritas lebih tinggi dari misi otomatis apa pun: kedua toggle saling eksklusif, jadi menyalakannya akan menjeda pergerakan otonom.
 :::
 
 ## Mengirim Robot ke Suatu Titik (Pinpoint)
 
-1. Pastikan Kendali Manual dalam keadaan **mati**.
+1. Pastikan Manual Override dalam keadaan **OFF**.
 2. Klik di mana saja pada peta ke tempat Anda ingin robot pergi.
-3. Sebuah pin akan muncul di lokasi tersebut. Klik **Go** (atau konfirmasi) untuk mengirim robot.
+3. Sebuah pin akan muncul di lokasi tersebut. Konfirmasi untuk mengirim robot.
 4. Robot secara otomatis merencanakan jalur dan menghindari rintangan sepanjang perjalanan.
-5. Perhatikan **status bar** untuk progres: "Bergerak", "Sampai", atau "Terjebak" jika ada sesuatu yang menghalangi jalan.
+5. Perhatikan **tampilan status** untuk progres: "On Progress", "Arrived", atau "Robot Stuck" jika ada sesuatu yang menghalangi jalan.
 
-Anda juga bisa menaruh beberapa pin secara berurutan: robot akan mengunjunginya sesuai urutan.
+Anda juga bisa mengantrekan beberapa titik henti secara berurutan dan menyimpannya sebagai rute yang bisa dipakai ulang (lihat [Rute & Cakupan](/id/user-guide/routes-coverage)).
 
 ### Membaca Kanvas Peta
 
 Saat robot bergerak, kanvas menampilkan beberapa indikator yang perlu diketahui:
 
 - **Garis biru**: jalur yang direncanakan pada peta.
-- **Trajektori hijau/merah**: jalur jarak pendek yang sedang aktif diikuti robot saat ini (hingga beberapa meter ke depan).
-- **Titik merah**: titik pantulan LiDAR langsung, menunjukkan apa yang sedang dilihat robot.
-- **Garis tembus pandang di sekeliling robot**: jejak keselamatannya; perencana jalur menjaga area ini tetap bebas dari rintangan.
+- **Jalur pendek hijau/merah**: beberapa meter yang sedang aktif diikuti robot saat ini.
+- **Titik merah**: apa yang sedang dilihat sensor robot di sekelilingnya.
+- **Garis tembus pandang di sekeliling robot**: zona keselamatannya; robot menjaga area ini tetap bebas dari rintangan.
 
 ## Auto Align
 
 Jika posisi robot pada peta terlihat sedikit meleset (misalnya setelah dipindahkan secara manual), gunakan **Auto Align** untuk mengoreksinya tanpa berputar di tempat:
 
 1. Klik **Auto Align** pada toolbar.
-2. Robot mencocokkan pemindaian LiDAR langsungnya dengan peta untuk menyempurnakan posisinya, biasanya dalam waktu kurang dari satu detik, tanpa bergerak. Di koridor simetris, robot mungkin bergerak maju-mundur beberapa sentimeter untuk memastikan arah hadapnya.
+2. Robot membandingkan apa yang dilihat sensornya dengan peta tersimpan untuk memperbaiki posisinya, biasanya dalam waktu kurang dari satu detik dan tanpa bergerak.
 3. Tunggu pesan konfirmasi sebelum mengirim tujuan baru.
 
 ## Autopilot (Misi Tanpa Pengawasan)
 
-Autopilot memungkinkan robot menjalankan rute atau playlist yang telah direncanakan secara mandiri, bahkan jika Anda menutup tab browser.
+Autopilot menjaga operasi tanpa pengawasan yang sedang berjalan tetap hidup di robot bahkan setelah Anda menutup tab browser — baik itu rute yang sedang Anda jalankan maupun sapuan [Operation Playlist](/id/user-guide/routes-coverage).
 
-1. Pilih [rute atau playlist](/id/user-guide/routes-coverage) yang tersimpan.
-2. Klik **Mulai Autopilot**.
-3. Robot akan menjalankan setiap titik secara otomatis. Anda bisa menutup dashboard: misi tetap berjalan di robot itu sendiri.
-4. Untuk menghentikan lebih awal, buka kembali dashboard dan klik **Hentikan Autopilot**.
+1. Mulai operasinya: muat rute tersimpan lalu klik **Play**, atau buka **Operation Playlist** dan klik **Run Playlist**.
+2. Nyalakan toggle **Autopilot** di panel Robot Control.
+3. Robot akan terus menjalankannya secara otomatis. Anda bisa menutup dashboard: misi tetap berjalan di robot itu sendiri.
+4. Untuk menghentikan lebih awal, buka kembali dashboard dan matikan toggle **Autopilot** (Anda akan diminta konfirmasi).
 
 ## Jeda dan Lanjutkan
 
@@ -78,7 +78,7 @@ Autopilot memungkinkan robot menjalankan rute atau playlist yang telah direncana
 : Ada sesuatu yang menghalangi jalur yang direncanakan. Periksa kamera langsung, singkirkan rintangan jika memungkinkan, lalu klik Lanjutkan.
 
 **Klik pada peta tidak berpengaruh apa-apa**
-: Kendali Manual mungkin masih aktif: matikan dulu, atau pastikan Anda terhubung ke robot yang benar (lihat indikator koneksi).
+: Manual Override mungkin masih ON: matikan dulu, atau pastikan Anda terhubung ke robot yang benar (lihat indikator koneksi).
 
 **Robot berhenti sejenak sebelum berbelok, bukan berputar di tempat**
 : Ini wajar: perencana lebih memilih jalur yang aman daripada berputar di tempat. Beri waktu sesaat agar robot menemukan jalannya.

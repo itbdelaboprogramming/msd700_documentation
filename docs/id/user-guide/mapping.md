@@ -10,16 +10,17 @@ Sebelum robot bisa bernavigasi di suatu ruangan, robot membutuhkan **peta** dari
 
 ## Memulai Peta Baru
 
-1. Dari menu utama, pilih **Pemetaan**.
-2. Klik **Peta Baru** dan beri nama (contoh: "Lantai 2 Gudang").
-3. Klik **Play** untuk mulai merekam.
+1. Bawa robot ke posisi pengisian daya atau parkir yang dituju terlebih dahulu: di mana pun robot berdiri saat Anda klik Play, itu akan menjadi **home base** peta ini, dipakai nanti untuk mengirimnya kembali ke sana secara otomatis.
+2. Dari menu utama, pilih **Pemetaan**.
+3. Klik **Buat Peta Baru** dan beri nama (contoh: "Lantai 2 Gudang").
+4. Klik **Play** untuk mulai merekam.
 
 ## Membangun Peta
 
 Anda bisa membangun peta dengan dua cara:
 
 - **Kendarai secara manual**: Gunakan tombol **W A S D** (tahan **Shift** untuk mode lambat `0.20 m/s`) untuk mengendarai robot perlahan mengelilingi seluruh area, termasuk sudut dan jalan buntu, agar tidak ada yang terlewat.
-- **Eksplorasi otonom**: Klik **Auto Explore** dan robot akan menjelajahi area secara mandiri, mundur otomatis jika merasa terjebak di sudut.
+- **Eksplorasi otonom**: Jalankan auto-explore dan robot akan menjelajahi area secara mandiri, mundur otomatis jika merasa terjebak di sudut. (Manual Override harus dalam keadaan mati: mengendarai sendiri selalu diprioritaskan.)
 
 Saat Anda mengendarai, peta akan terisi di layar secara real-time: dinding dan rintangan muncul sebagai garis gelap, lantai terbuka muncul dengan warna lebih terang.
 
@@ -28,10 +29,6 @@ Saat Anda mengendarai, peta akan terisi di layar secara real-time: dinding dan r
 - Klik **Pause** kapan saja untuk berhenti merekam dan memeriksa peta sejauh ini.
 - Klik **Play** lagi untuk melanjutkan dari titik terakhir: tidak ada yang hilang.
 - Kendarai kembali ke area tertentu jika bagian itu terlihat belum lengkap atau kurang jelas.
-
-## Menetapkan Homebase
-
-Sebelum menyimpan, kendarai robot kembali ke posisi awal atau pengisian daya yang dimaksud, lalu klik **Set Homebase Here** pada toolbar. Ini menandai titik acuan `(x=0, y=0)` yang nantinya dipakai playlist otomatis untuk mengirim robot kembali ke stasiun pengisian daya saat misi selesai.
 
 ## Menyimpan Peta
 
@@ -47,7 +44,7 @@ Menutup tab saat Play masih aktif dapat menghilangkan progres yang belum tersimp
 
 - Kendarai dengan kecepatan sedang dan stabil: terlalu cepat dapat mengaburkan pembacaan sensor.
 - Cakup setiap ruangan, koridor, dan pintu yang akan Anda lalui saat navigasi nanti.
-- Hindari permukaan yang sangat reflektif atau kaca jika memungkinkan; ini dapat membingungkan sensor LiDAR.
+- Hindari permukaan yang sangat reflektif atau kaca jika memungkinkan; ini dapat membingungkan sensor laser.
 - Jika sebuah ruangan terlihat tidak rapi atau tidak sejajar setelahnya, biasanya lebih cepat merekam ulang bagian tersebut daripada mencoba memperbaikinya secara manual.
 
 ## Pemecahan Masalah
@@ -60,3 +57,6 @@ Menutup tab saat Play masih aktif dapat menghilangkan progres yang belum tersimp
 
 **Tombol "Simpan" berwarna abu-abu (tidak bisa diklik)**
 : Pastikan perekaman sudah dihentikan (bukan hanya dijeda) dan peta sudah diberi nama.
+
+**Lupa memulai dari posisi pengisian daya**
+: Home base diambil dari posisi robot saat Anda klik Play. Anda tidak perlu merekam ulang: buka peta di [Navigasi](/id/user-guide/navigation), kendarai robot ke posisi yang benar, lalu gunakan **Set Home Base** pada toolbar untuk memperbaruinya.
