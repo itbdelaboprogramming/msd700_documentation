@@ -134,6 +134,41 @@ from a new workstation, not just the high-level behavior.
    reports `idle` across 4 consecutive ~1 Hz ping samples (`PHANTOM_IDLE_SAMPLES = 4`), the frontend automatically resets to
    `idle` to prevent phantom execution displays.
 
+### Logout ends the session, unless autopilot is on
+
+The two logout contracts are deliberately opposite, and both hinge on the robot's `autopilot` flag
+as reported by the pre-flight peek ping.
+
+- **Autopilot ON**: logout keeps the unit bridge and the run. Nothing is torn down; the next login is
+  routed back and rebuilds the operation from the latched snapshot.
+- **Autopilot OFF**: logout ends the run. `shutdownFlow.ts` sends `POST /api/hardware/idle` before
+  `/user/logout` (`endRobotOperation`, skipped for autonomous runs and for the emergency stop). This
+  is a deliberate sign-out, so the next login starts from zero.
+
+Ending the run means clearing **every** piece of state the recovery path reads, and three sinks
+used to disagree:
+
+| State sink | On non-autopilot logout |
+| --- | --- |
+| `operation_supervisor` batch | `_idle_system` publishes `{"type":"stop"}` so the latched snapshot (and its disk mirror) no longer describes an active run. |
+| Robot active mode | `_idle_system` must call `robot_state.set_active_mode(None)`, not just `update_activity("idle")`. |
+| Backend intended operation | `POST /api/hardware/idle` must call `setUnitIntendedState(unit_id, 'idle', null, ...)`. |
+
+::: warning The robot activity alone does not decide routing
+`derive_active_page()` falls back to the robot's remembered `active_mode` whenever the raw activity
+is not itself a mapping/navigation label. Setting the activity to `idle` while leaving the mode set
+therefore still reports `active_page='mapping'` or `'navigation'` on the next ping, and
+`resolveActiveRoute()` sends the returning operator straight back into the map session the logout
+just ended. The explicit-logout handler in `system_command.py` was missing the `set_active_mode(None)`
+call that the 10-minute ping-timeout idle switch already made.
+:::
+
+Leaving the backend's persisted `intended_mode`/`map_id` set has the same effect one layer up:
+Navigation's auto-resume treats `intended_map_id` as a map candidate, so the old map can be re-opened
+even after the robot has reported `idle`. Clearing it matches what the emergency stop and navigation
+deactivate paths already do, and it does not touch autopilot retention, which never reaches this
+endpoint.
+
 ### What triggers a snapshot rebuild
 
 The rebuild is not limited to a brand-new tab. It runs whenever the tab has no local session worth
