@@ -293,6 +293,7 @@ The live host has extra blocks not shown here (MQTT WebSocket, webhook, legacy d
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
 | `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | Docs deploy hook (in `apache-snippet.conf`, not the main block) |
+| `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | ros-web-ui auto-deploy hook, see [Auto-deploy](#auto-deploy-on-push) |
 | `/itbdelabo/docs` | exclusion + `Alias` to `dist/` | Must stay above the catch-all |
 | `/` | `http://localhost:3000/` | Dashboard frontend, **must be last** |
 
@@ -357,6 +358,72 @@ docker compose --profile server_dev up -d
 Dev ports: MySQL `3308`, backend `5001`, HiveMQ `8884`, rosbridge `9091`, ROS master `11312` (prod `11311`), frontend `3100`, media `4003`, signalling `4001` WS / `4002` HTTP.
 
 Dev uses the separate `jwt_keyring.dev.json` but the same keystore file as prod. `coturn` stays production-only.
+
+</details>
+
+<details id="auto-deploy-on-push">
+<summary><b>Auto-deploy on push (GitHub webhook)</b></summary>
+
+A push or merged PR rebuilds and re-ups the matching stack on its own:
+
+| Branch | Checkout | Profile |
+| --- | --- | --- |
+| `main` | `~/ITBdeLabo/Production/ros-web-ui` | `server_prod` |
+| `develop` | `~/ITBdeLabo/Development/ros-web-ui` | `server_dev` |
+
+Pushes to `ros-web-ui` **and** `ROS-dashboard-next-ts` both trigger it, since the frontend is built from the nested dashboard clone. Other branches are ignored.
+
+```mermaid
+flowchart LR
+  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
+  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
+  L -->|verify HMAC| D[deploy.sh]
+  D --> G[git ff-only pull<br>repo + dashboard]
+  G --> B[compose build]
+  B --> U[compose up -d]
+```
+
+Code lives in `ros-web-ui/scripts/autodeploy/`; the full guide is `ros-web-ui/Documentation/auto-deploy.md`.
+
+**One-time setup** (the listener runs from the Production checkout, so the files must be on `main` first):
+
+```bash
+cd ~/ITBdeLabo/Production/ros-web-ui
+
+# 1. Secret (gitignored)
+cp scripts/autodeploy/webhook.env.example scripts/autodeploy/webhook.env
+chmod 600 scripts/autodeploy/webhook.env
+openssl rand -hex 32   # paste into WEBHOOK_SECRET=
+
+# 2. Service
+sudo cp scripts/autodeploy/rosweb-autodeploy-webhook.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rosweb-autodeploy-webhook
+curl http://127.0.0.1:4702/health   # ok
+
+# 3. Apache: add scripts/autodeploy/apache-snippet.conf above `ProxyPass /`
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+4. In **both** GitHub repos, go to Settings → Webhooks → Add webhook. Payload URL `https://msd.nglobal.jp/services/rosweb-deploy-webhook`, content type `application/json`, the same secret, push event only. The first delivery should be `200 pong`.
+
+**Operating it:**
+
+```bash
+tail -f ~/ITBdeLabo/Production/ros-web-ui/logs/autodeploy/deploy.log   # or Development/
+journalctl -u rosweb-autodeploy-webhook -f                            # incoming hooks
+
+# Manual deploy from the matching checkout; FORCE=1 rebuilds with no new commits
+FORCE=1 scripts/autodeploy/deploy.sh develop server_dev
+```
+
+A deploy **aborts without touching anything** when the checkout is on the wrong branch, has local edits to tracked files, or can't fast-forward. A failed `build` skips `up`, so the old containers keep running. Only one build runs at a time; pushes arriving mid-build queue and pick up the latest commit.
+
+::: warning Never add `down` or `--remove-orphans`
+Both checkouts are directories named `ros-web-ui`, so they share one compose project name. Each stack sees the other's containers as orphans, and `--remove-orphans` from dev deletes production.
+:::
+
+Any change under `source/` recreates every app container in that profile (they share one image), so connected robots drop briefly.
 
 </details>
 
