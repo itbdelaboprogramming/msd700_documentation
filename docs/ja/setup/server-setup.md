@@ -293,6 +293,7 @@ sudo systemctl restart apache2
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
 | `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`、`Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | ドキュメント配備フック(主ブロックでなく `apache-snippet.conf` 内) |
+| `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | ros-web-ui 自動デプロイフック。[自動デプロイ](#auto-deploy-on-push)参照 |
 | `/itbdelabo/docs` | 除外 + `dist/` への `Alias` | キャッチオールより上に維持必須 |
 | `/` | `http://localhost:3000/` | ダッシュボードフロントエンド、**必ず最後** |
 
@@ -357,6 +358,110 @@ docker compose --profile server_dev up -d
 開発ポート: MySQL `3308`、バックエンド`5001`、HiveMQ `8884`、rosbridge `9091`、ROSマスター`11312`(本番`11311`)、フロントエンド`3100`、メディア`4003`、シグナリング`4001` WS / `4002` HTTP。
 
 開発は別ファイル`jwt_keyring.dev.json`を使いますが、キーストアファイルは本番と共通です。`coturn`は本番専用のままです。
+
+</details>
+
+<details id="auto-deploy-on-push">
+<summary><b>push時の自動デプロイ (GitHub webhook)</b></summary>
+
+push または PR のマージで、対応するスタックが自動的に再ビルド・再起動されます。
+
+| ブランチ | チェックアウト | プロファイル |
+| --- | --- | --- |
+| `main` | `~/ITBdeLabo/Production/ros-web-ui` | `server_prod` |
+| `develop` | `~/ITBdeLabo/Development/ros-web-ui` | `server_dev` |
+
+フロントエンドはリポジトリ内のダッシュボードのクローンからビルドされるため、`ros-web-ui` と `ROS-dashboard-next-ts` の **両方** の push でトリガーされます。その他のブランチは無視されます。
+
+```mermaid
+flowchart LR
+  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
+  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
+  L -->|HMAC検証| D[deploy.sh]
+  D --> G[git ff-only pull<br>repo + dashboard]
+  G --> B[compose build]
+  B --> U[compose up -d]
+```
+
+リスナーは GitHub に即座に `202` を返し、`deploy.sh` をバックグラウンドで実行します。そのため catkin + Next.js の長いビルドでも GitHub の webhook タイムアウト(10秒)に掛かりません。
+
+ファイルはすべて `ros-web-ui/scripts/autodeploy/` にあります。
+
+| ファイル | 役割 |
+| --- | --- |
+| `webhook-listener.mjs` | webhook 受信(Node、依存なし) |
+| `deploy.sh` | git 同期 + build + up。手動実行も可 |
+| `rosweb-autodeploy-webhook.service` | systemd ユニット |
+| `apache-snippet.conf` | Apache 用 `ProxyPass` ブロック |
+| `webhook.env.example` | 設定テンプレート(secret、ポート、パス) |
+| `webhook.env` | 実際の設定。**gitignore 対象**、サーバー上で手動作成 |
+
+各チェックアウトは `logs/autodeploy/deploy.log`(gitignore 対象)にログを書きます。
+
+**初回セットアップ**(リスナーは Production チェックアウトから動くため、先に `main` にファイルが入っている必要があります):
+
+```bash
+cd ~/ITBdeLabo/Production/ros-web-ui
+
+# 1. シークレット(gitignore 対象)
+cp scripts/autodeploy/webhook.env.example scripts/autodeploy/webhook.env
+chmod 600 scripts/autodeploy/webhook.env
+openssl rand -hex 32   # WEBHOOK_SECRET= に貼り付け
+
+# 2. サービス
+sudo cp scripts/autodeploy/rosweb-autodeploy-webhook.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rosweb-autodeploy-webhook
+curl http://127.0.0.1:4702/health   # ok
+
+# 3. Apache: scripts/autodeploy/apache-snippet.conf を `ProxyPass /` より上に追加
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+4. **両方** の GitHub リポジトリで Settings → Webhooks → Add webhook。Payload URL `https://msd.nglobal.jp/services/rosweb-deploy-webhook`、content type `application/json`、同じ secret、push イベントのみ。最初の配信が `200 pong` になれば OK です。
+
+**運用:**
+
+```bash
+tail -f ~/ITBdeLabo/Production/ros-web-ui/logs/autodeploy/deploy.log   # または Development/
+journalctl -u rosweb-autodeploy-webhook -f                            # 受信した webhook
+
+# 該当チェックアウトから手動デプロイ。FORCE=1 で新規コミットがなくても再ビルド
+FORCE=1 scripts/autodeploy/deploy.sh develop server_dev
+```
+
+失敗した webhook は GitHub → Settings → Webhooks → Recent Deliveries → **Redeliver** で再送できます。
+
+チェックアウトのブランチが違う、追跡ファイルにローカル変更がある、fast-forward できない場合、デプロイは **何も変更せずに中止** します。`build` が失敗すると `up` はスキップされ、旧コンテナが動き続けます。ビルドは同時に1つだけで、ビルド中に来た push は待機した後に最新コミットを取り込みます。
+
+::: warning `down` や `--remove-orphans` は絶対に追加しない
+両チェックアウトはどちらも `ros-web-ui` というディレクトリ名のため、compose プロジェクト名が同じです。互いのコンテナを orphan と見なすので、dev から `--remove-orphans` を実行すると本番コンテナが削除されます。
+:::
+
+注意点:
+
+- `source/` 以下の変更は、そのプロファイルのアプリコンテナをすべて再作成します(`nakayama_cloud*`、`unit_relays*`、`nakayama_media*`、`nakayama_signalling*` は同じイメージを共有)。接続中のロボットは一時的に切断されます。`db`、`hivemq`、`coturn` は compose 上の設定が変わった場合のみ再作成されます。ユニット別の `rosweb_unit_*` コンテナは触りません(`unit_manager.js` が管理)。
+- ロック `/tmp/rosweb-autodeploy.lock` は prod と dev で共有され、待機中の push は最大2時間待ちます。
+- `deploy.sh` の変更は *次回* のデプロイから有効です(マージは旧スクリプト実行中に行われるため)。各チェックアウトは自分のコピーを実行するので、変更はまず develop で試されます。
+- `webhook-listener.mjs` の変更後は `sudo systemctl restart rosweb-autodeploy-webhook` が必要です。`KillMode=process` により実行中のビルドは再起動で止まりません。
+- git は `itbdelabo` ユーザーの SSH 鍵(`~/.ssh`、agent なし)を使います。鍵の変更やパスフレーズ設定で `git fetch` が失敗します。
+- nvm の node パスはユニットの `ExecStart` にハードコードされています(`msd700-docs-webhook.service` と同様)。node を変えたら更新してください。
+- `.env` は git 管理下で pull により更新されます。ホスト固有の値は追跡されない `docker-compose.override.yml` に置いてください。
+
+| 症状 | 確認 |
+| --- | --- |
+| 配信 `401 bad signature` | GitHub の secret が `WEBHOOK_SECRET` と不一致。`webhook.env` 変更後はサービスを再起動 |
+| 配信 `502/503` | リスナー停止: `systemctl status rosweb-autodeploy-webhook` |
+| 配信 `404` | Apache ブロック未設定、または `ProxyPass /` より下にある |
+| 配信 `500 deploy script missing` | 対象チェックアウトに `scripts/autodeploy/deploy.sh` がまだない |
+| `200 ignored` | 他ブランチ、push 以外のイベント、`ALLOWED_REPOS` 外のリポジトリでは正常 |
+| ログ `ABORT: ... is on 'x', expected 'y'` | そのフォルダで `git checkout <branch>` |
+| ログ `ABORT: ... has local changes` | そのフォルダで `git status` を確認し手動で整理 |
+| ログ `Not possible to fast-forward` | ローカルコミットまたは force-push。手動で `origin/<branch>` に合わせる |
+| ログ `Permission denied (publickey)` | `itbdelabo` の SSH 鍵で GitHub にアクセスできない |
+| ビルド失敗 | `deploy FAILED` の上のログを確認。旧コンテナは動作継続 |
+
+デプロイせずにリスナーを試すには、`webhook.env` に `DRY_RUN=1` を設定してサービスを再起動し、GitHub から **Redeliver** します。`journalctl` に `DRY_RUN: would run ...` が表示されます。
 
 </details>
 

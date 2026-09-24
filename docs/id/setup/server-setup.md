@@ -293,6 +293,7 @@ Host live punya blok tambahan yang tidak ditampilkan (MQTT WebSocket, webhook, d
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
 | `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | Hook deploy docs (di `apache-snippet.conf`, bukan blok utama) |
+| `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | Hook auto-deploy ros-web-ui, lihat [Auto-deploy](#auto-deploy-on-push) |
 | `/itbdelabo/docs` | exclusion + `Alias` ke `dist/` | Harus tetap di atas catch-all |
 | `/` | `http://localhost:3000/` | Frontend dashboard, **harus terakhir** |
 
@@ -357,6 +358,110 @@ docker compose --profile server_dev up -d
 Port dev: MySQL `3308`, backend `5001`, HiveMQ `8884`, rosbridge `9091`, ROS master `11312` (prod `11311`), frontend `3100`, media `4003`, signalling `4001` WS / `4002` HTTP.
 
 Dev memakai `jwt_keyring.dev.json` terpisah tapi file keystore yang sama dengan prod. `coturn` tetap hanya produksi.
+
+</details>
+
+<details id="auto-deploy-on-push">
+<summary><b>Auto-deploy saat push (GitHub webhook)</b></summary>
+
+Setiap push atau PR yang di-merge otomatis me-rebuild dan menaikkan ulang stack yang sesuai:
+
+| Branch | Checkout | Profile |
+| --- | --- | --- |
+| `main` | `~/ITBdeLabo/Production/ros-web-ui` | `server_prod` |
+| `develop` | `~/ITBdeLabo/Development/ros-web-ui` | `server_dev` |
+
+Push ke `ros-web-ui` **dan** `ROS-dashboard-next-ts` sama-sama memicu deploy, karena frontend di-build dari clone dashboard di dalam repo. Branch lain diabaikan.
+
+```mermaid
+flowchart LR
+  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
+  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
+  L -->|verifikasi HMAC| D[deploy.sh]
+  D --> G[git ff-only pull<br>repo + dashboard]
+  G --> B[compose build]
+  B --> U[compose up -d]
+```
+
+Listener langsung membalas `202` ke GitHub dan menjalankan `deploy.sh` di background, jadi build catkin + Next.js yang lama tidak kena timeout webhook GitHub (10 detik).
+
+Semua file ada di `ros-web-ui/scripts/autodeploy/`:
+
+| File | Fungsi |
+| --- | --- |
+| `webhook-listener.mjs` | Penerima webhook (Node, tanpa dependency) |
+| `deploy.sh` | Sync git + build + up; bisa juga dijalankan manual |
+| `rosweb-autodeploy-webhook.service` | Unit systemd |
+| `apache-snippet.conf` | Blok `ProxyPass` untuk Apache |
+| `webhook.env.example` | Template konfigurasi (secret, port, path) |
+| `webhook.env` | Konfigurasi yang dipakai, **di-gitignore**, dibuat manual di server |
+
+Masing-masing checkout menulis log ke `logs/autodeploy/deploy.log` (di-gitignore).
+
+**Setup sekali saja** (listener jalan dari checkout Production, jadi file-file ini harus sudah ada di `main`):
+
+```bash
+cd ~/ITBdeLabo/Production/ros-web-ui
+
+# 1. Secret (di-gitignore)
+cp scripts/autodeploy/webhook.env.example scripts/autodeploy/webhook.env
+chmod 600 scripts/autodeploy/webhook.env
+openssl rand -hex 32   # tempel ke WEBHOOK_SECRET=
+
+# 2. Service
+sudo cp scripts/autodeploy/rosweb-autodeploy-webhook.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rosweb-autodeploy-webhook
+curl http://127.0.0.1:4702/health   # ok
+
+# 3. Apache: tambahkan scripts/autodeploy/apache-snippet.conf di atas `ProxyPass /`
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+4. Di **kedua** repo GitHub, buka Settings → Webhooks → Add webhook. Payload URL `https://msd.nglobal.jp/services/rosweb-deploy-webhook`, content type `application/json`, secret yang sama, hanya push event. Delivery pertama harus `200 pong`.
+
+**Operasional:**
+
+```bash
+tail -f ~/ITBdeLabo/Production/ros-web-ui/logs/autodeploy/deploy.log   # atau Development/
+journalctl -u rosweb-autodeploy-webhook -f                            # webhook masuk
+
+# Deploy manual dari checkout yang bersangkutan; FORCE=1 rebuild walau tidak ada commit baru
+FORCE=1 scripts/autodeploy/deploy.sh develop server_dev
+```
+
+Webhook yang gagal bisa dikirim ulang dari GitHub → Settings → Webhooks → Recent Deliveries → **Redeliver**.
+
+Deploy **berhenti tanpa mengubah apa pun** kalau checkout ada di branch yang salah, ada perubahan lokal di file yang di-track, atau tidak bisa fast-forward. Kalau `build` gagal, `up` dilewati sehingga container lama tetap jalan. Hanya satu build dalam satu waktu; push yang datang saat build berjalan akan mengantre lalu mengambil commit terbaru.
+
+::: warning Jangan pernah menambahkan `down` atau `--remove-orphans`
+Kedua checkout sama-sama bernama folder `ros-web-ui`, jadi compose project name-nya sama. Masing-masing stack melihat container milik yang lain sebagai orphan, dan `--remove-orphans` dari dev akan menghapus container production.
+:::
+
+Hal yang perlu diketahui:
+
+- Perubahan apa pun di `source/` me-recreate semua container app di profile itu (`nakayama_cloud*`, `unit_relays*`, `nakayama_media*`, `nakayama_signalling*` memakai image yang sama), jadi robot yang terhubung putus sebentar. `db`, `hivemq`, dan `coturn` hanya di-recreate kalau konfigurasinya di compose berubah. Container per-unit `rosweb_unit_*` tidak disentuh (dikelola `unit_manager.js`).
+- Lock `/tmp/rosweb-autodeploy.lock` dipakai bersama oleh prod dan dev; push yang mengantre menunggu maksimal 2 jam.
+- Perubahan `deploy.sh` baru berlaku di deploy *berikutnya* (merge terjadi saat script lama sedang jalan). Tiap checkout menjalankan salinannya sendiri, jadi perubahan teruji di develop dulu.
+- Perubahan `webhook-listener.mjs` perlu `sudo systemctl restart rosweb-autodeploy-webhook`. `KillMode=process` menjaga build yang sedang jalan tidak ikut mati.
+- git memakai SSH key user `itbdelabo` (`~/.ssh`, tanpa agent). Kalau key diganti atau diberi passphrase, `git fetch` akan gagal.
+- Path node dari nvm di-hardcode di `ExecStart` unit (sama seperti `msd700-docs-webhook.service`); update kalau versi node berubah.
+- `.env` di-track git dan ikut ter-update saat pull. Nilai khusus host taruh di `docker-compose.override.yml` (untracked).
+
+| Gejala | Cek |
+| --- | --- |
+| Delivery `401 bad signature` | Secret GitHub beda dengan `WEBHOOK_SECRET`; restart service setelah mengubah `webhook.env` |
+| Delivery `502/503` | Listener mati: `systemctl status rosweb-autodeploy-webhook` |
+| Delivery `404` | Blok Apache belum dipasang atau posisinya di bawah `ProxyPass /` |
+| Delivery `500 deploy script missing` | Checkout target belum punya `scripts/autodeploy/deploy.sh` |
+| `200 ignored` | Normal untuk branch lain, event selain push, atau repo di luar `ALLOWED_REPOS` |
+| Log `ABORT: ... is on 'x', expected 'y'` | `git checkout <branch>` di folder itu |
+| Log `ABORT: ... has local changes` | `git status` di folder itu, bereskan manual |
+| Log `Not possible to fast-forward` | Ada commit lokal atau force-push; samakan dengan `origin/<branch>` secara manual |
+| Log `Permission denied (publickey)` | SSH key `itbdelabo` tidak bisa akses GitHub |
+| Build gagal | Baca log di atas baris `deploy FAILED`; container lama tetap jalan |
+
+Untuk tes listener tanpa men-deploy: set `DRY_RUN=1` di `webhook.env`, restart service, lalu **Redeliver** dari GitHub; `journalctl` akan menampilkan `DRY_RUN: would run ...`.
 
 </details>
 

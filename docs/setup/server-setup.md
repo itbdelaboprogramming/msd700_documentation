@@ -383,7 +383,20 @@ flowchart LR
   B --> U[compose up -d]
 ```
 
-Code lives in `ros-web-ui/scripts/autodeploy/`; the full guide is `ros-web-ui/Documentation/auto-deploy.md`.
+The listener answers GitHub with `202` right away and runs `deploy.sh` detached, so a long catkin + Next.js build never hits GitHub's 10 s webhook timeout.
+
+Everything lives in `ros-web-ui/scripts/autodeploy/`:
+
+| File | Purpose |
+| --- | --- |
+| `webhook-listener.mjs` | Webhook receiver (Node, no dependencies) |
+| `deploy.sh` | git sync + build + up; can also be run by hand |
+| `rosweb-autodeploy-webhook.service` | systemd unit |
+| `apache-snippet.conf` | `ProxyPass` block for Apache |
+| `webhook.env.example` | Config template (secret, port, paths) |
+| `webhook.env` | Live config, **gitignored**, created by hand on the server |
+
+Each checkout writes its own log to `logs/autodeploy/deploy.log` (gitignored).
 
 **One-time setup** (the listener runs from the Production checkout, so the files must be on `main` first):
 
@@ -423,7 +436,30 @@ A deploy **aborts without touching anything** when the checkout is on the wrong 
 Both checkouts are directories named `ros-web-ui`, so they share one compose project name. Each stack sees the other's containers as orphans, and `--remove-orphans` from dev deletes production.
 :::
 
-Any change under `source/` recreates every app container in that profile (they share one image), so connected robots drop briefly.
+Things to know:
+
+- Any change under `source/` recreates every app container in that profile (`nakayama_cloud*`, `unit_relays*`, `nakayama_media*`, `nakayama_signalling*` share one image), so connected robots drop briefly. `db`, `hivemq` and `coturn` are only recreated when their compose config changes. Per-unit `rosweb_unit_*` containers are left to `unit_manager.js`.
+- The lock `/tmp/rosweb-autodeploy.lock` is shared by prod and dev; queued pushes wait up to 2 hours.
+- A change to `deploy.sh` takes effect on the *next* deploy (the merge happens while the old script runs). Each checkout runs its own copy, so changes are exercised on develop first.
+- A change to `webhook-listener.mjs` needs `sudo systemctl restart rosweb-autodeploy-webhook`. `KillMode=process` keeps a running build alive across the restart.
+- git uses the `itbdelabo` user's SSH key (`~/.ssh`, no agent). A new or passphrase-protected key breaks `git fetch`.
+- The nvm node path is hardcoded in the unit's `ExecStart` (same as `msd700-docs-webhook.service`); update it when node changes.
+- `.env` is tracked and updated by the pull. Put host-specific values in the untracked `docker-compose.override.yml`.
+
+| Symptom | Check |
+| --- | --- |
+| Delivery `401 bad signature` | GitHub secret differs from `WEBHOOK_SECRET`; restart the service after editing `webhook.env` |
+| Delivery `502/503` | Listener down: `systemctl status rosweb-autodeploy-webhook` |
+| Delivery `404` | Apache block missing or placed below `ProxyPass /` |
+| Delivery `500 deploy script missing` | Target checkout has no `scripts/autodeploy/deploy.sh` yet |
+| `200 ignored` | Normal for other branches, non-push events, or repos outside `ALLOWED_REPOS` |
+| Log `ABORT: ... is on 'x', expected 'y'` | `git checkout <branch>` in that folder |
+| Log `ABORT: ... has local changes` | `git status` there and clean up by hand |
+| Log `Not possible to fast-forward` | Local commits or a force-push; reset to `origin/<branch>` by hand |
+| Log `Permission denied (publickey)` | The `itbdelabo` SSH key can't reach GitHub |
+| Build failed | Read the log above `deploy FAILED`; old containers keep running |
+
+To test the listener without deploying, set `DRY_RUN=1` in `webhook.env`, restart the service and **Redeliver** from GitHub; `journalctl` shows `DRY_RUN: would run ...`.
 
 </details>
 
