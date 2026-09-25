@@ -145,8 +145,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
+│   ├── drawio-viewer.mjs         # pinned draw.io viewer (version/URL/hash) shipped to the browser
+│   ├── diagram-hash.mjs          # .drawio content hash shared by the plugin and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -156,8 +156,12 @@ msd700_documentation/
 ### Diagrams
 
 Diagrams are draw.io files (`.drawio`), kept in a `diagrams/` folder next to the pages that use
-them, for example `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Readers get a
-static PNG of each one, never an editor.
+them, for example `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Readers see the
+drawing, never an editor.
+
+A page draws the `.drawio` itself with the official draw.io viewer, read-only. There is no image to
+generate and no second copy to drift out of sync: the `.drawio` is the single source of truth, and
+drawio-assets.mjs serves/emits it under a hash of its own bytes.
 
 **Editing a diagram:** open the `.drawio` file in draw.io: the
 [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
@@ -180,24 +184,22 @@ A translated page may point at the English file when the diagram has no text to 
 
 | Piece | Job |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | Draws every referenced `.drawio` file with the official draw.io viewer in headless Chrome and writes `docs/public/diagrams/<hash>.png` at 2x, so the PNG matches what the editor shows. Deletes images nothing uses any more, and reports broken references and `.drawio` files no page uses |
-| `scripts/diagram-hash.mjs` | The hash of a `.drawio` file plus `RENDER_VERSION`. Shared by the renderer and the build, so both name the same file. Bump `RENDER_VERSION` after changing how the renderer draws, so readers get new URLs, not cached old images |
-| `docs/.vitepress/config.mts`, `markdown.config` | Turns every `![...](....drawio)` into an `<img>` of its PNG. A click opens it in a pop-up. If the PNG is missing, the page shows a broken image and the build prints a `[diagrams]` warning until `npm run docs:diagrams` writes it |
+| `scripts/diagram-hash.mjs` | The content hash of a `.drawio` file. Shared by the Vite plugin and the markdown hook, so both name the same file |
+| `scripts/drawio-viewer.mjs` | The pinned draw.io viewer (version, URL, SHA-256) and its downloader; drawio-assets.mjs ships the same bytes to the browser |
+| `docs/.vitepress/drawio-assets.mjs` | Vite plugin: serves each `.drawio` by its hash in dev and emits it (plus the viewer) into the build, so the `.drawio` stays the single source of truth and nothing is copied into `docs/public` |
+| `docs/.vitepress/theme/components/DrawioDiagram.vue` | Draws one `.drawio` read-only in the page (viewer fetched once per page) and opens the zoom viewer on click. Locked to light mode; no edit path |
+| `docs/.vitepress/theme/zoom-viewer.ts` | The shared full-screen, view-only zoom/pan pop-up (wheel/buttons zoom to the cursor, drag pans, Esc closes) |
+| `docs/.vitepress/config.mts`, `markdown.config` | Turns every `![...](....drawio)` into `<DrawioDiagram>`. A missing source logs a `[diagrams]` warning and renders a placeholder |
 
-```bash
-npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
-npm run docs:diagrams -- --all # re-render everything, e.g. after bumping RENDER_VERSION
-npm run docs:check-diagrams    # fail on a broken reference or a diagram without a PNG
-```
+There is nothing to generate: edit the `.drawio` and the page reads it. Commit the `.drawio` with
+the markdown change. If a dev page keeps showing the old drawing, restart `npm run docs:dev`
+(`vitepress dev` caches rendered markdown by the `.md` content, which the `.drawio` edit does not
+change).
 
-Commit the `.drawio` file and its PNG together with the markdown change. Set `CHROME_PATH` if Chrome
-is not in a standard location. The first run downloads the pinned draw.io viewer into
-`node_modules/.cache` and checks its hash.
-
-::: warning Edited a diagram? Re-render it
-The image is looked up by a hash of the `.drawio` file, so any edit, even moving one box, needs
-`npm run docs:diagrams`. Otherwise the page shows a broken image. `npm run docs:dev` caches pages,
-so restart it to see the new image.
+::: warning A diagram is missing
+The page's `![...](....drawio)` path is resolved at build time. If the file is not there, the build
+logs a `[diagrams]` warning and the page shows a `Missing diagram` placeholder; fix the path or add
+the file.
 :::
 
 ::: info Why draw.io and not Mermaid

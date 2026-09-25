@@ -49,15 +49,9 @@ Hasil build akan disimpan di direktori `docs/.vitepress/dist`.
 ### 4. Diagram (draw.io)
 
 Diagram berupa file `.drawio` di folder `diagrams/` di samping halamannya, disisipkan dengan
-`![judul](./diagrams/nama.drawio)`. Edit dengan draw.io (misalnya ekstensi VS Code "Draw.io Integration"),
-lalu render ulang PNG-nya dan cek semua rujukan:
-
-```bash
-npm run docs:diagrams
-npm run docs:check-diagrams
-```
-
-Detailnya ada di halaman *Repository Structure § Diagrams*.
+`![judul](./diagrams/nama.drawio)`. Halaman menggambar `.drawio` itu sendiri dengan viewer resmi
+draw.io (view-only, tanpa PNG), jadi tidak ada langkah render: cukup edit file `.drawio`-nya dan
+commit bersama markdown-nya. Detailnya ada di halaman *Repository Structure § Diagrams*.
 
 ---
 
@@ -73,7 +67,7 @@ msd700_documentation/
 │   ├── id/                   # Terjemahan Bahasa Indonesia (dihasilkan otomatis)
 │   └── ja/                   # Terjemahan Bahasa Jepang (dihasilkan otomatis)
 ├── scripts/
-│   ├── render-diagrams.mjs   # Render diagram .drawio ke PNG statis
+│   ├── drawio-viewer.mjs     # Viewer draw.io terkunci yang dikirim ke browser
 │   └── sync_i18n.mjs         # Mesin sinkronisasi otomatis multi-bahasa
 ├── package.json
 └── README.md

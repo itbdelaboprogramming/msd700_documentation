@@ -15,7 +15,7 @@ Untuk lokasi repositori, lihat [Struktur Repositori](/id/development/repository-
 
 Keputusan arsitektur sentral MSD700 adalah bahwa **sebuah Unit (robot fisik) menjalankan stack server lokal yang lengkap**, sementara **MSD700 Server (cloud)** menjalankan stack manajemen pusat untuk seluruh fleet. Keduanya adalah peer yang berbagi struktur data identik, terhubung lewat transport MQTT terenkripsi.
 
-![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![Diagram Sistem MSD700](../../development/diagrams/msd700-system-diagram.drawio)
 
 | Dimensi | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |

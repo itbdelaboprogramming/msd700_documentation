@@ -44,7 +44,7 @@ underneath every mode, not something each mode reimplements.
 `MapComponent` composes its view as a stack of EaselJS layers on a single HTML5 Canvas stage, fed
 by rosbridge WebSocket topics:
 
-![Map Canvas Pipeline](/images/MSD700-DrawMapPipeline.jpg)
+![Map Canvas Pipeline](./diagrams/msd700-draw-map-pipeline.drawio)
 
 Layer 6, the interactive vertex overlay, is what Single Pinpoint, Multiple Pinpoint, and Set Home
 Base draw onto when the operator clicks the canvas; see

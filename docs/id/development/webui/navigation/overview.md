@@ -46,7 +46,7 @@ bersama di bawah setiap mode, bukan sesuatu yang diimplementasikan ulang oleh ma
 `MapComponent` menyusun tampilannya sebagai tumpukan layer EaselJS di atas satu stage HTML5
 Canvas, yang dipasok oleh topic WebSocket rosbridge:
 
-![Map Canvas Pipeline](/images/MSD700-DrawMapPipeline.jpg)
+![Map Canvas Pipeline](../../../../development/webui/navigation/diagrams/msd700-draw-map-pipeline.drawio)
 
 Layer 6, overlay vertex interaktif, adalah tempat Single Pinpoint, Multiple Pinpoint, dan Set Home
 Base menggambar saat operator mengklik canvas; lihat

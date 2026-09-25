@@ -16,7 +16,7 @@ This page connects a real robot to the **production cloud**. Simulator (`--simul
 
 ## System topology
 
-![MSD700 System Diagram](/images/MSD700-System-Diagram.jpg)
+![MSD700 System Diagram](../development/diagrams/msd700-system-diagram.drawio)
 
 ## Folder layout
 

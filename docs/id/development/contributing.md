@@ -58,16 +58,15 @@ npm run docs:preview   # Serves production build preview
 Sebelum melakukan commit perubahan dokumentasi, jalankan:
 
 ```bash
-# 1. Render diagram .drawio baru/berubah, lalu cek semua rujukan punya gambar
-npm run docs:diagrams
-npm run docs:check-diagrams
-
-# 2. Build VitePress bundle and test broken links
+# 1. Build VitePress bundle and test broken links
 npm run docs:build
 
-# 3. Verify zero forbidden punctuation characters
+# 2. Verify zero forbidden punctuation characters
 grep -rn $'\xe2\x80\x94' docs/ scripts/
 ```
+
+Diagram tidak butuh langkah render: halaman membaca file `.drawio`-nya langsung. Cukup edit,
+simpan, dan commit bersama markdown yang merujuknya.
 
 ### Komponen Global Kustom:
 Tema dokumentasi ini memperluas VitePress dengan komponen global kustom:

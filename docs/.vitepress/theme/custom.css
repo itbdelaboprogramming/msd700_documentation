@@ -44,56 +44,170 @@
   margin: 0 auto;
 }
 
-/* Full-size diagram pop-up (theme/index.ts). Fits the screen first; click the image for 1:1 and
-   scroll around it. */
+/* ==================== DIAGRAMS: direct draw.io ====================
+   Default mode (components/DrawioDiagram.vue): the .drawio is drawn live by draw.io's own viewer,
+   read-only, so there is no PNG. The figure keeps the white frame above in both themes because the
+   drawing is black-on-white. */
+.vp-doc .drawio-stage {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  padding: 0;
+  border: none;
+  background: #fff;
+  overflow: hidden;
+  /* Lock the diagram box to light mode: the .drawio is black-on-white, and draw.io's HTML labels
+     inherit this colour, so keep it dark even when the site is in dark mode. */
+  color: #1a1a1a;
+  color-scheme: light;
+}
+
+.vp-doc .drawio-stage.is-ready {
+  cursor: zoom-in;
+}
+
+.vp-doc .drawio-render {
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+
+.vp-doc .drawio-render svg {
+  display: block;
+}
+
+.vp-doc .drawio-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vp-c-text-3);
+  font-size: 20px;
+}
+
+.vp-doc .drawio-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--vp-c-divider);
+  border-top-color: var(--vp-c-brand-1);
+  border-radius: 50%;
+  animation: drawio-spin 0.8s linear infinite;
+}
+
+@keyframes drawio-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Full-size, view-only diagram viewer (theme/index.ts). Fits the screen on open, then zooms around
+   the cursor with the wheel or the toolbar; dragging pans and double-click toggles fit / 1:1. */
 .diagram-lightbox {
   position: fixed;
   inset: 0;
   z-index: 200;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   background: rgba(0, 0, 0, 0.72);
-  overflow: auto;
-  padding: 24px;
+  padding: 16px;
   box-sizing: border-box;
 }
 
-.diagram-lightbox img {
-  max-width: 100%;
-  max-height: 100%;
+.diagram-viewer {
+  display: flex;
+  flex-direction: column;
+  width: min(1600px, 100%);
+  height: 100%;
+}
+
+.diagram-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
+  margin-bottom: 12px;
+  padding: 4px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.diagram-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #111;
+  font-size: 16px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.diagram-toolbar-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.diagram-toolbar-button:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 1px;
+}
+
+.diagram-toolbar-zoom {
+  min-width: 56px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #333;
+}
+
+.diagram-toolbar-close {
+  font-size: 22px;
+}
+
+.diagram-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 10px;
   background: #fff;
-  padding: 16px;
-  border-radius: 6px;
+  color: #1a1a1a;
+  color-scheme: light;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  cursor: zoom-in;
+  cursor: grab;
+  touch-action: none;
 }
 
-.diagram-lightbox.zoomed {
-  align-items: flex-start;
-  justify-content: flex-start;
+.diagram-stage.is-grabbing {
+  cursor: grabbing;
 }
 
-.diagram-lightbox.zoomed img {
+.diagram-stage img {
+  position: absolute;
+  top: 0;
+  left: 0;
   max-width: none;
   max-height: none;
-  margin: auto;
-  cursor: zoom-out;
+  transform-origin: 0 0;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.diagram-lightbox-close {
-  position: fixed;
-  top: 12px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  color: #000;
-  font-size: 24px;
-  line-height: 40px;
-  cursor: pointer;
+@media (max-width: 640px) {
+  .diagram-lightbox {
+    padding: 8px;
+  }
+
+  .diagram-toolbar {
+    margin-bottom: 8px;
+  }
 }
 
 .dark .vp-doc .diagram-figure {

@@ -16,7 +16,7 @@ Halaman ini menghubungkan robot asli ke cloud **produksi**. Simulator (`--simula
 
 ## Topologi sistem
 
-![Diagram Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![Diagram Sistem MSD700](../../development/diagrams/msd700-system-diagram.drawio)
 
 ## Struktur folder
 

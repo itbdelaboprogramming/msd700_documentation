@@ -58,16 +58,15 @@ npm run docs:preview   # Serves production build preview
 ドキュメントの変更をコミットする前に、以下を実行してください。
 
 ```bash
-# 1. 新規・変更された .drawio 図をレンダリングし、すべての参照に画像があるか確認
-npm run docs:diagrams
-npm run docs:check-diagrams
-
-# 2. Build VitePress bundle and test broken links
+# 1. Build VitePress bundle and test broken links
 npm run docs:build
 
-# 3. Verify zero forbidden punctuation characters
+# 2. Verify zero forbidden punctuation characters
 grep -rn $'\xe2\x80\x94' docs/ scripts/
 ```
+
+図にはレンダリング手順は不要です。ページが `.drawio` ファイルを直接読み込みます。編集して
+保存し、参照する markdown と一緒にコミットするだけです。
 
 ### カスタムグローバルコンポーネント:
 このドキュメントテーマは、カスタムのグローバルコンポーネントで VitePress を拡張しています。

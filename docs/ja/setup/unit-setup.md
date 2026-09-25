@@ -16,7 +16,7 @@ outline: deep
 
 ## システム構成
 
-![MSD700システム図](/images/MSD700-System-Diagram.jpg)
+![MSD700システム図](../../development/diagrams/msd700-system-diagram.drawio)
 
 ## フォルダ構成
 

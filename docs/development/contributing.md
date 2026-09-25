@@ -58,16 +58,15 @@ npm run docs:preview   # Serves production build preview
 Before committing documentation changes, run:
 
 ```bash
-# 1. Render new/changed .drawio diagrams, then check every reference has an image
-npm run docs:diagrams
-npm run docs:check-diagrams
-
-# 2. Build VitePress bundle and test broken links
+# 1. Build VitePress bundle and test broken links
 npm run docs:build
 
-# 3. Verify zero forbidden punctuation characters
+# 2. Verify zero forbidden punctuation characters
 grep -rn $'\xe2\x80\x94' docs/ scripts/
 ```
+
+Diagrams need no generation step: the page reads the `.drawio` file itself. Just edit,
+save, and commit it with the markdown that references it.
 
 ### Custom Global Components:
 This documentation theme extends VitePress with custom global components:

@@ -146,8 +146,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
+│   ├── drawio-viewer.mjs         # pinned draw.io viewer (version/URL/hash) shipped to the browser
+│   ├── diagram-hash.mjs          # .drawio content hash shared by the plugin and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -157,8 +157,12 @@ msd700_documentation/
 ### Diagram
 
 Diagram berupa file draw.io (`.drawio`) yang disimpan di folder `diagrams/` di samping halaman yang
-memakainya, misalnya `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Pembaca menerima
-PNG statis dari setiap diagram, bukan editor.
+memakainya, misalnya `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Pembaca melihat
+gambarnya, bukan editor.
+
+Halaman menggambar `.drawio` itu sendiri dengan viewer resmi draw.io, view-only. Tidak ada gambar
+yang perlu dibuat dan tidak ada salinan kedua yang bisa tidak sinkron: `.drawio` adalah satu-satunya
+sumber, dan drawio-assets.mjs menyajikan/meng-emit-nya dengan hash dari isinya sendiri.
 
 **Mengedit diagram:** buka file `.drawio` di draw.io: ekstensi
 [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
@@ -182,24 +186,21 @@ dari `docs/id/development/`), atau salinannya sendiri di `docs/id/.../diagrams/`
 
 | Bagian | Tugas |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | Menggambar setiap file `.drawio` yang dirujuk dengan viewer resmi draw.io di Chrome headless lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x, sehingga PNG-nya sama dengan tampilan di editor. Menghapus gambar yang tidak dipakai lagi, dan melaporkan rujukan yang rusak serta file `.drawio` yang tidak dipakai halaman mana pun |
-| `scripts/diagram-hash.mjs` | Hash dari file `.drawio` plus `RENDER_VERSION`. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama. Naikkan `RENDER_VERSION` setelah mengubah cara renderer menggambar, agar pembaca mendapat URL baru, bukan gambar lama dari cache |
-| `docs/.vitepress/config.mts`, `markdown.config` | Mengubah setiap `![...](....drawio)` menjadi `<img>` PNG-nya. Klik membukanya di pop-up. Jika PNG belum ada, halaman menampilkan gambar rusak dan build mencetak peringatan `[diagrams]` sampai `npm run docs:diagrams` membuatnya |
+| `scripts/diagram-hash.mjs` | Hash isi file `.drawio`. Dipakai bersama oleh plugin Vite dan markdown hook, sehingga keduanya menunjuk file yang sama |
+| `scripts/drawio-viewer.mjs` | Viewer draw.io versi terkunci (versi, URL, SHA-256) dan pengunduhnya; drawio-assets.mjs mengirim byte yang sama ke browser |
+| `docs/.vitepress/drawio-assets.mjs` | Plugin Vite: menyajikan setiap `.drawio` berdasarkan hash-nya di dev dan meng-emit-nya (plus viewer) ke hasil build, sehingga `.drawio` tetap jadi satu-satunya sumber dan tidak ada salinan ke `docs/public` |
+| `docs/.vitepress/theme/components/DrawioDiagram.vue` | Menggambar satu `.drawio` view-only di halaman (viewer diambil sekali per halaman) dan membuka viewer zoom saat diklik. Terkunci ke light mode; tidak ada jalur edit |
+| `docs/.vitepress/theme/zoom-viewer.ts` | Pop-up zoom/pan view-only layar penuh yang dipakai bersama (roda/tombol zoom ke kursor, geser untuk pan, Esc menutup) |
+| `docs/.vitepress/config.mts`, `markdown.config` | Mengubah setiap `![...](....drawio)` menjadi `<DrawioDiagram>`. Jika sumbernya hilang, build mencetak peringatan `[diagrams]` dan halaman menampilkan placeholder |
 
-```bash
-npm run docs:diagrams          # render diagram baru atau yang berubah (butuh Chrome/Chromium lokal)
-npm run docs:diagrams -- --all # render ulang semua, misalnya setelah menaikkan RENDER_VERSION
-npm run docs:check-diagrams    # gagal jika ada rujukan rusak atau diagram tanpa PNG
-```
+Tidak ada yang perlu dibuat: edit `.drawio` dan halaman langsung membacanya. Commit `.drawio` bersama
+perubahan markdown. Jika halaman dev masih menampilkan gambar lama, restart `npm run docs:dev`
+(`vitepress dev` meng-cache markdown berdasarkan isi `.md`, yang tidak berubah saat `.drawio` diedit).
 
-Commit file `.drawio` dan PNG-nya bersama perubahan markdown. Set `CHROME_PATH` jika Chrome tidak ada
-di lokasi standar. Run pertama mengunduh viewer draw.io versi terkunci ke `node_modules/.cache` dan
-memeriksa hash-nya.
-
-::: warning Mengubah diagram? Render ulang
-Gambar dicari berdasarkan hash file `.drawio`, jadi setiap perubahan, bahkan menggeser satu kotak,
-perlu `npm run docs:diagrams`. Jika tidak, halaman menampilkan gambar rusak. `npm run docs:dev`
-menyimpan cache halaman, jadi restart dulu untuk melihat gambar barunya.
+::: warning Diagram hilang
+Path `![...](....drawio)` di halaman diselesaikan saat build. Jika filenya tidak ada, build mencetak
+peringatan `[diagrams]` dan halaman menampilkan placeholder `Missing diagram`; perbaiki path atau
+tambahkan filenya.
 :::
 
 ::: info Kenapa draw.io, bukan Mermaid

@@ -15,7 +15,7 @@ For repository locations, see [Repository Structure](/development/repository-str
 
 The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
 
-![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![MSD700 System Diagram](./diagrams/msd700-system-diagram.drawio)
 
 | Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |

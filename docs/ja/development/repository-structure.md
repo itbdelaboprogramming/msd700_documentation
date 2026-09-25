@@ -144,8 +144,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
+│   ├── drawio-viewer.mjs         # pinned draw.io viewer (version/URL/hash) shipped to the browser
+│   ├── diagram-hash.mjs          # .drawio content hash shared by the plugin and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -155,8 +155,12 @@ msd700_documentation/
 ### 図
 
 図は draw.io ファイル(`.drawio`)で、使用するページの隣の `diagrams/` フォルダーに置きます。
-例: `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`。読者に届くのは各図の静的な
-PNG で、エディターではありません。
+例: `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`。読者に届くのは図そのもので、
+エディターではありません。
+
+ページが `.drawio` を公式 draw.io ビューアーで閲覧専用に描画します。生成する画像も、ずれる可能性の
+ある複製もありません。`.drawio` が唯一の情報源で、drawio-assets.mjs がそのバイト列のハッシュで
+配信/emit します。
 
 **図の編集:** `.drawio` ファイルを draw.io で開きます。VS Code の
 [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
@@ -179,24 +183,22 @@ draw.io シェイプです。移動し、線は折れ点をドラッグして経
 
 | 構成要素 | 役割 |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | 参照されているすべての `.drawio` ファイルを、ヘッドレス Chrome 上の公式 draw.io ビューアーで描画し、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。PNG はエディターの表示と一致します。使われなくなった画像を削除し、壊れた参照とどのページからも使われていない `.drawio` ファイルを報告します |
-| `scripts/diagram-hash.mjs` | `.drawio` ファイルと `RENDER_VERSION` のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします。レンダラーの描き方を変えたら `RENDER_VERSION` を上げ、キャッシュされた古い画像ではなく新しい URL が配信されるようにします |
-| `docs/.vitepress/config.mts`、`markdown.config` | すべての `![...](....drawio)` をその PNG の `<img>` に置き換えます。クリックするとポップアップで開きます。PNG がない場合、ページには壊れた画像が表示され、`npm run docs:diagrams` が書き出すまでビルドが `[diagrams]` 警告を出します |
+| `scripts/diagram-hash.mjs` | `.drawio` ファイルの内容ハッシュ。Vite プラグインと markdown フックで共有し、両者が同じファイルを指すようにします |
+| `scripts/drawio-viewer.mjs` | バージョン固定の draw.io ビューアー(バージョン、URL、SHA-256)とダウンローダー。drawio-assets.mjs が同じバイト列をブラウザーに配信します |
+| `docs/.vitepress/drawio-assets.mjs` | Vite プラグイン: 開発時は各 `.drawio` をハッシュで配信し、ビルド時はそれとビューアーを出力に emit します。`.drawio` が唯一の情報源のままで、`docs/public` への複製もありません |
+| `docs/.vitepress/theme/components/DrawioDiagram.vue` | 1 つの `.drawio` をページ内に閲覧専用で描画し(ビューアーはページごとに 1 回取得)、クリックでズームビューアーを開きます。ライトモード固定で、編集経路はありません |
+| `docs/.vitepress/theme/zoom-viewer.ts` | 共有の全画面・閲覧専用ズーム/パンポップアップ(ホイール/ボタンでカーソル位置にズーム、ドラッグでパン、Esc で閉じる) |
+| `docs/.vitepress/config.mts`、`markdown.config` | すべての `![...](....drawio)` を `<DrawioDiagram>` に置き換えます。ソースがない場合は `[diagrams]` 警告を出し、プレースホルダーを表示します |
 
-```bash
-npm run docs:diagrams          # 新規・変更された図をレンダリング(ローカルの Chrome/Chromium が必要)
-npm run docs:diagrams -- --all # すべて再レンダリング(RENDER_VERSION を上げた後など)
-npm run docs:check-diagrams    # 壊れた参照や PNG のない図があれば失敗
-```
+生成するものはありません。`.drawio` を編集すればページが読み込みます。`.drawio` を markdown の
+変更と一緒にコミットしてください。開発ページが古い図を表示し続ける場合は `npm run docs:dev` を
+再起動してください(`vitepress dev` は `.md` の内容で markdown をキャッシュするため、`.drawio`
+の編集だけでは無効化されません)。
 
-`.drawio` ファイルと PNG を markdown の変更と一緒にコミットしてください。Chrome が標準の場所にない
-場合は `CHROME_PATH` を設定します。初回実行時は、バージョン固定の draw.io ビューアーを
-`node_modules/.cache` にダウンロードしてハッシュを検証します。
-
-::: warning 図を編集したら再レンダリング
-画像は `.drawio` ファイルのハッシュで引かれるため、ボックスを 1 つ動かしただけでも
-`npm run docs:diagrams` が必要です。実行しないとページには壊れた画像が表示されます。
-`npm run docs:dev` はページをキャッシュするので、新しい画像を見るには再起動してください。
+::: warning 図が見つからない場合
+ページの `![...](....drawio)` パスはビルド時に解決されます。ファイルがない場合、ビルドは
+`[diagrams]` 警告を出し、ページは `Missing diagram` プレースホルダーを表示します。パスを直すか
+ファイルを追加してください。
 :::
 
 ::: info Mermaid ではなく draw.io を使う理由

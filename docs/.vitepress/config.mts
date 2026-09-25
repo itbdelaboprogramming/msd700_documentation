@@ -4,14 +4,17 @@ import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { diagramHash } from '../../scripts/diagram-hash.mjs'
+import { VIEWER_VERSION } from '../../scripts/drawio-viewer.mjs'
+import { drawioAssets } from './drawio-assets.mjs'
 
 const BASE = '/itbdelabo/docs/'
 
 // ==================== DIAGRAMS ====================
 // Diagrams are draw.io files next to the pages (docs/<section>/diagrams/*.drawio), embedded with
-// ![alt](./diagrams/name.drawio). Readers get a static PNG pre-rendered by
-// scripts/render-diagrams.mjs (npm run docs:diagrams), keyed by a hash of the .drawio file.
-const DIAGRAM_DIR = fileURLToPath(new URL('../public/diagrams/', import.meta.url))
+// ![alt](./diagrams/name.drawio). The page fetches the .drawio and draws it with the official
+// draw.io viewer, read-only, so the .drawio file is the single source of truth: nothing is
+// generated and nothing can drift out of sync. drawio-assets.mjs serves each file in dev and emits
+// it (plus the viewer) into the build, named by a hash of its bytes.
 const DOCS_DIR = fileURLToPath(new URL('../', import.meta.url))
 const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
@@ -23,25 +26,7 @@ function renderDiagram(ref: string, alt: string, env: any): string {
     return `<figure class="diagram-figure"><em>Missing diagram: ${escapeAttr(ref)}</em></figure>`
   }
   const hash = diagramHash(readFileSync(source, 'utf8'))
-  const file = `${DIAGRAM_DIR}${hash}.png`
-  // Always a static image. The src is bound (:src) rather than a plain attribute so Vite does not
-  // treat it as an import: a PNG that does not exist yet is then just a broken image until
-  // `npm run docs:diagrams` writes it, instead of a build error. (`vitepress dev` caches rendered
-  // markdown by content, so after editing a .drawio file restart it to pick up the new hash.)
-  const url = `${BASE}diagrams/${hash}.png`
-  let size = ''
-  if (existsSync(file)) {
-    // PNG header: width/height as big-endian uint32 at bytes 16 and 20. Rendered at 2x.
-    const png = readFileSync(file)
-    const width = Math.round(png.readUInt32BE(16) / 2)
-    const height = Math.round(png.readUInt32BE(20) / 2)
-    // Natural size is the upper bound; CSS shrinks it to the column, and a click opens it full size
-    size = ` width="${width}" height="${height}"`
-  } else {
-    console.warn(`[diagrams] no image for ${ref} (${hash}); run \`npm run docs:diagrams\``)
-  }
-  return `<figure class="diagram-figure"><a href="${url}" class="diagram-open" target="_blank" rel="noopener" title="Click to enlarge">` +
-    `<img :src="'${url}'" alt="${escapeAttr(alt || 'Diagram')}"${size} loading="lazy" decoding="async"></a></figure>`
+  return `<DrawioDiagram src="${BASE}diagrams/${hash}.drawio" viewer="${BASE}diagrams/viewer-${VIEWER_VERSION}.min.js" alt="${escapeAttr(alt || 'Diagram')}" />`
 }
 
 // ==================== EN SIDEBARS ====================
@@ -679,6 +664,7 @@ export default defineConfig({
   lastUpdated: true,
   cleanUrls: true,
   vite: {
+    plugins: [drawioAssets()],
     server: {
       port: 5700,
       strictPort: true
