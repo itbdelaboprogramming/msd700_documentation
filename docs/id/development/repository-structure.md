@@ -163,7 +163,7 @@ yang sudah dirender lebih dulu dengan gaya draw.io seperti gambar buatan tangan 
 | Bagian | Tugas |
 | --- | --- |
 | `scripts/render-diagrams.mjs` | Menata setiap fence sekali di Chrome headless (mermaid + engine layout ELK untuk flowchart dan state diagram) lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x. Menghapus gambar yang tidak dipakai fence mana pun |
-| `scripts/diagram-hash.mjs` | Hash dari isi fence. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama |
+| `scripts/diagram-hash.mjs` | Hash dari isi fence plus `RENDER_VERSION`. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama. Naikkan `RENDER_VERSION` setelah mengubah gaya agar pembaca mendapat URL baru, bukan gambar lama dari cache |
 | `docs/.vitepress/config.mts`, `markdown.config` | Mengganti setiap fence `mermaid` dengan `<img>` PNG-nya, ditautkan ke file ukuran penuh. Jika PNG belum ada, kembali ke komponen `<Mermaid>` lama di browser dan mencetak peringatan `[diagrams]` |
 
 Render di browser pembaca ditinggalkan karena mermaid mengukur label dengan font apa pun yang
@@ -173,6 +173,7 @@ Satu renderer dengan satu font yang pasti menghasilkan gambar yang sama di mana 
 ```bash
 npm run docs:diagrams          # render diagram baru atau yang berubah (butuh Chrome/Chromium lokal)
 npm run docs:diagrams -- --all # render ulang semua, misalnya setelah mengubah gaya
+npm run docs:diagrams -- --all --audit # plus daftar garis yang memotong teks, judul, atau label
 npm run docs:check-diagrams    # cek sintaks semua diagram dan gagal jika ada yang belum punya PNG
 ```
 

@@ -14,6 +14,7 @@
 //   npm run docs:diagrams            render new / changed diagrams
 //   npm run docs:diagrams -- --all   re-render everything (after changing the style below)
 //   npm run docs:diagrams -- --check exit 1 if any fence has no image (no browser needed)
+//   npm run docs:diagrams -- --audit also list every line crossing text, a group title or a label
 //
 // Needs a local Chrome/Chromium. Set CHROME_PATH if it is not in a standard location.
 //
@@ -218,6 +219,27 @@ function postProcess(svg) {
         t.style.textAnchor = 'start'
       }
     }
+    // A label wider than its arrow runs into the number badge at the arrow's start. Slide it
+    // sideways, away from the badge, until it clears.
+    for (const ln of svg.querySelectorAll('line.messageLine0, line.messageLine1')) {
+      // the badge number follows the arrow, after an invisible line that carries the circle marker
+      let badge = null
+      for (let el = ln.nextElementSibling, n = 0; el && n < 3 && !el.matches('text.messageText'); el = el.nextElementSibling, n++) {
+        if (el.matches('text.sequenceNumber')) { badge = el; break }
+      }
+      const texts = []
+      for (let el = ln.previousElementSibling; el && el.matches('text.messageText'); el = el.previousElementSibling) texts.unshift(el)
+      if (!badge || !texts.length) continue
+      const bb = badge.getBBox()
+      const cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2, r = 11
+      const boxes = texts.map((t) => t.getBBox())
+      const x0 = Math.min(...boxes.map((b) => b.x)), x1 = Math.max(...boxes.map((b) => b.x + b.width))
+      const y0 = Math.min(...boxes.map((b) => b.y)), y1 = Math.max(...boxes.map((b) => b.y + b.height))
+      if (!(x0 < cx + r && x1 > cx - r && y0 < cy + r && y1 > cy - r)) continue
+      const leftToRight = +ln.getAttribute('x1') < +ln.getAttribute('x2')
+      const dx = leftToRight ? cx + r - x0 : cx - r - x1
+      for (const t of texts) t.setAttribute('x', +t.getAttribute('x') + dx)
+    }
     // White plate behind each message label so lifelines don't strike through the text
     for (const t of svg.querySelectorAll('text.messageText')) {
       const b = t.getBBox()
@@ -241,24 +263,155 @@ function postProcess(svg) {
       }
     }
   }
+  // Everything a group title must not sit on: connector points and boxes, in the svg's own space
+  const root = svg.getScreenCTM().inverse()
+  const toRoot = (el) => root.multiply(el.getScreenCTM())
+  const edgePts = []
+  for (const path of svg.querySelectorAll('path[data-edge="true"], path.transition, path.flowchart-link')) {
+    const m = toRoot(path), len = path.getTotalLength()
+    for (let d = 0; d <= len; d += 2) edgePts.push(path.getPointAtLength(d).matrixTransform(m))
+  }
+  const nodeBoxes = [...svg.querySelectorAll('g.node')].map((g) => {
+    const b = g.getBBox(), m = toRoot(g)
+    const p0 = new DOMPoint(b.x, b.y).matrixTransform(m), p1 = new DOMPoint(b.x + b.width, b.y + b.height).matrixTransform(m)
+    return { x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y }
+  })
   for (const cluster of svg.querySelectorAll('g.cluster')) {
     const rect = cluster.querySelector(':scope > rect')
     const label = cluster.querySelector(':scope > .cluster-label')
     if (!rect || !label) continue
-    const x = +rect.getAttribute('x'), y = +rect.getAttribute('y')
+    const rx = +rect.getAttribute('x'), y = +rect.getAttribute('y'), rw = +rect.getAttribute('width')
     const lb = label.getBBox()
     if (!lb.width) continue
     const padX = 8, padY = 4
+    const tw = lb.width + padX * 2, th = lb.height + padY * 2
+    // The tab goes top-left like draw.io, unless a connector entering the group runs through
+    // that spot: then slide it right along the top edge to the first clear position.
+    const cm = toRoot(cluster)
+    // cost of a tab at tx: connector points under it (a box underneath rules the spot out)
+    const cost = (tx) => {
+      const p0 = new DOMPoint(tx - 3, y - 1).matrixTransform(cm), p1 = new DOMPoint(tx + tw + 3, y + th + 2).matrixTransform(cm)
+      const b = { x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y }
+      if (nodeBoxes.some((n) => n.x0 < b.x1 && b.x0 < n.x1 && n.y0 < b.y1 && b.y0 < n.y1)) return Infinity
+      return edgePts.filter((p) => p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1).length
+    }
+    let x = rx, best = cost(rx)
+    for (let tx = rx + 4; best > 0 && tx <= rx + rw - tw; tx += 4) {
+      const c = cost(tx)
+      if (c < best) { best = c; x = tx }
+    }
+    // No clear spot (every stretch of the top edge has a connector entering): the tab is lifted
+    // above the connectors below, so a line passes behind the title instead of through its text.
+    const raised = best > 0
     const tab = document.createElementNS(NS, 'rect')
     tab.setAttribute('x', x); tab.setAttribute('y', y)
-    tab.setAttribute('width', lb.width + padX * 2); tab.setAttribute('height', lb.height + padY * 2)
+    tab.setAttribute('width', tw); tab.setAttribute('height', th)
+    tab.setAttribute('class', 'cluster-tab')
     tab.setAttribute('style', 'fill:#fff;stroke:#000;stroke-width:1px')
     cluster.insertBefore(tab, label)
     // label's translate() positions its own origin; shift it so its box lands inside the tab
     const m = /translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)/.exec(label.getAttribute('transform') || '')
     const tx = m ? +m[1] : 0, ty = m ? +m[2] : 0
     label.setAttribute('transform', `translate(${tx + (x + padX - (tx + lb.x))}, ${ty + (y + padY - (ty + lb.y))})`)
+    if (raised) {
+      const top = document.createElementNS(NS, 'g')
+      top.setAttribute('class', 'cluster-tab-raised')
+      top.setAttribute('transform', `matrix(${cm.a} ${cm.b} ${cm.c} ${cm.d} ${cm.e} ${cm.f})`)
+      top.append(tab, label)
+      svg.append(top)
+    }
   }
+}
+
+// Runs in the page after postProcess: lists every place a connector runs through text or a box it
+// does not belong to, or two labels overlap. `--audit` prints these; rendering itself uses the
+// count to pick the best of several layouts (see LAYOUT_VARIANTS).
+function audit(svg) {
+  const out = []
+  const root = svg.getScreenCTM().inverse()
+  const mat = (el) => root.multiply(el.getScreenCTM())
+  const box = (el, shrink = 0) => {
+    const b = el.getBBox(), m = mat(el)
+    const pts = [[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]]
+      .map(([x, y]) => new DOMPoint(x, y).matrixTransform(m))
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y)
+    return { x0: Math.min(...xs) + shrink, y0: Math.min(...ys) + shrink, x1: Math.max(...xs) - shrink, y1: Math.max(...ys) - shrink }
+  }
+  const valid = (b) => b.x1 - b.x0 > 1 && b.y1 - b.y0 > 1
+  const inside = (p, b) => p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1
+  const overlap = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1
+  const key = (id) => (id || '').replace(/^d[0-9a-f]{16}-/, '').replace(/^(flowchart|state)-/, '').replace(/-\d+$/, '')
+  const txt = (el) => (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40)
+
+  const nodes = [...svg.querySelectorAll('g.node')].map((g) => {
+    const shape = g.querySelector(':scope > rect, :scope > polygon, :scope > path, :scope > circle, :scope > g.label-container, :scope > .basic, :scope > .outer-path') || g
+    const label = g.querySelector(':scope > g.label, :scope > .label')
+    return { id: key(g.id), name: txt(g) || key(g.id), shape: box(shape, 2), text: label ? box(label, 1) : null }
+  })
+  const nodeIds = new Set(nodes.map((n) => n.id))
+  const clusterIds = new Set([...svg.querySelectorAll('g.cluster')].map((c) => key(c.id)))
+  // (tabs lifted into .cluster-tab-raised sit above the lines, so they are skipped here)
+  const titles = [...svg.querySelectorAll('g.cluster')].map((c) => {
+    const t = c.querySelector(':scope > rect.cluster-tab') || c.querySelector(':scope > .cluster-label')
+    return t ? { name: txt(c.querySelector(':scope > .cluster-label') || c), b: box(t, 1) } : null
+  }).filter((t) => t && valid(t.b))
+  const labels = [...svg.querySelectorAll('g.edgeLabel g.label[data-id], g.edgeLabel .label[data-id]')]
+    .map((l) => ({ edge: l.dataset.id, name: txt(l), b: box(l, 1) })).filter((l) => valid(l.b) && l.name)
+  const ends = (id) => {
+    const body = id.replace(/^L_/, '').replace(/_\d+$/, '')
+    const known = (x) => nodeIds.has(x) || clusterIds.has(x)
+    for (let i = 1; i < body.length; i++) {
+      if (body[i] !== '_') continue
+      const a = body.slice(0, i), b = body.slice(i + 1)
+      if (known(a) && known(b)) return [a, b]
+    }
+    return []
+  }
+  for (const path of svg.querySelectorAll('path[data-edge="true"], path.transition, path.flowchart-link')) {
+    const id = path.dataset.id || key(path.id)
+    const [from, to] = ends(id)
+    const m = mat(path)
+    const len = path.getTotalLength()
+    const pts = []
+    for (let d = 0; d <= len; d += 2) pts.push(path.getPointAtLength(d).matrixTransform(m))
+    const hit = (b) => pts.some((p) => inside(p, b))
+    const edgeName = `${from || '?'} -> ${to || '?'}`
+    for (const t of titles) if (hit(t.b)) out.push(`line ${edgeName} crosses group title "${t.name}"`)
+    for (const n of nodes) {
+      if (n.id !== from && n.id !== to && hit(n.shape)) out.push(`line ${edgeName} crosses box "${n.name}"`)
+      else if (n.text && hit(n.text) && n.id !== from && n.id !== to) out.push(`line ${edgeName} crosses text "${n.name}"`)
+    }
+    for (const l of labels) if (l.edge !== id && hit(l.b)) out.push(`line ${edgeName} crosses label "${l.name}"`)
+  }
+  for (let i = 0; i < labels.length; i++) {
+    for (let j = i + 1; j < labels.length; j++) if (overlap(labels[i].b, labels[j].b)) out.push(`label "${labels[i].name}" overlaps label "${labels[j].name}"`)
+    for (const n of nodes) if (overlap(labels[i].b, n.shape)) out.push(`label "${labels[i].name}" overlaps box "${n.name}"`)
+    for (const t of titles) if (overlap(labels[i].b, t.b)) out.push(`label "${labels[i].name}" overlaps group title "${t.name}"`)
+  }
+  // Sequence diagrams: text blocks colliding with each other or with notes / number badges
+  const seqText = [...svg.querySelectorAll('text.messageText, text.noteText, text.loopText, text.labelText')]
+  if (seqText.length) {
+    const items = [
+      ...seqText.map((t) => ({ kind: 'text', name: txt(t), b: box(t, 1), el: t })),
+      ...[...svg.querySelectorAll('rect.note')].map((r) => ({ kind: 'note', name: txt(r.parentNode), b: box(r, 1), el: r })),
+      // the badge circle lives in a <marker>; its number text sits at the circle's centre (r = 8)
+      ...[...svg.querySelectorAll('text.sequenceNumber')].map((t) => {
+        const c = box(t)
+        const cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2
+        return { kind: 'badge', name: `#${txt(t)}`, b: { x0: cx - 7, y0: cy - 7, x1: cx + 7, y1: cy + 7 }, el: t }
+      })
+    ].filter((x) => valid(x.b))
+    for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+      const a = items[i], b = items[j]
+      if (a.kind !== 'text' && b.kind !== 'text') continue
+      if (a.kind === 'note' && a.el.parentNode.contains(b.el)) continue
+      if (b.kind === 'note' && b.el.parentNode.contains(a.el)) continue
+      if (a.kind === 'text' && b.kind === 'text' && a.el.parentNode === b.el.parentNode && a.el.classList.value === b.el.classList.value) continue
+      if (overlap(a.b, b.b)) out.push(`${a.kind} "${a.name}" overlaps ${b.kind} "${b.name}"`)
+    }
+  }
+  if (window.__auditDebug) out.push(`DEBUG nodes=${nodes.length} titles=${titles.length} labels=${labels.length} edges=${svg.querySelectorAll('path[data-edge="true"], path.transition, path.flowchart-link').length} ends=${[...svg.querySelectorAll('path[data-edge="true"]')].map((p) => ends(p.dataset.id).length).join("")}`)
+  return [...new Set(out)]
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -296,6 +449,7 @@ function findChrome() {
 }
 
 let failed = 0
+let totalIssues = 0
 if (todo.length) {
   const puppeteer = (await import('puppeteer-core')).default
   const browser = await puppeteer.launch({ executablePath: findChrome(), headless: true, args: ['--no-sandbox'] })
@@ -303,6 +457,7 @@ if (todo.length) {
   await page.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 2 })
   await page.goto(`http://127.0.0.1:${server.address().port}/`)
   await page.waitForFunction('window.__ready === true')
+  if (process.env.AUDIT_DEBUG) await page.evaluate(() => { window.__auditDebug = true })
   await page.evaluate((cfg) => window.__mermaid.initialize(cfg), mermaidConfig)
 
   let i = 0
@@ -312,7 +467,7 @@ if (todo.length) {
       const code = d.code
       // stateDiagram / sequence / timeline ignore ELK or break with it; only flowcharts use it
       const isFlow = /^\s*(flowchart|graph|stateDiagram)/m.test(code.split('\n').find((l) => l.trim() && !l.trim().startsWith('%%')) || '')
-      await page.evaluate(async ({ code, hash, isFlow, cfg, post }) => {
+      const issues = await page.evaluate(async ({ code, hash, isFlow, cfg, post, check }) => {
         const m = window.__mermaid
         m.initialize({ ...cfg, layout: isFlow ? 'elk' : 'dagre' })
         const stage = document.getElementById('stage')
@@ -329,12 +484,16 @@ if (todo.length) {
         el.setAttribute('width', Math.ceil(bb.width + pad * 2))
         el.setAttribute('height', Math.ceil(bb.height + pad * 2))
         el.style.maxWidth = 'none'
-      }, { code, hash, isFlow, cfg: mermaidConfig, post: postProcess.toString() })
+        // eslint-disable-next-line no-new-func
+        return new Function('svg', `return (${check})(svg)`)(el)
+      }, { code, hash, isFlow, cfg: mermaidConfig, post: postProcess.toString(), check: audit.toString() })
       await page.evaluate(() => document.fonts.ready)
       const stage = await page.$('#stage')
       if (process.env.DIAGRAM_SVG_DIR) writeFileSync(join(process.env.DIAGRAM_SVG_DIR, `${hash}.svg`), await page.$eval('#stage', (e) => e.innerHTML))
       writeFileSync(pngPath(hash), await stage.screenshot({ type: 'png', omitBackground: false }))
-      process.stdout.write(`[${i}/${todo.length}] ${hash}  ${d.sources[0]}\n`)
+      process.stdout.write(`[${i}/${todo.length}] ${hash}  ${d.sources[0]}${issues.length ? `  (${issues.length} collisions)` : ''}\n`)
+      if (args.has('--audit')) for (const x of issues) process.stdout.write(`    - ${x}\n`)
+      totalIssues += issues.length
     } catch (err) {
       failed++
       console.error(`[${i}/${todo.length}] FAILED ${d.sources.join(', ')}\n  ${String(err?.message || err).split('\n')[0]}`)
@@ -350,5 +509,5 @@ if (!match) for (const name of readdirSync(OUT)) {
   if (name.endsWith('.png') && !diagrams.has(name.slice(0, -4))) { unlinkSync(join(OUT, name)); pruned++ }
 }
 
-console.log(`${diagrams.size} diagrams, ${todo.length - failed} rendered, ${failed} failed, ${pruned} stale images removed`)
+console.log(`${diagrams.size} diagrams, ${todo.length - failed} rendered, ${failed} failed, ${pruned} stale images removed, ${totalIssues} collisions`)
 process.exit(failed ? 1 : 0)

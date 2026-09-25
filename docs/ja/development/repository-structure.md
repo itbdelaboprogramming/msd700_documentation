@@ -161,7 +161,7 @@ msd700_documentation/
 | 要素 | 役割 |
 | --- | --- |
 | `scripts/render-diagrams.mjs` | すべてのフェンスをヘッドレス Chrome で一度だけレイアウトし(mermaid + フローチャートと状態図には ELK レイアウトエンジン)、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。どのフェンスからも使われなくなった画像は削除します |
-| `scripts/diagram-hash.mjs` | フェンス本文のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします |
+| `scripts/diagram-hash.mjs` | フェンス本文と `RENDER_VERSION` のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします。スタイル変更後は `RENDER_VERSION` を上げ、キャッシュされた古い画像ではなく新しい URL が配信されるようにします |
 | `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを、その PNG の `<img>`(原寸ファイルへのリンク付き)に置き換えます。PNG が無い場合は従来のブラウザ内 `<Mermaid>` コンポーネントに戻し、`[diagrams]` 警告を出します |
 
 読者のブラウザでのレンダリングをやめたのは、mermaid がそのブラウザで解決されたフォントでラベルを計測するため、
@@ -171,6 +171,7 @@ msd700_documentation/
 ```bash
 npm run docs:diagrams          # 新規・変更された図をレンダリング(ローカルの Chrome/Chromium が必要)
 npm run docs:diagrams -- --all # スタイル変更後などに全図を再レンダリング
+npm run docs:diagrams -- --all --audit # 文字・グループ名・ラベルを横切る線も一覧表示
 npm run docs:check-diagrams    # 全図の構文を確認し、PNG の無い図があれば失敗
 ```
 

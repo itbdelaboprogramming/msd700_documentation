@@ -162,7 +162,7 @@ thin black lines, Helvetica, right-angle connectors, group titles in a corner ta
 | Piece | Job |
 | --- | --- |
 | `scripts/render-diagrams.mjs` | Lays out every fence once in headless Chrome (mermaid + the ELK layout engine for flowcharts and state diagrams) and writes `docs/public/diagrams/<hash>.png` at 2x. Deletes images no fence uses any more |
-| `scripts/diagram-hash.mjs` | The hash of a fence body. Shared by the renderer and the build, so both name the same file |
+| `scripts/diagram-hash.mjs` | The hash of a fence body plus `RENDER_VERSION`. Shared by the renderer and the build, so both name the same file. Bump `RENDER_VERSION` after a style change so readers get new URLs, not cached old images |
 | `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. If the PNG is missing it falls back to the old in-browser `<Mermaid>` component and prints a `[diagrams]` warning |
 
 Rendering in the reader's browser was dropped because mermaid measured labels with whatever font
@@ -172,6 +172,7 @@ machines. One renderer with one known font gives the same picture everywhere.
 ```bash
 npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
 npm run docs:diagrams -- --all # re-render everything, e.g. after changing the style
+npm run docs:diagrams -- --all --audit # also list lines crossing text, titles or labels
 npm run docs:check-diagrams    # syntax-check every diagram and fail if any has no PNG
 ```
 

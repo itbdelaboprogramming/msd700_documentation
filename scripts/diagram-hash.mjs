@@ -13,8 +13,12 @@ export function normalizeDiagram(code) {
   return lines.map((l) => l.slice(indent)).join('\n')
 }
 
+// Bump whenever render-diagrams.mjs changes how diagrams look. It is part of every image's file
+// name, so a restyle produces new URLs instead of browsers and Apache serving the cached old PNGs.
+export const RENDER_VERSION = 2
+
 export function diagramHash(code) {
-  return createHash('sha256').update(normalizeDiagram(code)).digest('hex').slice(0, 16)
+  return createHash('sha256').update(`v${RENDER_VERSION}\n${normalizeDiagram(code)}`).digest('hex').slice(0, 16)
 }
 
 // Every ```mermaid fence in a markdown source, skipping ones nested in other code blocks.
