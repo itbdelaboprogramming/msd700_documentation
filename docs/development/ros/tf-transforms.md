@@ -15,14 +15,7 @@ The coordinate transform tree adheres to ROS REP-103 (Standard Units of Measure 
 
 The tree below is what the **real unit** publishes: `irbot.urdf.xacro` through `msd700_description/launch/robot_description.launch.xml`, started by `bringup_msd.launch` in every mode (idle included) so `/scan` and the EKF always have their static transforms. The lidar height comes from `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) and is the datum `msd700_perception` measures every height from.
 
-```mermaid
-flowchart TD
-  MAP["map<br/>(global fixed frame)"] -->|"AMCL / SLAM correction"| ODOM["odom<br/>(smooth local odometry frame)"]
-  ODOM -->|"EKF: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(chassis projected on the floor)"]
-  BASE_FP -->|"Static: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link"]
-  BASE_LINK -->|"Static: z = +0.427 m"| LASER["laser<br/>(Velodyne VLP-16)"]
-  BASE_LINK -->|"Static: identity"| IMU["imu<br/>(CMPS12 via STM32)"]
-```
+![Coordinate Frame Hierarchy (TF Tree)](./diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
 There is no `camera_link` on the robot: the camera is a separate USB/WebRTC device, not a URDF link.
 
@@ -69,22 +62,7 @@ MSD700 strictly enforces right-handed Cartesian coordinate systems:
 
 When telemetry (such as robot pose and laser scans) is bridged from the physical robot across the internet to the cloud server, **clock drift between physical machines creates `TF_OLD_DATA` extrapolation warnings** if timestamps are evaluated directly.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Robot as Robot Jetson (Clock Domain A)
-  participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama (Cloud Server Domain B)
-  participant Canvas as Browser ROS2D Canvas
-
-  Robot->>Robot: Stamp Pose with Jetson Time (t_robot)
-  Robot->>MQTT: Publish /string/robotpose JSON payload
-  MQTT->>Relay: Deliver payload over WAN
-  Note over Relay: BoundaryPublisher Restamping Filter
-  Relay->>Relay: Measure Delta = now(server) - t_robot<br/>Restamp message with ros::Time::now()
-  Relay->>Canvas: Publish /server/robot_pose to rosbridge
-  Canvas->>Canvas: Render smooth icon position without TF latency drops
-```
+![Cross-Machine Clock Domain Restamping (BoundaryPublisher)](./diagrams/tf-transforms-cross-machine-clock-domain-restamping-bo.drawio)
 
 ### Why Restamping Is Load-Bearing:
 1. **Jetson RTC Limitations**: Physical SBCs in field environments without NTP access can boot with clocks skewed by seconds or months.

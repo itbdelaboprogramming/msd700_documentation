@@ -25,6 +25,7 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 - **Faster Hazard Scan**: The perception pipeline's grouped reductions moved into a C library (`fastops`), cutting a frame from about 55 ms to about 37 ms with a numpy fallback.
 - **Hotspot Restart from the Dashboard**: `network_local` restarts the hotspot through the narrow `msd700-hotspot-restart.path` unit instead of NetworkManager.
 - **Auto-Deploy Webhook**: Pushes to the deploy branches rebuild `server_prod` / `server_dev` automatically.
+- **Diagrams in draw.io**: Every docs diagram is now an editable `.drawio` file next to its page, rendered to a static PNG with the draw.io viewer. Mermaid is no longer used. See [Repository Structure § Diagrams](/development/repository-structure#diagrams).
 
 ### August 2026: Documentation Overhaul & Precision Kinematics
 - **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.

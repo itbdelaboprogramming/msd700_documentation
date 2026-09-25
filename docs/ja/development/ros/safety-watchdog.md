@@ -9,18 +9,7 @@ search: false
 
 オンボードソフトウェアは、`system_command.py`内で動作するウォッチドッグでオペレーターの在席を監視する。これはロボット内部の安全機構であり、それ自体にはダッシュボードUIを持たない。オペレーターからその効果(`in_use`/リースフィールド、強制されうるアクティビティ状態)がどう見えるかについては、[アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#状態の所有権と永続化のマトリクス)と[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)を参照。
 
-```mermaid
-flowchart TB
-  HB["MQTT heartbeat, 5 Hz<br/>(unit's local dashboard only)"] --> RESET["Refresh presence"]
-  PING["HTTP ping, 1 Hz<br/>POST /api/hardware/ping"] --> RESET
-  RESET --> MONITOR["Watchdog monitor loop<br/>(sampled every 0.2 s)"]
-
-  MONITOR -->|No presence for 2 s| PAUSE["2 seconds: motion safety pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
-  PAUSE -->|No presence for 10 min| TEARDOWN["10 minutes: session teardown<br/>Switch mode to idle, drop the navigation/mapping stack"]
-  TEARDOWN -->|No presence for 30 min| SHUTDOWN["30 minutes: hardware shutdown<br/>Lease dropped, motion lock kept on"]
-
-  RESET -.->|Presence restored| UNPAUSE["Clear the 2 s pause<br/>Resume the active mission"]
-```
+![セーフティウォッチドッグとハートビート監視](../../../development/ros/diagrams/safety-watchdog-safety-watchdog-and-heartbeat-supervisio.drawio)
 
 
 ## 2つの在席シグナル

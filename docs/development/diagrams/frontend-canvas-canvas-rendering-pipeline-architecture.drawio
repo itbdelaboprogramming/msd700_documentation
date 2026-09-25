@@ -1,0 +1,73 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Canvas Rendering Pipeline Architecture">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="333" y="21" width="270" height="716" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="21" y="174" width="272" height="427" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="/server/slam/map (OccupancyGrid)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="15" y="46" width="242" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="/server/robot_pose (PoseStamped)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="15" y="120" width="243" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="/server/scan (LaserScan, derived&lt;br&gt;from robot_pose topic name)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="20" y="193" width="232" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="/server/move_base/NavfnROS/plan&lt;br&gt;(Path)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="283" width="248" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="/server/boustrophedon_path (Path)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="15" y="372" width="242" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Layer 1: Base Map&lt;br&gt;OccupancyGrid Bitmap&lt;br&gt;(resolution from map metadata)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="63" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Layer 2: Keep-Out Exclusion Zone&lt;br&gt;Red Polygons" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="168" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="Layer 3: Global Path (Pink) &amp;amp;&lt;br&gt;Local Trajectory (Yellow)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="257" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="Layer 4: Boustrophedon Sweep&lt;br&gt;Lanes (Orange Comb Splines)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="346" width="246" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" value="Layer 5: Laser Scan Points&lt;br&gt;(vendored Nav2D&lt;br&gt;LaserScanViewer, latency-&lt;br&gt;compensated)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="436" width="246" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Layer 6: Interactive Polygon&lt;br&gt;Drawing Vertex Overlay" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="556" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" value="Layer 7: Robot Footprint Hull &amp;amp;&lt;br&gt;Yaw Heading Arrow" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="645" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="HTML5 Canvas Display (60 FPS&lt;br&gt;Pan/Zoom)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="643" y="358" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5012;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5126;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="293" y="388" as="sourcePoint" />
+            <mxPoint x="333" y="388" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5126;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n17">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="603" y="388" as="sourcePoint" />
+            <mxPoint x="643" y="388" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n3" value="EaselJS 2D Canvas Stage&lt;br&gt;(mapComponent.tsx)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="203" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Incoming rosbridge WebSocket Streams" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="231" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -11,36 +11,7 @@ This document provides an exhaustive mathematical and architectural specificatio
 
 ## Perception and Fusion Architecture
 
-```mermaid
-flowchart TD
-  subgraph RawSensors["Physical sensors"]
-    VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.231)"]
-    IMU_HW["CMPS12 compass/IMU on the STM32<br/>accel, gyro, magnetometer, heading"]
-    ENCODERS["Wheel encoders<br/>pulse deltas in hardware_state"]
-    CAM["USB Camera<br/>separate WebRTC device, not a URDF link"]
-  end
-
-  subgraph Preprocessing["ROS preprocessing and filtering"]
-    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D pointcloud to 2D /scan<br/>Height window: -0.30 to +0.30 m"]
-    RAW["raw_sensor_node (hardware_state.py)<br/>/wheel/odom, /imu/data_raw, /imu/mag"]
-    IMU_FILT["imu_filter_madgwick<br/>gain 0.01, use_mag, fixed frame odom<br/>output remapped to /imu/from_filter"]
-    IMU_OUT["raw_sensor_node republishes<br/>/imu/data (frame imu)"]
-  end
-
-  subgraph StateEstimation["EKF"]
-    EKF["robot_localization (ekf_localization_node)<br/>Fuses /wheel/odom and /imu/data"]
-    ODOM_FILT["/odometry/filtered<br/>TF odom -> base_footprint (30 Hz)"]
-  end
-
-  VLP16 --> PCL2SCAN
-  IMU_HW --> RAW
-  ENCODERS --> RAW
-  RAW -->|/imu/data_raw, /imu/mag| IMU_FILT
-  IMU_FILT -->|/imu/from_filter| IMU_OUT
-  RAW -->|/wheel/odom| EKF
-  IMU_OUT --> EKF
-  EKF --> ODOM_FILT
-```
+![Perception and Fusion Architecture](./diagrams/sensor-fusion-and-control-perception-and-fusion-architecture.drawio)
 
 ---
 
@@ -120,12 +91,7 @@ $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}
 
 The Velodyne VLP-16 sensor produces 300,000 points/sec across 16 laser rings. To minimize CPU utilization while preserving spatial obstacle awareness, `pointcloud_to_laserscan` slices the 3D point cloud into a high-rate 2D planar scan:
 
-```mermaid
-flowchart LR
-  PCL["sensor_msgs/PointCloud2<br/>(/velodyne_points)"] --> SLICE["Z-Axis Vertical Slicing Window<br/>min_height: -0.30 m<br/>max_height: +0.30 m"]
-  SLICE --> PROJ["Ray Projection & Range Bounding<br/>min_range: 0.40 m, max_range: 100.0 m<br/>scan_time: 0.1 s (10 Hz)<br/>angle_increment: 0.0087 rad (0.5 deg)"]
-  PROJ --> SCAN["sensor_msgs/LaserScan<br/>(/scan, 10 Hz)"]
-```
+![LiDAR PointCloud Projection Pipeline](./diagrams/sensor-fusion-and-control-lidar-pointcloud-projection-pipeline.drawio)
 
 This keeps the $\pm 0.30\text{ m}$ band around the sensor in the navigation costmaps while returns outside it (floor reflections, ceiling) are dropped. A second pipeline (`cloud_hazard.launch`) fits ground and watches the $0.08$–$0.65\text{ m}$ band above it for holes and drop-offs, publishing `/scan_hazard`.
 

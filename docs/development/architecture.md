@@ -48,55 +48,7 @@ The unit's local stack is an **offline-first cache of the cloud, not an isolated
 
 ## System Topology and Data Flow
 
-```mermaid
-flowchart TB
-  subgraph Client["Operator Web Client"]
-    BROWSER["Operator Browser<br/>Next.js Dashboard"]
-  end
-
-  subgraph ServerHost["MSD700 Server Host (Cloud)"]
-    APACHE["Apache2 Reverse Proxy (:443)<br/>TLS Termination & URL Routing"]
-    FE_PROD["frontend_prod (:3000)"]
-    BE_PROD["backend_node (:5000)<br/>REST API + unit_manager.js<br/>(process inside nakayama_cloud)"]
-    DB_PROD[("MySQL Central (:3307 host)<br/>3306 inside the container")]
-    HIVEMQ["HiveMQ Broker (:8883 TLS)"]
-    ROSBRIDGE["rosbridge_suite (:9090)"]
-    MEDIA["media-server (:3003)"]
-    SIG["signalling_server (:3001)"]
-    COTURN["coturn (:3478 / UDP Relay)"]
-    UNIT_RELAY["rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama<br/>MQTT-to-ROS Deserializer<br/>(legacy per-unit; default is the fleet relay)"]
-  end
-
-  subgraph UnitHost["MSD700 Unit (Jetson SBC)"]
-    MQTT_BRIDGE["aws_mqtt Bridge<br/>Cloud TLS + Local Loopback"]
-    SYS_CMD["system_command.py<br/>Command Dispatcher & Lease Holder"]
-    OP_SUP["operation_supervisor.py<br/>Autopilot & Waypoint Sequencer"]
-    ROS_NAV["ROS Noetic Navigation<br/>move_base, costmaps, EKF, drivers"]
-    LOCAL_STACK["Local Stack (:5002, :3000, :3306)<br/>Offline Operator Interface"]
-  end
-
-  BROWSER -->|"HTTPS (:443)"| APACHE
-  APACHE --> FE_PROD
-  APACHE --> BE_PROD
-  APACHE --> ROSBRIDGE
-  APACHE --> MEDIA
-  APACHE --> SIG
-  BROWSER -.->|"WebRTC Video"| COTURN
-
-  BE_PROD <--> DB_PROD
-  BE_PROD -->|"/var/run/docker.sock"| UNIT_RELAY
-  BE_PROD <-->|"system_command / system_feedback"| HIVEMQ
-
-  HIVEMQ <-->|"TLS 8883 (Internet)"| MQTT_BRIDGE
-  UNIT_RELAY <-->|"Telemetry Strings"| HIVEMQ
-  UNIT_RELAY -->|"Typed ROS Topics"| ROSBRIDGE
-
-  MQTT_BRIDGE --> SYS_CMD
-  MQTT_BRIDGE --> OP_SUP
-  SYS_CMD --> ROS_NAV
-  OP_SUP --> ROS_NAV
-  LOCAL_STACK --> ROS_NAV
-```
+![System Topology and Data Flow](./diagrams/architecture-system-topology-and-data-flow.drawio)
 
 ### Architectural Key Rules:
 1. **Apache as the Single Public Ingress**: All HTTP and WebSocket requests enter through Apache port 443. Backend services bind to internal ports or loopback addresses. The only external port directly reached by robots is HiveMQ on port 8883 (TLS).
@@ -107,20 +59,7 @@ flowchart TB
 
 The platform uses two separate communication channels that fail independently:
 
-```mermaid
-flowchart TB
-  subgraph Channel1["Channel 1: MQTT Control Channel"]
-    direction LR
-    M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
-  end
-
-  subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
-    direction LR
-    R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
-  end
-
-  Channel1 ~~~ Channel2
-```
+![Two Diagnostic Channels](./diagrams/architecture-two-diagnostic-channels.drawio)
 
 | Channel | Transport | Data Carried | Failure Symptom |
 | --- | --- | --- | --- |
@@ -132,35 +71,7 @@ flowchart TB
 
 When an operator commands the robot (for example, clicking a waypoint on the map):
 
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Operator as Operator
-  participant UI as Browser Dashboard
-  participant Apache as Apache2 Proxy
-  participant Backend as backend_node
-  participant HiveMQ as HiveMQ Broker
-  participant UnitCmd as system_command.py
-  participant MoveBase as move_base (ROS)
-
-  Operator->>UI: Click waypoint on navigation map
-  UI->>Apache: POST /services/rosbackend/api/navigation/pointstamped
-  Apache->>Backend: Proxy request with Bearer JWT
-  Note over Backend: verifyToken & attachUnit<br/>Validates account lease permissions
-  Backend->>Backend: Generate unique request_id (UUID v4)
-  Backend->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_command
-  HiveMQ->>UnitCmd: Deliver command envelope via TLS
-  UnitCmd->>MoveBase: Convert to geometry_msgs/PoseStamped goal
-  MoveBase-->>UnitCmd: Goal accepted by navigation actionlib
-  UnitCmd->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_feedback (request_id match)
-  HiveMQ->>Backend: Deliver feedback payload
-  Backend-->>Apache: HTTP 200 { status: true, message: "Goal accepted" }
-  Apache-->>UI: Update UI state to "Navigating"
-
-  loop Automatic Retry on Packet Drop
-    Backend->>HiveMQ: Resend unacknowledged command every 1500 ms (up to 30 s)
-  end
-```
+![End-to-End Command Execution Flow](./diagrams/architecture-end-to-end-command-execution-flow.drawio)
 
 ### Critical Implementation Details:
 - **HTTP Response Reflects Robot State**: `backend_node` holds the HTTP connection open until `system_feedback` with the matching `request_id` arrives from the robot. A status 504 Gateway Timeout signifies that the robot never processed the command.
@@ -174,20 +85,7 @@ Multi-unit telemetry is processed by a single **fleet relay** container serving 
 
 In the per-unit path, `unit_manager.js` inside `backend_node` dynamically manages one container per active unit over `/var/run/docker.sock`:
 
-```mermaid
-stateDiagram-v2
-  [*] --> Absent: No container running
-  Absent --> Starting: Operator opens robot page (touch event)
-  Starting --> Running: Container healthy, rosbridge topics published
-  Running --> Running: Periodic ping refreshes lastActivity
-  Running --> Retained: Robot reports Autopilot ON
-  Retained --> Running: Autopilot OFF or supervisor timeout
-  Running --> Stopped: Idle past UNIT_IDLE_TIMEOUT_MS (reaped)
-  Running --> Stopped: Operator explicitly logs out
-  Retained --> Retained: Operator logout ignored (run protected)
-  Stopped --> Starting: Operator re-opens robot
-  Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
-```
+![Per-Unit Container Lifecycle](./diagrams/architecture-per-unit-container-lifecycle.drawio)
 
 | Configuration Variable | Default Value | Description |
 | --- | --- | --- |
@@ -206,25 +104,7 @@ When a robot executes an autonomous mission in **Autopilot Mode**, its relay con
 
 The robot onboard computer and the cloud server run separate ROS master instances with independent system clocks. To prevent timestamp divergence, all geometric messages crossing MQTT are restamped to local ROS time on ingress via `BoundaryPublisher`.
 
-```mermaid
-flowchart LR
-  subgraph UnitDomain["Unit Clock Domain (Robot)"]
-    U_MSG["ROS Message<br/>stamp = Unit Clock"]
-    U_T2S["topic2string<br/>JSON Serialization"]
-  end
-
-  subgraph Transport["Encrypted Transport"]
-    MQTT_TOPIC["MQTT Topic<br/>/unit_#lt;ULID#gt;/string/..."]
-  end
-
-  subgraph CloudDomain["Cloud Clock Domain (Server)"]
-    C_BOUND["BoundaryPublisher<br/>Restamp to Server ROS Clock"]
-    C_ROS["Typed ROS Message<br/>stamp = Server Clock"]
-    C_VIEW["rosbridge / UI Canvas"]
-  end
-
-  U_MSG --> U_T2S --> MQTT_TOPIC --> C_BOUND --> C_ROS --> C_VIEW
-```
+![Clock Domain Boundary and Time Synchronization](./diagrams/architecture-clock-domain-boundary-and-time-synchroni.drawio)
 
 ::: danger Why Clock Restamping Is Mandatory
 Omitting time restamping results in immediate `TF_OLD_DATA` warnings in RViz and web renderers. Furthermore, if `/use_sim_time` is enabled on one master without an active `/clock` generator, TF tree evaluation freezes completely.
@@ -234,28 +114,7 @@ Omitting time restamping results in immediate `TF_OLD_DATA` warnings in RViz and
 
 The MSD700 architecture enforces three distinct security trust domains. Credentials issued within one domain are strictly rejected by the others.
 
-```mermaid
-flowchart TB
-  subgraph CloudDomain["Cloud Server Trust Domain"]
-    KEYRING["JWT Keyring<br/>/run/secrets/jwt_keyring (container)<br/>dev mount, else JWT_SECRET_KEY/JWT_SECRET env"]
-    OP_TOKENS["Operator JWTs (typ=access)"]
-    ADMIN_TOKENS["Admin JWTs (typ=admin)"]
-    ROBOT_TOKENS["Robot Cloud Tokens (/enroll)"]
-  end
-
-  subgraph UnitDomain["Unit Local Trust Domain"]
-    LOCAL_KEY["Unit Local Keyring"]
-    LOCAL_TOKENS["Local Tokens (/local/robot-token)"]
-  end
-
-  KEYRING --> OP_TOKENS
-  KEYRING --> ADMIN_TOKENS
-  KEYRING --> ROBOT_TOKENS
-  LOCAL_KEY --> LOCAL_TOKENS
-
-  ROBOT_TOKENS -.->|"REJECTED by Local Services"| LOCAL_TOKENS
-  ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
-```
+![Multi-Tier Trust Domains and Security](./diagrams/architecture-multi-tier-trust-domains-and-security.drawio)
 
 1. **Operator Tokens**: Standard HS256 JWTs (`typ=access`) verified against the keyring at `/run/secrets/jwt_keyring` inside the container (mounted from `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` on dev services; production falls back to `JWT_SECRET_KEY`/`JWT_SECRET`). Tokens include user IDs and account scope. Admin tokens (`typ=admin`) are rejected by standard robot operation routes.
 2. **Robot Cloud Tokens**: Minted by `/enroll/token` using the device secret generated during physical robot registration. Valid for 12 hours (`ACCESS_TOKEN_TTL`), refreshed on every system boot. The refresher and the boot-time identity resolver target the **same** backend (`ENROLL_BASE_URL` in `run_msd.sh`); a `401 reenroll` during a background refresh is logged and never touches `device.json`.
@@ -265,20 +124,7 @@ flowchart TB
 
 Because a robot can be accessed from both the cloud web interface and the onboard local network dashboard, the physical robot enforces a single **Operating Lease**.
 
-```mermaid
-flowchart LR
-  USER_A["Operator A (Cloud Dashboard)"]
-  USER_B["Operator B (Local LAN Dashboard)"]
-
-  subgraph Jetson["Physical Robot (Jetson SBC)"]
-    LEASE_MGR["system_command.py<br/>Exclusive Operating Lease"]
-    CONTROLLER["move_base & Motor Actuators"]
-  end
-
-  USER_A -->|"Acquires Lease"| LEASE_MGR
-  USER_B -.->|"Rejected: In Use by Another User"| LEASE_MGR
-  LEASE_MGR --> CONTROLLER
-```
+![Operating Lease: Preventing Multi-Operator Conflicts](./diagrams/architecture-operating-lease-preventing-multi-operato.drawio)
 
 - The lease is held on the **robot** (inside `system_command.py`), not on the server backend.
 - When an operator opens a robot dashboard, the client acquires a 15-second lease renewed continuously by heartbeat pings.

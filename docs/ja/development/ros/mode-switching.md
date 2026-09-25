@@ -11,24 +11,7 @@ search: false
 
 ## モードオーケストレーションのトポロジー
 
-```mermaid
-flowchart TD
-  MQTT["MQTT /system_command"] --> SYS_CMD["system_command.py<br/>(Master Command Dispatcher)"]
-
-  SYS_CMD -->|"Calls ROS Service: /switch_mode"| SWITCH["switch_mode.py<br/>(Dynamic Process Lifecycle Manager)"]
-
-  SWITCH -->|Spawn / Terminate via subprocess + killall| LAUNCH_STACKS
-
-  subgraph LAUNCH_STACKS["Dynamic Launch Subsystems"]
-    NAV_STACK["Navigation Stack (msd700_navigation.launch)<br/>map_server, amcl, move_base, TEB planner"]
-    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping (teleop is a separate robot_teleop.launch)"]
-    COV_STACK["Area Coverage Stack (msd700_coverage/msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
-    EXP_STACK["Exploration Stack (msd700_explore.launch)<br/>explore_lite, frontier exploration"]
-  end
-
-  SYS_CMD -->|"Dispatches Goals"| OP_SUP["operation_supervisor.py<br/>(Autopilot Mission Sequencer)"]
-  OP_SUP --> NAV_STACK
-```
+![モードオーケストレーションのトポロジー](../../../development/ros/diagrams/mode-switching-mode-orchestration-topology.drawio)
 
 ---
 
@@ -65,18 +48,7 @@ timeouts:
 
 `operation_supervisor.py`は、複数ステップのウェイポイントルートとエリア網羅走行プレイリストの自律実行を管理する:
 
-```mermaid
-stateDiagram-v2
-  [*] --> SupervisorIdle
-
-  SupervisorIdle --> StepActive: Goal dispatched from Playlist
-  StepActive --> DwellWaiting: move_base reports Goal Succeeded
-  DwellWaiting --> StepActive: Dwell timer expired, advance next waypoint
-  StepActive --> Paused: Safety watchdog triggers or operator pauses
-  Paused --> StepActive: Operator clicks Resume
-  StepActive --> Completed: All waypoints in playlist reached
-  Completed --> SupervisorIdle: Return to Homebase and latch final snapshot
-```
+![Autopilotミッションシーケンシング(operationsupervisor.py)](../../../development/ros/diagrams/mode-switching-autopilot-mission-sequencing-operationsu.drawio)
 
 ### スーパーバイザーの主要機能:
 - **ラッチされたOperation Snapshot**: `/string/operation_snapshot`をlatched QoSでパブリッシュする。オペレーターがブラウザタブを開くと、アクティブなミッションの全状態(現在のウェイポイントインデックス、残りのルートピン、滞留タイマー)が数ミリ秒で復元される。

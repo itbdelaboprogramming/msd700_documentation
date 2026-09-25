@@ -37,12 +37,7 @@ nonceプロトコルのロボット側は、ロボットのJetson SBC上で動�
 同時に存在する複数のユーザーやブラウザタブからの相反する命令を防ぐため、モーター駆動へのアクセスは、
 物理ロボット上のメモリに保持される**排他的な運用リース**によって管理されている。
 
-```mermaid
-flowchart LR
-  OP1["Operator 1 (Active Session)"] -->|"Heartbeat Ping (claim: true)"| ROBOT["Robot Lease Manager<br/>(system_command.py)"]
-  OP2["Operator 2 (Different User)"] -.->|"Rejected: In Use"| ROBOT
-  OP1_TAB2["Operator 1 (Second Tab)"] -.->|"Origin Conflict (Prompt Takeover)"| ROBOT
-```
+![運用リースのセキュリティ: 複数オペレーターによる乗っ取りの防止](../../../../development/webui/accounts/diagrams/ros-integration-operating-lease-security-preventing-mult.drawio)
 
 - **ハートビートの有効期限**: リースの有効期間は15秒で、定期的なpingによって更新されなければならない。
 - **アカウントとセッションの分離**:

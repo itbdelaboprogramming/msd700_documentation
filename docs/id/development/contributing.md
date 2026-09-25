@@ -58,7 +58,7 @@ npm run docs:preview   # Serves production build preview
 Sebelum melakukan commit perubahan dokumentasi, jalankan:
 
 ```bash
-# 1. Render diagram baru/berubah, lalu cek sintaks + semua diagram punya gambar
+# 1. Render diagram .drawio baru/berubah, lalu cek semua rujukan punya gambar
 npm run docs:diagrams
 npm run docs:check-diagrams
 

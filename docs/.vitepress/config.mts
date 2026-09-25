@@ -2,29 +2,32 @@ import { defineConfig } from 'vitepress'
 import mathjax3 from 'markdown-it-mathjax3'
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 import { diagramHash } from '../../scripts/diagram-hash.mjs'
 
 const BASE = '/itbdelabo/docs/'
 
 // ==================== DIAGRAMS ====================
-// ```mermaid fences are shown as static PNGs pre-rendered by scripts/render-diagrams.mjs
-// (npm run docs:diagrams), keyed by a hash of the fence body. See that script for why.
+// Diagrams are draw.io files next to the pages (docs/<section>/diagrams/*.drawio), embedded with
+// ![alt](./diagrams/name.drawio). Readers get a static PNG pre-rendered by
+// scripts/render-diagrams.mjs (npm run docs:diagrams), keyed by a hash of the .drawio file.
 const DIAGRAM_DIR = fileURLToPath(new URL('../public/diagrams/', import.meta.url))
+const DOCS_DIR = fileURLToPath(new URL('../', import.meta.url))
 const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
 
-function renderDiagram(tokens: any[], idx: number): string {
-  const token = tokens[idx]
-  const hash = diagramHash(token.content)
-  const file = `${DIAGRAM_DIR}${hash}.png`
-  // Alt text: the heading the diagram sits under
-  let alt = 'Diagram'
-  for (let i = idx - 1; i >= 0; i--) {
-    if (tokens[i].type === 'heading_open') { alt = tokens[i + 1]?.content || alt; break }
+function renderDiagram(ref: string, alt: string, env: any): string {
+  const mdFile = env?.path || resolve(DOCS_DIR, env?.relativePath || '')
+  const source = resolve(dirname(mdFile), decodeURI(ref))
+  if (!existsSync(source)) {
+    console.warn(`[diagrams] ${env?.relativePath}: ${ref} does not exist`)
+    return `<figure class="diagram-figure"><em>Missing diagram: ${escapeAttr(ref)}</em></figure>`
   }
-  // Always a static image, never in-browser mermaid. The src is bound (:src) rather than a plain
-  // attribute so Vite does not treat it as an import: a PNG that does not exist yet is then just a
-  // broken image until `npm run docs:diagrams` writes it, instead of a build error or a cached
-  // fallback that `vitepress dev` keeps serving (its markdown cache is keyed by content).
+  const hash = diagramHash(readFileSync(source, 'utf8'))
+  const file = `${DIAGRAM_DIR}${hash}.png`
+  // Always a static image. The src is bound (:src) rather than a plain attribute so Vite does not
+  // treat it as an import: a PNG that does not exist yet is then just a broken image until
+  // `npm run docs:diagrams` writes it, instead of a build error. (`vitepress dev` caches rendered
+  // markdown by content, so after editing a .drawio file restart it to pick up the new hash.)
   const url = `${BASE}diagrams/${hash}.png`
   let size = ''
   if (existsSync(file)) {
@@ -35,10 +38,10 @@ function renderDiagram(tokens: any[], idx: number): string {
     // Natural size is the upper bound; CSS shrinks it to the column, and a click opens it full size
     size = ` width="${width}" height="${height}"`
   } else {
-    console.warn(`[diagrams] no image for mermaid block (${hash}); run \`npm run docs:diagrams\``)
+    console.warn(`[diagrams] no image for ${ref} (${hash}); run \`npm run docs:diagrams\``)
   }
   return `<figure class="diagram-figure"><a href="${url}" class="diagram-open" target="_blank" rel="noopener" title="Click to enlarge">` +
-    `<img :src="'${url}'" alt="${escapeAttr(alt)}"${size} loading="lazy" decoding="async"></a></figure>\n`
+    `<img :src="'${url}'" alt="${escapeAttr(alt || 'Diagram')}"${size} loading="lazy" decoding="async"></a></figure>`
 }
 
 // ==================== EN SIDEBARS ====================
@@ -684,11 +687,21 @@ export default defineConfig({
   markdown: {
     config(md) {
       md.use(mathjax3)
-      const defaultFence = md.renderer.rules.fence!
-      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+      // A diagram on a line of its own renders as a <figure>, which may not sit inside a <p>
+      md.core.ruler.push('drawio_unwrap', (state) => {
+        const t = state.tokens
+        for (let i = 1; i + 1 < t.length; i++) {
+          const kids = t[i].type === 'inline' ? (t[i].children || []).filter((c) => !(c.type === 'text' && !c.content.trim())) : []
+          if (t[i - 1].type === 'paragraph_open' && t[i + 1].type === 'paragraph_close' && kids.length === 1 &&
+            kids[0].type === 'image' && /\.drawio$/i.test(kids[0].attrGet('src') || '')) t[i - 1].hidden = t[i + 1].hidden = true
+        }
+      })
+      const defaultImage = md.renderer.rules.image!
+      md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const token = tokens[idx]
-        if (token.info.trim().toLowerCase() === 'mermaid') return renderDiagram(tokens, idx)
-        return defaultFence(tokens, idx, options, env, self)
+        const src = token.attrGet('src') || ''
+        if (/\.drawio$/i.test(src)) return renderDiagram(src, token.content, env)
+        return defaultImage(tokens, idx, options, env, self)
       }
     }
   },

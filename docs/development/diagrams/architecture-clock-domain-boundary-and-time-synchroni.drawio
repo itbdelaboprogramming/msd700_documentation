@@ -1,0 +1,76 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Clock Domain Boundary and Time Synchronization">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="695" y="20" width="645" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="368" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="443" y="20" width="197" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="ROS Message&lt;br&gt;stamp = Unit Clock" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="12" y="31" width="157" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="topic2string&lt;br&gt;JSON Serialization" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="199" y="31" width="157" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="MQTT Topic&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/string/..." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="31" width="173" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="BoundaryPublisher&lt;br&gt;Restamp to Server ROS Clock" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="31" width="218" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Typed ROS Message&lt;br&gt;stamp = Server Clock" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="260" y="31" width="171" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="rosbridge / UI Canvas" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="461" y="39" width="172" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n3" source="n7" target="n8">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="169" y="61" as="sourcePoint" />
+            <mxPoint x="199" y="61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n8" target="n9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="376" y="81" as="sourcePoint" />
+            <mxPoint x="455" y="81" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n9" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="628" y="81" as="sourcePoint" />
+            <mxPoint x="707" y="81" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n10" target="n11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="230" y="61" as="sourcePoint" />
+            <mxPoint x="260" y="61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5116;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n11" target="n12">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="431" y="61" as="sourcePoint" />
+            <mxPoint x="461" y="61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n4" value="Cloud Clock Domain (Server)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="172" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Encrypted Transport" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="124" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Unit Clock Domain (Robot)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="0" y="0" width="159" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -32,25 +32,7 @@ Content-Type: application/json
 
 Token ditandatangani secara kriptografis menggunakan HS256 dan divalidasi terhadap sebuah keyring bersama. Di dalam container file keyring adalah `/run/secrets/jwt_keyring` (di-mount dari `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` pada service `*_dev`; produksi fallback ke env var `JWT_SECRET_KEY`/`JWT_SECRET`). Secret key aktif menandatangani token baru, sementara key yang baru saja dirotasi tetap valid selama periode grace transisi.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Client as Client Application
-  participant Backend as backend_node
-  participant DB as MySQL Database
-
-  Client->>Backend: POST /user/login { username, password }
-  Backend->>DB: Query user credentials & rental profiles
-  DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
-  Note over Client: Include token in Bearer header on subsequent calls
-
-  Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
-  Backend-->>Client: 401 Unauthorized (when token expires)
-
-  Client->>Backend: POST /user/refresh { refresh_token }
-  Backend-->>Client: 200 OK { token, refresh_token } (fresh token pair)
-```
+![Autentikasi dan Otorisasi](../../development/diagrams/api-reference-authentication-and-authorization.drawio)
 
 | Klaim Token `typ` | Lingkup & Penerimaan | Aturan Penolakan |
 | --- | --- | --- |
@@ -62,16 +44,7 @@ sequenceDiagram
 
 Setiap kali sebuah permintaan menuju robot spesifik, field `unit_id` di body permintaan (atau parameter query) diproses lewat middleware `attachUnit`:
 
-```mermaid
-flowchart TB
-  REQ["HTTP Request + Bearer Token"] --> V_TOK["verifyToken<br/>JWT Keyring Validation"]
-  V_TOK -->|Invalid or Expired| E_401["HTTP 401 Unauthorized"]
-  V_TOK --> ATTACH["attachUnit Middleware"]
-  ATTACH -->|No unit_id present| PASS["Pass to Handler"]
-  ATTACH -->|Malformed ULID| E_400["HTTP 400 Invalid Unit ID"]
-  ATTACH -->|User lacks Rental Profile for Unit| E_403["HTTP 403 Forbidden: Unit Not Assigned"]
-  ATTACH -->|Valid & Authorized| EXEC["Execute Target Handler"]
-```
+![Middleware Otorisasi Unit (attachUnit)](../../development/diagrams/api-reference-unit-authorization-middleware-attachunit.drawio)
 
 ## Amplop Respons Standar
 

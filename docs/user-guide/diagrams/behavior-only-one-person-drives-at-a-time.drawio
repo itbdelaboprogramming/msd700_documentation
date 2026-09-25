@@ -1,0 +1,67 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Only one person drives at a time">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="You open a unit" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="79" y="21" width="139" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Is another session&lt;br&gt;already driving it?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="71" y="105" width="156" height="156" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="You get control immediately" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="21" y="358" width="203" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="A dialog appears:&lt;br&gt;already being operated" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="264" y="358" width="179" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Take over control:&lt;br&gt;the other session ends visibly" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="218" y="457" width="213" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Leave it running:&lt;br&gt;you stay without control" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="471" y="457" width="181" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.4964;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4936;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="65" as="sourcePoint" />
+            <mxPoint x="148" y="105" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3269;exitY=0.8718;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4975;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.1696" relative="1" as="geometry">
+            <mxPoint x="122" y="241" as="sourcePoint" />
+            <mxPoint x="122" y="358" as="targetPoint" />
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6603;exitY=0.8782;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4972;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n4">
+          <mxGeometry x="-0.5429" relative="1" as="geometry">
+            <mxPoint x="174" y="242" as="sourcePoint" />
+            <mxPoint x="353" y="358" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="174" y="338" />
+              <mxPoint x="353" y="338" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3352;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4977;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="324" y="417" as="sourcePoint" />
+            <mxPoint x="324" y="457" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6648;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5028;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="383" y="417" as="sourcePoint" />
+            <mxPoint x="562" y="457" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="383" y="437" />
+              <mxPoint x="562" y="437" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

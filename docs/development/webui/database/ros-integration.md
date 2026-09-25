@@ -52,20 +52,7 @@ for the convention and [Database Schema](/development/database-schema) for the a
 The subset of [Database Schema § Foreign keys, in full](/development/database-schema#foreign-keys-in-full)
 relevant to this feature:
 
-```mermaid
-flowchart TB
-  units -->|unit_id CASCADE| maps_data
-  rental_profiles -->|profile_id RESTRICT| maps_data
-  users -->|created_by / modified_by SET NULL| maps_data
-  users -->|created_by / modified_by SET NULL| routes_data
-  users -->|created_by / modified_by SET NULL| areas_data
-  users -->|created_by / modified_by SET NULL| playlists_data
-  users -->|modified_by SET NULL| unit_operation_state
-  maps_data -->|map_id CASCADE| routes_data
-  maps_data -->|map_id CASCADE| areas_data
-  maps_data -->|map_id CASCADE| playlists_data
-  maps_data -->|map_id SET NULL| unit_operation_state
-```
+![Foreign keys](./diagrams/ros-integration-foreign-keys.drawio)
 
 This is what backs [Rename and Delete § Cascade delete](/development/webui/database/rename-and-delete#cascade-delete):
 deleting a `maps_data` row cascades to its routes, areas, and playlists, and clears rather than

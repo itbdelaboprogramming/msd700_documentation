@@ -30,29 +30,7 @@ HTTP 同期コントラクトについては [API リファレンス](/ja/develo
 
 ## 同期の仕組み
 
-```mermaid
-flowchart LR
-  subgraph Triggers["Reconciliation Triggers"]
-    T1["5-Minute Periodic Timer"]
-    T2["Network Reachability Event<br/>(offline to online transition)"]
-    T3["Manual Operator Action<br/>(POST /local/sync)"]
-  end
-
-  subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
-    EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
-  end
-
-  subgraph CloudServer["Central Cloud Server"]
-    RESP["sync_engine.js<br/>Serve Changes & Acknowledge Watermarks"]
-  end
-
-  T1 --> WAKE
-  T2 --> WAKE
-  T3 --> WAKE
-  WAKE --> EXEC
-  EXEC <-->|"HTTP Sync Endpoints"| RESP
-```
+![同期の仕組み](../../development/diagrams/data-sync-synchronization-mechanics.drawio)
 
 ### 主要コンポーネント:
 - **`sync_agent.js`**: ユニット上でのみ動作し、ポーリングタイマー、到達可能性のプローブ、クラウドエンドポイントへの送信 HTTP 呼び出しを管理します。(クラウドは NAT の背後にあるロボットへ能動的に発信することはありません)。
@@ -77,13 +55,7 @@ flowchart LR
 
 ローカルダッシュボードビルド(`NEXT_PUBLIC_DEPLOYMENT_MODE=local`)では、右上のヘッダーに Local Mode バッジが表示されます。
 
-```mermaid
-flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
-  BADGE --> CLICK["Click Badge: Opens Modal Menu"]
-  CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
-```
+![Local Mode ステータスバッジ](../../development/diagrams/data-sync-the-local-mode-status-badge.drawio)
 
 ### 詳細な同期フェーズ:
 1. `token`: ロボットの資格情報を使ってクラウドサーバーで認証する。

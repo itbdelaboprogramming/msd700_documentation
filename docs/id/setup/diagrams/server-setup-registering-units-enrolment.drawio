@@ -1,0 +1,140 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Mendaftarkan unit (enrolment)">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Portal admin" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="710" y="20" width="170" height="636" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Backend cloud" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="480" y="20" width="170" height="636" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Robot (Jetson)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="250" y="20" width="170" height="636" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Teknisi lapangan" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="170" height="636" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Jalankan script enrolment di Jetson" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.1572;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.1572;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n3">
+          <mxGeometry x="-0.0228" relative="1" as="geometry">
+            <mxPoint x="112" y="120" as="sourcePoint" />
+            <mxPoint x="331" y="120" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n6" value="1" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="111" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="POST /enroll/claim (fingerprint, nonce&lt;br&gt;hash, hostname/MAC)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.2437;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.2437;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.0267" relative="1" as="geometry">
+            <mxPoint x="342" y="175" as="sourcePoint" />
+            <mxPoint x="561" y="175" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="2" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="326" y="166" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Kode klaim 8 karakter, mis. &quot;K7M2QP4R&quot;" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.3066;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.3066;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.1703" relative="1" as="geometry">
+            <mxPoint x="570" y="215" as="sourcePoint" />
+            <mxPoint x="339" y="215" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="3" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="556" y="206" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Tampilkan &quot;K7M2QP4R&quot; di terminal" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.3695;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.3695;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry x="0.0221" relative="1" as="geometry">
+            <mxPoint x="340" y="255" as="sourcePoint" />
+            <mxPoint x="109" y="255" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="4" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="326" y="246" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="Buka https://msd.nglobal.jp/admin, login" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.4324;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.4324;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n1">
+          <mxGeometry x="-0.0074" relative="1" as="geometry">
+            <mxPoint x="112" y="295" as="sourcePoint" />
+            <mxPoint x="791" y="295" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="5" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="286" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Cari &quot;K7M2QP4R&quot; di Pending Units" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.4953;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.4953;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n1">
+          <mxGeometry x="-0.0066" relative="1" as="geometry">
+            <mxPoint x="112" y="335" as="sourcePoint" />
+            <mxPoint x="791" y="335" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="6" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="326" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="Isi nama unit + rental profile -&amp;gt; Approve" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.5582;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.5582;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n1">
+          <mxGeometry x="-0.0074" relative="1" as="geometry">
+            <mxPoint x="112" y="375" as="sourcePoint" />
+            <mxPoint x="791" y="375" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="7" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="366" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="Tandai &quot;approved&quot; di&lt;br&gt;database" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.6447;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.6761;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n2">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="566" y="430" as="sourcePoint" />
+            <mxPoint x="566" y="450" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="610" y="430" />
+              <mxPoint x="610" y="450" />
+            </Array>
+            <mxPoint x="86" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="8" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="556" y="421" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n21" value="POST /enroll/status (nonce plaintext)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.7547;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.7547;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.0069" relative="1" as="geometry">
+            <mxPoint x="342" y="500" as="sourcePoint" />
+            <mxPoint x="561" y="500" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n22" value="9" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="326" y="491" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n23" value="ULID unit + device secret" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.8176;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.8176;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0200" relative="1" as="geometry">
+            <mxPoint x="570" y="540" as="sourcePoint" />
+            <mxPoint x="339" y="540" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n24" value="10" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="556" y="531" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n25" value="Simpan&lt;br&gt;Certificates/robot/device.json,&lt;br&gt;hubungi HiveMQ" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.9277;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.9591;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n3">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="336" y="610" as="sourcePoint" />
+            <mxPoint x="336" y="630" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="380" y="610" />
+              <mxPoint x="380" y="630" />
+            </Array>
+            <mxPoint x="111" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n26" value="11" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="326" y="601" width="18" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

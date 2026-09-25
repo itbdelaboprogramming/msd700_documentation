@@ -23,12 +23,7 @@ Before starting, ensure you have:
 1. Open your browser and navigate to: `https://msd.nglobal.jp`.
 2. Enter your username and password, then click **Proceed**.
 
-```mermaid
-flowchart LR
-  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
-  FLEET --> SELECT["3. Click Start"]
-  SELECT --> NAV["4. Navigation or Mapping Opens"]
-```
+![Step 1: Log In to the Dashboard](./diagrams/quick-start-step-1-log-in-to-the-dashboard.drawio)
 
 ---
 
@@ -51,18 +46,7 @@ Select a **Ready** row and click **Start**: the dashboard opens [Navigation](/us
 
 The operator interface is divided into three main operational panels:
 
-```mermaid
-flowchart TB
-  subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
-    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
-  end
-
-  TOP ~~~ LEFT
-  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
-```
+![Step 3: Understand the Operator Workspace](./diagrams/quick-start-step-3-understand-the-operator-workspace.drawio)
 
 ---
 
@@ -82,18 +66,7 @@ If no maps exist in the dropdown, see [Mapping](/user-guide/mapping) to create y
 
 You drive the robot manually with your keyboard:
 
-```mermaid
-flowchart TB
-  subgraph KeyboardControls["Keyboard Drive Controls"]
-    W["W: Drive Forward"]
-    S["S: Drive Backward"]
-    A["A: Rotate Left (Counter-Clockwise)"]
-    D["D: Rotate Right (Clockwise)"]
-    SHIFT["Hold Shift: Slow Mode"]
-  end
-
-  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
-```
+![Step 5: Drive Manually (Teleoperation)](./diagrams/quick-start-step-5-drive-manually-teleoperation.drawio)
 
 ### Teleoperation Controls:
 - **W / S**: Drive forward / backward at normal speed (`0.40 m/s`).
@@ -112,12 +85,7 @@ To send the robot to a target destination autonomously:
 3. Click and drag outward to orient the target heading arrow, then release.
 4. The robot calculates a collision-free global path (blue line) and navigates autonomously to the target.
 
-```mermaid
-flowchart LR
-  CLICK["1. Click Destination on Map"] --> PLAN["2. Robot Plans Collision-Free Path"]
-  PLAN --> DRIVE["3. Robot Steers Around Obstacles"]
-  DRIVE --> ARRIVE["4. Arrives at Goal with Target Heading"]
-```
+![Step 6: Dispatch a Navigation Goal (Point-to-Point)](./diagrams/quick-start-step-6-dispatch-a-navigation-goal-point.drawio)
 
 ---
 

@@ -1,0 +1,53 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Pipeline (msd700perception/launch/cloudhazard.launch)">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Velodyne PointCloud2&lt;br&gt;VLP-16, 192.168.103.231, 10 Hz" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="32" width="231" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Ground fit&lt;br&gt;quadratic over near-field floor&lt;br&gt;radius 3.0 m, 3 iterations" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="291" y="25" width="212" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Height gate above fitted ground&lt;br&gt;0.08 – 0.65 m obstacles&lt;br&gt;holes deeper than 0.12 m" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="543" y="25" width="223" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="/scan&lt;br&gt;positive obstacles" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="806" y="20" width="151" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="/scan_hazard&lt;br&gt;obstacles + holes" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="806" y="120" width="149" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4933;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="251" y="62" as="sourcePoint" />
+            <mxPoint x="291" y="62" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.4933;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4933;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="503" y="62" as="sourcePoint" />
+            <mxPoint x="543" y="62" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.3333;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="766" y="50" as="sourcePoint" />
+            <mxPoint x="806" y="50" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.6667;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="766" y="75" as="sourcePoint" />
+            <mxPoint x="806" y="150" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="786" y="75" />
+              <mxPoint x="786" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

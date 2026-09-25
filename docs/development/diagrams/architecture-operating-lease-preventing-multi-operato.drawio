@@ -1,0 +1,52 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Operating Lease: Preventing Multi-Operator Conflicts">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="514" y="21" width="470" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Operator A (Cloud Dashboard)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="45" y="50" width="218" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Operator B (Local LAN Dashboard)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="134" width="243" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="system_command.py&lt;br&gt;Exclusive Operating Lease" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="31" width="199" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="move_base &amp;amp; Motor Actuators" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="241" y="39" width="217" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Acquires Lease" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.339;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n5">
+          <mxGeometry x="-0.0718" relative="1" as="geometry">
+            <mxPoint x="263" y="72" as="sourcePoint" />
+            <mxPoint x="526" y="72" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="Rejected: In Use by Another User" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.661;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry x="-0.2557" relative="1" as="geometry">
+            <mxPoint x="263" y="156" as="sourcePoint" />
+            <mxPoint x="526" y="91" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="487" y="156" />
+              <mxPoint x="487" y="91" />
+            </Array>
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5116;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="211" y="61" as="sourcePoint" />
+            <mxPoint x="241" y="61" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n2" value="Physical Robot (Jetson SBC)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="171" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

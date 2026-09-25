@@ -10,30 +10,6 @@ MSD700サーバーやロボットユニットをインストールする**前に
 
 ## ハードウェア
 
-```mermaid
-flowchart LR
-  subgraph ServerSpecs["1. クラウドサーバー"]
-    direction TB
-    S_CPU["4〜8 vCPU (x86_64)"]
-    S_RAM["RAM 8〜16 GB"]
-    S_DISK["NVMe 100 GB"]
-    S_NET["パブリックIPv4 + DNSドメイン"]
-  end
-
-  subgraph UnitSpecs["2. ロボットユニット"]
-    direction TB
-    U_SBC["NVIDIA Jetson (ARM64)"]
-    U_LIDAR["Velodyne VLP-16 LiDAR (Ethernet)"]
-    U_IMU["9軸IMU"]
-    U_MOTOR["デュアルモーター+エンコーダー"]
-    U_BAT["バッテリー+E-Stop (BOMで確認)"]
-  end
-
-  S_CPU ~~~ S_RAM ~~~ S_DISK ~~~ S_NET
-  U_SBC ~~~ U_LIDAR ~~~ U_IMU ~~~ U_MOTOR ~~~ U_BAT
-  ServerSpecs ~~~ UnitSpecs
-```
-
 ### 1. クラウドサーバー
 
 | 項目 | 最小 | 推奨 |
@@ -58,29 +34,6 @@ flowchart LR
 ## ファイアウォールポート
 
 下の**パブリック**ポートを開けます。それ以外は信頼できるネットワークからのみ到達できるよう閉じてください。
-
-```mermaid
-flowchart LR
-  subgraph PublicIngress["パブリック (ファイアウォールで開放)"]
-    direction TB
-    P443["TCP 443: HTTPS / WSS (Apache)"]
-    P8883["TCP 8883: MQTTS (HiveMQ)"]
-    P3478["UDP/TCP 3478: STUN/TURN (coturn)"]
-    PRANGE["UDP 49152-65535: WebRTCメディアリレー"]
-  end
-
-  subgraph LocalLoopback["内部 (アクセス制限)"]
-    direction TB
-    P3306["TCP 3307: MySQL"]
-    P5000["TCP 5000: Backend API"]
-    P9090["TCP 9090: rosbridge"]
-    P3003["TCP 3003: メディアサーバー"]
-  end
-
-  P443 ~~~ P8883 ~~~ P3478 ~~~ PRANGE
-  P3306 ~~~ P5000 ~~~ P9090 ~~~ P3003
-  PublicIngress ~~~ LocalLoopback
-```
 
 | ポート | プロトコル | 範囲 | サービス |
 | --- | --- | --- | --- |

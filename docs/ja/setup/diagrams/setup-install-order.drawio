@@ -1,0 +1,49 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="インストール順序">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="1. 前提条件&lt;br&gt;ハードウェアとポートを確認" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="21" width="212" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="2. サーバー構築&lt;br&gt;クラウドとApacheを起動" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="272" y="21" width="192" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="3. ユニット構築&lt;br&gt;ロボットイメージ作成と登録" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="504" y="21" width="212" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="4. システム構築&lt;br&gt;エンドツーエンド確認" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="756" y="21" width="176" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="5. コミッショニング&lt;br&gt;ユニットを1項目ずつ受入" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="972" y="21" width="195" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="232" y="51" as="sourcePoint" />
+            <mxPoint x="272" y="51" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="464" y="51" as="sourcePoint" />
+            <mxPoint x="504" y="51" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="716" y="51" as="sourcePoint" />
+            <mxPoint x="756" y="51" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="932" y="51" as="sourcePoint" />
+            <mxPoint x="972" y="51" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

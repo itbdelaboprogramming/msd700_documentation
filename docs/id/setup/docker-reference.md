@@ -18,28 +18,7 @@ Tiga file, tiga pekerjaan beda. Tidak bisa dipertukarkan.
 | `msd700_noetic/docker/docker-compose.yml` | **Unit** | container robot `msd700` + stack server `local_dev` milik unit |
 | `ros-web-ui/docker-compose.robot.yml` | laptop dev | separuh robot saja, standalone, tanpa orkestrasi unit |
 
-```mermaid
-flowchart TB
-  subgraph S["Host server"]
-    SC["ros-web-ui/docker-compose.yml"]
-    SC --> P1["--profile server_prod"]
-    SC --> P2["--profile server_dev"]
-    SC --> P3["--profile turn"]
-    SC --> P4["--profile manual"]
-  end
-  subgraph U["Unit (Jetson)"]
-    DM["scripts/docker-manager.sh"]
-    DM --> UC["docker/docker-compose.yml<br/>service: msd700"]
-    DM --> UL["docker/docker-compose.yml<br/>--profile local_dev"]
-  end
-  subgraph B["Backend, saat runtime"]
-    UM["unit_manager.js<br/>restart/reconcile via Docker API, tidak pernah create"]
-    P1 --> RU["ros_web_ui_v2_unit_relays<br/>satu relay bersama, fleet prod"]
-    P2 --> RD["ros_web_ui_v2_unit_relays_dev<br/>satu relay bersama, fleet dev"]
-    UM --> RU
-    UM --> RD
-  end
-```
+![File compose yang mana?](./diagrams/docker-reference-which-compose-file.drawio)
 
 ## Server: profile compose
 
@@ -412,17 +391,7 @@ Ia error dengan penjelasan. Robot tanpa identitas cached enrol mandiri dan mence
 
 ### Apa yang dilakukan `up`, berurutan
 
-```mermaid
-flowchart TB
-  A["Bila --build: build image robot<br/>Bila simulator: pastikan world asset"] --> B["Resolve endpoint cloud, port ROS,<br/>identitas cached, fingerprint host"]
-  B --> C["Pastikan file token,<br/>start container robot bila berhenti"]
-  C --> D["Rekonsiliasi duplikat robot_pose_publisher<br/>marker CATKIN_IGNORE"]
-  D --> E["local_up: secret, direktori media,<br/>path repo, IP lokal"]
-  E --> F["Build image lokal bila hilang atau --build;<br/>bila tidak warning bila basi"]
-  F --> G["compose --profile local_dev up -d --no-build"]
-  G --> H["Aktifkan autostart kecuali opt-out"]
-  H --> I["docker exec run_msd.sh:<br/>build workspace bila perlu,<br/>ganti sesi tmux, launch service"]
-```
+![Apa yang dilakukan up, berurutan](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
 Tanpa `--build`, image lokal yang ada dipakai ulang dan yang basi hanya warning (`[WARN] ... is OUT OF DATE`). Image hilang, asset simulator, dan enrolment pertama tetap bisa butuh internet. Rebuild dengan sengaja (`build`, `local-build`, atau `up --build`); `build-clean` membuang cache. Robot yang jalan tidak pernah recreated oleh `up`, bahkan setelah build: recreate saat stop terencana dengan flag `--dev`/`--simulator` yang sama.
 

@@ -58,7 +58,7 @@ npm run docs:preview   # Serves production build preview
 ドキュメントの変更をコミットする前に、以下を実行してください。
 
 ```bash
-# 1. 新規・変更された図をレンダリングし、構文と全図の画像の有無を確認
+# 1. 新規・変更された .drawio 図をレンダリングし、すべての参照に画像があるか確認
 npm run docs:diagrams
 npm run docs:check-diagrams
 

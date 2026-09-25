@@ -47,39 +47,7 @@ Windowsは独自仮想アダプタースタックでAP+クライアント動作�
 
 ## 全体構成
 
-```mermaid
-flowchart TB
-  subgraph HOST["ホスト (Jetsonまたは開発PC)、Linux"]
-    SEL["msd700-hotspot-select-iface.sh<br/>プライマリ/バックアップ選択、<br/>/run/msd700-hotspot-activeへ書込"]
-    APIF["msd700-ap0 (プライマリ)<br/>オンボード無線上の仮想iface"]
-    DONGLE["USBドングル (バックアップ)<br/>AP_INTERFACE_LOCAL"]
-    HAP["hostapd<br/>msd700-hotspot.service"]
-    UNMANAGED["NetworkManagerドロップイン<br/>AP ifaceに不干渉"]
-    DNSM["dnsmasq<br/>msd700-hotspot-dhcp.service<br/>DHCP + 単一ホスト名"]
-    FW["msd700-hotspot-firewall.sh<br/>ダッシュボード転送 + NAT中継"]
-    NM["NetworkManager<br/>クライアントプロファイルのみ"]
-    SEL -->|"勝者を作成+起動"| APIF
-    SEL -.->|"または"| DONGLE
-    SEL -->|"IFACE/CONF書込"| HAP
-    HAP -->|"起動/停止フック"| FW
-    DNSM -->|"同状態ファイル追従"| HAP
-  end
-
-  subgraph AGENT["network_local"]
-    NA["network-agent (Node)<br/>ループバック :5011<br/>ホストネットワーク、NET_ADMIN"]
-  end
-  AGENT -->|"D-Busソケットマウント"| NM
-  NA -->|"SSID/パスワード編集"| HAP
-  NA -->|"番兵ファイルに触れる"| RPATH["再起動監視<br/>ホットスポットサービスを再起動"]
-
-  BE["backend_local<br/>/local/wifi/*"] -->|"ループバックプロキシ<br/>(wifi_proxy.js、25秒タイムアウト)"| NA
-  FE["frontend_local :3000<br/>WiFiパネル"] -->|"scan/connect/status"| BE
-
-  CLIENT["ホットスポット参加機器"] -->|"DNS: mymsd.jp -> ユニット"| DNSM
-  CLIENT -->|"ユニット宛HTTP :80、転送"| FW
-  FW --> FE
-  FW -->|"NAT、上り設定時のみ"| STA["オンボード無線上り"]
-```
+![全体構成](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
 
 ホットスポットはDocker非依存です。`hostapd`+`dnsmasq`はsystemdサービスとして起動し、`docker-manager.sh`の有無に関わらず起動時に上がります。`network_local`はダッシュボードの状態/スキャン/クライアント操作とホットスポット名変更・再起動要求を提供します。ダッシュボード自体はローカルDockerスタック稼働が必要です。
 

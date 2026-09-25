@@ -22,30 +22,7 @@ antara robot dan browser, atau melalui `coturn` ketika tidak ada jalur langsung 
 
 ## Jabat tangannya
 
-```mermaid
-sequenceDiagram
-  participant B as Browser
-  participant S as signalling_server
-  participant C as camera_client.py
-
-  B->>S: connect, then authenticate (JWT)
-  S-->>B: auth_success
-  B->>S: client_ready { target: #lt;this unit#gt; }
-  S->>C: client_ready
-  C->>C: start_stream(): build offer, setLocalDescription
-  C->>S: offer
-  S->>B: offer
-  B->>B: setRemoteDescription, createAnswer, setLocalDescription
-  Note over B: waits up to 5s for ICE gathering, then sends regardless
-  B->>S: answer
-  S->>C: answer
-  loop while negotiating
-    C->>S: candidate
-    S->>B: candidate
-    B->>S: candidate
-    S->>C: candidate
-  end
-```
+![Jabat tangannya](../../../../development/webui/camera/diagrams/overview-the-handshake.drawio)
 
 `VideoStreamComponent` membuat `RTCPeerConnection` browser hanya setelah sebuah `offer` tiba dari
 ujung pertukaran ini, bukan secara eager saat halaman dimuat. `signalling_server` sendiri adalah

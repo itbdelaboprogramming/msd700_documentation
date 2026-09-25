@@ -38,14 +38,7 @@ MSD700は、頼まれなくてもいくつかのことを自分で行います�
 
 ## 一度に操作できるのは1人だけ
 
-```mermaid
-flowchart TB
-  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
-  B -->|no| C["You get control immediately"]
-  B -->|yes| D["A dialog appears:<br/>already being operated"]
-  D --> E["Take over control:<br/>the other session ends visibly"]
-  D --> F["Leave it running:<br/>you stay without control"]
-```
+![一度に操作できるのは1人だけ](../../user-guide/diagrams/behavior-only-one-person-drives-at-a-time.drawio)
 
 | 表示される内容 | 意味 | できること |
 | --- | --- | --- |
@@ -68,16 +61,7 @@ flowchart TB
 ロボットはあなたのダッシュボードを監視しています。あなたからの応答が途絶えると、
 段階的に間隔を広げながら3つのことが起こります。
 
-```mermaid
-timeline
-  title After your browser stops responding
-  2 seconds : Motion pauses
-             : the operation stays loaded
-  10 minutes : Session ends
-             : navigation or mapping is torn down
-  30 minutes : Hardware shuts down
-             : must be restarted by hand
-```
+![接続が切れたときに起こること](../../user-guide/diagrams/behavior-what-happens-when-you-disconnect.drawio)
 
 | 経過後 | 起こること | 自動で回復するか |
 | --- | --- | --- |
@@ -101,15 +85,7 @@ timeline
 - 停止ポイントを進める処理は、ブラウザではなくロボット自身が引き継ぎます。
 - ログアウトしても実行中のミッションは**停止しません**。
 
-```mermaid
-flowchart LR
-  A["Autopilot OFF"] -->|"you press the toggle"| B["Autopilot ON"]
-  B --> C["safety pauses suspended"]
-  B --> D["robot drives the route itself"]
-  B --> E["logout no longer ends the run"]
-  B -->|"toggle again"| A
-  A --> F["safety pauses re-armed<br/>with a fresh window"]
-```
+![意図的に一時停止を無効にする: オートパイロット](../../user-guide/diagrams/behavior-turning-the-pause-off-on-purpose-autopil.drawio)
 
 ::: danger オートパイロットは、誰も見ていない状態でロボットが動き続けることを意味します
 それこそがオートパイロットの目的であり、長時間の無人ルートには適切な選択です。一方で、
@@ -126,19 +102,7 @@ flowchart LR
 
 すべてを閉じた後に再度ログインすると、ダッシュボードは元の状態に戻します。
 
-```mermaid
-sequenceDiagram
-  participant You
-  participant Dashboard
-  participant Robot
-
-  You->>Dashboard: log in
-  Dashboard->>Robot: what are you doing?
-  Robot-->>Dashboard: running a route on the Navigation tab
-  Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which stop it is on
-  Dashboard->>You: pins, map and progress restored
-```
+![戻ってきたとき](../../user-guide/diagrams/behavior-coming-back.drawio)
 
 ロボットは操作全体を返します。停止ポイント、現在どこにいるか、マップ、カバレッジエリアなど
 すべてです。これらはいずれもあなたのブラウザ由来のものではないため、別のコンピュータでも

@@ -94,16 +94,7 @@ hilang bagaimanapun juga, jadi ini hanya berhasil karena apa yang terjadi beriku
   satu detik) dan memanggil `restart_ice()` jika koneksi masih belum `connected`/`completed` pada saat
   itu.
 
-```mermaid
-flowchart LR
-  A["answer SDP arrives"] --> B{"any a=candidate:*.local ?"}
-  B -->|no| E["setRemoteDescription unchanged"]
-  B -->|yes| C["drop those lines,<br/>drop a=end-of-candidates too"]
-  C --> D["setRemoteDescription"]
-  D --> F["watch_prflx_handshake:<br/>wait up to 20s"]
-  F -->|connected in time| G["normal"]
-  F -->|still not connected| H["restart_ice()"]
-```
+![Perbaikannya](../../../../development/webui/camera/diagrams/ros-integration-the-fix.drawio)
 
 ::: warning Penghapusan berlaku untuk kedua target, tidak hanya unit-local
 Kandidat mDNS sama-sama tidak berguna untuk target cloud: ia menyebut alamat yang tidak bisa

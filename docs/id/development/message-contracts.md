@@ -19,11 +19,7 @@ Bentuk payload diturunkan langsung dari kode sumber aktif (`backend_node`, `syst
 
 Setiap robot fisik dialamati dengan sebuah prefix unik: `/unit_<ULID>/...`. ULID (Universally Unique Lexicographically Sortable Identifier) adalah primary key yang ditetapkan untuk robot tersebut di tabel database `units` pusat saat pendaftaran.
 
-```mermaid
-flowchart LR
-  R_TOPIC["Robot ROS Master<br/>Topic: /string/robotpose"] -->|"aws_mqtt prepends prefix"| MQTT_TOPIC["Central MQTT Broker<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
-  MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
-```
+![Skema Pengalamatan Fleet](../../development/diagrams/message-contracts-fleet-addressing-scheme.drawio)
 
 | Lokasi Hop | Format Topik | Tujuan Engineering |
 | --- | --- | --- |
@@ -99,24 +95,7 @@ Dua topik MQTT khusus menangani semua interaksi permintaan dan respons dua arah 
 
 ### Arsitektur Korelasi dan Retry Perintah
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Backend as backend_node
-  participant Broker as HiveMQ Broker
-  participant Robot as Robot (system_command.py)
-
-  Backend->>Backend: Generate request_id = uuidv4()<br/>Register pending HTTP Promise in map
-  Backend->>Broker: Publish system_command payload
-  Broker--xRobot: Packet dropped in wireless transit
-  Note over Backend: 1500 ms elapsed without feedback
-  Backend->>Broker: Retry: Publish identical command envelope
-  Broker->>Robot: Successfully delivered
-  Robot->>Broker: Publish system_feedback (matching request_id)
-  Broker->>Backend: Deliver feedback envelope
-  Backend->>Backend: Match request_id, clear retry timer
-  Backend-->>Backend: Resolve HTTP request (200 OK)
-```
+![Arsitektur Korelasi dan Retry Perintah](../../development/diagrams/message-contracts-command-correlation-and-retry-architectu.drawio)
 
 | Parameter | Nilai Default | Lokasi Konfigurasi | Tujuan |
 | --- | --- | --- | --- |
@@ -334,23 +313,7 @@ Pesan heartbeat ping mengelola operating lease robot, timer safety watchdog, dan
 
 Telemetri streaming diserialisasi menjadi string JSON pada unit lewat `topic2string`, dirutekan lewat MQTT, dan dikonversi kembali menjadi pesan ROS bertipe pada server untuk `rosbridge`.
 
-```mermaid
-flowchart LR
-  subgraph Unit["Physical Robot (Jetson)"]
-    T_POSE["/robot_pose (typed)"] --> S_POSE["topic2string<br/>robotpose_msd"]
-    S_POSE --> O_POSE["/string/robotpose"]
-  end
-
-  subgraph Broker["MQTT Transport"]
-    O_POSE --> M_POSE["/unit_#lt;ULID#gt;/string/robotpose"]
-  end
-
-  subgraph Cloud["Cloud Server"]
-    M_POSE --> D_POSE["topic2string<br/>robotpose_server"]
-    D_POSE --> C_POSE["/unit_#lt;ULID#gt;/server/robot_pose<br/>(typed)"]
-    C_POSE --> ROSBRIDGE["rosbridge_suite (:9090)"]
-  end
-```
+![Topik Telemetri Streaming](../../development/diagrams/message-contracts-streaming-telemetry-topics.drawio)
 
 ### Definisi Stream Telemetri
 
@@ -412,21 +375,7 @@ yang melewatkan satu pengiriman menunggu ~52 detik terukur untuk pengiriman beri
 
 `operation_supervisor.py` mengelola eksekusi misi otonom pada robot sehingga misi berlanjut tanpa gangguan jika tab browser ditutup.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant UI as Browser UI
-  participant Supervisor as operation_supervisor.py
-  participant MoveBase as move_base
-
-  UI->>Supervisor: /string/operation_sync (batch payload)
-  Note over Supervisor: Mission batch recorded locally
-  UI->>Supervisor: /string/operation_sync (type: takeover)
-  Supervisor->>MoveBase: Dispatch Waypoint 1
-  MoveBase-->>Supervisor: Waypoint 1 Succeeded
-  Supervisor->>UI: /string/operation_progress (current_index: 1)
-  Supervisor->>MoveBase: Dispatch Waypoint 2
-```
+![Sinkronisasi Operation Supervisor](../../development/diagrams/message-contracts-operation-supervisor-synchronization.drawio)
 
 ### Payload Operation Sync (`/string/operation_sync`)
 
@@ -466,31 +415,7 @@ sequenceDiagram
 
 Robot yang belum terdaftar mendaftarkan diri mereka sendiri ke server cloud lewat handshake kriptografis tiga tahap yang aman.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Robot as Robot (enroll.py)
-  participant Backend as backend_node (/enroll)
-  participant Admin as Admin Web Console
-
-  Robot->>Robot: Generate 32-byte cryptographically random nonce<br/>Compute nonce_hash = sha256(nonce)<br/>Compute fingerprint = sha256(hardware_serial)
-  Robot->>Backend: POST /enroll/claim { fingerprint, nonce_hash, hostname, mac }
-  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP4R", status: "pending" }
-  Note over Robot: Displays claim code on LCD/terminal
-  Admin->>Backend: Admin approves claim code in console
-  loop Poll until Approved
-    Robot->>Backend: POST /enroll/status { fingerprint, nonce }
-    Backend-->>Robot: HTTP 202 Pending
-  end
-  Robot->>Backend: POST /enroll/status { fingerprint, nonce }
-  Backend->>Backend: Verify sha256(nonce) == stored nonce_hash
-  Backend-->>Robot: HTTP 200 OK { unit_id, unit_name, device_secret, token }
-  Robot->>Robot: Persist device.json credentials locally
-
-  Note over Robot,Backend: Subsequent System Boots
-  Robot->>Backend: POST /enroll/token { unit_id, device_secret }
-  Backend-->>Robot: HTTP 200 OK { token } (12-hour validity)
-```
+![Handshake Pendaftaran Robot](../../development/diagrams/message-contracts-robot-enrolment-handshake.drawio)
 
 ::: tip Tujuan Keamanan Nonce
 Nonce secret 32-byte menjamin bahwa spoofing alamat MAC tidak bisa membajak sebuah pendaftaran robot yang sudah disetujui selagi robot fisik dalam keadaan mati. Device secret hanya dikirimkan ketika robot asli mengungkapkan nonce plaintext asli yang cocok dengan hash yang telah terdaftar sebelumnya.

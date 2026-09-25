@@ -47,13 +47,7 @@ Each section below walks through a specific feature with step-by-step instructio
 
 ## Recommended Reading Order
 
-```mermaid
-flowchart LR
-  A["1. Introduction<br/>System Overview"] --> B["2. Quick Start<br/>First Mission"]
-  B --> C["3. Accounts<br/>Login & Roles"]
-  C --> D["4. Navigation & Mapping<br/>Core Operations"]
-  D --> E["5. Behavior & FAQ<br/>Safety & Help"]
-```
+![Recommended Reading Order](./diagrams/user-guide-recommended-reading-order.drawio)
 
 1. **[Introduction](/user-guide/introduction)**: Understand the platform, hardware, and cloud architecture
 2. **[Quick Start](/user-guide/quick-start)**: Log in and run your first mission in a few minutes

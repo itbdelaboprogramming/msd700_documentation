@@ -82,7 +82,7 @@ async function translateFrontmatter(fm, targetLang) {
   return newLines.join('\n');
 }
 
-async function translateMarkdownFile(content, targetLang) {
+async function translateMarkdownFile(content, targetLang, relDir = '.') {
   // 1. Separate & Translate YAML frontmatter
   let frontmatter = '';
   let body = content;
@@ -95,7 +95,7 @@ async function translateMarkdownFile(content, targetLang) {
     }
   }
 
-  // 2. Protect Code Blocks & Mermaid Blocks
+  // 2. Protect Code Blocks
   const codeBlocks = [];
   body = body.replace(/```[\s\S]*?```/g, (match) => {
     codeBlocks.push(match);
@@ -204,6 +204,10 @@ async function translateMarkdownFile(content, targetLang) {
     let url = mdUrls[parseInt(id, 10) - 1] || '';
     if (url.startsWith('/') && !url.startsWith('//') && !url.startsWith(`/${targetLang}/`)) {
       url = `/${targetLang}${url}`;
+    } else if (/\.drawio$/i.test(url) && !/^[a-z]+:|^\//i.test(url)) {
+      // Diagrams: point the translation at the English .drawio file (a translated copy can be
+      // made by hand later under docs/<lang>/.../diagrams/)
+      url = path.posix.relative(path.posix.join(targetLang, relDir), path.posix.join(relDir, url));
     }
     return `](${url})`;
   });
@@ -286,7 +290,7 @@ async function run() {
 
       console.log(`  [${i + 1}/${sourceFiles.length}] (${lang.code}) ${relPath}`);
       const content = fs.readFileSync(srcFile, 'utf-8');
-      const translated = await translateMarkdownFile(content, lang.code);
+      const translated = await translateMarkdownFile(content, lang.code, path.dirname(relPath).split(path.sep).join('/'));
       fs.writeFileSync(destFile, translated, 'utf-8');
     }
   }

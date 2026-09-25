@@ -40,12 +40,7 @@ Untuk mencegah perintah yang saling bertentangan dari pengguna atau tab browser 
 bersamaan, akses ke aktuasi motor diatur oleh sebuah **lease operasi eksklusif** yang dipegang di
 memori pada robot fisik.
 
-```mermaid
-flowchart LR
-  OP1["Operator 1 (Active Session)"] -->|"Heartbeat Ping (claim: true)"| ROBOT["Robot Lease Manager<br/>(system_command.py)"]
-  OP2["Operator 2 (Different User)"] -.->|"Rejected: In Use"| ROBOT
-  OP1_TAB2["Operator 1 (Second Tab)"] -.->|"Origin Conflict (Prompt Takeover)"| ROBOT
-```
+![Keamanan lease operasi: mencegah pengambilalihan multi-operator](../../../../development/webui/accounts/diagrams/ros-integration-operating-lease-security-preventing-mult.drawio)
 
 - **Kedaluwarsa Heartbeat**: Lease berlaku selama 15 detik dan harus diperbarui melalui ping berkala.
 - **Pemisahan Akun vs Sesi**:

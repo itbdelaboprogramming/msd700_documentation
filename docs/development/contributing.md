@@ -58,7 +58,7 @@ npm run docs:preview   # Serves production build preview
 Before committing documentation changes, run:
 
 ```bash
-# 1. Render new/changed diagrams, then validate syntax + that every diagram has an image
+# 1. Render new/changed .drawio diagrams, then check every reference has an image
 npm run docs:diagrams
 npm run docs:check-diagrams
 

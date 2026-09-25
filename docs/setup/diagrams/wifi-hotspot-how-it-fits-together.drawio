@@ -1,0 +1,214 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="How it fits together">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="347" y="276" width="1214" height="404" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="684" y="48" width="224" height="117" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="msd700-hotspot-select-iface.sh&lt;br&gt;picks primary vs backup,&lt;br&gt;writes /run/msd700-hotspot-active" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="230" y="31" width="236" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="msd700-ap0 (primary)&lt;br&gt;virtual iface on onboard radio" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="197" width="211" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="USB dongle (backup)&lt;br&gt;AP_INTERFACE_LOCAL" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="253" y="197" width="192" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="hostapd&lt;br&gt;msd700-hotspot.service" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="864" y="197" width="183" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="NetworkManager drop-in&lt;br&gt;leaves AP ifaces alone" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="498" y="39" width="188" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="dnsmasq&lt;br&gt;msd700-hotspot-dhcp.service&lt;br&gt;DHCP + one hostname" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="895" y="31" width="213" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="msd700-hotspot-firewall.sh&lt;br&gt;redirect to dashboard + NAT relay" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="967" y="333" width="235" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="NetworkManager&lt;br&gt;client profile only" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="717" y="31" width="147" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="network-agent (Node)&lt;br&gt;loopback :5011&lt;br&gt;host network, NET_ADMIN" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="30" width="200" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" value="restart watcher&lt;br&gt;restarts hotspot service" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="126" y="276" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="backend_local&lt;br&gt;/local/wifi/*" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1207" y="910" width="133" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" value="frontend_local :3000&lt;br&gt;WiFi panel" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1213" y="728" width="165" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="Device on hotspot" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1298" y="121" width="152" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n18" value="onboard radio uplink" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1389" y="827" width="165" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="creates + brings up winner" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.25;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4976;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n5" target="n6">
+          <mxGeometry x="0.5970" relative="1" as="geometry">
+            <mxPoint x="289" y="106" as="sourcePoint" />
+            <mxPoint x="117" y="197" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="289" y="121" />
+              <mxPoint x="117" y="121" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="or" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5042;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n5" target="n7">
+          <mxGeometry x="-0.1648" relative="1" as="geometry">
+            <mxPoint x="349" y="106" as="sourcePoint" />
+            <mxPoint x="349" y="197" as="targetPoint" />
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n21" value="writes IFACE/CONF" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.75;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2514;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n5" target="n8">
+          <mxGeometry x="-0.8350" relative="1" as="geometry">
+            <mxPoint x="407" y="106" as="sourcePoint" />
+            <mxPoint x="910" y="197" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="407" y="121" />
+              <mxPoint x="418" y="121" />
+              <mxPoint x="418" y="182" />
+              <mxPoint x="910" y="182" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n22" value="start/stop hooks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5027;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3319;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n8" target="n11">
+          <mxGeometry x="-0.5339" relative="1" as="geometry">
+            <mxPoint x="956" y="256" as="sourcePoint" />
+            <mxPoint x="1045" y="333" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="956" y="318" />
+              <mxPoint x="1045" y="318" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n23" value="follows same state file" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5023;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7541;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n10" target="n8">
+          <mxGeometry x="-0.1648" relative="1" as="geometry">
+            <mxPoint x="1002" y="106" as="sourcePoint" />
+            <mxPoint x="1002" y="197" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n24" value="D-Bus socket mount" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.7143;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5034;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n12">
+          <mxGeometry x="0.6038" relative="1" as="geometry">
+            <mxPoint x="844" y="165" as="sourcePoint" />
+            <mxPoint x="1138" y="307" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="844" y="192" />
+              <mxPoint x="1138" y="192" />
+              <mxPoint x="1138" y="269" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n25" value="edits SSID/password" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.665;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5027;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n13" target="n8">
+          <mxGeometry x="-0.8297" relative="1" as="geometry">
+            <mxPoint x="829" y="153" as="sourcePoint" />
+            <mxPoint x="1303" y="473" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="829" y="172" />
+              <mxPoint x="829" y="269" />
+              <mxPoint x="829" y="443" />
+              <mxPoint x="1303" y="443" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n26" value="touches sentinel file" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.335;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n13" target="n14">
+          <mxGeometry x="0.8347" relative="1" as="geometry">
+            <mxPoint x="763" y="153" as="sourcePoint" />
+            <mxPoint x="216" y="276" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="763" y="172" />
+              <mxPoint x="763" y="192" />
+              <mxPoint x="216" y="192" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n27" value="loopback proxy&lt;br&gt;(wifi_proxy.js, 25 s timeout)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3308;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n15" target="n13">
+          <mxGeometry x="0.1254" relative="1" as="geometry">
+            <mxPoint x="1251" y="910" as="sourcePoint" />
+            <mxPoint x="796" y="78" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1251" y="890" />
+              <mxPoint x="20" y="890" />
+              <mxPoint x="20" y="849" />
+              <mxPoint x="20" y="757" />
+              <mxPoint x="20" y="221" />
+              <mxPoint x="20" y="106" />
+              <mxPoint x="20" y="20" />
+              <mxPoint x="796" y="20" />
+              <mxPoint x="796" y="40" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n28" value="scan/connect/status" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.497;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6617;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n16" target="n15">
+          <mxGeometry x="0.0018" relative="1" as="geometry">
+            <mxPoint x="1295" y="787" as="sourcePoint" />
+            <mxPoint x="1295" y="910" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n29" value="DNS: mymsd.jp -&amp;gt; unit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3355;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5023;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n17" target="n10">
+          <mxGeometry x="-0.2165" relative="1" as="geometry">
+            <mxPoint x="1349" y="165" as="sourcePoint" />
+            <mxPoint x="1349" y="307" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1349" y="269" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n30" value="HTTP :80 to unit, redirected" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6645;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6681;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n17" target="n11">
+          <mxGeometry x="-0.4673" relative="1" as="geometry">
+            <mxPoint x="1399" y="165" as="sourcePoint" />
+            <mxPoint x="1471" y="609" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1399" y="192" />
+              <mxPoint x="1492" y="192" />
+              <mxPoint x="1492" y="249" />
+              <mxPoint x="1471" y="249" />
+              <mxPoint x="1471" y="269" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n31" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3319;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.497;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n11" target="n16">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1392" y="668" as="sourcePoint" />
+            <mxPoint x="1295" y="728" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1392" y="688" />
+              <mxPoint x="1392" y="708" />
+              <mxPoint x="1295" y="708" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n32" value="NAT, only if uplink set" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6681;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.497;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n11" target="n18">
+          <mxGeometry x="0.1222" relative="1" as="geometry">
+            <mxPoint x="1471" y="668" as="sourcePoint" />
+            <mxPoint x="1471" y="827" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1471" y="688" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n3" value="network_local" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="89" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Host (Jetson or dev laptop), Linux" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="195" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

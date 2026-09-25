@@ -11,18 +11,7 @@ search: false
 
 ## モーションプランニングパイプライン
 
-```mermaid
-flowchart TD
-  GOAL["Navigation Goal: PoseStamped"] --> GLOBAL_PLANNER["Global Planner: navfn/NavfnROS<br/>Dijkstra / A* Shortest Path on Global Costmap"]
-  GLOBAL_PLANNER --> GLOBAL_PATH["Global Geometric Path: nav_msgs/Path"]
-
-  GLOBAL_PATH --> TEB_OPT["TEB Local Planner: TebLocalPlannerROS<br/>Multi-Objective Non-Linear Least Squares Optimization"]
-  TEB_OPT --> CMD_VEL["Optimal Control Output: mux/nav_vel<br/>(geometry_msgs/Twist, 10 Hz)<br/>move_base remaps cmd_vel away from the wheels;<br/>twist_mux arbitrates onto /cmd_vel"]
-
-  LIDAR["LiDAR /scan (10 Hz)"] --> COSTMAPS["Layered Costmap Pipeline<br/>Static + Obstacle + Keep-Out + Inflation Layers"]
-  COSTMAPS --> GLOBAL_PLANNER
-  COSTMAPS --> TEB_OPT
-```
+![モーションプランニングパイプライン](../../../development/ros/diagrams/costmaps-and-planners-motion-planning-pipeline.drawio)
 
 ---
 

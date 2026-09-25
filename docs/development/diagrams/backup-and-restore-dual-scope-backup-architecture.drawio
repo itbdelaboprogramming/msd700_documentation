@@ -1,0 +1,40 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Dual-Scope Backup Architecture">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="21" y="21" width="710" height="149" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="28" y="210" width="697" height="133" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Scope: 'profile'" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="69" width="134" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Captures: All maps, routes, areas,&lt;br&gt;and playlists owned by a rental&lt;br&gt;profile across any robot." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="176" y="54" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Restore Behavior: Additive restore&lt;br&gt;into a new profile, or an existing&lt;br&gt;one via profile_remap. Missing&lt;br&gt;robots can be remapped." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="452" y="46" width="246" height="91" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Scope: 'unit'" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="61" width="121" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Captures: Complete operational&lt;br&gt;history recorded by a specific&lt;br&gt;physical robot." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="163" y="46" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Restore Behavior: Restores robot&lt;br&gt;calibration and recorded maps&lt;br&gt;directly to that unit." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="439" y="46" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="2. Unit-Scoped Backup (Robot Centric)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="223" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="1. Profile-Scoped Backup (Tenant Centric)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="240" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -17,36 +17,11 @@ This document details the dynamic lifecycle management of per-unit relay contain
 
 To scale across large robot fleets without wasting server CPU and RAM on idle machines, the server spins up a dedicated ROS relay container only when an operator opens that robot's dashboard.
 
-```mermaid
-flowchart TD
-  OPERATOR["Operator Opens Unit Page"] --> API["backend_node (Express API)"]
-  API --> UM["unit_manager.js<br/>Docker Engine Client"]
-  UM -->|/var/run/docker.sock| DOCKER["Host Docker Daemon"]
-
-  DOCKER -->|Instantiate on Demand| CONTAINER["Container: rosweb_unit_#lt;ULID#gt;_nakayama<br/>Image: ros-noetic-webui-app-v2:latest"]
-  CONTAINER --> RELAY1["topic2string / rosbridge deserializers"]
-  CONTAINER --> RELAY2["BoundaryPublisher (clock restamping)"]
-
-  REAPER["Background Idle Reaper<br/>(Runs Every 60 s)"] -->|If Idle > 30 min & Autopilot OFF| STOP["docker stop Container"]
-```
+![Container Architecture Overview (Legacy)](./diagrams/unit-container-lifecycle-container-architecture-overview-legacy.drawio)
 
 ## Container Lifecycle State Machine
 
-```mermaid
-stateDiagram-v2
-  [*] --> Absent: Container does not exist or stopped
-
-  Absent --> Starting: Operator navigates to unit dashboard (touch)
-  Starting --> Running: Container running, ROS nodes initialized
-  Running --> Running: Incoming ping heartbeat updates lastActivity
-  Running --> Retained: Robot reports Autopilot ON
-  Retained --> Running: Autopilot switched OFF by operator
-  Running --> Stopped: Inactive > 30 minutes (Reaper)
-  Running --> Stopped: Operator explicitly logs out
-  Retained --> Retained: Operator logout ignored (run protected)
-  Stopped --> Starting: Operator re-opens unit
-  Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
-```
+![Container Lifecycle State Machine](./diagrams/unit-container-lifecycle-container-lifecycle-state-machine.drawio)
 
 ## Lifecycle Rules and Policies
 

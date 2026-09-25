@@ -17,36 +17,11 @@ search: false
 
 アイドル状態のマシンにサーバーの CPU と RAM を浪費することなく大規模なロボットフリート全体にスケールするため、サーバーはオペレーターがそのロボットのダッシュボードを開いたときにのみ、専用の ROS リレーコンテナを起動します。
 
-```mermaid
-flowchart TD
-  OPERATOR["Operator Opens Unit Page"] --> API["backend_node (Express API)"]
-  API --> UM["unit_manager.js<br/>Docker Engine Client"]
-  UM -->|/var/run/docker.sock| DOCKER["Host Docker Daemon"]
-
-  DOCKER -->|Instantiate on Demand| CONTAINER["Container: rosweb_unit_#lt;ULID#gt;_nakayama<br/>Image: ros-noetic-webui-app-v2:latest"]
-  CONTAINER --> RELAY1["topic2string / rosbridge deserializers"]
-  CONTAINER --> RELAY2["BoundaryPublisher (clock restamping)"]
-
-  REAPER["Background Idle Reaper<br/>(Runs Every 60 s)"] -->|If Idle > 30 min & Autopilot OFF| STOP["docker stop Container"]
-```
+![コンテナアーキテクチャ概要(レガシー)](../../development/diagrams/unit-container-lifecycle-container-architecture-overview-legacy.drawio)
 
 ## コンテナライフサイクルのステートマシン
 
-```mermaid
-stateDiagram-v2
-  [*] --> Absent: Container does not exist or stopped
-
-  Absent --> Starting: Operator navigates to unit dashboard (touch)
-  Starting --> Running: Container running, ROS nodes initialized
-  Running --> Running: Incoming ping heartbeat updates lastActivity
-  Running --> Retained: Robot reports Autopilot ON
-  Retained --> Running: Autopilot switched OFF by operator
-  Running --> Stopped: Inactive > 30 minutes (Reaper)
-  Running --> Stopped: Operator explicitly logs out
-  Retained --> Retained: Operator logout ignored (run protected)
-  Stopped --> Starting: Operator re-opens unit
-  Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
-```
+![コンテナライフサイクルのステートマシン](../../development/diagrams/unit-container-lifecycle-container-lifecycle-state-machine.drawio)
 
 ## ライフサイクルのルールとポリシー
 

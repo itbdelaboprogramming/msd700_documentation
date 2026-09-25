@@ -38,12 +38,7 @@ all.
 To prevent conflicting commands from simultaneous users or browser tabs, access to motor actuation
 is governed by an **exclusive operating lease** held in memory on the physical robot.
 
-```mermaid
-flowchart LR
-  OP1["Operator 1 (Active Session)"] -->|"Heartbeat Ping (claim: true)"| ROBOT["Robot Lease Manager<br/>(system_command.py)"]
-  OP2["Operator 2 (Different User)"] -.->|"Rejected: In Use"| ROBOT
-  OP1_TAB2["Operator 1 (Second Tab)"] -.->|"Origin Conflict (Prompt Takeover)"| ROBOT
-```
+![Operating lease security: preventing multi-operator takeover](./diagrams/ros-integration-operating-lease-security-preventing-mult.drawio)
 
 - **Heartbeat Expiry**: The lease is valid for 15 seconds and must be renewed by periodic pings.
 - **Account vs Session Separation**:

@@ -1,0 +1,97 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Cross-Machine Clock Domain Restamping (BoundaryPublisher)">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Browser ROS2D Canvas" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="712" y="20" width="170" height="511" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="rosweb_unit_&amp;lt;u&amp;gt;-&lt;br&gt;_&amp;lt;unit&amp;gt;_nakaya-&lt;br&gt;ma (Cloud Server Domain&lt;br&gt;B)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="482" y="20" width="170" height="511" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Cloud HiveMQ (TLS&lt;br&gt;8883)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="250" y="20" width="170" height="511" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Robot Jetson (Clock&lt;br&gt;Domain A)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="170" height="511" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="BoundaryPublisher&lt;br&gt;Restamping Filter" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="482" y="255" width="170" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Stamp Pose with Jetson Time&lt;br&gt;(t_robot)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.225;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.2642;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n4">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="106" y="135" as="sourcePoint" />
+            <mxPoint x="106" y="155" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="150" y="135" />
+              <mxPoint x="150" y="155" />
+            </Array>
+            <mxPoint x="112" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="1" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="126" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Publish /string/robotpose JSON payload" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.362;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.362;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n3">
+          <mxGeometry x="0.0905" relative="1" as="geometry">
+            <mxPoint x="112" y="205" as="sourcePoint" />
+            <mxPoint x="331" y="205" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="2" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="196" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Deliver payload over WAN" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.4403;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.4403;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="-0.0226" relative="1" as="geometry">
+            <mxPoint x="342" y="245" as="sourcePoint" />
+            <mxPoint x="563" y="245" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="3" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="326" y="236" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="Measure Delta = now(server) - t_robot&lt;br&gt;Restamp message with ros::Time::now()" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.6654;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.7045;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n2">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="568" y="360" as="sourcePoint" />
+            <mxPoint x="568" y="380" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="612" y="360" />
+              <mxPoint x="612" y="380" />
+            </Array>
+            <mxPoint x="142" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="4" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="558" y="351" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" value="Publish /server/robot_pose to rosbridge" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.8023;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.8023;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="0.0741" relative="1" as="geometry">
+            <mxPoint x="574" y="430" as="sourcePoint" />
+            <mxPoint x="793" y="430" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="5" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="558" y="421" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" value="Render smooth icon position&lt;br&gt;without TF latency drops" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.91;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.9491;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n1">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="798" y="485" as="sourcePoint" />
+            <mxPoint x="798" y="505" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="842" y="485" />
+              <mxPoint x="842" y="505" />
+            </Array>
+            <mxPoint x="108" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="6" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="788" y="476" width="18" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

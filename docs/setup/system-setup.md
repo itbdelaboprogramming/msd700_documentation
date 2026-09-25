@@ -8,29 +8,7 @@ How to confirm a finished [Server](/setup/server-setup) and a finished [Unit](/s
 
 The unit and the server talk over channels that fail **independently**. Telling them apart is the whole skill here.
 
-```mermaid
-flowchart LR
-  subgraph U["Unit"]
-    R["robot"]
-  end
-  subgraph S["Server"]
-    MQ["HiveMQ"]
-    BE["backend_node"]
-    FR["unit_relays<br/>(one shared fleet relay)"]
-    RB["rosbridge"]
-    SIG["signalling"]
-  end
-  subgraph B["Operator browser"]
-    UI["dashboard"]
-  end
-
-  R ==>|"1. MQTT TLS 8883"| MQ
-  MQ --> BE
-  MQ --> FR --> RB
-  UI -->|"2. WSS /services/rosbridge"| RB
-  UI -->|"3. WSS /services/signalling"| SIG
-  UI -.->|"4. WebRTC media, direct or via coturn"| R
-```
+![Overview](./diagrams/system-setup-overview.drawio)
 
 | # | Channel | Carries | When broken |
 | --- | --- | --- | --- |

@@ -16,29 +16,7 @@ Halaman ini men-deploy **produksi**. Mode dev dan tambahan ada di [Advanced Conf
 
 ## Topologi sistem
 
-```mermaid
-flowchart TB
-  NET["Internet publik"] -->|":443 HTTPS / WSS"| AP["Apache2 Reverse Proxy<br/>TLS + routing"]
-  NET -->|":8883 MQTTS"| MQ["HiveMQ (:8883)<br/>Broker armada"]
-  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>Relay WebRTC"]
-
-  subgraph DockerServices["Stack produksi Docker Compose"]
-    AP --> FE["frontend_prod (:3000)<br/>Web dashboard"]
-    AP --> BE["backend_node (:5000)<br/>REST API"]
-    AP --> RB["rosbridge_suite (:9090)<br/>WebSocket telemetri"]
-    AP --> MED["media-server (:3003)<br/>Peta + file"]
-    AP --> SIG["signalling_server (:3001)<br/>Signalling WebRTC"]
-    MQ --> FR["unit_relays<br/>Relay armada bersama"]
-    FR --> RB
-    BE --> DB[("MySQL (:3307)<br/>Database: ROS_DB")]
-    SEC["/srv/msd/secrets<br/>JWT keyring + keystore TLS"]
-    SEC -.-> BE
-    SEC -.-> MQ
-    FP["fix_perms_prod (one-shot)<br/>Perbaiki owner folder host"]
-    FP -.-> BE
-    FP -.-> MED
-  end
-```
+![Topologi sistem](./diagrams/server-setup-system-topology.drawio)
 
 ::: warning Mode fleet adalah default
 Satu container `unit_relays` melayani seluruh armada. Container per-unit `rosweb_unit_*` hanya ada di mode legacy (`UNIT_CONTAINERS_ENABLED=true`). Jangan jalankan `server_prod` dan `server_dev` bersamaan di satu host. `coturn` hanya produksi. MySQL (`3307`) dan backend listen di semua interface, jadi tahan di balik firewall (lihat [Prasyarat](/id/setup/prerequisites)).
@@ -312,28 +290,7 @@ sudo systemctl reload apache2
 
 Setelah server jalan, robot bisa didaftarkan:
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Tech as Teknisi lapangan
-  participant Unit as Robot (Jetson)
-  participant Server as Backend cloud
-  participant Admin as Portal admin
-
-  Tech->>Unit: Jalankan script enrolment di Jetson
-  Unit->>Server: POST /enroll/claim (fingerprint, nonce hash, hostname/MAC)
-  Server-->>Unit: Kode klaim 8 karakter, mis. "K7M2QP4R"
-  Unit-->>Tech: Tampilkan "K7M2QP4R" di terminal
-
-  Tech->>Admin: Buka https://msd.nglobal.jp/admin, login
-  Tech->>Admin: Cari "K7M2QP4R" di Pending Units
-  Tech->>Admin: Isi nama unit + rental profile -> Approve
-
-  Server->>Server: Tandai "approved" di database
-  Unit->>Server: POST /enroll/status (nonce plaintext)
-  Server-->>Unit: ULID unit + device secret
-  Unit->>Unit: Simpan Certificates/robot/device.json, hubungi HiveMQ
-```
+![Mendaftarkan unit (enrolment)](./diagrams/server-setup-registering-units-enrolment.drawio)
 
 1. Login di `https://msd.nglobal.jp/admin`.
 2. Di bawah **Pending Units**, cari kode 8 karakter dari robot.
@@ -373,15 +330,7 @@ Setiap push atau PR yang di-merge otomatis me-rebuild dan menaikkan ulang stack 
 
 Push ke `ros-web-ui` **dan** `ROS-dashboard-next-ts` sama-sama memicu deploy, karena frontend di-build dari clone dashboard di dalam repo. Branch lain diabaikan.
 
-```mermaid
-flowchart LR
-  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
-  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
-  L -->|verifikasi HMAC| D[deploy.sh]
-  D --> G[git ff-only pull<br>repo + dashboard]
-  G --> B[compose build]
-  B --> U[compose up -d]
-```
+![Advanced configurations](./diagrams/server-setup-advanced-configurations.drawio)
 
 Listener langsung membalas `202` ke GitHub dan menjalankan `deploy.sh` di background, jadi build catkin + Next.js yang lama tidak kena timeout webhook GitHub (10 detik).
 

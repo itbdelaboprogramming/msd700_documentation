@@ -140,13 +140,13 @@ msd700_documentation/
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
-│   └── development/             # developer docs (this section)
+│   ├── development/             # developer docs (this section)
+│   └── */diagrams/*.drawio      # diagram sources, next to the pages that use them
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
-│   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
+│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -155,45 +155,55 @@ msd700_documentation/
 
 ### Diagrams
 
-Diagrams are authored as ```` ```mermaid ```` fences in markdown, but readers get a static PNG,
-pre-rendered in the draw.io look of the hand-drawn figures in `docs/public/images/` (white boxes,
-thin black lines, Helvetica, right-angle connectors, group titles in a corner tab).
+Diagrams are draw.io files (`.drawio`), kept in a `diagrams/` folder next to the pages that use
+them, for example `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Readers get a
+static PNG of each one, never an editor.
+
+**Editing a diagram:** open the `.drawio` file in draw.io: the
+[Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
+extension in VS Code (edits the file in place), the desktop app, or
+[app.diagrams.net](https://app.diagrams.net). Boxes, groups and lines are ordinary draw.io shapes:
+move them, reroute a line by dragging its waypoints, and save. Keep the house style (white boxes,
+thin black lines, Helvetica, right-angle connectors, group title in a tab at the top-left corner of
+its group) by copying an existing shape rather than using the palette defaults.
+
+**Embedding a diagram:** use image syntax with a path relative to the page. The alt text is what a
+screen reader says and what shows if the image is missing:
+
+```md
+![How it fits together](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
+```
+
+A translated page may point at the English file when the diagram has no text to translate
+(for example `../../development/diagrams/architecture-system-topology-and-data-flow.drawio` from `docs/id/development/`), or at its own copy in `docs/id/.../diagrams/` or
+`docs/ja/.../diagrams/` when the labels are translated.
 
 | Piece | Job |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | Lays out every fence once in headless Chrome (mermaid + the ELK layout engine for flowcharts and state diagrams) and writes `docs/public/diagrams/<hash>.png` at 2x. Deletes images no fence uses any more |
-| `scripts/diagram-hash.mjs` | The hash of a fence body plus `RENDER_VERSION`. Shared by the renderer and the build, so both name the same file. Bump `RENDER_VERSION` after a style change so readers get new URLs, not cached old images |
-| `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. Diagrams are never drawn in the browser: if the PNG is missing, the page shows a broken image and the build prints a `[diagrams]` warning until `npm run docs:diagrams` writes it |
-
-Rendering in the reader's browser was dropped because mermaid measured labels with whatever font
-that browser resolved, so boxes came out the wrong size, text was clipped and layouts shifted between
-machines. One renderer with one known font gives the same picture everywhere.
+| `scripts/render-diagrams.mjs` | Draws every referenced `.drawio` file with the official draw.io viewer in headless Chrome and writes `docs/public/diagrams/<hash>.png` at 2x, so the PNG matches what the editor shows. Deletes images nothing uses any more, and reports broken references and `.drawio` files no page uses |
+| `scripts/diagram-hash.mjs` | The hash of a `.drawio` file plus `RENDER_VERSION`. Shared by the renderer and the build, so both name the same file. Bump `RENDER_VERSION` after changing how the renderer draws, so readers get new URLs, not cached old images |
+| `docs/.vitepress/config.mts`, `markdown.config` | Turns every `![...](....drawio)` into an `<img>` of its PNG. A click opens it in a pop-up. If the PNG is missing, the page shows a broken image and the build prints a `[diagrams]` warning until `npm run docs:diagrams` writes it |
 
 ```bash
 npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
-npm run docs:diagrams -- --all # re-render everything, e.g. after changing the style
-npm run docs:diagrams -- --all --audit # also list layout findings per diagram
-npm run docs:check-diagrams    # syntax-check every diagram and fail if any has no PNG
+npm run docs:diagrams -- --all # re-render everything, e.g. after bumping RENDER_VERSION
+npm run docs:check-diagrams    # fail on a broken reference or a diagram without a PNG
 ```
 
-Commit the PNGs together with the markdown change. Set `CHROME_PATH` if Chrome is not in a
-standard location.
+Commit the `.drawio` file and its PNG together with the markdown change. Set `CHROME_PATH` if Chrome
+is not in a standard location. The first run downloads the pinned draw.io viewer into
+`node_modules/.cache` and checks its hash.
 
 ::: warning Edited a diagram? Re-render it
-The image is looked up by a hash of the fence body, so any edit, even a single character, needs
-`npm run docs:diagrams`. Otherwise the page shows a broken image (diagrams are never drawn in the browser).
+The image is looked up by a hash of the `.drawio` file, so any edit, even moving one box, needs
+`npm run docs:diagrams`. Otherwise the page shows a broken image. `npm run docs:dev` caches pages,
+so restart it to see the new image.
 :::
 
-Each flowchart is laid out with a few ELK variants and the one with the fewest audit findings is kept. `--audit` lists what remains: hard findings (a line through a box, a group title or a label) and soft ones marked `~` (a line within a few px of a title or box, hidden under a title, running along a group border, overlapping another line, or arrowheads bunched together). Group titles slide along the group edge, or wrap onto more lines, to stay clear of lines. Near-straight lines are straightened. If a diagram still looks cramped, reorder it in the source: `~~~` (an invisible link) fixes the order of boxes and groups, and `direction TB`/`LR` inside a `subgraph` sets its own flow.
-
-::: info Escape angle-bracket placeholders
-Write a placeholder such as `<unit>` as `#lt;unit#gt;` inside a diagram. Written raw, it is read as
-an HTML tag and silently dropped (`<u>` even turns the rest of the label into underlined text).
-:::
-
-::: info Keep `<br/>` out of state-diagram transition labels
-It works in `flowchart` node labels and in sequence-diagram notes, which is where this site uses it.
-State-diagram edge labels are plain text, so a `<br/>` there renders literally.
+::: info Why draw.io and not Mermaid
+The diagrams used to be Mermaid fences laid out automatically. An automatic layout decides where
+every box and line goes, so a line hugging a title or a box landing in an awkward place could only
+be nudged indirectly. In draw.io every position is explicit and can be fixed by hand.
 :::
 
 ### How the docs site is deployed

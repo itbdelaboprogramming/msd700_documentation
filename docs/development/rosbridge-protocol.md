@@ -13,22 +13,7 @@ This document details the WebSocket interface provided by `rosbridge_suite`, exp
 
 The web dashboard interacts with live ROS topics and services through `rosbridge_server` over a persistent WebSocket connection.
 
-```mermaid
-flowchart LR
-  subgraph BrowserClient["Operator Web Browser"]
-    JS_CLIENT["ROS2D.js / roslibjs<br/>Map Canvas & Telemetry Display"]
-  end
-
-  subgraph CloudServer["MSD700 Cloud Server"]
-    APACHE["Apache2 Reverse Proxy (:443)<br/>Route: /services/rosbridge"]
-    ROSBRIDGE["rosbridge_suite WebSocket Server<br/>(Port: 9090)"]
-    RELAY["rosweb_unit_#lt;ULID#gt;<br/>Deserialized Typed ROS Topics"]
-  end
-
-  JS_CLIENT <-->|"WSS (/services/rosbridge)"| APACHE
-  APACHE <-->|"WS (localhost:9090)"| ROSBRIDGE
-  ROSBRIDGE <-->|"Native ROS Topics"| RELAY
-```
+![rosbridge Architecture Overview](./diagrams/rosbridge-protocol-rosbridge-architecture-overview.drawio)
 
 ## Connection Endpoints
 

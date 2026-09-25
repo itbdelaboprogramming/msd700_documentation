@@ -23,12 +23,7 @@ search: false
 1. ブラウザを開き、`https://msd.nglobal.jp` にアクセスします。
 2. ユーザー名とパスワードを入力し、**Proceed** をクリックします。
 
-```mermaid
-flowchart LR
-  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
-  FLEET --> SELECT["3. Click Start"]
-  SELECT --> NAV["4. Navigation or Mapping Opens"]
-```
+![ステップ1: ダッシュボードにログイン](../../user-guide/diagrams/quick-start-step-1-log-in-to-the-dashboard.drawio)
 
 ---
 
@@ -51,18 +46,7 @@ flowchart LR
 
 オペレーターインターフェースは3つの主要な操作パネルに分かれています。
 
-```mermaid
-flowchart TB
-  subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
-    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
-  end
-
-  TOP ~~~ LEFT
-  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
-```
+![ステップ3: オペレーターワークスペースを理解する](../../user-guide/diagrams/quick-start-step-3-understand-the-operator-workspace.drawio)
 
 ---
 
@@ -82,18 +66,7 @@ flowchart TB
 
 キーボードを使ってロボットを手動で操作できます。
 
-```mermaid
-flowchart TB
-  subgraph KeyboardControls["Keyboard Drive Controls"]
-    W["W: Drive Forward"]
-    S["S: Drive Backward"]
-    A["A: Rotate Left (Counter-Clockwise)"]
-    D["D: Rotate Right (Clockwise)"]
-    SHIFT["Hold Shift: Slow Mode"]
-  end
-
-  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
-```
+![ステップ5: 手動走行(テレオペレーション)](../../user-guide/diagrams/quick-start-step-5-drive-manually-teleoperation.drawio)
 
 ### テレオペレーション操作:
 - **W / S**: 通常速度(`0.40 m/s`)で前進 / 後退します。
@@ -112,12 +85,7 @@ flowchart TB
 3. 外側にクリック&ドラッグして目標の向きの矢印を設定し、離します。
 4. ロボットは衝突のないグローバル経路(青い線)を計算し、目標地点まで自律的にナビゲートします。
 
-```mermaid
-flowchart LR
-  CLICK["1. Click Destination on Map"] --> PLAN["2. Robot Plans Collision-Free Path"]
-  PLAN --> DRIVE["3. Robot Steers Around Obstacles"]
-  DRIVE --> ARRIVE["4. Arrives at Goal with Target Heading"]
-```
+![ステップ6: ナビゲーションゴールを送信する(地点間移動)](../../user-guide/diagrams/quick-start-step-6-dispatch-a-navigation-goal-point.drawio)
 
 ---
 

@@ -47,39 +47,7 @@ Windows runs AP+client through its own virtual-adapter stack, unrelated to Linux
 
 ## How it fits together
 
-```mermaid
-flowchart TB
-  subgraph HOST["Host (Jetson or dev laptop), Linux"]
-    SEL["msd700-hotspot-select-iface.sh<br/>picks primary vs backup,<br/>writes /run/msd700-hotspot-active"]
-    APIF["msd700-ap0 (primary)<br/>virtual iface on onboard radio"]
-    DONGLE["USB dongle (backup)<br/>AP_INTERFACE_LOCAL"]
-    HAP["hostapd<br/>msd700-hotspot.service"]
-    UNMANAGED["NetworkManager drop-in<br/>leaves AP ifaces alone"]
-    DNSM["dnsmasq<br/>msd700-hotspot-dhcp.service<br/>DHCP + one hostname"]
-    FW["msd700-hotspot-firewall.sh<br/>redirect to dashboard + NAT relay"]
-    NM["NetworkManager<br/>client profile only"]
-    SEL -->|"creates + brings up winner"| APIF
-    SEL -.->|"or"| DONGLE
-    SEL -->|"writes IFACE/CONF"| HAP
-    HAP -->|"start/stop hooks"| FW
-    DNSM -->|"follows same state file"| HAP
-  end
-
-  subgraph AGENT["network_local"]
-    NA["network-agent (Node)<br/>loopback :5011<br/>host network, NET_ADMIN"]
-  end
-  AGENT -->|"D-Bus socket mount"| NM
-  NA -->|"edits SSID/password"| HAP
-  NA -->|"touches sentinel file"| RPATH["restart watcher<br/>restarts hotspot service"]
-
-  BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy<br/>(wifi_proxy.js, 25 s timeout)"| NA
-  FE["frontend_local :3000<br/>WiFi panel"] -->|"scan/connect/status"| BE
-
-  CLIENT["Device on hotspot"] -->|"DNS: mymsd.jp -> unit"| DNSM
-  CLIENT -->|"HTTP :80 to unit, redirected"| FW
-  FW --> FE
-  FW -->|"NAT, only if uplink set"| STA["onboard radio uplink"]
-```
+![How it fits together](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
 
 The hotspot doesn't depend on Docker. `hostapd` + `dnsmasq` run as systemd services, up at boot with or without `docker-manager.sh`. `network_local` provides status/scan/client actions in the dashboard, plus hotspot rename and restart requests. The dashboard still needs the local Docker stack running.
 

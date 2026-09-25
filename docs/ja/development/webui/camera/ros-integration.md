@@ -87,16 +87,7 @@ OSError: [Errno 19] No such device
   接続性チェックが通常1秒未満で届くLANにとっては十分に余裕のある値)だけ待機し、その時点で接続がまだ
   `connected`/`completed` になっていなければ `restart_ice()` を呼び出す。
 
-```mermaid
-flowchart LR
-  A["answer SDP arrives"] --> B{"any a=candidate:*.local ?"}
-  B -->|no| E["setRemoteDescription unchanged"]
-  B -->|yes| C["drop those lines,<br/>drop a=end-of-candidates too"]
-  C --> D["setRemoteDescription"]
-  D --> F["watch_prflx_handshake:<br/>wait up to 20s"]
-  F -->|connected in time| G["normal"]
-  F -->|still not connected| H["restart_ice()"]
-```
+![修正内容](../../../../development/webui/camera/diagrams/ros-integration-the-fix.drawio)
 
 ::: warning この除去処理はユニットローカルだけでなく両方のターゲットに適用される
 mDNS候補は、クラウドターゲットにとっても等しく無意味である。DNSの問題とは関係なく、インターネット越し

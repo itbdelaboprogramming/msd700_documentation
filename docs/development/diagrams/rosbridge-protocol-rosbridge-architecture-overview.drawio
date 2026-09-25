@@ -1,0 +1,55 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="rosbridge Architecture Overview">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="500" y="21" width="1021" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="21" y="21" width="257" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="ROS2D.js / roslibjs&lt;br&gt;Map Canvas &amp;amp; Telemetry Display" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="31" width="233" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Apache2 Reverse Proxy (:443)&lt;br&gt;Route: /services/rosbridge" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="31" width="220" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="rosbridge_suite WebSocket Server&lt;br&gt;(Port: 9090)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="391" y="31" width="242" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="rosweb_unit_&amp;lt;ULID&amp;gt;&lt;br&gt;Deserialized Typed ROS Topics" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="785" y="31" width="224" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="WSS (/services/rosbridge)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry x="-0.0008" relative="1" as="geometry">
+            <mxPoint x="266" y="82" as="sourcePoint" />
+            <mxPoint x="512" y="82" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="WS (localhost:9090)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n6" target="n7">
+          <mxGeometry x="0.0050" relative="1" as="geometry">
+            <mxPoint x="232" y="61" as="sourcePoint" />
+            <mxPoint x="391" y="61" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="Native ROS Topics" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n7" target="n8">
+          <mxGeometry x="-0.0042" relative="1" as="geometry">
+            <mxPoint x="633" y="61" as="sourcePoint" />
+            <mxPoint x="785" y="61" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n3" value="MSD700 Cloud Server" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="136" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Operator Web Browser" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="138" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

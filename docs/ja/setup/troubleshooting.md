@@ -10,21 +10,7 @@
 
 ## 最初に:どの層が壊れているか?
 
-```mermaid
-flowchart TB
-  A["何かおかしい"] --> B{"管理コンソールで<br/>ユニットはオンライン?"}
-  B -->|いいえ| C["MQTT層。<br/>ブローカー、経路、証明書。"]
-  B -->|はい| D{"コマンドは効く?<br/>(E-Stop、手動)"}
-  D -->|いいえ| E["コマンド層。<br/>ユニットのsystem_command、<br/>バックエンドのMQTTクライアント。"]
-  D -->|はい| F{"地図キャンバスは表示?"}
-  F -->|いいえ| G{"フリートリレー<br/>(unit_relays)は稼働?"}
-  G -->|いいえ| H["フリートリレー。<br/>unit_relaysかレガシーの<br/>ユニット単位コンテナ。"]
-  G -->|はい| I["rosbridge層。<br/>ApacheのHostヘッダーブロック。"]
-  F -->|はい| J{"映像は?"}
-  J -->|"LANのみ"| K["TURNリレー。<br/>TURN_EXTERNAL_IP、ルーター。"]
-  J -->|"全くなし"| L["シグナリング層。<br/>シグナリングプロキシ、トークン。"]
-  J -->|はい| M["アプリ層の問題。<br/>下の表へ。"]
-```
+![最初に:どの層が壊れているか?](./diagrams/troubleshooting-start-here-which-layer-is-broken.drawio)
 
 ## 診断チェックリスト
 

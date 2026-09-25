@@ -180,18 +180,7 @@ nmcli device
 
 ## 診断
 
-```mermaid
-flowchart TD
-  A["MT7922ハードウェア"] --> B["PCIeで検出"]
-  B --> C["mt7921eドライバーバインド"]
-  C --> D{"ファームウェア.bin<br/>あり?"}
-  D -->|"なし、.zstのみ"| E["hardware init failed"]
-  E --> F["NetworkManager: 無線なし<br/>'Adapter not found'"]
-  D -->|"あり"| G["ファームウェア読込"]
-  G --> H["wlan0リネーム<br/>(例 wlP1p1s0)"]
-  H --> I["NetworkManager"]
-  I --> J["Wi-Fiデバイス準備完了。接続は別途"]
-```
+![診断](./diagrams/wifi-mt7922-diagnosis.drawio)
 
 ## 次ユニット用の一括手順
 

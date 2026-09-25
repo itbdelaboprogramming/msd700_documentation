@@ -22,13 +22,7 @@ Memanggang tepi lubang ke peta statis akan menghantui lokalisasi selamanya, sehi
 
 ## Pipeline (`msd700_perception/launch/cloud_hazard.launch`)
 
-```mermaid
-flowchart LR
-  CLOUD["Velodyne PointCloud2<br/>VLP-16, 192.168.103.231, 10 Hz"] --> FIT["Ground fit<br/>quadratic over near-field floor<br/>radius 3.0 m, 3 iterations"]
-  FIT --> BAND["Height gate above fitted ground<br/>0.08 – 0.65 m obstacles<br/>holes deeper than 0.12 m"]
-  BAND --> SCAN["/scan<br/>positive obstacles"]
-  BAND --> HAZ["/scan_hazard<br/>obstacles + holes"]
-```
+![Pipeline (msd700perception/launch/cloudhazard.launch)](../../../development/ros/diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
 
 Pita-pita itu adalah meter **di atas permukaan tanah hasil fit**, bukan sensor: `ground_tolerance 0.06`, `min_obstacle_height 0.08` (di atas pita lantai berarti obstacle nyata), `max_obstacle_height 0.65` (di atas ini robot melintas di bawahnya), `hole_depth_threshold 0.12` (`config/hazard_scan.yaml`). Fit-nya kuadratik (orde 2, perlu untuk melintasi tanah bergelombang) atas return lantai dalam 3.0 m, dibobot ulang 3 kali, dengan diskriminator lantai-vs-dinding (`steepest_ring_deg 15.0`) agar dinding tidak memiringkan tanah.
 

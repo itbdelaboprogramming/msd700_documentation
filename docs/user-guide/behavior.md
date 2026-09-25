@@ -38,14 +38,7 @@ panel snap back to whatever the robot actually has engaged rather than what you 
 
 ## Only one person drives at a time
 
-```mermaid
-flowchart TB
-  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
-  B -->|no| C["You get control immediately"]
-  B -->|yes| D["A dialog appears:<br/>already being operated"]
-  D --> E["Take over control:<br/>the other session ends visibly"]
-  D --> F["Leave it running:<br/>you stay without control"]
-```
+![Only one person drives at a time](./diagrams/behavior-only-one-person-drives-at-a-time.drawio)
 
 | What you see | What it means | What you can do |
 | --- | --- | --- |
@@ -68,16 +61,7 @@ closed laptop stop stranding a robot nobody can use.
 The robot watches for your dashboard. When it stops hearing from you, three things happen at
 increasing intervals.
 
-```mermaid
-timeline
-  title After your browser stops responding
-  2 seconds : Motion pauses
-             : the operation stays loaded
-  10 minutes : Session ends
-             : navigation or mapping is torn down
-  30 minutes : Hardware shuts down
-             : must be restarted by hand
-```
+![What happens when you disconnect](./diagrams/behavior-what-happens-when-you-disconnect.drawio)
 
 | After | What happens | Recovers by itself? |
 | --- | --- | --- |
@@ -101,15 +85,7 @@ Autopilot is how you say "I am allowed to walk away." With it on:
 - The robot itself takes over stepping through your stops, instead of the browser doing it.
 - Logging out does **not** stop the run.
 
-```mermaid
-flowchart LR
-  A["Autopilot OFF"] -->|"you press the toggle"| B["Autopilot ON"]
-  B --> C["safety pauses suspended"]
-  B --> D["robot drives the route itself"]
-  B --> E["logout no longer ends the run"]
-  B -->|"toggle again"| A
-  A --> F["safety pauses re-armed<br/>with a fresh window"]
-```
+![Turning the pause off on purpose: Autopilot](./diagrams/behavior-turning-the-pause-off-on-purpose-autopil.drawio)
 
 ::: danger Autopilot means the robot will keep moving with nobody watching
 That is the entire point of it, and it is the right choice for a long unattended route. It is the
@@ -126,19 +102,7 @@ up and take over the run in progress. The run continues either way.
 
 Log in again after closing everything and the dashboard puts you back where you were.
 
-```mermaid
-sequenceDiagram
-  participant You
-  participant Dashboard
-  participant Robot
-
-  You->>Dashboard: log in
-  Dashboard->>Robot: what are you doing?
-  Robot-->>Dashboard: running a route on the Navigation tab
-  Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which stop it is on
-  Dashboard->>You: pins, map and progress restored
-```
+![Coming back](./diagrams/behavior-coming-back.drawio)
 
 The robot hands back the whole operation: your stops, which one it is on, the map, and any
 coverage areas. None of that came from your browser, which is why it survives a different computer.

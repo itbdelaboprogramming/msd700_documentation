@@ -1,0 +1,85 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Synchronization Mechanics">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="303" y="49" width="495" height="211" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="21" y="21" width="227" height="266" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="1001" y="96" width="270" height="117" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="5-Minute Periodic Timer" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="32" y="121" width="183" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Network Reachability Event&lt;br&gt;(offline to online transition)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="12" y="195" width="203" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Manual Operator Action&lt;br&gt;(POST /local/sync)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="33" y="31" width="182" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="wake()&lt;br&gt;Dispatcher&lt;br&gt;(one sync round at a time)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="78" width="195" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Sync Round Execution:&lt;br&gt;1. Handshake &amp;amp; Clock Calibration&lt;br&gt;2. Pull Downstream Changes&lt;br&gt;3. Apply Rows &amp;amp; Upsert&lt;br&gt;Tombstones&lt;br&gt;4. Push Upstream Operational&lt;br&gt;Rows&lt;br&gt;5. Transfer Missing Map Binary&lt;br&gt;Files" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="237" y="31" width="246" height="168" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="sync_engine.js&lt;br&gt;Serve Changes &amp;amp; Acknowledge&lt;br&gt;Watermarks" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="31" width="246" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5116;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n7" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="236" y="164" as="sourcePoint" />
+            <mxPoint x="315" y="164" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.7568;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n8" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="236" y="246" as="sourcePoint" />
+            <mxPoint x="315" y="183" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="275" y="246" />
+              <mxPoint x="275" y="183" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.2568;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n9" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="236" y="82" as="sourcePoint" />
+            <mxPoint x="315" y="146" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="275" y="82" />
+              <mxPoint x="275" y="146" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n10" target="n11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="207" y="115" as="sourcePoint" />
+            <mxPoint x="237" y="115" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="HTTP Sync Endpoints" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n11" target="n12">
+          <mxGeometry x="0.0013" relative="1" as="geometry">
+            <mxPoint x="786" y="164" as="sourcePoint" />
+            <mxPoint x="1013" y="164" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n4" value="Central Cloud Server" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="128" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="sync_agent.js (Onboard Unit)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="172" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Reconciliation Triggers" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="0" y="0" width="137" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

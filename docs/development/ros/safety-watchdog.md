@@ -9,18 +9,7 @@ search: false
 
 The onboard software monitors operator presence with a watchdog, running inside `system_command.py`. This is a robot-internal safety mechanism with no dashboard UI of its own; for how the operator sees its effects (the `in_use`/lease fields, activity states it can force), see [Architecture § State Ownership and Persistence Matrix](/development/architecture#state-ownership-and-persistence-matrix) and [Navigation: Manual Override & Autopilot](/development/webui/navigation/manual-and-autopilot).
 
-```mermaid
-flowchart TB
-  HB["MQTT heartbeat, 5 Hz<br/>(unit's local dashboard only)"] --> RESET["Refresh presence"]
-  PING["HTTP ping, 1 Hz<br/>POST /api/hardware/ping"] --> RESET
-  RESET --> MONITOR["Watchdog monitor loop<br/>(sampled every 0.2 s)"]
-
-  MONITOR -->|No presence for 2 s| PAUSE["2 seconds: motion safety pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
-  PAUSE -->|No presence for 10 min| TEARDOWN["10 minutes: session teardown<br/>Switch mode to idle, drop the navigation/mapping stack"]
-  TEARDOWN -->|No presence for 30 min| SHUTDOWN["30 minutes: hardware shutdown<br/>Lease dropped, motion lock kept on"]
-
-  RESET -.->|Presence restored| UNPAUSE["Clear the 2 s pause<br/>Resume the active mission"]
-```
+![Safety Watchdog and Heartbeat Supervision](./diagrams/safety-watchdog-safety-watchdog-and-heartbeat-supervisio.drawio)
 
 ## Two presence signals
 

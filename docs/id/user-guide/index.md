@@ -47,13 +47,7 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
 
 ## Urutan Baca yang Disarankan
 
-```mermaid
-flowchart LR
-  A["1. Pendahuluan<br/>Ikhtisar Sistem"] --> B["2. Panduan Cepat<br/>Misi Pertama"]
-  B --> C["3. Akun<br/>Login & Peran"]
-  C --> D["4. Navigasi & Pemetaan<br/>Operasi Inti"]
-  D --> E["5. Perilaku & FAQ<br/>Keselamatan & Bantuan"]
-```
+![Urutan Baca yang Disarankan](./diagrams/user-guide-recommended-reading-order.drawio)
 
 1. **[Pendahuluan](/id/user-guide/introduction)**: Pahami platform, perangkat keras, dan arsitektur cloud
 2. **[Panduan Cepat](/id/user-guide/quick-start)**: Masuk dan jalankan misi pertama Anda dalam beberapa menit

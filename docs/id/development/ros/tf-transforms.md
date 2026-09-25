@@ -15,14 +15,7 @@ Pohon transformasi koordinat mematuhi ROS REP-103 (Standard Units of Measure & C
 
 Pohon di bawah adalah yang dipublikasikan **unit sungguhan**: `irbot.urdf.xacro` lewat `msd700_description/launch/robot_description.launch.xml`, dijalankan oleh `bringup_msd.launch` di setiap mode (termasuk idle) sehingga `/scan` dan EKF selalu punya transform statisnya. Tinggi lidar diambil dari `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) dan menjadi acuan `msd700_perception` untuk mengukur semua ketinggian.
 
-```mermaid
-flowchart TD
-  MAP["map<br/>(global fixed frame)"] -->|"AMCL / SLAM correction"| ODOM["odom<br/>(smooth local odometry frame)"]
-  ODOM -->|"EKF: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(chassis projected on the floor)"]
-  BASE_FP -->|"Static: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link"]
-  BASE_LINK -->|"Static: z = +0.427 m"| LASER["laser<br/>(Velodyne VLP-16)"]
-  BASE_LINK -->|"Static: identity"| IMU["imu<br/>(CMPS12 via STM32)"]
-```
+![Hierarki Frame Koordinat (Pohon TF)](../../../development/ros/diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
 Tidak ada `camera_link` pada robot: kamera adalah perangkat USB/WebRTC terpisah, bukan link URDF.
 
@@ -69,22 +62,7 @@ MSD700 secara ketat menerapkan sistem koordinat Cartesian tangan-kanan:
 
 Ketika telemetri (seperti pose robot dan laser scan) dijembatani dari robot fisik melalui internet ke server cloud, **drift clock antar mesin fisik menghasilkan peringatan ekstrapolasi `TF_OLD_DATA`** jika timestamp dievaluasi secara langsung.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Robot as Robot Jetson (Clock Domain A)
-  participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama (Cloud Server Domain B)
-  participant Canvas as Browser ROS2D Canvas
-
-  Robot->>Robot: Stamp Pose with Jetson Time (t_robot)
-  Robot->>MQTT: Publish /string/robotpose JSON payload
-  MQTT->>Relay: Deliver payload over WAN
-  Note over Relay: BoundaryPublisher Restamping Filter
-  Relay->>Relay: Measure Delta = now(server) - t_robot<br/>Restamp message with ros::Time::now()
-  Relay->>Canvas: Publish /server/robot_pose to rosbridge
-  Canvas->>Canvas: Render smooth icon position without TF latency drops
-```
+![Restamping Domain Clock Lintas-Mesin (BoundaryPublisher)](../../../development/ros/diagrams/tf-transforms-cross-machine-clock-domain-restamping-bo.drawio)
 
 ### Mengapa Restamping Bersifat Krusial:
 1. **Keterbatasan RTC Jetson**: SBC fisik di lingkungan lapangan tanpa akses NTP dapat boot dengan clock yang menyimpang hingga hitungan detik atau bahkan bulan.

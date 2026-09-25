@@ -8,29 +8,7 @@
 
 ユニットとサーバーは**独立に故障する**経路で通信します。それらを切り分けることがここの要点です。
 
-```mermaid
-flowchart LR
-  subgraph U["ユニット"]
-    R["robot"]
-  end
-  subgraph S["サーバー"]
-    MQ["HiveMQ"]
-    BE["backend_node"]
-    FR["unit_relays<br/>(共有フリートリレー1台)"]
-    RB["rosbridge"]
-    SIG["シグナリング"]
-  end
-  subgraph B["オペレーターブラウザ"]
-    UI["ダッシュボード"]
-  end
-
-  R ==>|"1. MQTT TLS 8883"| MQ
-  MQ --> BE
-  MQ --> FR --> RB
-  UI -->|"2. WSS /services/rosbridge"| RB
-  UI -->|"3. WSS /services/signalling"| SIG
-  UI -.->|"4. WebRTCメディア、直接またはcoturn経由"| R
-```
+![概要](./diagrams/system-setup-overview.drawio)
 
 | # | 経路 | 運ぶもの | 故障時の様子 |
 | --- | --- | --- | --- |

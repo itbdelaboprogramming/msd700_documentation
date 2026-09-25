@@ -15,22 +15,7 @@ Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-gui
 
 ## Diagram Alur Diagnostik Sistematis
 
-```mermaid
-flowchart TD
-  START["Identify Engineering Symptom"] --> Q1{"Does the unit show Online<br/>in the Web Console?"}
-
-  Q1 -->|No| MQTT_FAIL["Check MQTT Layer:<br/>1. Is HiveMQ CE running (:8883)?<br/>2. Is TLS keystore valid (/srv/msd/secrets/)?<br/>3. Is robot aws_mqtt bridge active?"]
-  Q1 -->|Yes| Q2{"Do commands execute?<br/>(e.g. Manual WASD / Mode Switch)"}
-
-  Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
-  Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
-
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
-  Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
-
-  Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]
-  Q4 -->|Yes| APP_OK["All Core Subsystems Operational"]
-```
+![Diagram Alur Diagnostik Sistematis](../../development/diagrams/troubleshooting-guide-systematic-diagnostic-flowchart.drawio)
 
 ## Mode Kegagalan Umum dan Solusi
 

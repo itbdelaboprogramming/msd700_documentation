@@ -141,13 +141,13 @@ msd700_documentation/
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
-│   └── development/             # developer docs (this section)
+│   ├── development/             # developer docs (this section)
+│   └── */diagrams/*.drawio      # diagram sources, next to the pages that use them
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
-│   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
+│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -156,45 +156,56 @@ msd700_documentation/
 
 ### Diagram
 
-Diagram ditulis sebagai fence ```` ```mermaid ```` di markdown, tapi pembaca menerima PNG statis
-yang sudah dirender lebih dulu dengan gaya draw.io seperti gambar buatan tangan di
-`docs/public/images/` (kotak putih, garis hitam tipis, Helvetica, konektor siku, judul grup di tab pojok).
+Diagram berupa file draw.io (`.drawio`) yang disimpan di folder `diagrams/` di samping halaman yang
+memakainya, misalnya `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`. Pembaca menerima
+PNG statis dari setiap diagram, bukan editor.
+
+**Mengedit diagram:** buka file `.drawio` di draw.io: ekstensi
+[Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
+di VS Code (langsung mengedit file-nya), aplikasi desktop, atau
+[app.diagrams.net](https://app.diagrams.net). Kotak, grup, dan garis adalah shape draw.io biasa:
+geser, atur jalur garis dengan menarik titik beloknya, lalu simpan. Pertahankan gaya yang sama (kotak
+putih, garis hitam tipis, Helvetica, konektor siku, judul grup di tab pojok kiri atas grupnya) dengan
+menyalin shape yang sudah ada, bukan memakai default palet.
+
+**Menyisipkan diagram:** pakai sintaks gambar dengan path relatif terhadap halaman. Alt text adalah
+yang dibacakan screen reader dan yang tampil jika gambar tidak ada:
+
+```md
+![Cara kerja keseluruhannya](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
+```
+
+Halaman terjemahan boleh menunjuk file bahasa Inggris jika diagramnya tidak punya teks yang perlu
+diterjemahkan (misalnya `../../development/diagrams/architecture-system-topology-and-data-flow.drawio`
+dari `docs/id/development/`), atau salinannya sendiri di `docs/id/.../diagrams/` atau
+`docs/ja/.../diagrams/` jika labelnya diterjemahkan.
 
 | Bagian | Tugas |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | Menata setiap fence sekali di Chrome headless (mermaid + engine layout ELK untuk flowchart dan state diagram) lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x. Menghapus gambar yang tidak dipakai fence mana pun |
-| `scripts/diagram-hash.mjs` | Hash dari isi fence plus `RENDER_VERSION`. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama. Naikkan `RENDER_VERSION` setelah mengubah gaya agar pembaca mendapat URL baru, bukan gambar lama dari cache |
-| `docs/.vitepress/config.mts`, `markdown.config` | Mengganti setiap fence `mermaid` dengan `<img>` PNG-nya, ditautkan ke file ukuran penuh. Diagram tidak pernah digambar di browser: jika PNG belum ada, halaman menampilkan gambar rusak dan build mencetak peringatan `[diagrams]` sampai `npm run docs:diagrams` membuatnya |
-
-Render di browser pembaca ditinggalkan karena mermaid mengukur label dengan font apa pun yang
-ditemukan browser itu, sehingga ukuran kotak meleset, teks terpotong, dan layout berbeda antar mesin.
-Satu renderer dengan satu font yang pasti menghasilkan gambar yang sama di mana pun.
+| `scripts/render-diagrams.mjs` | Menggambar setiap file `.drawio` yang dirujuk dengan viewer resmi draw.io di Chrome headless lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x, sehingga PNG-nya sama dengan tampilan di editor. Menghapus gambar yang tidak dipakai lagi, dan melaporkan rujukan yang rusak serta file `.drawio` yang tidak dipakai halaman mana pun |
+| `scripts/diagram-hash.mjs` | Hash dari file `.drawio` plus `RENDER_VERSION`. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama. Naikkan `RENDER_VERSION` setelah mengubah cara renderer menggambar, agar pembaca mendapat URL baru, bukan gambar lama dari cache |
+| `docs/.vitepress/config.mts`, `markdown.config` | Mengubah setiap `![...](....drawio)` menjadi `<img>` PNG-nya. Klik membukanya di pop-up. Jika PNG belum ada, halaman menampilkan gambar rusak dan build mencetak peringatan `[diagrams]` sampai `npm run docs:diagrams` membuatnya |
 
 ```bash
 npm run docs:diagrams          # render diagram baru atau yang berubah (butuh Chrome/Chromium lokal)
-npm run docs:diagrams -- --all # render ulang semua, misalnya setelah mengubah gaya
-npm run docs:diagrams -- --all --audit # plus daftar temuan layout per diagram
-npm run docs:check-diagrams    # cek sintaks semua diagram dan gagal jika ada yang belum punya PNG
+npm run docs:diagrams -- --all # render ulang semua, misalnya setelah menaikkan RENDER_VERSION
+npm run docs:check-diagrams    # gagal jika ada rujukan rusak atau diagram tanpa PNG
 ```
 
-Commit PNG bersama perubahan markdown-nya. Set `CHROME_PATH` jika Chrome tidak ada di lokasi standar.
+Commit file `.drawio` dan PNG-nya bersama perubahan markdown. Set `CHROME_PATH` jika Chrome tidak ada
+di lokasi standar. Run pertama mengunduh viewer draw.io versi terkunci ke `node_modules/.cache` dan
+memeriksa hash-nya.
 
 ::: warning Mengubah diagram? Render ulang
-Gambar dicari berdasarkan hash isi fence, jadi setiap perubahan, bahkan satu karakter, perlu
-`npm run docs:diagrams`. Jika tidak, halaman menampilkan gambar rusak (diagram tidak pernah digambar di browser).
+Gambar dicari berdasarkan hash file `.drawio`, jadi setiap perubahan, bahkan menggeser satu kotak,
+perlu `npm run docs:diagrams`. Jika tidak, halaman menampilkan gambar rusak. `npm run docs:dev`
+menyimpan cache halaman, jadi restart dulu untuk melihat gambar barunya.
 :::
 
-Setiap flowchart di-layout dengan beberapa varian ELK, lalu yang temuan audit-nya paling sedikit yang dipakai. `--audit` menampilkan sisanya: temuan berat (garis menembus kotak, judul grup, atau label) dan temuan ringan bertanda `~` (garis terlalu dekat ke judul atau kotak, tertutup judul, menempel di border grup, berimpit dengan garis lain, atau ujung panah yang berdempetan). Judul grup digeser di sepanjang tepi grup, atau dipecah menjadi beberapa baris, agar tidak kena garis. Garis yang hampir lurus diluruskan. Jika diagram masih terlihat sempit, ubah urutannya di sumber: `~~~` (link tak terlihat) mengatur urutan kotak dan grup, dan `direction TB`/`LR` di dalam `subgraph` mengatur arahnya sendiri.
-
-::: info Escape placeholder berkurung siku
-Tulis placeholder seperti `<unit>` sebagai `#lt;unit#gt;` di dalam diagram. Jika ditulis mentah, ia
-dibaca sebagai tag HTML dan hilang tanpa pesan (`<u>` bahkan membuat sisa label bergaris bawah).
-:::
-
-::: info Jauhkan `<br/>` dari label transisi state-diagram
-Tag ini berfungsi di label node `flowchart` dan di catatan sequence-diagram, yang merupakan tempat situs ini
-menggunakannya. Label edge pada state-diagram adalah teks polos, sehingga `<br/>` di sana dirender secara
-harfiah.
+::: info Kenapa draw.io, bukan Mermaid
+Dulu diagram ditulis sebagai fence Mermaid yang di-layout otomatis. Layout otomatis menentukan posisi
+setiap kotak dan garis, jadi garis yang mepet judul atau kotak yang posisinya janggal hanya bisa diakali
+secara tidak langsung. Di draw.io setiap posisi eksplisit dan bisa dirapikan langsung.
 :::
 
 ### Bagaimana situs dokumentasi ini di-deploy

@@ -1,0 +1,147 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Container Lifecycle State Machine">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="html=1;whiteSpace=wrap;fillColor=#000000;strokeColor=#000000;ellipse;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="41" y="38" width="14" height="14" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Absent" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=1;absoluteArcSize=1;arcSize=10;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="21" y="189" width="53" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Starting" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=1;absoluteArcSize=1;arcSize=10;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="186" y="334" width="57" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Running" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=1;absoluteArcSize=1;arcSize=10;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="483" y="21" width="61" height="31" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Retained" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=1;absoluteArcSize=1;arcSize=10;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="570" y="189" width="64" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Stopped" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=1;absoluteArcSize=1;arcSize=10;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="675" y="189" width="61" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="" style="html=1;whiteSpace=wrap;fillColor=#000000;strokeColor=#000000;ellipse;shape=endState;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="708" y="334" width="14" height="14" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Container does not exist or stopped" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5094;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="0.0109" relative="1" as="geometry">
+            <mxPoint x="48" y="52" as="sourcePoint" />
+            <mxPoint x="48" y="189" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="Operator navigates to unit dashboard&lt;br&gt;(touch)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5094;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.2456;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="-0.5729" relative="1" as="geometry">
+            <mxPoint x="48" y="221" as="sourcePoint" />
+            <mxPoint x="200" y="334" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="48" y="314" />
+              <mxPoint x="200" y="314" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="Container running, ROS nodes initialized" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5088;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.1639;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry x="-0.5403" relative="1" as="geometry">
+            <mxPoint x="215" y="334" as="sourcePoint" />
+            <mxPoint x="493" y="52" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="215" y="278" />
+              <mxPoint x="215" y="121" />
+              <mxPoint x="215" y="73" />
+              <mxPoint x="493" y="73" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="Incoming ping heartbeat updates&lt;br&gt;lastActivity" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0;exitY=0.3226;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.6774;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n4">
+          <mxGeometry x="-0.0000" relative="1" as="geometry">
+            <mxPoint x="483" y="31" as="sourcePoint" />
+            <mxPoint x="483" y="42" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="463" y="31" />
+              <mxPoint x="463" y="42" />
+            </Array>
+            <mxPoint x="-104" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="Robot reports Autopilot ON" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3279;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3281;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry x="-0.1570" relative="1" as="geometry">
+            <mxPoint x="503" y="52" as="sourcePoint" />
+            <mxPoint x="591" y="189" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="503" y="93" />
+              <mxPoint x="340" y="93" />
+              <mxPoint x="340" y="169" />
+              <mxPoint x="591" y="169" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="Autopilot switched OFF by operator" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6719;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4918;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n4">
+          <mxGeometry x="0.4156" relative="1" as="geometry">
+            <mxPoint x="613" y="189" as="sourcePoint" />
+            <mxPoint x="513" y="52" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="613" y="149" />
+              <mxPoint x="513" y="149" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="Inactive &amp;gt; 30 minutes (Reaper)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6557;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3279;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n6">
+          <mxGeometry x="0.5615" relative="1" as="geometry">
+            <mxPoint x="523" y="52" as="sourcePoint" />
+            <mxPoint x="695" y="189" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="523" y="93" />
+              <mxPoint x="695" y="93" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="Operator explicitly logs out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.8361;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6557;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n6">
+          <mxGeometry x="0.3052" relative="1" as="geometry">
+            <mxPoint x="534" y="52" as="sourcePoint" />
+            <mxPoint x="715" y="189" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="534" y="73" />
+              <mxPoint x="855" y="73" />
+              <mxPoint x="855" y="149" />
+              <mxPoint x="715" y="149" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="Operator logout ignored (run protected)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0;exitY=0.3438;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.6875;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n5">
+          <mxGeometry x="-0.0080" relative="1" as="geometry">
+            <mxPoint x="570" y="200" as="sourcePoint" />
+            <mxPoint x="570" y="211" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="550" y="200" />
+              <mxPoint x="550" y="211" />
+            </Array>
+            <mxPoint x="-100" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="Operator re-opens unit" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3279;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.7544;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n6" target="n3">
+          <mxGeometry x="-0.2691" relative="1" as="geometry">
+            <mxPoint x="695" y="221" as="sourcePoint" />
+            <mxPoint x="229" y="334" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="695" y="241" />
+              <mxPoint x="540" y="241" />
+              <mxPoint x="540" y="314" />
+              <mxPoint x="229" y="314" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="Removed if&lt;br&gt;UNIT_REMOVE_ON_REAP=true" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6557;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n6" target="n7">
+          <mxGeometry x="0.0017" relative="1" as="geometry">
+            <mxPoint x="715" y="221" as="sourcePoint" />
+            <mxPoint x="715" y="334" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

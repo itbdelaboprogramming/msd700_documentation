@@ -11,24 +11,7 @@ Dokumen ini merinci bagaimana robot MSD700 secara dinamis berpindah antara mode 
 
 ## Topologi Orkestrasi Mode
 
-```mermaid
-flowchart TD
-  MQTT["MQTT /system_command"] --> SYS_CMD["system_command.py<br/>(Master Command Dispatcher)"]
-
-  SYS_CMD -->|"Calls ROS Service: /switch_mode"| SWITCH["switch_mode.py<br/>(Dynamic Process Lifecycle Manager)"]
-
-  SWITCH -->|Spawn / Terminate via subprocess + killall| LAUNCH_STACKS
-
-  subgraph LAUNCH_STACKS["Dynamic Launch Subsystems"]
-    NAV_STACK["Navigation Stack (msd700_navigation.launch)<br/>map_server, amcl, move_base, TEB planner"]
-    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping (teleop is a separate robot_teleop.launch)"]
-    COV_STACK["Area Coverage Stack (msd700_coverage/msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
-    EXP_STACK["Exploration Stack (msd700_explore.launch)<br/>explore_lite, frontier exploration"]
-  end
-
-  SYS_CMD -->|"Dispatches Goals"| OP_SUP["operation_supervisor.py<br/>(Autopilot Mission Sequencer)"]
-  OP_SUP --> NAV_STACK
-```
+![Topologi Orkestrasi Mode](../../../development/ros/diagrams/mode-switching-mode-orchestration-topology.drawio)
 
 ---
 
@@ -65,18 +48,7 @@ timeouts:
 
 `operation_supervisor.py` mengelola eksekusi otonom dari rute waypoint multi-langkah dan playlist cakupan area:
 
-```mermaid
-stateDiagram-v2
-  [*] --> SupervisorIdle
-
-  SupervisorIdle --> StepActive: Goal dispatched from Playlist
-  StepActive --> DwellWaiting: move_base reports Goal Succeeded
-  DwellWaiting --> StepActive: Dwell timer expired, advance next waypoint
-  StepActive --> Paused: Safety watchdog triggers or operator pauses
-  Paused --> StepActive: Operator clicks Resume
-  StepActive --> Completed: All waypoints in playlist reached
-  Completed --> SupervisorIdle: Return to Homebase and latch final snapshot
-```
+![Sequencing Misi Autopilot (operationsupervisor.py)](../../../development/ros/diagrams/mode-switching-autopilot-mission-sequencing-operationsu.drawio)
 
 ### Kemampuan Kunci Supervisor:
 - **Latched Operation Snapshot**: Mempublikasikan `/string/operation_snapshot` dengan QoS latched. Ketika operator mana pun membuka tab browser, state lengkap dari misi aktif (indeks waypoint aktif, sisa pin rute, dwell timer) dipulihkan dalam hitungan milidetik.

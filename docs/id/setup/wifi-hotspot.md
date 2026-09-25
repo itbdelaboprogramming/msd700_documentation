@@ -47,39 +47,7 @@ Windows menjalankan AP+client lewat stack virtual-adapter sendiri, tak terkait k
 
 ## Cara kerja keseluruhannya
 
-```mermaid
-flowchart TB
-  subgraph HOST["Host (Jetson atau laptop dev), Linux"]
-    SEL["msd700-hotspot-select-iface.sh<br/>memilih primary vs backup,<br/>menulis /run/msd700-hotspot-active"]
-    APIF["msd700-ap0 (primary)<br/>iface virtual di radio onboard"]
-    DONGLE["dongle USB (backup)<br/>AP_INTERFACE_LOCAL"]
-    HAP["hostapd<br/>msd700-hotspot.service"]
-    UNMANAGED["drop-in NetworkManager<br/>membiarkan iface AP sendiri"]
-    DNSM["dnsmasq<br/>msd700-hotspot-dhcp.service<br/>DHCP + satu hostname"]
-    FW["msd700-hotspot-firewall.sh<br/>redirect ke dashboard + relay NAT"]
-    NM["NetworkManager<br/>hanya profile client"]
-    SEL -->|"membuat + menaikkan pemenang"| APIF
-    SEL -.->|"atau"| DONGLE
-    SEL -->|"menulis IFACE/CONF"| HAP
-    HAP -->|"hook start/stop"| FW
-    DNSM -->|"mengikuti state file yang sama"| HAP
-  end
-
-  subgraph AGENT["network_local"]
-    NA["network-agent (Node)<br/>loopback :5011<br/>host network, NET_ADMIN"]
-  end
-  AGENT -->|"mount socket D-Bus"| NM
-  NA -->|"mengedit SSID/password"| HAP
-  NA -->|"menyentuh sentinel file"| RPATH["watcher restart<br/>me-restart service hotspot"]
-
-  BE["backend_local<br/>/local/wifi/*"] -->|"proxy loopback<br/>(wifi_proxy.js, timeout 25 dtk)"| NA
-  FE["frontend_local :3000<br/>panel WiFi"] -->|"scan/connect/status"| BE
-
-  CLIENT["Device di hotspot"] -->|"DNS: mymsd.jp -> unit"| DNSM
-  CLIENT -->|"HTTP :80 ke unit, di-redirect"| FW
-  FW --> FE
-  FW -->|"NAT, hanya bila uplink diset"| STA["uplink radio onboard"]
-```
+![Cara kerja keseluruhannya](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
 
 Hotspot tidak tergantung Docker. `hostapd` + `dnsmasq` jalan sebagai service systemd, naik saat boot dengan atau tanpa `docker-manager.sh`. `network_local` menyediakan status/scan/aksi client di dashboard, plus rename hotspot dan request restart. Dashboard tetap butuh stack Docker lokal jalan.
 

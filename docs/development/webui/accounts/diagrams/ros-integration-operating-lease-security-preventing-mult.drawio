@@ -1,0 +1,51 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Operating lease security: preventing multi-operator takeover">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Operator 1 (Active Session)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="203" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Robot Lease Manager&lt;br&gt;(system_command.py)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="466" y="96" width="177" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Operator 2 (Different User)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="25" y="104" width="198" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Operator 1 (Second Tab)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="36" y="188" width="187" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Heartbeat Ping (claim: true)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.2542;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="-0.2205" relative="1" as="geometry">
+            <mxPoint x="223" y="42" as="sourcePoint" />
+            <mxPoint x="466" y="111" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="446" y="42" />
+              <mxPoint x="446" y="111" />
+            </Array>
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n6" value="Rejected: In Use" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.0009" relative="1" as="geometry">
+            <mxPoint x="223" y="126" as="sourcePoint" />
+            <mxPoint x="466" y="126" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n7" value="Origin Conflict (Prompt Takeover)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.7458;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n2">
+          <mxGeometry x="-0.2229" relative="1" as="geometry">
+            <mxPoint x="223" y="210" as="sourcePoint" />
+            <mxPoint x="466" y="140" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="446" y="210" />
+              <mxPoint x="446" y="140" />
+            </Array>
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

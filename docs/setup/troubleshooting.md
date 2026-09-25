@@ -10,21 +10,7 @@ Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide
 
 ## Start here: which layer is broken?
 
-```mermaid
-flowchart TB
-  A["Something is wrong"] --> B{"Unit online<br/>in admin console?"}
-  B -->|no| C["MQTT layer.<br/>Broker, network path, certificate."]
-  B -->|yes| D{"Commands work?<br/>(E-Stop, manual)"}
-  D -->|no| E["Command layer.<br/>system_command on unit,<br/>backend MQTT client."]
-  D -->|yes| F{"Map canvas filled?"}
-  F -->|no| G{"Fleet relay<br/>(unit_relays) running?"}
-  G -->|no| H["Fleet relay.<br/>unit_relays, or legacy<br/>per-unit container."]
-  G -->|yes| I["rosbridge layer.<br/>Apache Host-header block."]
-  F -->|yes| J{"Video?"}
-  J -->|"LAN only"| K["TURN relay.<br/>TURN_EXTERNAL_IP, router."]
-  J -->|"never"| L["Signalling layer.<br/>Signalling proxy, tokens."]
-  J -->|yes| M["App-level issue.<br/>Tables below."]
-```
+![Start here: which layer is broken?](./diagrams/troubleshooting-start-here-which-layer-is-broken.drawio)
 
 ## Diagnostic checklist
 

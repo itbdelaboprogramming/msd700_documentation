@@ -1,0 +1,102 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Authentication and Authorization">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="MySQL Database" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="485" y="20" width="170" height="531" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="backend_node" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="255" y="20" width="170" height="531" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Client Application" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="170" height="531" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Include token in Bearer&lt;br&gt;header on subsequent&lt;br&gt;calls" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="265" width="170" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="POST /user/login { username, password }" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.1883;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.1883;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.1067" relative="1" as="geometry">
+            <mxPoint x="112" y="120" as="sourcePoint" />
+            <mxPoint x="336" y="120" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n6" value="1" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="111" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Query user credentials &amp;amp; rental profiles" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.2637;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.2637;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="0.0663" relative="1" as="geometry">
+            <mxPoint x="347" y="160" as="sourcePoint" />
+            <mxPoint x="566" y="160" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="2" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="331" y="151" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="User record verified" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.339;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.339;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="0.0216" relative="1" as="geometry">
+            <mxPoint x="575" y="200" as="sourcePoint" />
+            <mxPoint x="344" y="200" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="3" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="561" y="191" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="200 OK { success, msg, username,&lt;br&gt;full_name, user_id, token, refresh_token }" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.4426;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.4426;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.1537" relative="1" as="geometry">
+            <mxPoint x="345" y="255" as="sourcePoint" />
+            <mxPoint x="109" y="255" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="4" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="331" y="246" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="POST /api/navigation/pointstamped (Bearer&lt;br&gt;token)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.6874;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.6874;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.1617" relative="1" as="geometry">
+            <mxPoint x="112" y="385" as="sourcePoint" />
+            <mxPoint x="336" y="385" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="5" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="376" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="401 Unauthorized (when token expires)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.7627;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.7627;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0958" relative="1" as="geometry">
+            <mxPoint x="345" y="425" as="sourcePoint" />
+            <mxPoint x="109" y="425" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="6" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="331" y="416" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="POST /user/refresh { refresh_token }" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.838;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.838;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="-0.0191" relative="1" as="geometry">
+            <mxPoint x="112" y="465" as="sourcePoint" />
+            <mxPoint x="336" y="465" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="7" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="456" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="200 OK { token, refresh_token } (fresh&lt;br&gt;token pair)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.9416;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.9416;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0621" relative="1" as="geometry">
+            <mxPoint x="345" y="520" as="sourcePoint" />
+            <mxPoint x="109" y="520" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="8" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="331" y="511" width="18" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

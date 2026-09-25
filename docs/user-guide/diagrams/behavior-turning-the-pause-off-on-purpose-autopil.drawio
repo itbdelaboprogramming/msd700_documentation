@@ -1,0 +1,84 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Turning the pause off on purpose: Autopilot">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Autopilot OFF" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="476" y="266" width="130" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Autopilot ON" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="252" width="124" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="safety pauses suspended" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="224" y="20" width="192" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="robot drives the route itself" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="224" y="104" width="197" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="logout no longer ends the run" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="224" y="188" width="212" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="safety pauses re-armed&lt;br&gt;with a fresh window" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="646" y="258" width="182" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="you press the toggle" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0;exitY=0.6591;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.8182;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="-0.1220" relative="1" as="geometry">
+            <mxPoint x="476" y="295" as="sourcePoint" />
+            <mxPoint x="144" y="288" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="456" y="295" />
+              <mxPoint x="456" y="319" />
+              <mxPoint x="164" y="319" />
+              <mxPoint x="164" y="288" />
+            </Array>
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.1591;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="144" y="259" as="sourcePoint" />
+            <mxPoint x="224" y="42" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="164" y="259" />
+              <mxPoint x="164" y="42" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.3409;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="144" y="267" as="sourcePoint" />
+            <mxPoint x="224" y="126" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="184" y="267" />
+              <mxPoint x="184" y="126" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="144" y="274" as="sourcePoint" />
+            <mxPoint x="224" y="210" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="204" y="274" />
+              <mxPoint x="204" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n11" value="toggle again" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.6591;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.3409;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="0.1211" relative="1" as="geometry">
+            <mxPoint x="144" y="281" as="sourcePoint" />
+            <mxPoint x="476" y="281" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="606" y="288" as="sourcePoint" />
+            <mxPoint x="646" y="288" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

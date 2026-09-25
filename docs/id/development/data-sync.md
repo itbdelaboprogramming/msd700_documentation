@@ -30,29 +30,7 @@ Aset biner (seperti occupancy grid `.pgm`, metadata `.yaml`, dan thumbnail peta)
 
 ## Mekanika Sinkronisasi
 
-```mermaid
-flowchart LR
-  subgraph Triggers["Reconciliation Triggers"]
-    T1["5-Minute Periodic Timer"]
-    T2["Network Reachability Event<br/>(offline to online transition)"]
-    T3["Manual Operator Action<br/>(POST /local/sync)"]
-  end
-
-  subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
-    EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
-  end
-
-  subgraph CloudServer["Central Cloud Server"]
-    RESP["sync_engine.js<br/>Serve Changes & Acknowledge Watermarks"]
-  end
-
-  T1 --> WAKE
-  T2 --> WAKE
-  T3 --> WAKE
-  WAKE --> EXEC
-  EXEC <-->|"HTTP Sync Endpoints"| RESP
-```
+![Mekanika Sinkronisasi](../../development/diagrams/data-sync-synchronization-mechanics.drawio)
 
 ### Komponen Kunci:
 - **`sync_agent.js`**: Berjalan eksklusif pada Unit, mengelola timer polling, probe reachability, dan panggilan HTTP keluar ke endpoint cloud. (Cloud tidak menghubungi robot di belakang NAT).
@@ -77,13 +55,7 @@ Resolusi konflik mengikuti strategi deterministik **Last-Write-Wins per baris**:
 
 Pada build dashboard lokal (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), header kanan atas menampilkan badge Local Mode:
 
-```mermaid
-flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
-  BADGE --> CLICK["Click Badge: Opens Modal Menu"]
-  CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
-```
+![Badge Status Local Mode](../../development/diagrams/data-sync-the-local-mode-status-badge.drawio)
 
 ### Fase Sinkronisasi Detail:
 1. `token`: Mengautentikasi dengan server cloud menggunakan kredensial robot.

@@ -86,15 +86,7 @@ This restarts the dev fleet relay too, briefly interrupting dev units. Tokens st
 
 Apache reads the Let's Encrypt PEM files directly. HiveMQ reads a **separately generated** PKCS#12 keystore. Renewing the PEMs never updates HiveMQ by itself.
 
-```mermaid
-flowchart TB
-  CB["certbot renew"] --> PEM["/etc/letsencrypt/live/DOMAIN/<br/>fullchain.pem + privkey.pem"]
-  PEM --> AP["Apache2<br/>reads the PEMs directly"]
-  PEM -->|"openssl pkcs12 -export<br/>update_ssl.sh"| KS["/srv/msd/secrets/hivemq/keystore.p12"]
-  KS --> MQ["HiveMQ<br/>reads the keystore ONCE, at startup"]
-  AP -.->|"systemctl reload apache2"| DONE1["new cert live"]
-  MQ -.->|"container restart"| DONE2["new cert live"]
-```
+![Certificates](./diagrams/maintenance-certificates.drawio)
 
 | Consumer | Picks up renewal by | Automatic? |
 | --- | --- | --- |

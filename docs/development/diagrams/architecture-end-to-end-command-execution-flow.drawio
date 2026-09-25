@@ -1,0 +1,174 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="End-to-End Command Execution Flow">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="move_base (ROS)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1369" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="system_command.py" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="1129" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="HiveMQ Broker" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="890" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="backend_node" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="651" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Apache2 Proxy" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="421" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Browser Dashboard" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="183" y="25" width="170" height="894" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Operator" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=65;participant=umlActor;verticalAlign=top;spacingTop=66;fillColor=none;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="36" height="899" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="loop" style="shape=umlFrame;html=1;whiteSpace=wrap;width=50;height=20;boxedLabel=1;fillColor=none;strokeColor=#333333;dashed=1;dashPattern=2 2;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="725" y="785" width="261" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="[Automatic Retry on Packet&lt;br&gt;Drop]" style="text;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="804" y="790" width="154" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="verifyToken &amp;amp; attachUnit&lt;br&gt;Validates account lease permissions" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="623" y="245" width="226" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Click waypoint on navigation map" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6944;exitY=0.1168;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.1119;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n7" target="n6">
+          <mxGeometry x="-0.0228" relative="1" as="geometry">
+            <mxPoint x="45" y="125" as="sourcePoint" />
+            <mxPoint x="264" y="125" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="1" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="29" y="116" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="POST&lt;br&gt;/services/rosbackend/api/navigation/pointsta-&lt;br&gt;mped" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.1902;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.1902;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n6" target="n5">
+          <mxGeometry x="0.1795" relative="1" as="geometry">
+            <mxPoint x="275" y="195" as="sourcePoint" />
+            <mxPoint x="502" y="195" as="targetPoint" />
+            <mxPoint x="0" y="-28" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="2" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="259" y="186" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Proxy request with Bearer JWT" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.2349;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.2349;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n4">
+          <mxGeometry x="-0.0226" relative="1" as="geometry">
+            <mxPoint x="513" y="235" as="sourcePoint" />
+            <mxPoint x="732" y="235" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="3" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="497" y="226" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="Generate unique request_id&lt;br&gt;(UUID v4)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.3635;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.3859;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n4">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="737" y="350" as="sourcePoint" />
+            <mxPoint x="737" y="370" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="781" y="350" />
+              <mxPoint x="781" y="370" />
+            </Array>
+            <mxPoint x="107" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="4" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="727" y="341" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="Publish to&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/system_command" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.4586;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.4586;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n3">
+          <mxGeometry x="-0.0263" relative="1" as="geometry">
+            <mxPoint x="743" y="435" as="sourcePoint" />
+            <mxPoint x="971" y="435" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="5" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="727" y="426" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n21" value="Deliver command envelope via TLS" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.5034;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.5034;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="-0.0249" relative="1" as="geometry">
+            <mxPoint x="982" y="475" as="sourcePoint" />
+            <mxPoint x="1210" y="475" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n22" value="6" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="966" y="466" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n23" value="Convert to geometry_msgs/PoseStamped&lt;br&gt;goal" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.5649;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.5649;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="0.0902" relative="1" as="geometry">
+            <mxPoint x="1221" y="530" as="sourcePoint" />
+            <mxPoint x="1450" y="530" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n24" value="7" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1205" y="521" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n25" value="Goal accepted by navigation actionlib" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.6096;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.6096;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="0.0252" relative="1" as="geometry">
+            <mxPoint x="1459" y="570" as="sourcePoint" />
+            <mxPoint x="1218" y="570" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n26" value="8" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1445" y="561" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n27" value="Publish to&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/system_feedback&lt;br&gt;(request_id match)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.6879;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.6879;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0230" relative="1" as="geometry">
+            <mxPoint x="1219" y="640" as="sourcePoint" />
+            <mxPoint x="979" y="640" as="targetPoint" />
+            <mxPoint x="0" y="-28" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n28" value="9" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="1205" y="631" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n29" value="Deliver feedback payload" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.7327;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.7327;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n4">
+          <mxGeometry x="0.0250" relative="1" as="geometry">
+            <mxPoint x="980" y="680" as="sourcePoint" />
+            <mxPoint x="740" y="680" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n30" value="10" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="966" y="671" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n31" value="HTTP 200 { status: true, message: &quot;Goal&lt;br&gt;accepted&quot; }" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.7942;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.7942;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry x="0.1513" relative="1" as="geometry">
+            <mxPoint x="741" y="735" as="sourcePoint" />
+            <mxPoint x="510" y="735" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n32" value="11" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="727" y="726" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n33" value="Update UI state to &quot;Navigating&quot;" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.8389;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.8389;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n6">
+          <mxGeometry x="0.0194" relative="1" as="geometry">
+            <mxPoint x="511" y="775" as="sourcePoint" />
+            <mxPoint x="272" y="775" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n34" value="12" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="497" y="766" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n35" value="Resend unacknowledged command every&lt;br&gt;1500 ms (up to 30 s)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.962;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.962;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n3">
+          <mxGeometry x="0.1004" relative="1" as="geometry">
+            <mxPoint x="743" y="885" as="sourcePoint" />
+            <mxPoint x="971" y="885" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n36" value="13" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="727" y="876" width="18" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

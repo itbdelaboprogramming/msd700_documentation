@@ -30,29 +30,7 @@ Binary assets (such as `.pgm` occupancy grids, `.yaml` metadata, and map thumbna
 
 ## Synchronization Mechanics
 
-```mermaid
-flowchart LR
-  subgraph Triggers["Reconciliation Triggers"]
-    T1["5-Minute Periodic Timer"]
-    T2["Network Reachability Event<br/>(offline to online transition)"]
-    T3["Manual Operator Action<br/>(POST /local/sync)"]
-  end
-
-  subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
-    EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
-  end
-
-  subgraph CloudServer["Central Cloud Server"]
-    RESP["sync_engine.js<br/>Serve Changes & Acknowledge Watermarks"]
-  end
-
-  T1 --> WAKE
-  T2 --> WAKE
-  T3 --> WAKE
-  WAKE --> EXEC
-  EXEC <-->|"HTTP Sync Endpoints"| RESP
-```
+![Synchronization Mechanics](./diagrams/data-sync-synchronization-mechanics.drawio)
 
 ### Key Components:
 - **`sync_agent.js`**: Runs exclusively on the Unit, managing polling timers, reachability probes, and outbound HTTP calls to cloud endpoints. (The cloud does not dial into robots behind NAT).
@@ -77,13 +55,7 @@ Conflict resolution follows a deterministic **Last-Write-Wins per row** strategy
 
 In local dashboard builds (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), the top-right header displays the Local Mode badge:
 
-```mermaid
-flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
-  BADGE --> CLICK["Click Badge: Opens Modal Menu"]
-  CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
-```
+![The Local Mode Status Badge](./diagrams/data-sync-the-local-mode-status-badge.drawio)
 
 ### Detailed Sync Phases:
 1. `token`: Authenticating with cloud server using robot credentials.

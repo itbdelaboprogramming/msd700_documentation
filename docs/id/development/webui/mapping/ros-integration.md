@@ -153,21 +153,7 @@ Saat `mapping` / `stop` sampai ke robot, ia tidak langsung mengunggah begitu saj
 kesehatan preflight memverifikasi disk lokal dan endpoint media dapat dijangkau sebelum apa pun
 ditulis:
 
-```mermaid
-flowchart TB
-  SAVE_REQ["POST /api/mapping/stop"] --> PREFLIGHT["Preflight Health Check<br/>Verify local disk & media endpoints"]
-  PREFLIGHT -->|Local Disk Unwritable| REFUSE["Refuse Save: Prevent Corrupt Run"]
-  PREFLIGHT -->|Healthy| EXEC_SAVE["Execute map_saver<br/>Generate .pgm, .yaml, and thumbnail"]
-
-  EXEC_SAVE --> UP_LOCAL["1. Upload to Unit media_local :3003<br/>(MANDATORY TARGET)"]
-  EXEC_SAVE --> UP_CLOUD["2. Upload to Cloud media-server :3003<br/>(BEST-EFFORT TARGET)"]
-
-  UP_LOCAL -->|Local Success| CHK_CLOUD{"Cloud Upload Success?"}
-  UP_LOCAL -->|Local Failed| FAIL_STATE["Set activity = mapping_stop_failed<br/>Retain SLAM node for retry"]
-
-  CHK_CLOUD -->|Yes| DONE_ALL["Outcome = completed<br/>Both targets synchronized"]
-  CHK_CLOUD -->|"No (Offline)"| DONE_LOCAL["Outcome = cloud_pending<br/>Unit stores map; sync_agent replicates later"]
-```
+![Penyimpanan sisi robot: mapsaver dan pemeriksaan preflight](../../../../development/webui/mapping/diagrams/ros-integration-robot-side-save-mapsaver-and-preflight-c.drawio)
 
 Jika disk lokal tidak bisa ditulis, penyimpanan ditolak langsung alih-alih dicoba, untuk
 menghindari meninggalkan run yang korup atau sebagian di disk. Setelah preflight lolos,

@@ -13,20 +13,7 @@ Dokumen ini menyediakan spesifikasi algoritmik komprehensif untuk pipeline peren
 
 Prinsip desain fundamental dalam perencanaan cakupan MSD700 adalah bahwa **robot memiliki dua dimensi geometris berbeda yang digunakan untuk perhitungan berbeda**:
 
-```mermaid
-flowchart LR
-  subgraph PhysicalBody["1. Physical Body Footprint"]
-    B1["Width: 0.70 m, Length: 0.90 m"]
-    B2["Used for: Lane Pitch & Area Swept Math"]
-  end
-
-  subgraph SafetyEnvelope["2. Navigation Safety Envelope"]
-    E1["Width: 0.85 m, Length: 1.20 m"]
-    E2["Used for: Obstacle Clearance & Turn Radii"]
-  end
-
-  PhysicalBody -.->|"Includes 0.075 m Lateral Safety Padding"| SafetyEnvelope
-```
+![Dua Geometri Robot](../../../development/ros/diagrams/boustrophedon-and-alignment-dual-robot-geometries.drawio)
 
 | Definisi Geometris | Dimensi Ukuran | Penggunaan Algoritmik |
 | --- | --- | --- |
@@ -64,15 +51,7 @@ Karena strip perimeter 0,05 m tidak dapat dilintasi tanpa collision, ruangan per
 
 Planner cakupan mendekomposisi batas poligonal konkaf sembarang dengan obstacle internal menjadi sub-sel cembung yang bebas-obstacle:
 
-```mermaid
-flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.400 m)"]
-  B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
-  C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
-  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
-  E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
-  F --> G["Goal Dispatch to move_base"]
-```
+![Algoritma Boustrophedon Cellular Decomposition](../../../development/ros/diagrams/boustrophedon-and-alignment-boustrophedon-cellular-decomposition-alg.drawio)
 
 ### Klasifikasi Critical Point:
 Selama progresi sweep line vertikal sepanjang sumbu $x$, vertex boundary diklasifikasikan berdasarkan konektivitas lokal ruang bebas:
@@ -85,16 +64,7 @@ Selama progresi sweep line vertikal sepanjang sumbu $x$, vertex boundary diklasi
 
 ## Manajemen Obstacle Lima-Layer
 
-```mermaid
-flowchart TB
-  L0["Layer 0: Offline Area Decomposition<br/>Slices around known permanent walls"]
-  L1["Layer 1: Inter-Lane Transit Routing<br/>Global planner navfn routes around map obstacles"]
-  L2["Layer 2: Local Trajectory Avoidance<br/>TEB local planner steers around dynamic obstacles (3x3 m)"]
-  L3["Layer 3: Waypoint Failure Classification<br/>Classify goal aborts as static, dynamic, or planner lock"]
-  L4["Layer 4: Real-Time Cellular Replanning<br/>Re-cut remaining lanes when obstacle blocks > 15% of cell"]
-
-  L0 --> L1 --> L2 --> L3 --> L4
-```
+![Manajemen Obstacle Lima-Layer](../../../development/ros/diagrams/boustrophedon-and-alignment-five-layer-obstacle-management.drawio)
 
 ---
 
@@ -104,14 +74,7 @@ Ketika robot ditempatkan pada pose yang tidak diketahui di atas peta yang telah 
 
 MSD700 mengimplementasikan **pencarian partikel coarse-to-fine** (`particle_align_validator.py`) untuk menghitung orientasi dan posisi secara instan tanpa gerakan. Dashboard memicunya lewat service `/align/solve_pose` (tombol Auto Align milik Map Sync, via `align_checker`):
 
-```mermaid
-flowchart LR
-  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Coarse-to-Fine Particle Search<br/>Over Search Space: (dx, dy, dyaw)"]
-  GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
-  SCORE --> CONF{"Confidence >= 65%<br/>(solve_confidence_threshold)?"}
-  CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
-  CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
-```
+![Alignment Orientasi Zero-Spin (Particle Align Validator)](../../../development/ros/diagrams/boustrophedon-and-alignment-zero-spin-orientation-alignment-particle.drawio)
 
 ### Formulasi Matematis:
 Diberikan $N$ titik laser scan $\mathbf{p}_i = [x_i, y_i]^T$ dan peta occupancy grid statis $M(x, y)$, scan matcher menemukan transformasi rigid $(\Delta x, \Delta y, \Delta \theta)$ yang memaksimalkan skor korelasi:

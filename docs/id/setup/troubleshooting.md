@@ -10,21 +10,7 @@ Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-gui
 
 ## Mulai di sini: layer mana yang rusak?
 
-```mermaid
-flowchart TB
-  A["Ada yang salah"] --> B{"Unit online<br/>di admin console?"}
-  B -->|tidak| C["Layer MQTT.<br/>Broker, jalur jaringan, sertifikat."]
-  B -->|ya| D{"Perintah jalan?<br/>(E-Stop, manual)"}
-  D -->|tidak| E["Layer perintah.<br/>system_command di unit,<br/>client MQTT backend."]
-  D -->|ya| F{"Kanvas peta terisi?"}
-  F -->|tidak| G{"Relay armada<br/>(unit_relays) jalan?"}
-  G -->|tidak| H["Relay armada.<br/>unit_relays, atau container<br/>per-unit legacy."]
-  G -->|ya| I["Layer rosbridge.<br/>Blok Host-header Apache."]
-  F -->|ya| J{"Video?"}
-  J -->|"cuma di LAN"| K["Relay TURN.<br/>TURN_EXTERNAL_IP, router."]
-  J -->|"tidak pernah"| L["Layer signalling.<br/>Proxy signalling, token."]
-  J -->|ya| M["Masalah level aplikasi.<br/>Tabel di bawah."]
-```
+![Mulai di sini: layer mana yang rusak?](./diagrams/troubleshooting-start-here-which-layer-is-broken.drawio)
 
 ## Checklist diagnostik
 

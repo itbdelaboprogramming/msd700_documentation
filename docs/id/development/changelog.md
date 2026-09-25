@@ -25,6 +25,7 @@ Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajua
 - **Hazard Scan Lebih Cepat**: Reduksi per grup di pipeline perception dipindah ke library C (`fastops`), memangkas satu frame dari sekitar 55 ms menjadi sekitar 37 ms, dengan fallback numpy.
 - **Restart Hotspot dari Dashboard**: `network_local` me-restart hotspot lewat unit sempit `msd700-hotspot-restart.path`, bukan lewat NetworkManager.
 - **Webhook Auto-Deploy**: Push ke branch deploy otomatis me-rebuild `server_prod` / `server_dev`.
+- **Diagram di draw.io**: Semua diagram dokumentasi kini berupa file `.drawio` yang bisa diedit, disimpan di samping halamannya, dan dirender menjadi PNG statis dengan viewer draw.io. Mermaid tidak dipakai lagi. Lihat [Struktur Repositori § Diagram](/id/development/repository-structure#diagram).
 
 ### Agustus 2026: Overhaul Dokumentasi & Kinematika Presisi
 - **Arsitektur Dokumentasi Modular**: Penulisan ulang menyeluruh semua halaman dokumentasi dengan diagram SVG Mermaid responsif, formulasi matematis, dan operasi zero-downtime.

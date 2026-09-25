@@ -13,26 +13,7 @@ Dokumen ini merinci arsitektur backup database, struktur arsip export/import, me
 
 Platform ini mendukung dua lingkup backup yang independen:
 
-```mermaid
-flowchart TB
-  subgraph ProfileScope["1. Profile-Scoped Backup (Tenant Centric)"]
-    direction LR
-    P1["Scope: 'profile'"]
-    P2["Captures: All maps, routes, areas, and playlists owned by a rental profile across any robot."]
-    P3["Restore Behavior: Additive restore into a new profile, or an existing one via profile_remap. Missing robots can be remapped."]
-  end
-
-  subgraph UnitScope["2. Unit-Scoped Backup (Robot Centric)"]
-    direction LR
-    U1["Scope: 'unit'"]
-    U2["Captures: Complete operational history recorded by a specific physical robot."]
-    U3["Restore Behavior: Restores robot calibration and recorded maps directly to that unit."]
-  end
-
-  P1 ~~~ P2 ~~~ P3
-  U1 ~~~ U2 ~~~ U3
-  ProfileScope ~~~ UnitScope
-```
+![Arsitektur Backup Dua-Lingkup](../../development/diagrams/backup-and-restore-dual-scope-backup-architecture.drawio)
 
 | Dimensi | Backup Berlingkup Profil | Backup Berlingkup Unit |
 | --- | --- | --- |

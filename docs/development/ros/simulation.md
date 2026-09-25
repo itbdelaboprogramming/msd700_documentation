@@ -15,21 +15,7 @@ For coverage planning geometry derived from physical robot dimensions, see [Bous
 
 Older simulator setups in the repository used TurtleBot3 Waffle models: **0.266 x 0.266 m** footprint on a 0.287 m wheel track. In contrast, the production-size MSD700 field robot measures **0.90 x 0.70 m**, represented in the navigation costmap as a padded **1.20 x 0.85 m** footprint.
 
-```mermaid
-flowchart LR
-  subgraph OldModel["Legacy Sim Model (TurtleBot3 Waffle)"]
-    W1["Width: 0.266 m<br/>Length: 0.266 m"]
-    W2["Inscribed Radius: 0.133 m"]
-  end
-
-  subgraph FieldModel["Production Field Model (msd700_field)"]
-    F1["Body Width: 0.70 m<br/>Body Length: 0.90 m"]
-    F2["Costmap Envelope: 1.20 x 0.85 m"]
-    F3["Inscribed Radius: 0.425 m"]
-  end
-
-  OldModel -.->|"3.2x Scale Discrepancy"| FieldModel
-```
+![Background: The True-Scale Dimension Model](./diagrams/simulation-background-the-true-scale-dimension-mode.drawio)
 
 ### Consequences of the Scale Gap:
 1. **Unreproducible Narrow-Aisle Issues**: Real-world reports of path planning failures in narrow warehouse corridors could not reproduce on a 0.133 m radius TurtleBot.
@@ -67,19 +53,7 @@ The verified default spawn pose is **`x: 0.50, y: -2.40, yaw: 1.5708 (facing Nor
 
 The field (production-size) robot is modeled in `msd700_description/urdf/msd700_field.urdf.xacro` with Gazebo plugins in `msd700_field.gazebo.xacro`.
 
-```mermaid
-flowchart TB
-  subgraph RobotModel["msd700_field URDF"]
-    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.25 m (Mass: 150 kg)"]
-    DRIVE["4 Drive Wheels: x ±0.30 m, y ±0.30 m<br/>Radius 0.10 m, Separation 0.60 m"]
-    LIDAR["Velodyne VLP-16 LiDAR: 0.40 m above base_link<br/>0.50 m above footprint"]
-    EKF["EKF Sensor Fusion: /odometry/filtered (Odom + IMU)"]
-  end
-
-  CHASSIS --> DRIVE
-  CHASSIS --> LIDAR
-  DRIVE --> EKF
-```
+![The Robot URDF Model: msd700field](./diagrams/simulation-the-robot-urdf-model-msd700field.drawio)
 
 ### Physical Specifications:
 - **Dimensions**: 0.90 m length, 0.70 m width, 0.25 m height, mass 150 kg.

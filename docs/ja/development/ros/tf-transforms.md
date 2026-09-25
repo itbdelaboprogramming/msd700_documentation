@@ -15,14 +15,7 @@ search: false
 
 以下のツリーは**実機**がパブリッシュするものである: `irbot.urdf.xacro`を`msd700_description/launch/robot_description.launch.xml`経由で読み込み、`bringup_msd.launch`が全モード(idleを含む)で起動するため、`/scan`とEKFは常に静的TFを利用できる。LiDARの高さは`config/msd700_xacro_irbot.yaml`(`offset_z_lidar: 0.427`、`wheel_radius: 0.10`)によるもので、`msd700_perception`はこれを基準にすべての高さを測る。
 
-```mermaid
-flowchart TD
-  MAP["map<br/>(global fixed frame)"] -->|"AMCL / SLAM correction"| ODOM["odom<br/>(smooth local odometry frame)"]
-  ODOM -->|"EKF: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(chassis projected on the floor)"]
-  BASE_FP -->|"Static: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link"]
-  BASE_LINK -->|"Static: z = +0.427 m"| LASER["laser<br/>(Velodyne VLP-16)"]
-  BASE_LINK -->|"Static: identity"| IMU["imu<br/>(CMPS12 via STM32)"]
-```
+![座標フレーム階層(TFツリー)](../../../development/ros/diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
 ロボットには`camera_link`は存在しない。カメラはURDFリンクではなく、別のUSB/WebRTCデバイスである。
 
@@ -69,22 +62,7 @@ MSD700は右手系デカルト座標系を厳格に適用する:
 
 テレメトリ(ロボットの姿勢やレーザースキャンなど)が実機ロボットからインターネット経由でクラウドサーバーへ橋渡しされる際、タイムスタンプをそのまま評価すると**物理マシン間のクロックドリフトにより`TF_OLD_DATA`外挿警告が発生する**。
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Robot as Robot Jetson (Clock Domain A)
-  participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama (Cloud Server Domain B)
-  participant Canvas as Browser ROS2D Canvas
-
-  Robot->>Robot: Stamp Pose with Jetson Time (t_robot)
-  Robot->>MQTT: Publish /string/robotpose JSON payload
-  MQTT->>Relay: Deliver payload over WAN
-  Note over Relay: BoundaryPublisher Restamping Filter
-  Relay->>Relay: Measure Delta = now(server) - t_robot<br/>Restamp message with ros::Time::now()
-  Relay->>Canvas: Publish /server/robot_pose to rosbridge
-  Canvas->>Canvas: Render smooth icon position without TF latency drops
-```
+![マシン間クロックドメインの再スタンプ(BoundaryPublisher)](../../../development/ros/diagrams/tf-transforms-cross-machine-clock-domain-restamping-bo.drawio)
 
 ### 再スタンプが不可欠である理由:
 1. **JetsonのRTCの制約**: NTPアクセスのないフィールド環境の実機SBCは、数秒から数か月単位でずれたクロックのまま起動することがある。

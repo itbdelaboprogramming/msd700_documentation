@@ -48,55 +48,7 @@ Stack lokal unit adalah **cache offline-first dari cloud, bukan silo terisolasi*
 
 ## Topologi Sistem dan Alur Data
 
-```mermaid
-flowchart TB
-  subgraph Client["Operator Web Client"]
-    BROWSER["Operator Browser<br/>Next.js Dashboard"]
-  end
-
-  subgraph ServerHost["MSD700 Server Host (Cloud)"]
-    APACHE["Apache2 Reverse Proxy (:443)<br/>TLS Termination & URL Routing"]
-    FE_PROD["frontend_prod (:3000)"]
-    BE_PROD["backend_node (:5000)<br/>REST API + unit_manager.js<br/>(process inside nakayama_cloud)"]
-    DB_PROD[("MySQL Central (:3307 host)<br/>3306 inside the container")]
-    HIVEMQ["HiveMQ Broker (:8883 TLS)"]
-    ROSBRIDGE["rosbridge_suite (:9090)"]
-    MEDIA["media-server (:3003)"]
-    SIG["signalling_server (:3001)"]
-    COTURN["coturn (:3478 / UDP Relay)"]
-    UNIT_RELAY["rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama<br/>MQTT-to-ROS Deserializer<br/>(legacy per-unit; default is the fleet relay)"]
-  end
-
-  subgraph UnitHost["MSD700 Unit (Jetson SBC)"]
-    MQTT_BRIDGE["aws_mqtt Bridge<br/>Cloud TLS + Local Loopback"]
-    SYS_CMD["system_command.py<br/>Command Dispatcher & Lease Holder"]
-    OP_SUP["operation_supervisor.py<br/>Autopilot & Waypoint Sequencer"]
-    ROS_NAV["ROS Noetic Navigation<br/>move_base, costmaps, EKF, drivers"]
-    LOCAL_STACK["Local Stack (:5002, :3000, :3306)<br/>Offline Operator Interface"]
-  end
-
-  BROWSER -->|"HTTPS (:443)"| APACHE
-  APACHE --> FE_PROD
-  APACHE --> BE_PROD
-  APACHE --> ROSBRIDGE
-  APACHE --> MEDIA
-  APACHE --> SIG
-  BROWSER -.->|"WebRTC Video"| COTURN
-
-  BE_PROD <--> DB_PROD
-  BE_PROD -->|"/var/run/docker.sock"| UNIT_RELAY
-  BE_PROD <-->|"system_command / system_feedback"| HIVEMQ
-
-  HIVEMQ <-->|"TLS 8883 (Internet)"| MQTT_BRIDGE
-  UNIT_RELAY <-->|"Telemetry Strings"| HIVEMQ
-  UNIT_RELAY -->|"Typed ROS Topics"| ROSBRIDGE
-
-  MQTT_BRIDGE --> SYS_CMD
-  MQTT_BRIDGE --> OP_SUP
-  SYS_CMD --> ROS_NAV
-  OP_SUP --> ROS_NAV
-  LOCAL_STACK --> ROS_NAV
-```
+![Topologi Sistem dan Alur Data](../../development/diagrams/architecture-system-topology-and-data-flow.drawio)
 
 ### Aturan Kunci Arsitektur:
 1. **Apache sebagai Satu-Satunya Ingress Publik**: Semua permintaan HTTP dan WebSocket masuk lewat Apache port 443. Layanan backend binding ke port internal atau alamat loopback. Satu-satunya port eksternal yang dijangkau langsung oleh robot adalah HiveMQ pada port 8883 (TLS).
@@ -107,20 +59,7 @@ flowchart TB
 
 Platform ini menggunakan dua kanal komunikasi terpisah yang gagal secara independen:
 
-```mermaid
-flowchart TB
-  subgraph Channel1["Channel 1: MQTT Control Channel"]
-    direction LR
-    M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
-  end
-
-  subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
-    direction LR
-    R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
-  end
-
-  Channel1 ~~~ Channel2
-```
+![Dua Kanal Diagnostik](../../development/diagrams/architecture-two-diagnostic-channels.drawio)
 
 | Kanal | Transport | Data yang Dibawa | Gejala Kegagalan |
 | --- | --- | --- | --- |
@@ -132,35 +71,7 @@ flowchart TB
 
 Ketika seorang operator memerintahkan robot (misalnya, mengklik sebuah waypoint pada peta):
 
-```mermaid
-sequenceDiagram
-  autonumber
-  actor Operator as Operator
-  participant UI as Browser Dashboard
-  participant Apache as Apache2 Proxy
-  participant Backend as backend_node
-  participant HiveMQ as HiveMQ Broker
-  participant UnitCmd as system_command.py
-  participant MoveBase as move_base (ROS)
-
-  Operator->>UI: Click waypoint on navigation map
-  UI->>Apache: POST /services/rosbackend/api/navigation/pointstamped
-  Apache->>Backend: Proxy request with Bearer JWT
-  Note over Backend: verifyToken & attachUnit<br/>Validates account lease permissions
-  Backend->>Backend: Generate unique request_id (UUID v4)
-  Backend->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_command
-  HiveMQ->>UnitCmd: Deliver command envelope via TLS
-  UnitCmd->>MoveBase: Convert to geometry_msgs/PoseStamped goal
-  MoveBase-->>UnitCmd: Goal accepted by navigation actionlib
-  UnitCmd->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_feedback (request_id match)
-  HiveMQ->>Backend: Deliver feedback payload
-  Backend-->>Apache: HTTP 200 { status: true, message: "Goal accepted" }
-  Apache-->>UI: Update UI state to "Navigating"
-
-  loop Automatic Retry on Packet Drop
-    Backend->>HiveMQ: Resend unacknowledged command every 1500 ms (up to 30 s)
-  end
-```
+![Alur Eksekusi Perintah End-to-End](../../development/diagrams/architecture-end-to-end-command-execution-flow.drawio)
 
 ### Detail Implementasi Kritis:
 - **Response HTTP Mencerminkan State Robot**: `backend_node` menahan koneksi HTTP terbuka hingga `system_feedback` dengan `request_id` yang cocok tiba dari robot. Status 504 Gateway Timeout menandakan robot tidak pernah memproses perintah tersebut.
@@ -174,20 +85,7 @@ Telemetri multi-unit diproses oleh satu kontainer **fleet relay** yang melayani 
 
 Pada jalur per-unit, `unit_manager.js` di dalam `backend_node` secara dinamis mengelola satu kontainer per unit aktif lewat `/var/run/docker.sock`:
 
-```mermaid
-stateDiagram-v2
-  [*] --> Absent: No container running
-  Absent --> Starting: Operator opens robot page (touch event)
-  Starting --> Running: Container healthy, rosbridge topics published
-  Running --> Running: Periodic ping refreshes lastActivity
-  Running --> Retained: Robot reports Autopilot ON
-  Retained --> Running: Autopilot OFF or supervisor timeout
-  Running --> Stopped: Idle past UNIT_IDLE_TIMEOUT_MS (reaped)
-  Running --> Stopped: Operator explicitly logs out
-  Retained --> Retained: Operator logout ignored (run protected)
-  Stopped --> Starting: Operator re-opens robot
-  Stopped --> [*]: Removed if UNIT_REMOVE_ON_REAP=true
-```
+![Siklus Hidup Kontainer Per-Unit](../../development/diagrams/architecture-per-unit-container-lifecycle.drawio)
 
 | Variabel Konfigurasi | Nilai Default | Deskripsi |
 | --- | --- | --- |
@@ -206,25 +104,7 @@ Ketika sebuah robot menjalankan misi otonom dalam **Mode Autopilot**, kontainer 
 
 Komputer onboard robot dan server cloud menjalankan instance ROS master terpisah dengan jam sistem independen. Untuk mencegah divergensi timestamp, semua pesan geometrik yang melintasi MQTT di-restamp ke waktu ROS lokal saat ingress lewat `BoundaryPublisher`.
 
-```mermaid
-flowchart LR
-  subgraph UnitDomain["Unit Clock Domain (Robot)"]
-    U_MSG["ROS Message<br/>stamp = Unit Clock"]
-    U_T2S["topic2string<br/>JSON Serialization"]
-  end
-
-  subgraph Transport["Encrypted Transport"]
-    MQTT_TOPIC["MQTT Topic<br/>/unit_#lt;ULID#gt;/string/..."]
-  end
-
-  subgraph CloudDomain["Cloud Clock Domain (Server)"]
-    C_BOUND["BoundaryPublisher<br/>Restamp to Server ROS Clock"]
-    C_ROS["Typed ROS Message<br/>stamp = Server Clock"]
-    C_VIEW["rosbridge / UI Canvas"]
-  end
-
-  U_MSG --> U_T2S --> MQTT_TOPIC --> C_BOUND --> C_ROS --> C_VIEW
-```
+![Batas Domain Jam dan Sinkronisasi Waktu](../../development/diagrams/architecture-clock-domain-boundary-and-time-synchroni.drawio)
 
 ::: danger Mengapa Restamping Jam Wajib
 Melewatkan restamping waktu menghasilkan peringatan `TF_OLD_DATA` seketika di RViz dan renderer web. Lebih jauh lagi, jika `/use_sim_time` diaktifkan pada satu master tanpa generator `/clock` yang aktif, evaluasi pohon TF membeku sepenuhnya.
@@ -234,28 +114,7 @@ Melewatkan restamping waktu menghasilkan peringatan `TF_OLD_DATA` seketika di RV
 
 Arsitektur MSD700 menegakkan tiga trust domain keamanan yang berbeda. Kredensial yang diterbitkan dalam satu domain ditolak dengan tegas oleh yang lain.
 
-```mermaid
-flowchart TB
-  subgraph CloudDomain["Cloud Server Trust Domain"]
-    KEYRING["JWT Keyring<br/>/run/secrets/jwt_keyring (container)<br/>dev mount, else JWT_SECRET_KEY/JWT_SECRET env"]
-    OP_TOKENS["Operator JWTs (typ=access)"]
-    ADMIN_TOKENS["Admin JWTs (typ=admin)"]
-    ROBOT_TOKENS["Robot Cloud Tokens (/enroll)"]
-  end
-
-  subgraph UnitDomain["Unit Local Trust Domain"]
-    LOCAL_KEY["Unit Local Keyring"]
-    LOCAL_TOKENS["Local Tokens (/local/robot-token)"]
-  end
-
-  KEYRING --> OP_TOKENS
-  KEYRING --> ADMIN_TOKENS
-  KEYRING --> ROBOT_TOKENS
-  LOCAL_KEY --> LOCAL_TOKENS
-
-  ROBOT_TOKENS -.->|"REJECTED by Local Services"| LOCAL_TOKENS
-  ADMIN_TOKENS -.->|"REJECTED by Operator Middleware"| OP_TOKENS
-```
+![Trust Domain dan Keamanan Multi-Tingkat](../../development/diagrams/architecture-multi-tier-trust-domains-and-security.drawio)
 
 1. **Token Operator**: JWT HS256 standar (`typ=access`) yang diverifikasi terhadap keyring di `/run/secrets/jwt_keyring` di dalam kontainer (di-mount dari `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` pada layanan dev; produksi fallback ke `JWT_SECRET_KEY`/`JWT_SECRET`). Token menyertakan ID pengguna dan lingkup akun. Token admin (`typ=admin`) ditolak oleh rute operasi robot standar.
 2. **Token Cloud Robot**: Dicetak oleh `/enroll/token` menggunakan device secret yang dihasilkan selama pendaftaran robot fisik. Valid selama 12 jam (`ACCESS_TOKEN_TTL`), disegarkan pada setiap boot sistem. Refresher dan resolver identitas saat boot menargetkan backend yang **sama** (`ENROLL_BASE_URL` di `run_msd.sh`); sebuah `401 reenroll` selama refresh latar belakang dicatat dan tidak pernah menyentuh `device.json`.
@@ -265,20 +124,7 @@ flowchart TB
 
 Karena sebuah robot dapat diakses baik dari antarmuka web cloud maupun dashboard jaringan lokal onboard, robot fisik menegakkan satu **Operating Lease** eksklusif.
 
-```mermaid
-flowchart LR
-  USER_A["Operator A (Cloud Dashboard)"]
-  USER_B["Operator B (Local LAN Dashboard)"]
-
-  subgraph Jetson["Physical Robot (Jetson SBC)"]
-    LEASE_MGR["system_command.py<br/>Exclusive Operating Lease"]
-    CONTROLLER["move_base & Motor Actuators"]
-  end
-
-  USER_A -->|"Acquires Lease"| LEASE_MGR
-  USER_B -.->|"Rejected: In Use by Another User"| LEASE_MGR
-  LEASE_MGR --> CONTROLLER
-```
+![Operating Lease: Mencegah Konflik Multi-Operator](../../development/diagrams/architecture-operating-lease-preventing-multi-operato.drawio)
 
 - Lease dipegang pada **robot** (di dalam `system_command.py`), bukan pada backend server.
 - Ketika seorang operator membuka dashboard robot, klien memperoleh lease 15 detik yang diperbarui terus-menerus lewat ping heartbeat.

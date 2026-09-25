@@ -19,34 +19,7 @@ tersebut sampai ke host robot, lihat [Integrasi ROS](/id/development/webui/accou
 MSD700 menerapkan pertahanan berlapis (defense-in-depth) di seluruh frontend web, backend cloud,
 message broker, dan single-board computer (SBC) Jetson fisik.
 
-```mermaid
-flowchart TB
-  subgraph Public["Public Internet Ingress"]
-    HTTPS["HTTPS / WSS (:443)<br/>Apache TLS Termination"]
-    MQTTS["MQTT TLS (:8883)<br/>HiveMQ CE Encrypted Ingress"]
-  end
-
-  subgraph CloudDomain["Cloud Server Trust Domain"]
-    KEYRING["JWT Secret Keyring<br/>/run/secrets/jwt_keyring (container)<br/>dev: jwt_keyring.dev.json mount<br/>prod: JWT_SECRET_KEY env fallback"]
-    AUTH_MW["Express verifyToken Middleware"]
-    ATTACH_MW["attachUnit Authorization Middleware"]
-    MYSQL[("Central MySQL DB (:3307)<br/>Bcrypt Passwords")]
-  end
-
-  subgraph RobotDomain["Physical Robot Trust Domain (Jetson)"]
-    DEV_SECRET["Device Secret (bcrypt hash, server-side)<br/>32 random bytes at enrolment"]
-    ROBOT_TOKEN["Onboard Token Cache (12h TTL)<br/>Certificates/robot/token.cred"]
-    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets<br/>Local Auth Only"]
-  end
-
-  HTTPS --> AUTH_MW
-  AUTH_MW --> ATTACH_MW
-  ATTACH_MW --> MYSQL
-  KEYRING -.-> AUTH_MW
-
-  MQTTS <--> ROBOT_TOKEN
-  DEV_SECRET --> ROBOT_TOKEN
-```
+![Arsitektur domain kepercayaan](../../../../development/webui/accounts/diagrams/security-and-tokens-trust-domain-architecture.drawio)
 
 ## Tiga domain kepercayaan independen
 

@@ -121,25 +121,7 @@ Bagian ini secara alami berat pada rekayasa frontend: membahas mekanisme state R
 yang dijalankan `mapComponent.tsx` saat operator membuka kembali tab browser yang tertutup atau
 login dari workstation baru, bukan sekadar perilaku tingkat tinggi.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Browser as Browser
-  participant Backend as backend_node
-  participant Robot as Robot
-  participant Supervisor as operation_supervisor
-
-  Browser->>Backend: POST /user/login
-  Browser->>Backend: Ping (page: dashboard)
-  Backend->>Robot: Ping
-  Robot-->>Backend: active_page=nav, autopilot=true
-  Backend-->>Browser: Telemetry
-  Browser->>Browser: Route to Navigation
-  Browser->>Supervisor: Subscribe snapshot
-  Supervisor-->>Browser: Mission batch
-  Browser->>Browser: Rebuild state
-  Note over Browser: Recovery done
-```
+![Rekoneksi dan Pemulihan Sesi](../../../../development/webui/navigation/diagrams/manual-and-autopilot-session-reconnection-and-recovery.drawio)
 
 ### Prinsip pemulihan
 

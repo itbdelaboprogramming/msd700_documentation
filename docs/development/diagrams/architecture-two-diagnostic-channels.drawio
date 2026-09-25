@@ -1,0 +1,73 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Two Diagnostic Channels">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="21" y="147" width="835" height="149" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="129" y="21" width="619" height="86" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Commands &amp;amp; Telemetry Strings" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="31" width="225" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="HiveMQ (:8883)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="267" y="31" width="140" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="system_command.py" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="437" y="31" width="170" height="43" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Serialized ROS Topics" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="69" width="175" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="fleet relay&lt;br&gt;ros_web_ui_v2_unit_relays&lt;br&gt;(legacy:&lt;br&gt;rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="217" y="46" width="254" height="91" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="rosbridge (:9090)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="501" y="69" width="148" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Browser Canvas" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="679" y="69" width="144" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5116;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5116;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n5" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="237" y="53" as="sourcePoint" />
+            <mxPoint x="267" y="53" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5116;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5116;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n6" target="n7">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="407" y="53" as="sourcePoint" />
+            <mxPoint x="437" y="53" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4945;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n8" target="n9">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="187" y="91" as="sourcePoint" />
+            <mxPoint x="217" y="91" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.4945;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n9" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="471" y="91" as="sourcePoint" />
+            <mxPoint x="501" y="91" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n10" target="n11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="649" y="91" as="sourcePoint" />
+            <mxPoint x="679" y="91" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n3" value="Channel 2: rosbridge Visualization Channel" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="246" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Channel 1: MQTT Control Channel" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="201" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

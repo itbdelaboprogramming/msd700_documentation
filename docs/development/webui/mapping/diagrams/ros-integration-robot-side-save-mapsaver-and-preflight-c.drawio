@@ -1,0 +1,115 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Robot-side save: mapsaver and preflight checks">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="POST /api/mapping/stop" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="89" y="20" width="187" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Preflight Health Check&lt;br&gt;Verify local disk &amp;amp; media endpoints" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="61" y="104" width="241" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Refuse Save: Prevent Corrupt Run" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="259" width="241" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="Execute map_saver&lt;br&gt;Generate .pgm, .yaml, and&lt;br&gt;thumbnail" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="302" y="259" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="1. Upload to Unit media_local&lt;br&gt;:3003&lt;br&gt;(MANDATORY TARGET)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="261" y="374" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="2. Upload to Cloud media-server&lt;br&gt;:3003&lt;br&gt;(BEST-EFFORT TARGET)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="547" y="374" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Cloud Upload Success?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="258" y="545" width="171" height="172" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="Set activity = mapping_stop_failed&lt;br&gt;Retain SLAM node for retry" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="469" y="545" width="238" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Outcome = completed&lt;br&gt;Both targets synchronized" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="217" y="814" width="195" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Outcome = cloud_pending&lt;br&gt;Unit stores map; sync_agent&lt;br&gt;replicates later" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="452" y="814" width="246" height="74" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.4973;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5021;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="182" y="64" as="sourcePoint" />
+            <mxPoint x="182" y="104" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="Local Disk Unwritable" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.332;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5021;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0007" relative="1" as="geometry">
+            <mxPoint x="141" y="163" as="sourcePoint" />
+            <mxPoint x="141" y="259" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n13" value="Healthy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.668;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n4">
+          <mxGeometry x="0.6791" relative="1" as="geometry">
+            <mxPoint x="222" y="163" as="sourcePoint" />
+            <mxPoint x="425" y="259" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="222" y="183" />
+              <mxPoint x="425" y="183" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3333;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="384" y="334" as="sourcePoint" />
+            <mxPoint x="384" y="374" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6667;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="466" y="334" as="sourcePoint" />
+            <mxPoint x="670" y="374" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="466" y="354" />
+              <mxPoint x="670" y="354" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="Local Success" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3333;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4971;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n7">
+          <mxGeometry x="0.0020" relative="1" as="geometry">
+            <mxPoint x="343" y="449" as="sourcePoint" />
+            <mxPoint x="343" y="545" as="targetPoint" />
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="Local Failed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6667;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n8">
+          <mxGeometry x="0.6301" relative="1" as="geometry">
+            <mxPoint x="425" y="449" as="sourcePoint" />
+            <mxPoint x="588" y="545" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="425" y="469" />
+              <mxPoint x="588" y="469" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3684;exitY=0.8721;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4974;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n7" target="n9">
+          <mxGeometry x="0.1883" relative="1" as="geometry">
+            <mxPoint x="321" y="695" as="sourcePoint" />
+            <mxPoint x="314" y="814" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="314" y="717" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n19" value="No (Offline)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6608;exitY=0.8779;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n7" target="n10">
+          <mxGeometry x="0.6973" relative="1" as="geometry">
+            <mxPoint x="371" y="696" as="sourcePoint" />
+            <mxPoint x="575" y="814" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="371" y="737" />
+              <mxPoint x="575" y="737" />
+            </Array>
+            <mxPoint x="-1" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

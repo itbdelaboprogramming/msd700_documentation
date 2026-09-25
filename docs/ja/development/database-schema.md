@@ -84,39 +84,7 @@ search: false
 
 ## 外部キー、完全版
 
-```mermaid
-flowchart TB
-  admin_accounts -->|created_by| rental_profiles
-  admin_accounts -->|created_by / modified_by| units
-  admin_accounts -->|created_by| profile_backups
-  admin_accounts -->|approved_by| pending_units
-  admin_accounts -->|created_by| unit_enrollment_codes
-
-  units -->|unit_id CASCADE| maps_data
-  units -->|unit_id CASCADE| profile_units
-  units -->|unit_id CASCADE| unit_devices
-  units -->|unit_id CASCADE| unit_connection_log
-  units -->|approved_unit_id / claimed_unit_id| pending_units
-  units -->|unit_id SET NULL| profile_backups
-  units -->|unit_id CASCADE| unit_enrollment_codes
-
-  rental_profiles -->|profile_id RESTRICT| maps_data
-  rental_profiles -->|profile_id CASCADE| profile_members
-  rental_profiles -->|profile_id CASCADE| profile_units
-  rental_profiles -->|profile_id SET NULL| profile_backups
-
-  users -->|profile_id CASCADE| profile_members
-  users -->|created_by / modified_by SET NULL| maps_data
-  users -->|created_by / modified_by SET NULL| routes_data
-  users -->|created_by / modified_by SET NULL| areas_data
-  users -->|created_by / modified_by SET NULL| playlists_data
-  users -->|modified_by SET NULL| unit_operation_state
-
-  maps_data -->|map_id CASCADE| routes_data
-  maps_data -->|map_id CASCADE| areas_data
-  maps_data -->|map_id CASCADE| playlists_data
-  maps_data -->|map_id SET NULL| unit_operation_state
-```
+![外部キー、完全版](../../development/diagrams/database-schema-foreign-keys-in-full.drawio)
 
 ::: info 帰属(Attribution)は決して認可(Authorization)ではない
 `maps_data`、`routes_data`、`areas_data`、`playlists_data` の `created_by` / `modified_by` は、名前ではなく

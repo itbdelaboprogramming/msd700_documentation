@@ -16,29 +16,7 @@ This page deploys **production**. Dev mode and extras are in [Advanced Configura
 
 ## System topology
 
-```mermaid
-flowchart TB
-  NET["Public Internet"] -->|":443 HTTPS / WSS"| AP["Apache2 Reverse Proxy<br/>TLS + routing"]
-  NET -->|":8883 MQTTS"| MQ["HiveMQ (:8883)<br/>Fleet broker"]
-  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>WebRTC relay"]
-
-  subgraph DockerServices["Docker Compose production stack"]
-    AP --> FE["frontend_prod (:3000)<br/>Web dashboard"]
-    AP --> BE["backend_node (:5000)<br/>REST API"]
-    AP --> RB["rosbridge_suite (:9090)<br/>Telemetry WebSocket"]
-    AP --> MED["media-server (:3003)<br/>Maps + files"]
-    AP --> SIG["signalling_server (:3001)<br/>WebRTC signalling"]
-    MQ --> FR["unit_relays<br/>Shared fleet relay"]
-    FR --> RB
-    BE --> DB[("MySQL (:3307)<br/>Database: ROS_DB")]
-    SEC["/srv/msd/secrets<br/>JWT keyring + TLS keystore"]
-    SEC -.-> BE
-    SEC -.-> MQ
-    FP["fix_perms_prod (one-shot)<br/>Fixes host folder ownership"]
-    FP -.-> BE
-    FP -.-> MED
-  end
-```
+![System topology](./diagrams/server-setup-system-topology.drawio)
 
 ::: warning Fleet mode is the default
 One shared `unit_relays` container serves the whole fleet. Per-unit `rosweb_unit_*` containers exist only in legacy mode (`UNIT_CONTAINERS_ENABLED=true`). Never run `server_prod` and `server_dev` together on one host. `coturn` is production-only. MySQL (`3307`) and the backend listen on all interfaces, so keep them behind the firewall (see [Prerequisites](/setup/prerequisites)).
@@ -312,28 +290,7 @@ sudo systemctl reload apache2
 
 Once the server runs, robots can register:
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Tech as Field Technician
-  participant Unit as Robot (Jetson)
-  participant Server as Cloud Backend
-  participant Admin as Admin Web Portal
-
-  Tech->>Unit: Run enrolment script on Jetson
-  Unit->>Server: POST /enroll/claim (fingerprint, nonce hash, hostname/MAC)
-  Server-->>Unit: 8-character claim code, e.g. "K7M2QP4R"
-  Unit-->>Tech: Show "K7M2QP4R" in the terminal
-
-  Tech->>Admin: Open https://msd.nglobal.jp/admin, log in
-  Tech->>Admin: Find "K7M2QP4R" under Pending Units
-  Tech->>Admin: Set unit name + rental profile -> Approve
-
-  Server->>Server: Mark "approved" in database
-  Unit->>Server: POST /enroll/status (plaintext nonce)
-  Server-->>Unit: Unit ULID + device secret
-  Unit->>Unit: Save Certificates/robot/device.json, connect to HiveMQ
-```
+![Registering units (enrolment)](./diagrams/server-setup-registering-units-enrolment.drawio)
 
 1. Log in at `https://msd.nglobal.jp/admin`.
 2. Under **Pending Units**, find the 8-character code shown on the robot.
@@ -373,15 +330,7 @@ A push or merged PR rebuilds and re-ups the matching stack on its own:
 
 Pushes to `ros-web-ui` **and** `ROS-dashboard-next-ts` both trigger it, since the frontend is built from the nested dashboard clone. Other branches are ignored.
 
-```mermaid
-flowchart LR
-  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
-  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
-  L -->|verify HMAC| D[deploy.sh]
-  D --> G[git ff-only pull<br>repo + dashboard]
-  G --> B[compose build]
-  B --> U[compose up -d]
-```
+![Advanced configurations](./diagrams/server-setup-advanced-configurations.drawio)
 
 The listener answers GitHub with `202` right away and runs `deploy.sh` detached, so a long catkin + Next.js build never hits GitHub's 10 s webhook timeout.
 

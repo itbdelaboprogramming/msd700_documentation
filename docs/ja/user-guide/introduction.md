@@ -13,21 +13,7 @@ search: false
 
 360度レーザーセンサーとカメラを搭載し、走行させるだけでリアルタイムに正確なデジタルフロアプランを構築します。(この技術はSLAMと呼ばれ、ロボットはマップを描きながら自分の位置を把握します。)
 
-```mermaid
-flowchart LR
-  subgraph PhysicalRobot["MSD700 Robot"]
-    SENSORS["Laser Sensor & Camera"]
-    CHASSIS["Sturdy Wheels<br/>for Indoor Floors"]
-  end
-
-  subgraph CloudPlatform["Cloud Dashboard & Fleet Hub"]
-    MAPS["Map & Route Database"]
-    RENTALS["Rental Profiles"]
-    LIVE["Live Map & Robot Status"]
-  end
-
-  PhysicalRobot <-->|"Secure Link"| CloudPlatform
-```
+![MSD700とは](../../user-guide/diagrams/introduction-what-is-msd700.drawio)
 
 ## オペレーターが利用できる主な機能
 

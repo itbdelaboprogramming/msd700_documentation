@@ -180,18 +180,7 @@ The interface name doesn't have to be `wlP1p1s0`; it varies by machine.
 
 ## Diagnosis
 
-```mermaid
-flowchart TD
-  A["MT7922 hardware"] --> B["Seen on PCIe"]
-  B --> C["mt7921e driver bound"]
-  C --> D{"Firmware .bin<br/>found?"}
-  D -->|"No, only .zst"| E["hardware init failed"]
-  E --> F["NetworkManager: no radio<br/>'Adapter not found'"]
-  D -->|"Yes"| G["Firmware loaded"]
-  G --> H["wlan0 renamed<br/>(e.g. wlP1p1s0)"]
-  H --> I["NetworkManager"]
-  I --> J["Wi-Fi device ready; connect separately"]
-```
+![Diagnosis](./diagrams/wifi-mt7922-diagnosis.drawio)
 
 ## One-shot setup for the next unit
 

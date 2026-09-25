@@ -47,13 +47,7 @@ ROS Web UI では、以下のことが可能です。
 
 ## 推奨される読む順序
 
-```mermaid
-flowchart LR
-  A["1. 概要<br/>システム全体像"] --> B["2. クイックスタート<br/>最初のミッション"]
-  B --> C["3. アカウント<br/>ログインと役割"]
-  C --> D["4. ナビゲーション & マッピング<br/>基本操作"]
-  D --> E["5. 動作仕様 & FAQ<br/>安全性とヘルプ"]
-```
+![推奨される読む順序](./diagrams/user-guide-recommended-reading-order.drawio)
 
 1. **[概要](/ja/user-guide/introduction)**。プラットフォーム、ハードウェア、クラウドアーキテクチャを理解する
 2. **[クイックスタートガイド](/ja/user-guide/quick-start)**。数分でログインし最初のミッションを実行する

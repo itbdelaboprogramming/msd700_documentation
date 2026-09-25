@@ -13,21 +13,7 @@ The **MSD700** is an industrial-grade autonomous mobile robot designed and manuf
 
 Equipped with a 360-degree laser sensor and a camera, the robot builds an accurate digital floor plan in real time as you drive it around. (The technique is called SLAM: the robot figures out where it is while drawing the map.)
 
-```mermaid
-flowchart LR
-  subgraph PhysicalRobot["MSD700 Robot"]
-    SENSORS["Laser Sensor & Camera"]
-    CHASSIS["Sturdy Wheels<br/>for Indoor Floors"]
-  end
-
-  subgraph CloudPlatform["Cloud Dashboard & Fleet Hub"]
-    MAPS["Map & Route Database"]
-    RENTALS["Rental Profiles"]
-    LIVE["Live Map & Robot Status"]
-  end
-
-  PhysicalRobot <-->|"Secure Link"| CloudPlatform
-```
+![What is MSD700?](./diagrams/introduction-what-is-msd700.drawio)
 
 ## Key Operator Capabilities
 

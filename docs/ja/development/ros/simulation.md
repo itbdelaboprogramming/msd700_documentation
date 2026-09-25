@@ -15,21 +15,7 @@ search: false
 
 リポジトリ内の従来のシミュレータ構成では、TurtleBot3 Waffleモデル(トラック幅0.287 mに対し**0.266 x 0.266 m**のフットプリント)が使用されていた。これに対し、実際の量産MSD700ロボットは**0.90 x 0.70 m**であり、ナビゲーションコストマップ上ではパディングを加えた**1.20 x 0.85 m**のフットプリントとして表現される。
 
-```mermaid
-flowchart LR
-  subgraph OldModel["Legacy Sim Model (TurtleBot3 Waffle)"]
-    W1["Width: 0.266 m<br/>Length: 0.266 m"]
-    W2["Inscribed Radius: 0.133 m"]
-  end
-
-  subgraph FieldModel["Production Field Model (msd700_field)"]
-    F1["Body Width: 0.70 m<br/>Body Length: 0.90 m"]
-    F2["Costmap Envelope: 1.20 x 0.85 m"]
-    F3["Inscribed Radius: 0.425 m"]
-  end
-
-  OldModel -.->|"3.2x Scale Discrepancy"| FieldModel
-```
+![背景: 実寸スケール寸法モデル](../../../development/ros/diagrams/simulation-background-the-true-scale-dimension-mode.drawio)
 
 ### スケール差による影響:
 1. **再現不能な狭小通路の問題**: 倉庫の狭い通路での経路計画失敗という実世界の報告は、半径0.133 mのTurtleBotでは再現できなかった。
@@ -67,19 +53,7 @@ AWS RoboMakerは2025-09-10にアーカイブされた。そのGitHubのデフォ
 
 fieldロボット(量産サイズ)は`msd700_description/urdf/msd700_field.urdf.xacro`でモデル化され、Gazeboプラグインは`msd700_field.gazebo.xacro`に定義されている。
 
-```mermaid
-flowchart TB
-  subgraph RobotModel["msd700_field URDF"]
-    CHASSIS["Main Chassis Box: 0.90 x 0.70 x 0.25 m (Mass: 150 kg)"]
-    DRIVE["4 Drive Wheels: x ±0.30 m, y ±0.30 m<br/>Radius 0.10 m, Separation 0.60 m"]
-    LIDAR["Velodyne VLP-16 LiDAR: 0.40 m above base_link<br/>0.50 m above footprint"]
-    EKF["EKF Sensor Fusion: /odometry/filtered (Odom + IMU)"]
-  end
-
-  CHASSIS --> DRIVE
-  CHASSIS --> LIDAR
-  DRIVE --> EKF
-```
+![ロボットURDFモデル: msd700field](../../../development/ros/diagrams/simulation-the-robot-urdf-model-msd700field.drawio)
 
 ### 物理仕様:
 - **寸法**: 長さ0.90 m、幅0.70 m、高さ0.25 m、質量150 kg。

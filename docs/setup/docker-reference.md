@@ -18,28 +18,7 @@ Three files, three different jobs. They are not interchangeable.
 | `msd700_noetic/docker/docker-compose.yml` | a **Unit** | the `msd700` robot container + the unit's own `local_dev` server stack |
 | `ros-web-ui/docker-compose.robot.yml` | a dev laptop | robot half alone, standalone, no unit orchestration |
 
-```mermaid
-flowchart TB
-  subgraph S["Server host"]
-    SC["ros-web-ui/docker-compose.yml"]
-    SC --> P1["--profile server_prod"]
-    SC --> P2["--profile server_dev"]
-    SC --> P3["--profile turn"]
-    SC --> P4["--profile manual"]
-  end
-  subgraph U["Unit (Jetson)"]
-    DM["scripts/docker-manager.sh"]
-    DM --> UC["docker/docker-compose.yml<br/>service: msd700"]
-    DM --> UL["docker/docker-compose.yml<br/>--profile local_dev"]
-  end
-  subgraph B["Backend, at runtime"]
-    UM["unit_manager.js<br/>restart/reconcile via Docker API, never create"]
-    P1 --> RU["ros_web_ui_v2_unit_relays<br/>one shared relay, prod fleet"]
-    P2 --> RD["ros_web_ui_v2_unit_relays_dev<br/>one shared relay, dev fleet"]
-    UM --> RU
-    UM --> RD
-  end
-```
+![Which compose file?](./diagrams/docker-reference-which-compose-file.drawio)
 
 ## Server: compose profiles
 
@@ -412,17 +391,7 @@ It errors with an explanation. A robot with no cached identity self-enrols and p
 
 ### What `up` does, in order
 
-```mermaid
-flowchart TB
-  A["If --build: build robot image<br/>If simulator: ensure world assets"] --> B["Resolve cloud endpoint, ROS port,<br/>cached identity, host fingerprint"]
-  B --> C["Ensure token file,<br/>start robot container if stopped"]
-  C --> D["Reconcile duplicate robot_pose_publisher<br/>CATKIN_IGNORE marker"]
-  D --> E["local_up: secrets, media dir,<br/>repo paths, local IP"]
-  E --> F["Build local images if missing or --build;<br/>else warn if stale"]
-  F --> G["compose --profile local_dev up -d --no-build"]
-  G --> H["Enable autostart unless opted out"]
-  H --> I["docker exec run_msd.sh:<br/>build workspace if needed,<br/>replace tmux session, launch services"]
-```
+![What up does, in order](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
 Without `--build`, existing local images are reused and stale ones only warn (`[WARN] ... is OUT OF DATE`). Missing images, simulator assets, and first enrolment can still need internet. Rebuild on purpose (`build`, `local-build`, or `up --build`); `build-clean` drops the cache. A running robot is never recreated by `up`, even after a build: recreate it during a planned stop with the same `--dev`/`--simulator` flags.
 

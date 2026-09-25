@@ -52,20 +52,7 @@ atribusinya.
 Subset dari [Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap)
 yang relevan dengan fitur ini:
 
-```mermaid
-flowchart TB
-  units -->|unit_id CASCADE| maps_data
-  rental_profiles -->|profile_id RESTRICT| maps_data
-  users -->|created_by / modified_by SET NULL| maps_data
-  users -->|created_by / modified_by SET NULL| routes_data
-  users -->|created_by / modified_by SET NULL| areas_data
-  users -->|created_by / modified_by SET NULL| playlists_data
-  users -->|modified_by SET NULL| unit_operation_state
-  maps_data -->|map_id CASCADE| routes_data
-  maps_data -->|map_id CASCADE| areas_data
-  maps_data -->|map_id CASCADE| playlists_data
-  maps_data -->|map_id SET NULL| unit_operation_state
-```
+![Foreign key](../../../../development/webui/database/diagrams/ros-integration-foreign-keys.drawio)
 
 Inilah yang mendasari [Ganti Nama & Hapus § Cascade delete](/id/development/webui/database/rename-and-delete#cascade-delete):
 menghapus baris `maps_data` mem-cascade ke rute, area, dan playlist-nya, dan menghapus alih-alih

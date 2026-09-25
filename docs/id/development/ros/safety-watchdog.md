@@ -9,18 +9,7 @@ search: false
 
 Software onboard memantau kehadiran operator dengan watchdog yang berjalan di dalam `system_command.py`. Ini adalah mekanisme keselamatan internal robot tanpa UI dashboard sendiri; untuk bagaimana operator melihat efeknya (field `in_use`/lease, activity state yang dapat dipaksakan), lihat [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#matriks-kepemilikan-dan-persistensi-state) dan [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot).
 
-```mermaid
-flowchart TB
-  HB["MQTT heartbeat, 5 Hz<br/>(unit's local dashboard only)"] --> RESET["Refresh presence"]
-  PING["HTTP ping, 1 Hz<br/>POST /api/hardware/ping"] --> RESET
-  RESET --> MONITOR["Watchdog monitor loop<br/>(sampled every 0.2 s)"]
-
-  MONITOR -->|No presence for 2 s| PAUSE["2 seconds: motion safety pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
-  PAUSE -->|No presence for 10 min| TEARDOWN["10 minutes: session teardown<br/>Switch mode to idle, drop the navigation/mapping stack"]
-  TEARDOWN -->|No presence for 30 min| SHUTDOWN["30 minutes: hardware shutdown<br/>Lease dropped, motion lock kept on"]
-
-  RESET -.->|Presence restored| UNPAUSE["Clear the 2 s pause<br/>Resume the active mission"]
-```
+![Pengawas Keselamatan dan Supervisi Heartbeat](../../../development/ros/diagrams/safety-watchdog-safety-watchdog-and-heartbeat-supervisio.drawio)
 
 
 ## Dua sinyal kehadiran

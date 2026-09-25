@@ -104,25 +104,7 @@ Manual Overrideの解除は自分が取った一時停止だけを再開する�
 
 このセクションは本質的にフロントエンド実装寄りの内容である。オペレーターが閉じたブラウザタブを再度開いたとき、あるいは新しいワークステーションからログインしたときに`mapComponent.tsx`が実行するReactのstateとcanvasの仕組みを、高レベルの挙動だけでなく扱う。
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Browser as Browser
-  participant Backend as backend_node
-  participant Robot as Robot
-  participant Supervisor as operation_supervisor
-
-  Browser->>Backend: POST /user/login
-  Browser->>Backend: Ping (page: dashboard)
-  Backend->>Robot: Ping
-  Robot-->>Backend: active_page=nav, autopilot=true
-  Backend-->>Browser: Telemetry
-  Browser->>Browser: Route to Navigation
-  Browser->>Supervisor: Subscribe snapshot
-  Supervisor-->>Browser: Mission batch
-  Browser->>Browser: Rebuild state
-  Note over Browser: Recovery done
-```
+![セッションの再接続と復旧](../../../../development/webui/navigation/diagrams/manual-and-autopilot-session-reconnection-and-recovery.drawio)
 
 ### 復旧の原則
 

@@ -1,0 +1,124 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Command Correlation and Retry Architecture">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Robot&lt;br&gt;(system_command.py)" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="482" y="20" width="170" height="646" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="HiveMQ Broker" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="252" y="20" width="170" height="646" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="backend_node" style="shape=umlLifeline;perimeter=lifelinePerimeter;html=1;whiteSpace=wrap;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;size=60;fillColor=#ffffff;strokeColor=#000000;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="170" height="646" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="1500 ms elapsed without&lt;br&gt;feedback" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#fff2cc;strokeColor=#d6b656;fontFamily=Helvetica;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="255" width="170" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Generate request_id = uuidv4()&lt;br&gt;Register pending HTTP Promise in map" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.178;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.209;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n3">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="106" y="135" as="sourcePoint" />
+            <mxPoint x="106" y="155" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="150" y="135" />
+              <mxPoint x="150" y="155" />
+            </Array>
+            <mxPoint x="141" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n6" value="1" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="126" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="Publish system_command payload" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.2864;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.2864;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="-0.0226" relative="1" as="geometry">
+            <mxPoint x="112" y="205" as="sourcePoint" />
+            <mxPoint x="333" y="205" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="2" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="196" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="Packet dropped in wireless transit" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=cross;endSize=8;exitX=0.5412;exitY=0.3483;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.3483;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="-0.0211" relative="1" as="geometry">
+            <mxPoint x="344" y="245" as="sourcePoint" />
+            <mxPoint x="563" y="245" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n10" value="3" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="328" y="236" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="Retry: Publish identical command envelope" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.5031;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.5031;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n2">
+          <mxGeometry x="0.1657" relative="1" as="geometry">
+            <mxPoint x="112" y="345" as="sourcePoint" />
+            <mxPoint x="333" y="345" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n12" value="4" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="336" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="Successfully delivered" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5412;exitY=0.565;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4765;entryY=0.565;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n1">
+          <mxGeometry x="-0.0228" relative="1" as="geometry">
+            <mxPoint x="344" y="385" as="sourcePoint" />
+            <mxPoint x="563" y="385" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n14" value="5" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="328" y="376" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Publish system_feedback (matching&lt;br&gt;request_id)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.6502;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.6502;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="0.0381" relative="1" as="geometry">
+            <mxPoint x="572" y="440" as="sourcePoint" />
+            <mxPoint x="341" y="440" as="targetPoint" />
+            <mxPoint x="0" y="-21" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n16" value="6" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="558" y="431" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" value="Deliver feedback envelope" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5294;exitY=0.7121;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5235;entryY=0.7121;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="0.0215" relative="1" as="geometry">
+            <mxPoint x="342" y="480" as="sourcePoint" />
+            <mxPoint x="109" y="480" as="targetPoint" />
+            <mxPoint x="0" y="-13" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="7" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="328" y="471" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" value="Match request_id, clear retry&lt;br&gt;timer" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.7972;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.8282;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n3">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="106" y="535" as="sourcePoint" />
+            <mxPoint x="106" y="555" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="150" y="535" />
+              <mxPoint x="150" y="555" />
+            </Array>
+            <mxPoint x="109" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="8" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="526" width="18" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="n21" value="Resolve HTTP request (200&lt;br&gt;OK)" style="edgeStyle=none;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=13;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5059;exitY=0.9288;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5059;entryY=0.9598;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n3" target="n3">
+          <mxGeometry x="0.0000" relative="1" as="geometry">
+            <mxPoint x="106" y="620" as="sourcePoint" />
+            <mxPoint x="106" y="640" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="150" y="620" />
+              <mxPoint x="150" y="640" />
+            </Array>
+            <mxPoint x="106" y="0" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n22" value="9" style="ellipse;html=1;fillColor=#000000;strokeColor=none;fontColor=#ffffff;fontSize=10;fontFamily=Helvetica;spacing=0;" vertex="1" parent="1">
+          <mxGeometry x="96" y="611" width="18" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

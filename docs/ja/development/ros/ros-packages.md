@@ -11,51 +11,7 @@ search: false
 
 ## ワークスペースパッケージ構成
 
-```mermaid
-flowchart TD
-  subgraph RobotCore["msd700_robot (physical and sim stack)"]
-    BRINGUP["msd700_bringup<br/>Launch layer, bridger, serial"]
-    CONTROL["msd700_control<br/>raw_sensor_node, EKF, IMU filter, twist_mux"]
-    DESC["msd700_description<br/>URDF/xacro (irbot = physical prototype)"]
-    HW["msd700_hardware<br/>hardware_monitor, Velodyne launch,<br/>C++ hw interface (mode 2)"]
-    PERC["msd700_perception<br/>Velodyne hazard scan"]
-    NAV["msd700_navigation<br/>move_base, TEB, SLAM, explore"]
-    COV["msd700_coverage<br/>Boustrophedon sweep planner"]
-    SIM["msd700_simulation<br/>Gazebo worlds"]
-    MSGS["msd700_msgs<br/>HardwareState / HardwareCommand"]
-    TP["third_party<br/>ira_laser_tools, sensor_pointcloud"]
-  end
-
-  subgraph WebUIBridge["ros-web-ui/source (web and fleet bridges)"]
-    W_BRINGUP["msd700_webui_bringup<br/>bringup_msd / bringup_cloud"]
-    W_CTRL["msd700_webui_control<br/>system_command, supervisor, switch_mode"]
-    W_UTILS["msd700_webui_utils<br/>idle_detector"]
-    W_MSG["msd700_webui_msg<br/>SwitchMode, SetMapPath"]
-    BACKEND["ros_dashboard_backend<br/>REST API (backend_node)"]
-    T2S["topic2string<br/>telemetry to strings"]
-    MQTT["aws_mqtt<br/>MQTT bridge (cloud and local)"]
-    RPP["robot_pose_publisher<br/>/robot_pose from TF"]
-  end
-
-  W_BRINGUP --> W_CTRL
-  W_BRINGUP --> W_UTILS
-  W_BRINGUP --> T2S
-  W_BRINGUP --> BRINGUP
-  W_CTRL --> W_MSG
-  W_CTRL -->|switch_mode| NAV
-  W_CTRL -->|switch_mode| COV
-  BACKEND --> MQTT
-  T2S --> MQTT
-  RPP --> T2S
-  COV --> NAV
-  PERC -->|/scan, /scan_hazard| NAV
-  NAV --> CONTROL
-  BRINGUP --> CONTROL
-  BRINGUP --> HW
-  HW --> PERC
-  CONTROL --> MSGS
-  NAV --> DESC
-```
+![ワークスペースパッケージ構成](../../../development/ros/diagrams/ros-packages-workspace-package-layout.drawio)
 
 ## パッケージディレクトリ: `msd700_robot`
 

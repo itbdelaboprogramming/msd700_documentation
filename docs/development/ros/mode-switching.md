@@ -11,24 +11,7 @@ This document details how the MSD700 robot dynamically switches between operatio
 
 ## Mode Orchestration Topology
 
-```mermaid
-flowchart TD
-  MQTT["MQTT /system_command"] --> SYS_CMD["system_command.py<br/>(Master Command Dispatcher)"]
-
-  SYS_CMD -->|"Calls ROS Service: /switch_mode"| SWITCH["switch_mode.py<br/>(Dynamic Process Lifecycle Manager)"]
-
-  SWITCH -->|Spawn / Terminate via subprocess + killall| LAUNCH_STACKS
-
-  subgraph LAUNCH_STACKS["Dynamic Launch Subsystems"]
-    NAV_STACK["Navigation Stack (msd700_navigation.launch)<br/>map_server, amcl, move_base, TEB planner"]
-    SLAM_STACK["SLAM Mapping Stack (msd700_slam.launch)<br/>slam_gmapping (teleop is a separate robot_teleop.launch)"]
-    COV_STACK["Area Coverage Stack (msd700_coverage/msd700_boustrophedon.launch)<br/>path_coverage_node, coverage_geometry"]
-    EXP_STACK["Exploration Stack (msd700_explore.launch)<br/>explore_lite, frontier exploration"]
-  end
-
-  SYS_CMD -->|"Dispatches Goals"| OP_SUP["operation_supervisor.py<br/>(Autopilot Mission Sequencer)"]
-  OP_SUP --> NAV_STACK
-```
+![Mode Orchestration Topology](./diagrams/mode-switching-mode-orchestration-topology.drawio)
 
 ---
 
@@ -65,18 +48,7 @@ timeouts:
 
 `operation_supervisor.py` manages autonomous execution of multi-step waypoint routes and area coverage playlists:
 
-```mermaid
-stateDiagram-v2
-  [*] --> SupervisorIdle
-
-  SupervisorIdle --> StepActive: Goal dispatched from Playlist
-  StepActive --> DwellWaiting: move_base reports Goal Succeeded
-  DwellWaiting --> StepActive: Dwell timer expired, advance next waypoint
-  StepActive --> Paused: Safety watchdog triggers or operator pauses
-  Paused --> StepActive: Operator clicks Resume
-  StepActive --> Completed: All waypoints in playlist reached
-  Completed --> SupervisorIdle: Return to Homebase and latch final snapshot
-```
+![Autopilot Mission Sequencing (operationsupervisor.py)](./diagrams/mode-switching-autopilot-mission-sequencing-operationsu.drawio)
 
 ### Key Supervisor Capabilities:
 - **Latched Operation Snapshot**: Publishes `/string/operation_snapshot` with latched QoS. When any operator opens a browser tab, the full state of the active mission (active waypoint index, remaining route pins, dwell timer) is recovered in milliseconds.

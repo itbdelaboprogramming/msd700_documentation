@@ -22,13 +22,7 @@ Velodyneのクラウドが、スタックの残りが消費する2つの2Dスキ
 
 ## パイプライン(`msd700_perception/launch/cloud_hazard.launch`)
 
-```mermaid
-flowchart LR
-  CLOUD["Velodyne PointCloud2<br/>VLP-16, 192.168.103.231, 10 Hz"] --> FIT["Ground fit<br/>quadratic over near-field floor<br/>radius 3.0 m, 3 iterations"]
-  FIT --> BAND["Height gate above fitted ground<br/>0.08 – 0.65 m obstacles<br/>holes deeper than 0.12 m"]
-  BAND --> SCAN["/scan<br/>positive obstacles"]
-  BAND --> HAZ["/scan_hazard<br/>obstacles + holes"]
-```
+![パイプライン(msd700perception/launch/cloudhazard.launch)](../../../development/ros/diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
 
 帯域はセンサーからでなく**適合地表面からの**メートルである:`ground_tolerance 0.06`、`min_obstacle_height 0.08`(フロア帯より上は真の障害物)、`max_obstacle_height 0.65`(これより上はロボットが下を潜る)、`hole_depth_threshold 0.12`(`config/hazard_scan.yaml`)。適合は2次(次数2、うねる地面を跨ぐために必要)で、3.0 m以内の床リターンを3回再重み付けし、床壁判別器(`steepest_ring_deg 15.0`)で壁が地面を傾けないようにする。
 

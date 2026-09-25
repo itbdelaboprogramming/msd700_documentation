@@ -140,21 +140,7 @@ stopリクエストは、共有の[コマンドエンベロープ](/ja/developme
 
 `mapping` / `stop`がロボットに届いても、無条件にアップロードするわけではない。何かを書き込む前に、プリフライトのヘルスチェックがローカルディスクとメディアエンドポイントに到達可能であることを検証する。
 
-```mermaid
-flowchart TB
-  SAVE_REQ["POST /api/mapping/stop"] --> PREFLIGHT["Preflight Health Check<br/>Verify local disk & media endpoints"]
-  PREFLIGHT -->|Local Disk Unwritable| REFUSE["Refuse Save: Prevent Corrupt Run"]
-  PREFLIGHT -->|Healthy| EXEC_SAVE["Execute map_saver<br/>Generate .pgm, .yaml, and thumbnail"]
-
-  EXEC_SAVE --> UP_LOCAL["1. Upload to Unit media_local :3003<br/>(MANDATORY TARGET)"]
-  EXEC_SAVE --> UP_CLOUD["2. Upload to Cloud media-server :3003<br/>(BEST-EFFORT TARGET)"]
-
-  UP_LOCAL -->|Local Success| CHK_CLOUD{"Cloud Upload Success?"}
-  UP_LOCAL -->|Local Failed| FAIL_STATE["Set activity = mapping_stop_failed<br/>Retain SLAM node for retry"]
-
-  CHK_CLOUD -->|Yes| DONE_ALL["Outcome = completed<br/>Both targets synchronized"]
-  CHK_CLOUD -->|"No (Offline)"| DONE_LOCAL["Outcome = cloud_pending<br/>Unit stores map; sync_agent replicates later"]
-```
+![ロボット側の保存: mapsaverとプリフライトチェック](../../../../development/webui/mapping/diagrams/ros-integration-robot-side-save-mapsaver-and-preflight-c.drawio)
 
 ローカルディスクに書き込めない場合、破損した実行や不完全な実行をディスクに残さないよう、保存は試みられることなく即座に拒否される。プリフライトを通過すると、`map_saver`がoccupancy
 gridのアセットを生成する。`.pgm`画像、`.yaml`メタデータファイル、そしてサムネイルである。

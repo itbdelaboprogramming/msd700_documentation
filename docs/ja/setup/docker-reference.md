@@ -18,28 +18,7 @@ MSD700のDockerコマンド・フラグ・compose構造とその意味です。�
 | `msd700_noetic/docker/docker-compose.yml` | **ユニット** | `msd700`ロボットコンテナ+ユニット独自の`local_dev`サーバースタック |
 | `ros-web-ui/docker-compose.robot.yml` | 開発PC | ロボット半分のみ単独、ユニット管理なし |
 
-```mermaid
-flowchart TB
-  subgraph S["サーバーホスト"]
-    SC["ros-web-ui/docker-compose.yml"]
-    SC --> P1["--profile server_prod"]
-    SC --> P2["--profile server_dev"]
-    SC --> P3["--profile turn"]
-    SC --> P4["--profile manual"]
-  end
-  subgraph U["ユニット (Jetson)"]
-    DM["scripts/docker-manager.sh"]
-    DM --> UC["docker/docker-compose.yml<br/>service: msd700"]
-    DM --> UL["docker/docker-compose.yml<br/>--profile local_dev"]
-  end
-  subgraph B["バックエンド、実行時"]
-    UM["unit_manager.js<br/>Docker APIで再起動/整合のみ、作成なし"]
-    P1 --> RU["ros_web_ui_v2_unit_relays<br/>本番フリート共有リレー1台"]
-    P2 --> RD["ros_web_ui_v2_unit_relays_dev<br/>開発フリート共有リレー1台"]
-    UM --> RU
-    UM --> RD
-  end
-```
+![どのcomposeファイルか?](./diagrams/docker-reference-which-compose-file.drawio)
 
 ## サーバー: composeプロファイル
 
@@ -412,17 +391,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ### `up`の動作順
 
-```mermaid
-flowchart TB
-  A["--build時: ロボットイメージビルド<br/>シミュレーター時: ワールド資産確保"] --> B["クラウド宛先・ROSポート・<br/>キャッシュID・ホスト指紋を解決"]
-  B --> C["トークンファイル確保、<br/>停止中ならロボットコンテナ起動"]
-  C --> D["重複robot_pose_publisherの<br/>CATKIN_IGNORE標識を整合"]
-  D --> E["local_up: シークレット・メディアdir・<br/>リポジトリパス・ローカルIP"]
-  E --> F["ローカルイメージ欠落か--buildでビルド。<br/>他は旧版なら警告"]
-  F --> G["compose --profile local_dev up -d --no-build"]
-  G --> H["除外指定なければ自動起動を有効化"]
-  H --> I["docker exec run_msd.sh:<br/>必要ならワークスペースビルド、<br/>tmuxセッション置換・サービス起動"]
-```
+![upの動作順](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
 `--build`なしでは既存ローカルイメージ再利用で旧版は警告のみ(`[WARN] ... is OUT OF DATE`)です。欠落イメージ・シミュレーター資産・初回登録はネットが必要な場合があります。意図的リビルド(`build`・`local-build`・`up --build`)を使います。`build-clean`はキャッシュ無効です。稼働中ロボットは`up`で再作成されません。ビルド後も同`--dev`/`--simulator`フラグでの計画停止時に再作成します。
 

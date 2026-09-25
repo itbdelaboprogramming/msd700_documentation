@@ -16,29 +16,7 @@ outline: deep
 
 ## システム構成
 
-```mermaid
-flowchart TB
-  NET["公共インターネット"] -->|":443 HTTPS / WSS"| AP["Apache2リバースプロキシ<br/>TLS + ルーティング"]
-  NET -->|":8883 MQTTS"| MQ["HiveMQ (:8883)<br/>フリートブローカー"]
-  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>WebRTCリレー"]
-
-  subgraph DockerServices["Docker Compose本番スタック"]
-    AP --> FE["frontend_prod (:3000)<br/>Webダッシュボード"]
-    AP --> BE["backend_node (:5000)<br/>REST API"]
-    AP --> RB["rosbridge_suite (:9090)<br/>テレメトリWebSocket"]
-    AP --> MED["media-server (:3003)<br/>地図+ファイル"]
-    AP --> SIG["signalling_server (:3001)<br/>WebRTCシグナリング"]
-    MQ --> FR["unit_relays<br/>共有フリートリレー"]
-    FR --> RB
-    BE --> DB[("MySQL (:3307)<br/>データベース: ROS_DB")]
-    SEC["/srv/msd/secrets<br/>JWTキーリング + TLSキーストア"]
-    SEC -.-> BE
-    SEC -.-> MQ
-    FP["fix_perms_prod (ワンショット)<br/>ホストフォルダの所有者修正"]
-    FP -.-> BE
-    FP -.-> MED
-  end
-```
+![システム構成](./diagrams/server-setup-system-topology.drawio)
 
 ::: warning フリートモードがデフォルトです
 共有`unit_relays`コンテナ1台が全フリートを担当します。ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。`server_prod`と`server_dev`を1台のホストで同時に動かさないでください。`coturn`は本番専用です。MySQL (`3307`)とバックエンドは全インターフェースで待ち受けるため、ファイアウォールの内側に置きます([前提条件](/ja/setup/prerequisites)参照)。
@@ -312,28 +290,7 @@ sudo systemctl reload apache2
 
 サーバー稼働後、ロボットを登録できます:
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Tech as 現場技術者
-  participant Unit as ロボット (Jetson)
-  participant Server as クラウドバックエンド
-  participant Admin as 管理ポータル
-
-  Tech->>Unit: Jetsonで登録スクリプトを実行
-  Unit->>Server: POST /enroll/claim (フィンガープリント、nonceハッシュ、ホスト名/MAC)
-  Server-->>Unit: 8文字のクレームコード、例 "K7M2QP4R"
-  Unit-->>Tech: "K7M2QP4R"を画面に表示
-
-  Tech->>Admin: https://msd.nglobal.jp/adminを開きログイン
-  Tech->>Admin: Pending Unitsで"K7M2QP4R"を探す
-  Tech->>Admin: ユニット名+レンタルプロファイルを設定→承認
-
-  Server->>Server: DBを"approved"に更新
-  Unit->>Server: POST /enroll/status (平文nonce)
-  Server-->>Unit: ユニットULID+デバイスシークレット
-  Unit->>Unit: Certificates/robot/device.jsonを保存、HiveMQに接続
-```
+![ユニット登録 (エンロールメント)](./diagrams/server-setup-registering-units-enrolment.drawio)
 
 1. `https://msd.nglobal.jp/admin`にログインします。
 2. **Pending Units**でロボット表示の8文字コードを探します。
@@ -373,15 +330,7 @@ push または PR のマージで、対応するスタックが自動的に再�
 
 フロントエンドはリポジトリ内のダッシュボードのクローンからビルドされるため、`ros-web-ui` と `ROS-dashboard-next-ts` の **両方** の push でトリガーされます。その他のブランチは無視されます。
 
-```mermaid
-flowchart LR
-  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
-  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
-  L -->|HMAC検証| D[deploy.sh]
-  D --> G[git ff-only pull<br>repo + dashboard]
-  G --> B[compose build]
-  B --> U[compose up -d]
-```
+![高度な設定](./diagrams/server-setup-advanced-configurations.drawio)
 
 リスナーは GitHub に即座に `202` を返し、`deploy.sh` をバックグラウンドで実行します。そのため catkin + Next.js の長いビルドでも GitHub の webhook タイムアウト(10秒)に掛かりません。
 

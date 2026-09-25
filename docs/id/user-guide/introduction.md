@@ -13,21 +13,7 @@ search: false
 
 Dilengkapi dengan sensor laser 360 derajat dan kamera, robot ini membangun denah digital yang akurat secara real time saat Anda mengendarainya berkeliling. (Teknik ini disebut SLAM: robot menentukan posisinya sendiri sambil menggambar peta.)
 
-```mermaid
-flowchart LR
-  subgraph PhysicalRobot["MSD700 Robot"]
-    SENSORS["Laser Sensor & Camera"]
-    CHASSIS["Sturdy Wheels<br/>for Indoor Floors"]
-  end
-
-  subgraph CloudPlatform["Cloud Dashboard & Fleet Hub"]
-    MAPS["Map & Route Database"]
-    RENTALS["Rental Profiles"]
-    LIVE["Live Map & Robot Status"]
-  end
-
-  PhysicalRobot <-->|"Secure Link"| CloudPlatform
-```
+![Apa itu MSD700?](../../user-guide/diagrams/introduction-what-is-msd700.drawio)
 
 ## Kemampuan Utama Operator
 

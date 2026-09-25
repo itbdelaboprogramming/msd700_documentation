@@ -32,25 +32,7 @@ Content-Type: application/json
 
 Tokens are cryptographically signed using HS256 and validated against a shared keyring. Inside the container the keyring file is `/run/secrets/jwt_keyring` (mounted from `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` on `*_dev` services; production falls back to the `JWT_SECRET_KEY`/`JWT_SECRET` env vars). The active secret key signs new tokens, while recently rotated keys remain valid during a transition grace period.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant Client as Client Application
-  participant Backend as backend_node
-  participant DB as MySQL Database
-
-  Client->>Backend: POST /user/login { username, password }
-  Backend->>DB: Query user credentials & rental profiles
-  DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
-  Note over Client: Include token in Bearer header on subsequent calls
-
-  Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
-  Backend-->>Client: 401 Unauthorized (when token expires)
-
-  Client->>Backend: POST /user/refresh { refresh_token }
-  Backend-->>Client: 200 OK { token, refresh_token } (fresh token pair)
-```
+![Authentication and Authorization](./diagrams/api-reference-authentication-and-authorization.drawio)
 
 | Token Claim `typ` | Scope & Acceptance | Rejection Rules |
 | --- | --- | --- |
@@ -62,16 +44,7 @@ sequenceDiagram
 
 Whenever a request addresses a specific robot, the `unit_id` field in the request body (or query parameter) is processed through the `attachUnit` middleware:
 
-```mermaid
-flowchart TB
-  REQ["HTTP Request + Bearer Token"] --> V_TOK["verifyToken<br/>JWT Keyring Validation"]
-  V_TOK -->|Invalid or Expired| E_401["HTTP 401 Unauthorized"]
-  V_TOK --> ATTACH["attachUnit Middleware"]
-  ATTACH -->|No unit_id present| PASS["Pass to Handler"]
-  ATTACH -->|Malformed ULID| E_400["HTTP 400 Invalid Unit ID"]
-  ATTACH -->|User lacks Rental Profile for Unit| E_403["HTTP 403 Forbidden: Unit Not Assigned"]
-  ATTACH -->|Valid & Authorized| EXEC["Execute Target Handler"]
-```
+![Unit Authorization Middleware (attachUnit)](./diagrams/api-reference-unit-authorization-middleware-attachunit.drawio)
 
 ## Standard Response Envelopes
 

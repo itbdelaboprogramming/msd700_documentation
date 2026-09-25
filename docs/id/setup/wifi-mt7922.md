@@ -180,18 +180,7 @@ Nama interface tidak harus `wlP1p1s0`; beda tiap mesin.
 
 ## Diagnosis
 
-```mermaid
-flowchart TD
-  A["Hardware MT7922"] --> B["Terlihat di PCIe"]
-  B --> C["Driver mt7921e ter-bind"]
-  C --> D{"Firmware .bin<br/>ditemukan?"}
-  D -->|"Tidak, hanya .zst"| E["hardware init failed"]
-  E --> F["NetworkManager: radio tidak ada<br/>'Adapter not found'"]
-  D -->|"Ya"| G["Firmware ter-load"]
-  G --> H["wlan0 di-rename<br/>(mis. wlP1p1s0)"]
-  H --> I["NetworkManager"]
-  I --> J["Device Wi-Fi siap; connect terpisah"]
-```
+![Diagnosis](./diagrams/wifi-mt7922-diagnosis.drawio)
 
 ## Setup one-shot untuk unit berikutnya
 

@@ -1,0 +1,50 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="The Robot URDF Model: msd700field">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="546" height="296" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Main Chassis Box: 0.90 x 0.70 x&lt;br&gt;0.25 m (Mass: 150 kg)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="53" y="31" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="4 Drive Wheels: x ±0.30 m, y ±0.30&lt;br&gt;m&lt;br&gt;Radius 0.10 m, Separation 0.60 m" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="288" y="120" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Velodyne VLP-16 LiDAR: 0.40 m&lt;br&gt;above base_link&lt;br&gt;0.50 m above footprint" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="120" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="EKF Sensor Fusion:&lt;br&gt;/odometry/filtered (Odom + IMU)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="288" y="225" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.6667;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n3" target="n4">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="217" y="90" as="sourcePoint" />
+            <mxPoint x="411" y="120" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="217" y="105" />
+              <mxPoint x="411" y="105" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3333;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n3" target="n5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="90" as="sourcePoint" />
+            <mxPoint x="135" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n4" target="n6">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="411" y="195" as="sourcePoint" />
+            <mxPoint x="411" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n2" value="msd700_field URDF" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="124" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

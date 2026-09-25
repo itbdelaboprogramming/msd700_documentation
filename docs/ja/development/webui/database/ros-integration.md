@@ -53,20 +53,7 @@ search: false
 [データベーススキーマ § 外部キー一覧](/ja/development/database-schema#外部キー、完全版)
 のうち、この機能に関連するサブセット:
 
-```mermaid
-flowchart TB
-  units -->|unit_id CASCADE| maps_data
-  rental_profiles -->|profile_id RESTRICT| maps_data
-  users -->|created_by / modified_by SET NULL| maps_data
-  users -->|created_by / modified_by SET NULL| routes_data
-  users -->|created_by / modified_by SET NULL| areas_data
-  users -->|created_by / modified_by SET NULL| playlists_data
-  users -->|modified_by SET NULL| unit_operation_state
-  maps_data -->|map_id CASCADE| routes_data
-  maps_data -->|map_id CASCADE| areas_data
-  maps_data -->|map_id CASCADE| playlists_data
-  maps_data -->|map_id SET NULL| unit_operation_state
-```
+![外部キー](../../../../development/webui/database/diagrams/ros-integration-foreign-keys.drawio)
 
 これが
 [名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)

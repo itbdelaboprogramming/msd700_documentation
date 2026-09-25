@@ -8,29 +8,7 @@ Cara memastikan [Server](/id/setup/server-setup) dan [Unit](/id/setup/unit-setup
 
 Unit dan server berkomunikasi lewat jalur yang rusaknya **sendiri-sendiri**. Membedakannya adalah kunci di sini.
 
-```mermaid
-flowchart LR
-  subgraph U["Unit"]
-    R["robot"]
-  end
-  subgraph S["Server"]
-    MQ["HiveMQ"]
-    BE["backend_node"]
-    FR["unit_relays<br/>(satu relay bersama)"]
-    RB["rosbridge"]
-    SIG["signalling"]
-  end
-  subgraph B["Browser operator"]
-    UI["dashboard"]
-  end
-
-  R ==>|"1. MQTT TLS 8883"| MQ
-  MQ --> BE
-  MQ --> FR --> RB
-  UI -->|"2. WSS /services/rosbridge"| RB
-  UI -->|"3. WSS /services/signalling"| SIG
-  UI -.->|"4. Media WebRTC, langsung atau via coturn"| R
-```
+![Gambaran umum](./diagrams/system-setup-overview.drawio)
 
 | # | Jalur | Membawa | Kalau rusak |
 | --- | --- | --- | --- |

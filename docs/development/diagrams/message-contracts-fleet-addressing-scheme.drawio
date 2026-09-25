@@ -1,0 +1,33 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Fleet Addressing Scheme">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n1" value="Robot ROS Master&lt;br&gt;Topic: /string/robotpose" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="27" width="180" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="Central MQTT Broker&lt;br&gt;Topic:&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/string/robotpose" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="406" y="20" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="Cloud ROS Master&lt;br&gt;Topic:&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/string/robotpose" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="877" y="20" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="aws_mqtt prepends prefix" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4933;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n1" target="n2">
+          <mxGeometry x="0.0005" relative="1" as="geometry">
+            <mxPoint x="200" y="57" as="sourcePoint" />
+            <mxPoint x="406" y="57" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n5" value="Cloud Bridge preserves prefix" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.4933;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.4933;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n2" target="n3">
+          <mxGeometry x="-0.0001" relative="1" as="geometry">
+            <mxPoint x="652" y="57" as="sourcePoint" />
+            <mxPoint x="877" y="57" as="targetPoint" />
+            <mxPoint x="0" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

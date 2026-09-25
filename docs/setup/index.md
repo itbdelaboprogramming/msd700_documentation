@@ -27,15 +27,7 @@ Every page has the exact shell commands, expected outputs, and config templates 
 
 MSD700 always has two machines: one Server plus one or more Units. Install in this order:
 
-```mermaid
-flowchart LR
-  S1["1. Prerequisites<br/>Check hardware &amp; firewall ports"]
-  S2["2. Server Setup<br/>Bring up cloud backend &amp; Apache"]
-  S3["3. Unit Setup<br/>Build robot image &amp; enrol"]
-  S4["4. System Setup<br/>End-to-end checklist"]
-  S5["5. Commissioning<br/>Accept the unit, box by box"]
-  S1 --> S2 --> S3 --> S4 --> S5
-```
+![Install order](./diagrams/setup-install-order.drawio)
 
 1. [Prerequisites](/setup/prerequisites): check hardware and open firewall ports.
 2. [Server Setup](/setup/server-setup): start the cloud server first, so units have somewhere to enrol.

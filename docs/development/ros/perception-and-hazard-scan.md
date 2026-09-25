@@ -22,13 +22,7 @@ Baking a hole edge into the static map would haunt localization forever, so the 
 
 ## Pipeline (`msd700_perception/launch/cloud_hazard.launch`)
 
-```mermaid
-flowchart LR
-  CLOUD["Velodyne PointCloud2<br/>VLP-16, 192.168.103.231, 10 Hz"] --> FIT["Ground fit<br/>quadratic over near-field floor<br/>radius 3.0 m, 3 iterations"]
-  FIT --> BAND["Height gate above fitted ground<br/>0.08 – 0.65 m obstacles<br/>holes deeper than 0.12 m"]
-  BAND --> SCAN["/scan<br/>positive obstacles"]
-  BAND --> HAZ["/scan_hazard<br/>obstacles + holes"]
-```
+![Pipeline (msd700perception/launch/cloudhazard.launch)](./diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
 
 Bands are metres **above the fitted ground surface**, not the sensor: `ground_tolerance 0.06`, `min_obstacle_height 0.08` (above the floor band means a real obstacle), `max_obstacle_height 0.65` (above this the robot drives under it), `hole_depth_threshold 0.12` (`config/hazard_scan.yaml`). The fit is quadratic (order 2, needed to cross rolling ground) over floor returns inside 3.0 m, re-weighted 3 times, with a floor-vs-wall discriminator (`steepest_ring_deg 15.0`) so walls don't tilt the ground.
 

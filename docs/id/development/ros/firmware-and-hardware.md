@@ -15,34 +15,7 @@ Motor unit digerakkan oleh board **STM32H723** (`0483:5740`, USB virtual COM por
 
 ## Topologi Kontrol Embedded
 
-```mermaid
-flowchart TD
-  subgraph JetsonSBC["NVIDIA Jetson (msd700 container)"]
-    SERIAL_NODE["serial_node.py (rosserial_python)<br/>/dev/stm32"]
-    RAW["raw_sensor_node (hardware_state.py)<br/>/wheel/odom, /imu/data_raw, /imu/mag"]
-    BRIDGER["bridger_node (bridger.py)<br/>/cmd_vel to wheel speeds"]
-  end
-
-  subgraph MCU["STM32H723 (FreeRTOS)"]
-    ROS_TASK["ROS task, 20 Hz<br/>pub hardware_state, sub hardware_command"]
-    STATE_TASK["VehicleState task<br/>SBUS arm switch + RC/PC select"]
-    ODOM_TASK["Odometry task, 5 ms<br/>encoders + per-wheel PID (pidIr)"]
-    MOTOR_TASK["Motor task, 20 ms<br/>PWM out, lamp on when armed"]
-    ATT_TASK["Attitude task, 5 ms<br/>CMPS12 heading/roll/pitch"]
-  end
-
-  RC["SBUS RC receiver"] --> STATE_TASK
-  SERIAL_NODE <-->|rosserial over USB CDC| ROS_TASK
-  BRIDGER -->|hardware_command| SERIAL_NODE
-  SERIAL_NODE -->|hardware_state| RAW
-  ROS_TASK --> STATE_TASK
-  STATE_TASK -->|RPM targets| ODOM_TASK
-  ODOM_TASK -->|PWM| MOTOR_TASK
-  MOTOR_TASK --> DRV["Left / right motor drivers"]
-  DRV --> ENC["Quadrature encoders (TIM3 / TIM4)"]
-  ENC --> ODOM_TASK
-  ATT_TASK --> ROS_TASK
-```
+![Topologi Kontrol Embedded](../../../development/ros/diagrams/firmware-and-hardware-embedded-control-topology.drawio)
 
 ## Interface ROS
 

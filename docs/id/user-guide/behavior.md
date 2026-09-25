@@ -38,14 +38,7 @@ panel akan kembali ke apa yang sebenarnya sedang aktif pada robot, bukan apa yan
 
 ## Hanya satu orang yang mengemudikan pada satu waktu
 
-```mermaid
-flowchart TB
-  A["You open a unit"] --> B{"Is another session<br/>already driving it?"}
-  B -->|no| C["You get control immediately"]
-  B -->|yes| D["A dialog appears:<br/>already being operated"]
-  D --> E["Take over control:<br/>the other session ends visibly"]
-  D --> F["Leave it running:<br/>you stay without control"]
-```
+![Hanya satu orang yang mengemudikan pada satu waktu](../../user-guide/diagrams/behavior-only-one-person-drives-at-a-time.drawio)
 
 | Yang Anda lihat | Artinya | Yang bisa Anda lakukan |
 | --- | --- | --- |
@@ -68,16 +61,7 @@ laptop yang tertutup tidak lagi menahan robot agar tak bisa dipakai siapa pun.
 Robot memantau dashboard Anda. Ketika ia berhenti mendengar kabar dari Anda, tiga hal terjadi dengan
 jeda yang semakin meningkat.
 
-```mermaid
-timeline
-  title After your browser stops responding
-  2 seconds : Motion pauses
-             : the operation stays loaded
-  10 minutes : Session ends
-             : navigation or mapping is torn down
-  30 minutes : Hardware shuts down
-             : must be restarted by hand
-```
+![Apa yang terjadi saat Anda terputus](../../user-guide/diagrams/behavior-what-happens-when-you-disconnect.drawio)
 
 | Setelah | Yang terjadi | Pulih sendiri? |
 | --- | --- | --- |
@@ -101,15 +85,7 @@ Autopilot adalah cara Anda mengatakan "saya diizinkan untuk pergi." Dengan mode 
 - Robot itu sendiri yang mengambil alih untuk melangkah melalui titik henti Anda, bukan browser yang melakukannya.
 - Logout **tidak** menghentikan proses yang berjalan.
 
-```mermaid
-flowchart LR
-  A["Autopilot OFF"] -->|"you press the toggle"| B["Autopilot ON"]
-  B --> C["safety pauses suspended"]
-  B --> D["robot drives the route itself"]
-  B --> E["logout no longer ends the run"]
-  B -->|"toggle again"| A
-  A --> F["safety pauses re-armed<br/>with a fresh window"]
-```
+![Mematikan jeda dengan sengaja: Autopilot](../../user-guide/diagrams/behavior-turning-the-pause-off-on-purpose-autopil.drawio)
 
 ::: danger Autopilot berarti robot akan terus bergerak tanpa ada yang mengawasi
 Itu memang tujuan utamanya, dan itu pilihan yang tepat untuk rute panjang tanpa pengawasan. Itu
@@ -126,19 +102,7 @@ dan mengambil alih proses yang sedang berjalan. Prosesnya tetap berlanjut baik i
 
 Masuk kembali setelah menutup semuanya dan dashboard akan mengembalikan Anda ke kondisi semula.
 
-```mermaid
-sequenceDiagram
-  participant You
-  participant Dashboard
-  participant Robot
-
-  You->>Dashboard: log in
-  Dashboard->>Robot: what are you doing?
-  Robot-->>Dashboard: running a route on the Navigation tab
-  Dashboard->>You: opens the Navigation tab
-  Robot-->>Dashboard: the full route, and which stop it is on
-  Dashboard->>You: pins, map and progress restored
-```
+![Kembali lagi](../../user-guide/diagrams/behavior-coming-back.drawio)
 
 Robot mengembalikan seluruh operasi: titik henti Anda, sedang di mana posisinya, peta, dan area
 coverage apa pun. Tidak satu pun dari itu berasal dari browser Anda, itulah sebabnya semuanya tetap bertahan di komputer yang berbeda.

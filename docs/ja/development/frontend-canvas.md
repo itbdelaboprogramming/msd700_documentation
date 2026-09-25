@@ -13,33 +13,7 @@ search: false
 
 すべてのトピックはユニット単位でルート化される。`` `${root}/server/…` ``であり、`root = /unit_<ULID>`である。下記の素の`/server/…`名は略記である。
 
-```mermaid
-flowchart LR
-  subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
-    direction TB
-    OCC_MSG["/server/slam/map (OccupancyGrid)"]
-    POSE_MSG["/server/robot_pose (PoseStamped)"]
-    SCAN_MSG["/server/scan (LaserScan, derived<br/>from robot_pose topic name)"]
-    PATH_MSG["/server/move_base/NavfnROS/plan (Path)"]
-    BOSTRO_MSG["/server/boustrophedon_path (Path)"]
-  end
-
-  subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
-    direction TB
-    L1["Layer 1: Base Map OccupancyGrid Bitmap<br/>(resolution from map metadata)"]
-    L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
-    L3["Layer 3: Global Path (Pink) & Local Trajectory (Yellow)"]
-    L4["Layer 4: Boustrophedon Sweep Lanes (Orange Comb Splines)"]
-    L5["Layer 5: Laser Scan Points (vendored Nav2D<br/>LaserScanViewer, latency-compensated)"]
-    L6["Layer 6: Interactive Polygon Drawing Vertex Overlay"]
-    L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
-  end
-
-  OCC_MSG ~~~ POSE_MSG ~~~ SCAN_MSG ~~~ PATH_MSG ~~~ BOSTRO_MSG
-  L1 ~~~ L2 ~~~ L3 ~~~ L4 ~~~ L5 ~~~ L6 ~~~ L7
-  rosbridgeWS --> StagePipeline
-  StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
-```
+![Canvas レンダリングパイプラインアーキテクチャ](../../development/diagrams/frontend-canvas-canvas-rendering-pipeline-architecture.drawio)
 
 ---
 

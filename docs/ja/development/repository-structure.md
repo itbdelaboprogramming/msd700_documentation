@@ -139,13 +139,13 @@ msd700_documentation/
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
-│   └── development/             # developer docs (this section)
+│   ├── development/             # developer docs (this section)
+│   └── */diagrams/*.drawio      # diagram sources, next to the pages that use them
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
-│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
-│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
-│   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
+│   ├── render-diagrams.mjs       # renders every .drawio diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # diagram-file hash shared by the renderer and config.mts
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
 ├── package.json
@@ -154,45 +154,55 @@ msd700_documentation/
 
 ### 図
 
-図は markdown 内の ```` ```mermaid ```` フェンスとして記述しますが、読者に届くのは静的な PNG です。
-`docs/public/images/` の手描き図と同じ draw.io 風の見た目(白いボックス、細い黒線、Helvetica、直角コネクタ、
-角のタブに置いたグループ名)で事前にレンダリングされます。
+図は draw.io ファイル(`.drawio`)で、使用するページの隣の `diagrams/` フォルダーに置きます。
+例: `docs/setup/diagrams/wifi-hotspot-how-it-fits-together.drawio`。読者に届くのは各図の静的な
+PNG で、エディターではありません。
 
-| 要素 | 役割 |
+**図の編集:** `.drawio` ファイルを draw.io で開きます。VS Code の
+[Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
+拡張機能(ファイルをその場で編集)、デスクトップアプリ、または
+[app.diagrams.net](https://app.diagrams.net) を使えます。ボックス、グループ、線はすべて通常の
+draw.io シェイプです。移動し、線は折れ点をドラッグして経路を変え、保存します。スタイル(白いボックス、
+細い黒線、Helvetica、直角コネクター、グループ左上のタブに入ったグループ名)をそろえるため、パレットの
+既定値ではなく既存のシェイプをコピーしてください。
+
+**図の埋め込み:** ページからの相対パスで画像構文を使います。alt テキストはスクリーンリーダーが
+読み上げ、画像がないときに表示される文です:
+
+```md
+![全体構成](./diagrams/wifi-hotspot-how-it-fits-together.drawio)
+```
+
+翻訳ページは、訳すテキストのない図なら英語版のファイルを参照できます(例: `docs/ja/development/`
+から `../../development/diagrams/architecture-system-topology-and-data-flow.drawio`)。ラベルを
+翻訳した図は `docs/id/.../diagrams/` や `docs/ja/.../diagrams/` に専用のコピーを置きます。
+
+| 構成要素 | 役割 |
 | --- | --- |
-| `scripts/render-diagrams.mjs` | すべてのフェンスをヘッドレス Chrome で一度だけレイアウトし(mermaid + フローチャートと状態図には ELK レイアウトエンジン)、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。どのフェンスからも使われなくなった画像は削除します |
-| `scripts/diagram-hash.mjs` | フェンス本文と `RENDER_VERSION` のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします。スタイル変更後は `RENDER_VERSION` を上げ、キャッシュされた古い画像ではなく新しい URL が配信されるようにします |
-| `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを、その PNG の `<img>`(原寸ファイルへのリンク付き)に置き換えます。図がブラウザ内で描画されることはありません。PNG が無い場合、`npm run docs:diagrams` が生成するまでページには壊れた画像が表示され、ビルドは `[diagrams]` 警告を出します |
-
-読者のブラウザでのレンダリングをやめたのは、mermaid がそのブラウザで解決されたフォントでラベルを計測するため、
-ボックスの大きさがずれ、文字が切れ、マシンごとにレイアウトが変わっていたからです。
-フォントを固定した単一のレンダラーなら、どこでも同じ図になります。
+| `scripts/render-diagrams.mjs` | 参照されているすべての `.drawio` ファイルを、ヘッドレス Chrome 上の公式 draw.io ビューアーで描画し、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。PNG はエディターの表示と一致します。使われなくなった画像を削除し、壊れた参照とどのページからも使われていない `.drawio` ファイルを報告します |
+| `scripts/diagram-hash.mjs` | `.drawio` ファイルと `RENDER_VERSION` のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします。レンダラーの描き方を変えたら `RENDER_VERSION` を上げ、キャッシュされた古い画像ではなく新しい URL が配信されるようにします |
+| `docs/.vitepress/config.mts`、`markdown.config` | すべての `![...](....drawio)` をその PNG の `<img>` に置き換えます。クリックするとポップアップで開きます。PNG がない場合、ページには壊れた画像が表示され、`npm run docs:diagrams` が書き出すまでビルドが `[diagrams]` 警告を出します |
 
 ```bash
 npm run docs:diagrams          # 新規・変更された図をレンダリング(ローカルの Chrome/Chromium が必要)
-npm run docs:diagrams -- --all # スタイル変更後などに全図を再レンダリング
-npm run docs:diagrams -- --all --audit # 図ごとのレイアウト上の指摘も一覧表示
-npm run docs:check-diagrams    # 全図の構文を確認し、PNG の無い図があれば失敗
+npm run docs:diagrams -- --all # すべて再レンダリング(RENDER_VERSION を上げた後など)
+npm run docs:check-diagrams    # 壊れた参照や PNG のない図があれば失敗
 ```
 
-PNG は markdown の変更と一緒にコミットしてください。Chrome が標準の場所に無い場合は `CHROME_PATH` を設定します。
+`.drawio` ファイルと PNG を markdown の変更と一緒にコミットしてください。Chrome が標準の場所にない
+場合は `CHROME_PATH` を設定します。初回実行時は、バージョン固定の draw.io ビューアーを
+`node_modules/.cache` にダウンロードしてハッシュを検証します。
 
 ::: warning 図を編集したら再レンダリング
-画像はフェンス本文のハッシュで引くため、1 文字の変更でも `npm run docs:diagrams` が必要です。
-実行しないと、そのページには壊れた画像が表示されます(図がブラウザ内で描画されることはありません)。
+画像は `.drawio` ファイルのハッシュで引かれるため、ボックスを 1 つ動かしただけでも
+`npm run docs:diagrams` が必要です。実行しないとページには壊れた画像が表示されます。
+`npm run docs:dev` はページをキャッシュするので、新しい画像を見るには再起動してください。
 :::
 
-各フローチャートは複数の ELK バリアントでレイアウトされ、監査の指摘が最も少ないものが採用されます。`--audit` は残った指摘を表示します: 重大な指摘(線がボックス・グループ名・ラベルを貫通)と、`~` 付きの軽微な指摘(線がグループ名やボックスに近すぎる、グループ名の下に隠れる、グループの枠線に沿って走る、他の線と重なる、矢印の先端が密集している)です。グループ名は線を避けるように辺に沿って移動するか、複数行に折り返されます。ほぼ直線の線はまっすぐに補正されます。それでも窮屈に見える場合はソース側で並べ替えます: `~~~`(不可視リンク)でボックスやグループの順序を固定し、`subgraph` 内の `direction TB`/`LR` でその中の向きを指定します。
-
-::: info 山括弧のプレースホルダーはエスケープする
-図の中の `<unit>` のようなプレースホルダーは `#lt;unit#gt;` と書きます。そのまま書くと HTML タグとして
-扱われ、何も言わずに消えます(`<u>` はラベルの残りを下線付きにしてしまいます)。
-:::
-
-::: info state-diagram の遷移ラベルに `<br/>` を使わない
-このタグは `flowchart` のノードラベルや sequence-diagram のノート内では機能し、このサイトでもそこで
-使用しています。state-diagram のエッジラベルはプレーンテキストであるため、そこに書いた `<br/>` は
-文字どおりに表示されてしまいます。
+::: info Mermaid ではなく draw.io を使う理由
+以前の図は自動レイアウトされる Mermaid フェンスでした。自動レイアウトではボックスと線の位置を
+すべてエンジンが決めるため、タイトルに近すぎる線や不自然な位置のボックスは間接的にしか直せません
+でした。draw.io ではすべての位置が明示的で、手で直接整えられます。
 :::
 
 ### このドキュメントサイトのデプロイ方法

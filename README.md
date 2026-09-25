@@ -33,7 +33,7 @@ npm run docs:i18n
 
 Perintah ini akan secara otomatis:
 - Menerjemahkan konten baru ke Bahasa Indonesia (`docs/id/`) dan Bahasa Jepang (`docs/ja/`).
-- Mempertahankan integritas blok kode, diagram Mermaid, kontainer VitePress, dan tag Vue.
+- Mempertahankan integritas blok kode, rujukan diagram, kontainer VitePress, dan tag Vue.
 - Menyesuaikan rute tautan Markdown internal ke direktori bahasa yang sesuai.
 
 ### 3. Membangun Bundle Produksi (Build)
@@ -46,13 +46,18 @@ npm run docs:build
 
 Hasil build akan disimpan di direktori `docs/.vitepress/dist`.
 
-### 4. Memvalidasi Diagram Mermaid
+### 4. Diagram (draw.io)
 
-Untuk menguji sintaksis seluruh diagram Mermaid di seluruh halaman:
+Diagram berupa file `.drawio` di folder `diagrams/` di samping halamannya, disisipkan dengan
+`![judul](./diagrams/nama.drawio)`. Edit dengan draw.io (misalnya ekstensi VS Code "Draw.io Integration"),
+lalu render ulang PNG-nya dan cek semua rujukan:
 
 ```bash
+npm run docs:diagrams
 npm run docs:check-diagrams
 ```
+
+Detailnya ada di halaman *Repository Structure § Diagrams*.
 
 ---
 
@@ -68,7 +73,7 @@ msd700_documentation/
 │   ├── id/                   # Terjemahan Bahasa Indonesia (dihasilkan otomatis)
 │   └── ja/                   # Terjemahan Bahasa Jepang (dihasilkan otomatis)
 ├── scripts/
-│   ├── check_parse.mjs       # Validator diagram Mermaid
+│   ├── render-diagrams.mjs   # Render diagram .drawio ke PNG statis
 │   └── sync_i18n.mjs         # Mesin sinkronisasi otomatis multi-bahasa
 ├── package.json
 └── README.md

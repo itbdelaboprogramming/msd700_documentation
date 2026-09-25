@@ -23,12 +23,7 @@ Sebelum memulai, pastikan Anda memiliki:
 1. Buka browser Anda dan navigasikan ke: `https://msd.nglobal.jp`.
 2. Masukkan nama pengguna dan kata sandi Anda, lalu klik **Proceed**.
 
-```mermaid
-flowchart LR
-  LOGIN["1. Log in at msd.nglobal.jp"] --> FLEET["2. Pick a Robot from the Table"]
-  FLEET --> SELECT["3. Click Start"]
-  SELECT --> NAV["4. Navigation or Mapping Opens"]
-```
+![Langkah 1: Masuk ke Dashboard](../../user-guide/diagrams/quick-start-step-1-log-in-to-the-dashboard.drawio)
 
 ---
 
@@ -51,18 +46,7 @@ Pilih baris berstatus **Ready** dan klik **Start**: dashboard akan membuka [Navi
 
 Antarmuka operator dibagi menjadi tiga panel operasional utama:
 
-```mermaid
-flowchart TB
-  subgraph Workspace["MSD700 Operator Workspace Layout"]
-    TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
-    LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
-    RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
-    RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
-  end
-
-  TOP ~~~ LEFT
-  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
-```
+![Langkah 3: Memahami Ruang Kerja Operator](../../user-guide/diagrams/quick-start-step-3-understand-the-operator-workspace.drawio)
 
 ---
 
@@ -82,18 +66,7 @@ Jika tidak ada peta dalam dropdown, lihat [Pemetaan](/id/user-guide/mapping) unt
 
 Anda mengemudikan robot secara manual dengan keyboard:
 
-```mermaid
-flowchart TB
-  subgraph KeyboardControls["Keyboard Drive Controls"]
-    W["W: Drive Forward"]
-    S["S: Drive Backward"]
-    A["A: Rotate Left (Counter-Clockwise)"]
-    D["D: Rotate Right (Clockwise)"]
-    SHIFT["Hold Shift: Slow Mode"]
-  end
-
-  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
-```
+![Langkah 5: Mengemudikan Secara Manual (Teleoperasi)](../../user-guide/diagrams/quick-start-step-5-drive-manually-teleoperation.drawio)
 
 ### Kontrol Teleoperasi:
 - **W / S**: Maju / mundur dengan kecepatan normal (`0.40 m/s`).
@@ -112,12 +85,7 @@ Untuk mengirim robot ke tujuan target secara otonom:
 3. Klik dan seret ke luar untuk mengatur arah panah heading target, lalu lepaskan.
 4. Robot menghitung jalur global bebas tabrakan (garis biru) dan menavigasi secara otonom ke target.
 
-```mermaid
-flowchart LR
-  CLICK["1. Click Destination on Map"] --> PLAN["2. Robot Plans Collision-Free Path"]
-  PLAN --> DRIVE["3. Robot Steers Around Obstacles"]
-  DRIVE --> ARRIVE["4. Arrives at Goal with Target Heading"]
-```
+![Langkah 6: Mengirim Goal Navigasi (Titik-ke-Titik)](../../user-guide/diagrams/quick-start-step-6-dispatch-a-navigation-goal-point.drawio)
 
 ---
 

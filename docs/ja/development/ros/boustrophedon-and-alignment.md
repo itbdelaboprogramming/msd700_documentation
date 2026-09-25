@@ -13,20 +13,7 @@ search: false
 
 MSD700の網羅走行計画における基本的な設計原則は、**ロボットが異なる計算に使用される2つの異なる幾何学的寸法を持つ**という点である:
 
-```mermaid
-flowchart LR
-  subgraph PhysicalBody["1. Physical Body Footprint"]
-    B1["Width: 0.70 m, Length: 0.90 m"]
-    B2["Used for: Lane Pitch & Area Swept Math"]
-  end
-
-  subgraph SafetyEnvelope["2. Navigation Safety Envelope"]
-    E1["Width: 0.85 m, Length: 1.20 m"]
-    E2["Used for: Obstacle Clearance & Turn Radii"]
-  end
-
-  PhysicalBody -.->|"Includes 0.075 m Lateral Safety Padding"| SafetyEnvelope
-```
+![2つのロボットジオメトリ](../../../development/ros/diagrams/boustrophedon-and-alignment-dual-robot-geometries.drawio)
 
 | ジオメトリ定義 | サイズ寸法 | アルゴリズム上の用途 |
 | --- | --- | --- |
@@ -64,15 +51,7 @@ TEBなし(フォールバック`min_obstacle_dist 0.15`): `wall_clearance 0.500 
 
 網羅走行プランナーは、内部に障害物を含む任意の凹多角形境界を、凸かつ障害物のないサブセルへと分解する:
 
-```mermaid
-flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.400 m)"]
-  B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
-  C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
-  D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
-  E --> F["Headland Passes & Square 90-Degree Turns<br/>Square comb maneuvers with turn_clearance setbacks"]
-  F --> G["Goal Dispatch to move_base"]
-```
+![ブストロフェドンセル分解アルゴリズム](../../../development/ros/diagrams/boustrophedon-and-alignment-boustrophedon-cellular-decomposition-alg.drawio)
 
 ### クリティカルポイントの分類:
 $x$軸に沿った垂直スイープラインの進行中、境界頂点は自由空間の局所的な連結性に基づいて分類される:
@@ -85,16 +64,7 @@ $x$軸に沿った垂直スイープラインの進行中、境界頂点は自�
 
 ## 5層の障害物管理
 
-```mermaid
-flowchart TB
-  L0["Layer 0: Offline Area Decomposition<br/>Slices around known permanent walls"]
-  L1["Layer 1: Inter-Lane Transit Routing<br/>Global planner navfn routes around map obstacles"]
-  L2["Layer 2: Local Trajectory Avoidance<br/>TEB local planner steers around dynamic obstacles (3x3 m)"]
-  L3["Layer 3: Waypoint Failure Classification<br/>Classify goal aborts as static, dynamic, or planner lock"]
-  L4["Layer 4: Real-Time Cellular Replanning<br/>Re-cut remaining lanes when obstacle blocks > 15% of cell"]
-
-  L0 --> L1 --> L2 --> L3 --> L4
-```
+![5層の障害物管理](../../../development/ros/diagrams/boustrophedon-and-alignment-five-layer-obstacle-management.drawio)
 
 ---
 
@@ -104,14 +74,7 @@ flowchart TB
 
 MSD700は、動くことなく方位と位置を瞬時に計算する**粗密パーティクル探索**(`particle_align_validator.py`)を実装している。ダッシュボードは`/align/solve_pose`サービス経由でそれを起動する(Map SyncのAuto Alignボタン、`align_checker`経由):
 
-```mermaid
-flowchart LR
-  SCAN["Stationary 360-Degree LiDAR Scan"] --> GRID_SEARCH["Coarse-to-Fine Particle Search<br/>Over Search Space: (dx, dy, dyaw)"]
-  GRID_SEARCH --> SCORE["Score Evaluation: S(dx, dy, dyaw)"]
-  SCORE --> CONF{"Confidence >= 65%<br/>(solve_confidence_threshold)?"}
-  CONF -->|Yes| POSE["Publish /initialpose<br/>(< 50 ms Execution Time)"]
-  CONF -->|No| JOG["15 cm Linear Micro-Jog<br/>Resolves Symmetric Ambiguities"]
-```
+![ゼロスピン方位アライメント(パーティクルアライン検証)](../../../development/ros/diagrams/boustrophedon-and-alignment-zero-spin-orientation-alignment-particle.drawio)
 
 ### 数式による定式化:
 $N$個のレーザースキャン点$\mathbf{p}_i = [x_i, y_i]^T$と静的occupancy grid地図$M(x, y)$が与えられたとき、スキャンマッチャーは相関スコアを最大化する剛体変換$(\Delta x, \Delta y, \Delta \theta)$を求める:

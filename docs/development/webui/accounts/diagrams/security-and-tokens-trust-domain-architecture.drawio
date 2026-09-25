@@ -1,0 +1,109 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Trust domain architecture">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n2" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="177" width="370" height="428" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="430" y="177" width="598" height="222" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
+          <mxGeometry x="188" y="20" width="460" height="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="HTTPS / WSS (:443)&lt;br&gt;Apache TLS Termination" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="12" y="31" width="187" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="MQTT TLS (:8883)&lt;br&gt;HiveMQ CE Encrypted Ingress" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="229" y="31" width="219" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" value="JWT Secret Keyring&lt;br&gt;/run/secrets/jwt_keyring (container)&lt;br&gt;dev: jwt_keyring.dev.json mount&lt;br&gt;prod: JWT_SECRET_KEY env&lt;br&gt;fallback" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="12" y="30" width="246" height="106" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" value="Express verifyToken Middleware" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="121" y="166" width="228" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" value="attachUnit Authorization&lt;br&gt;Middleware" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="112" y="240" width="246" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" value="Central MySQL DB (:3307)&lt;br&gt;Bcrypt Passwords" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=14;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="157" y="329" width="157" height="87" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" value="Device Secret (bcrypt hash, server-&lt;br&gt;side)&lt;br&gt;32 random bytes at enrolment" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="247" y="46" width="246" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" value="Onboard Token Cache (12h TTL)&lt;br&gt;Certificates/robot/token.cred" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="354" y="151" width="232" height="59" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" value="Unit Local Keyring&lt;br&gt;Isolated from Cloud Secrets&lt;br&gt;Local Auth Only" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="12" y="46" width="204" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.4973;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6667;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n7" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="293" y="110" as="sourcePoint" />
+            <mxPoint x="293" y="343" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="293" y="129" />
+              <mxPoint x="293" y="169" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n10" target="n11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="235" y="210" as="sourcePoint" />
+            <mxPoint x="235" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4968;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n11" target="n12">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="235" y="299" as="sourcePoint" />
+            <mxPoint x="235" y="329" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;dashed=1;dashPattern=3 3;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3333;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n2" source="n9" target="n10">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="135" y="136" as="sourcePoint" />
+            <mxPoint x="197" y="166" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="135" y="151" />
+              <mxPoint x="197" y="151" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=0.5023;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.6638;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n8" target="n14">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="527" y="110" as="sourcePoint" />
+            <mxPoint x="938" y="328" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="527" y="129" />
+              <mxPoint x="527" y="149" />
+              <mxPoint x="938" y="149" />
+              <mxPoint x="938" y="169" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.3319;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n1" source="n13" target="n14">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="121" as="sourcePoint" />
+            <mxPoint x="431" y="151" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="370" y="136" />
+              <mxPoint x="431" y="136" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="n4" value="Physical Robot Trust Domain (Jetson)" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+          <mxGeometry x="0" y="0" width="217" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="Cloud Server Trust Domain" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+          <mxGeometry x="0" y="0" width="161" height="23" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="Public Internet Ingress" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+          <mxGeometry x="0" y="0" width="135" height="24" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

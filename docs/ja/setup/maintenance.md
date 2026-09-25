@@ -86,15 +86,7 @@ docker compose --profile server_dev up -d --no-deps --force-recreate nakayama_cl
 
 ApacheはLet's EncryptのPEMファイルを直接読みます。HiveMQは**別生成**のPKCS#12キーストアを読みます。PEM更新だけではHiveMQは更新されません。
 
-```mermaid
-flowchart TB
-  CB["certbot renew"] --> PEM["/etc/letsencrypt/live/DOMAIN/<br/>fullchain.pem + privkey.pem"]
-  PEM --> AP["Apache2<br/>PEMを直接読む"]
-  PEM -->|"openssl pkcs12 -export<br/>update_ssl.sh"| KS["/srv/msd/secrets/hivemq/keystore.p12"]
-  KS --> MQ["HiveMQ<br/>起動時に一度だけ読む"]
-  AP -.->|"systemctl reload apache2"| DONE1["新証明書が有効に"]
-  MQ -.->|"コンテナ再起動"| DONE2["新証明書が有効に"]
-```
+![証明書](./diagrams/maintenance-certificates.drawio)
 
 | 利用者 | 更新の反映方法 | 自動? |
 | --- | --- | --- |

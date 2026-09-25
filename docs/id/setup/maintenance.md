@@ -86,15 +86,7 @@ Ini juga me-restart relay dev, sempat memutus unit dev. Token tetap valid selama
 
 Apache membaca file PEM Let's Encrypt langsung. HiveMQ membaca keystore PKCS#12 yang **dibuat terpisah**. Memperpanjang PEM tidak pernah mengupdate HiveMQ dengan sendirinya.
 
-```mermaid
-flowchart TB
-  CB["certbot renew"] --> PEM["/etc/letsencrypt/live/DOMAIN/<br/>fullchain.pem + privkey.pem"]
-  PEM --> AP["Apache2<br/>membaca PEM langsung"]
-  PEM -->|"openssl pkcs12 -export<br/>update_ssl.sh"| KS["/srv/msd/secrets/hivemq/keystore.p12"]
-  KS --> MQ["HiveMQ<br/>membaca keystore SEKALI, saat startup"]
-  AP -.->|"systemctl reload apache2"| DONE1["sertifikat baru live"]
-  MQ -.->|"restart container"| DONE2["sertifikat baru live"]
-```
+![Sertifikat](./diagrams/maintenance-certificates.drawio)
 
 | Konsumen | Mendapat renewal dengan | Otomatis? |
 | --- | --- | --- |

@@ -22,30 +22,7 @@ MappingおよびNavigation画面のダッシュボードサイドバー(`src/com
 
 ## ハンドシェイク
 
-```mermaid
-sequenceDiagram
-  participant B as Browser
-  participant S as signalling_server
-  participant C as camera_client.py
-
-  B->>S: connect, then authenticate (JWT)
-  S-->>B: auth_success
-  B->>S: client_ready { target: #lt;this unit#gt; }
-  S->>C: client_ready
-  C->>C: start_stream(): build offer, setLocalDescription
-  C->>S: offer
-  S->>B: offer
-  B->>B: setRemoteDescription, createAnswer, setLocalDescription
-  Note over B: waits up to 5s for ICE gathering, then sends regardless
-  B->>S: answer
-  S->>C: answer
-  loop while negotiating
-    C->>S: candidate
-    S->>B: candidate
-    B->>S: candidate
-    S->>C: candidate
-  end
-```
+![ハンドシェイク](../../../../development/webui/camera/diagrams/overview-the-handshake.drawio)
 
 `VideoStreamComponent` は、ページ読み込み時に即座にではなく、このやり取りの相手側から `offer` が届い
 た時点で初めて、ブラウザの `RTCPeerConnection` を生成する。`signalling_server` 自体は `target` で振り

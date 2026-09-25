@@ -19,22 +19,7 @@ search: false
 
 ## オペレーター診断フローチャート
 
-```mermaid
-flowchart TD
-  START["Identify Operator Issue"] --> Q1{"Can you see the live<br/>2D Map Canvas?"}
-
-  Q1 -->|No| MAP_BLANK["1. Check Map Selector<br/>Open a map from the Database page.<br/>Refresh browser to reload the connection."]
-  Q1 -->|Yes| Q2{"Is the Live Camera Video<br/>streaming smoothly?"}
-
-  Q2 -->|No| CAM_STALL["2. Camera Stalled<br/>Click video refresh icon.<br/>Check robot Wi-Fi bandwidth."]
-  Q2 -->|Yes| Q3{"Does the robot accept<br/>Navigation Goals?"}
-
-  Q3 -->|No| GOAL_FAIL["3. Goal Rejected / Aborted<br/>Goal is inside a wall or too close to one.<br/>Check robot position with Auto-Align."]
-  Q3 -->|Yes| Q4{"Is the 'Robot Stuck'<br/>banner displayed?"}
-
-  Q4 -->|Yes| STUCK_CHK["4. Robot Stuck Warning<br/>Check camera for dynamic obstacle.<br/>Cancel goal and jog robot manually."]
-  Q4 -->|No| ALL_OK["Robot Operating Normally"]
-```
+![オペレーター診断フローチャート](../../user-guide/diagrams/troubleshooting-operator-diagnostic-flowchart.drawio)
 
 ---
 

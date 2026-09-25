@@ -89,16 +89,7 @@ this only works because of what happens next:
   real connectivity check typically lands in under a second) and calls `restart_ice()` if the
   connection still is not `connected`/`completed` by then.
 
-```mermaid
-flowchart LR
-  A["answer SDP arrives"] --> B{"any a=candidate:*.local ?"}
-  B -->|no| E["setRemoteDescription unchanged"]
-  B -->|yes| C["drop those lines,<br/>drop a=end-of-candidates too"]
-  C --> D["setRemoteDescription"]
-  D --> F["watch_prflx_handshake:<br/>wait up to 20s"]
-  F -->|connected in time| G["normal"]
-  F -->|still not connected| H["restart_ice()"]
-```
+![The fix](./diagrams/ros-integration-the-fix.drawio)
 
 ::: warning Stripping applies to both targets, not just unit-local
 An mDNS candidate is equally useless to the cloud target: it names an address unreachable across the
