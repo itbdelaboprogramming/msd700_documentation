@@ -25,6 +25,11 @@ search: false
 
 canvas自体はオペレーターがモードを切り替えても再マウントされないため、以下で説明するレンダリングパイプライン、座標変換ヘルパー、補助UIは各モードの下にある共有インフラであり、各モードがそれぞれ再実装するものではない。
 
+**メッセージ仕様:** Play、Pause、Stop は [rosbridge](/ja/development/message-contracts/rosbridge#move-base-action) 上の `move_base` ゴールに
+作用し、[オペレーション同期](/ja/development/message-contracts/operation-sync) で走行を反映する。Return to Home Base は保存済みホームベースへの
+`move_base` ゴール、Focus View はクライアントのみ。ボタンごとの一覧:
+[メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation)。
+
 ## Canvasレンダリングパイプライン
 
 `MapComponent`は、rosbridgeのWebSocketトピックから供給されるEaselJSレイヤーのスタックとして、1つのHTML5 Canvasステージ上にビューを構成する。
@@ -32,6 +37,10 @@ canvas自体はオペレーターがモードを切り替えても再マウン�
 ![Map Canvas Pipeline](../../../../development/webui/navigation/diagrams/msd700-draw-map-pipeline.drawio)
 
 レイヤー6、インタラクティブな頂点オーバーレイは、オペレーターがcanvasをクリックしたときにSingle Pinpoint、Multiple Pinpoint、Set Home Baseが描画する場所である。このオーバーレイがどう駆動されるかは[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)を参照。レイヤー2と4(keep-outポリゴンとboustrophedonの掃引レーン)は、兄弟ページが扱うモードに属する。
+
+**メッセージ仕様:** 各レイヤーは rosbridge の subscribe 1 つで、メッセージ型とともに
+[rosbridge § Subscribe](/ja/development/message-contracts/rosbridge#subscriptions) に一覧がある。マップ自体はマウント時に
+[`string/map_request`](/ja/development/message-contracts/bridge-topics#map-delivery) で要求する。
 
 ## 座標変換: メートル空間から画面ピクセルへ
 
@@ -82,6 +91,7 @@ canvasがこの形で決してクラッシュしないことを保証するた�
 
 ## 関連
 
+- [メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation): 本ページが送受信する全メッセージ。
 - [ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes): Single/Multiple
   Pinpoint、Save/Load Route、Round Trip/Loop Route、Set Home Base、Delete All Pinpoints。
 - [手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot): 共有される

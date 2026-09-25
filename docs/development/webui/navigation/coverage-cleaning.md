@@ -44,12 +44,23 @@ revives the [coverage-path overlay](#the-coverage-path-overlay) subscription if 
 torn it down. Because there is no bounded polygon to mark, the drawn-area overlay itself is cleared
 rather than populated: the sweep boundary is discovered by the robot, not drawn by the operator.
 
+**Contracts:** [`POST /api/boustrophedon/init`](/development/message-contracts/http-api#boustrophedon-init) `{ use_autocover: true }` →
+[`boustrophedon.init`](/development/message-contracts/mqtt-commands#boustrophedon), recorded with a
+[`batch`](/development/message-contracts/operation-sync#batch) of operation `coverage`.
+
 ## Custom Range Coverage
 
 Custom Range Coverage is the operator-drawn counterpart: the operator outlines a boundary on the
 map by hand (`src/components/navigationMap/customAreaDraw.ts`) instead of relying on
 auto-detection, then starts a sweep of exactly that polygon
 (`POST /api/boustrophedon/init` with `use_autocover: false` and the drawn `polygon`).
+
+**Contracts:** [`POST /api/boustrophedon/init`](/development/message-contracts/http-api#boustrophedon-init) with `polygon` →
+[`boustrophedon.init`](/development/message-contracts/mqtt-commands#boustrophedon), which the robot republishes as a
+`geometry_msgs/Polygon` on `/msd700/coverage_polygon`; recorded with a
+[`batch`](/development/message-contracts/operation-sync#batch) of operation `custom_coverage`. Pause and stop:
+[`/api/boustrophedon/pause`](/development/message-contracts/http-api#boustrophedon-pause),
+[`/api/boustrophedon/deactivate`](/development/message-contracts/http-api#boustrophedon-deactivate).
 
 Two drawing algorithms exist, selected at build time via
 `NEXT_PUBLIC_CUSTOM_AREA_DRAW_MODE` (`manual` is the default):
@@ -95,6 +106,9 @@ scoping described in
 [Database § ROS Integration](/development/webui/database/ros-integration). Areas saved here are
 what the Operation Playlist below draws from.
 
+**Contracts:** [`/api/areas`](/development/message-contracts/http-api#areas) (`POST`, `GET /:map_id`, `PUT /:id`, `DELETE /:id`),
+`area_type` `cover` or `no_cover`, `polygon_points` in metres. Backend only; the robot is not involved.
+
 ## Operation Playlist
 
 Operation Playlist (`src/components/area-playlist/AreaPlaylistModal.tsx`) builds and runs an
@@ -114,6 +128,12 @@ custom-coverage (`use_autocover: false`) path as Custom Range Coverage for its s
 pause/deactivate calls, since from the robot's point of view it is one bounded multi-polygon sweep,
 not a sequence of separate ones.
 
+**Contracts:** storing is [`/api/playlists`](/development/message-contracts/http-api#playlists) (items snapshot their polygons).
+Running is [`POST /api/boustrophedon/init`](/development/message-contracts/http-api#boustrophedon-init) with `areas` and
+`exclusions` → [`boustrophedon.init`](/development/message-contracts/mqtt-commands#boustrophedon), which the robot passes to the
+coverage node as JSON on `/msd700/coverage_plan`; recorded with a
+[`batch`](/development/message-contracts/operation-sync#batch) of operation `playlist`.
+
 ## Show/Hide Trace
 
 Show/Hide Trace toggles a visual overlay of the robot's traveled path during a coverage run: a red
@@ -126,6 +146,9 @@ fresh coverage run (Auto, Custom Range, or Playlist), but deliberately preserved
 pause/resume, so a paused-and-resumed run keeps showing its progress rather than restarting the
 line.
 
+**Contracts:** client only; the trace is drawn from the
+[`server/robot_pose`](/development/message-contracts/rosbridge#subscriptions) subscription the canvas already holds.
+
 ## The coverage-path overlay
 
 Separately from the trace, an orange overlay renders the boustrophedon planner's own intended sweep
@@ -136,8 +159,14 @@ This overlay's subscription is torn down on Cancel/Finish and revived at the sta
 show" sequence), and it is deliberately hidden rather than destroyed at the end of a run so the
 completed sweep line stays visible until a new one begins.
 
+**Contracts:** [`server/boustrophedon_path`](/development/message-contracts/rosbridge#subscriptions) (`nav_msgs/Path`, carried as a
+[compressed path](/development/message-contracts/bridge-topics#compressed-formats)); every revision drawn is ACKed on
+[`string/boustrophedon_path_ack`](/development/message-contracts/bridge-topics#acks). Skipped waypoints and unswept regions
+arrive on `server/skipped_waypoints` and `string/uncovered_regions`.
+
 ## Related
 
+- [Message Contracts § Coverage cleaning](/development/message-contracts/#trace-coverage): every message a coverage run sends.
 - [Overview](/development/webui/navigation/overview): the Navigation page and its full Mode List.
 - [Map Sync & Auto Align](/development/webui/navigation/map-sync-and-alignment): the other
   stationary-start, autonomous-run feature on this page.
@@ -149,7 +178,7 @@ completed sweep line stays visible until a new one begins.
   contract, including the boustrophedon command envelopes referenced above.
 - [Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment):
   the sweep algorithm itself: geometry model, cellular decomposition, obstacle management.
-- [Message Contracts](/development/message-contracts): the full MQTT command/feedback reference.
-- [API Reference](/development/api-reference): the full REST API reference.
-- [WebSocket and rosbridge Protocol](/development/rosbridge-protocol): the full rosbridge wire
+- [Message Contracts](/development/message-contracts/): the full MQTT command/feedback reference.
+- [HTTP API](/development/message-contracts/http-api): the full REST API reference.
+- [rosbridge (WebSocket)](/development/message-contracts/rosbridge): the full rosbridge wire
   protocol.

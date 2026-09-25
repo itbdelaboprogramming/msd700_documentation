@@ -35,4 +35,4 @@ MSD700 always has two machines: one Server plus one or more Units. Install in th
 4. [System Setup](/setup/system-setup): run the end-to-end checklist (10 items).
 5. [Commissioning Checklist](/setup/commissioning-checklist): accept one new unit, box by box.
 
-After that, see [Maintenance](/setup/maintenance) and [Troubleshooting](/setup/troubleshooting) for daily fleet care.
+After that, see [Maintenance](/setup/maintenance) and [Troubleshooting](/setup/troubleshooting) for day-to-day care of the units.

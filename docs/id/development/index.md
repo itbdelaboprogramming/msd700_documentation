@@ -24,7 +24,7 @@ Dashboard operator, konsol admin, dan layanan backend/bridge yang menghubungkann
   <LinkCard icon="🧭" title="Navigasi" details="Kendali manual, Autopilot, pinpoint/rute, sinkronisasi & penyelarasan peta, dan coverage cleaning." link="/id/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="Mapping" details="Membangun peta baru: Play/Pause/Stop, eksplorasi manual vs. otonom, dan save-on-stop." link="/id/development/webui/mapping/overview" />
   <LinkCard icon="🗄️" title="Database" details="Halaman Map DB: mendaftar, mencari, mengganti nama, dan menghapus peta yang direkam." link="/id/development/webui/database/overview" />
-  <LinkCard icon="🛠️" title="Konsol Admin" details="Tab Operators, Units & Fleet, Rentals, Backups, dan Admins khusus superadmin." link="/id/development/webui/admin-console/overview" />
+  <LinkCard icon="🛠️" title="Konsol Admin" details="Tab Operators, Units, Rentals, Backups, dan Admins khusus superadmin." link="/id/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="Akun & Akses" details="Login/pendaftaran operator, login admin, keyring JWT, dan pendaftaran perangkat keras." link="/id/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="Kamera & Live View" details="Pipeline video WebRTC di balik live feed dashboard." link="/id/development/webui/camera/overview" />
 </LinkCards>
@@ -36,7 +36,7 @@ Materi lintas domain yang berlaku untuk kedua domain, sehingga tidak diduplikasi
 <LinkCards>
   <LinkCard icon="🏗️" title="Arsitektur" details="Model dua mesin sebagai peer, topologi sistem, trust domain, dan kepemilikan state." link="/id/development/architecture" />
   <LinkCard icon="🗂️" title="Struktur Repositori" details="Tata letak basis kode di msd700_robot, ros-web-ui, dan msd700_noetic." link="/id/development/repository-structure" />
-  <LinkCard icon="📨" title="Kontrak Pesan" details="Format wire MQTT lengkap: amplop perintah, skema feedback, dan protokol ACK ARQ." link="/id/development/message-contracts" />
+  <LinkCard icon="📨" title="Kontrak Pesan" details="Semua payload HTTP, MQTT, ROS, dan WebSocket, dengan jejak dari tiap tombol dashboard ke pesan yang dikirimnya." link="/id/development/message-contracts/" />
   <LinkCard icon="🔧" title="Diagnostik & Troubleshooting" details="Pohon keputusan kegagalan seluruh stack dan pemetaan akar penyebab." link="/id/development/troubleshooting-guide" />
   <LinkCard icon="🤝" title="Panduan Kontribusi" details="Alur kerja pengembangan, konvensi commit, dan prosedur pull request." link="/id/development/contributing" />
   <LinkCard icon="📝" title="Changelog" details="Riwayat perubahan platform dan catatan rilis." link="/id/development/changelog" />
@@ -50,6 +50,5 @@ Untuk engineer yang baru bergabung dengan MSD700, urutan progresi fondasi yang d
 2. [Akun & Akses: Keamanan & Token](/id/development/webui/accounts/security-and-tokens): Pelajari tiga trust domain dan pendaftaran perangkat kriptografis.
 3. [Registri Paket ROS](/id/development/ros/ros-packages): Jelajahi node ROS dan binding paket.
 4. [Transformasi Koordinat (TF)](/id/development/ros/tf-transforms): Pahami pohon referensi spasial dan restamping domain jam.
-5. [Kontrak Pesan](/id/development/message-contracts): Kuasai format wire persis yang melintasi batas mesin.
+5. [Kontrak Pesan](/id/development/message-contracts/): Telusuri aksi dashboard mana pun sampai ke pesan HTTP, MQTT, dan ROS yang dikirimnya.
 6. [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot): Telusuri state machine aktivitas robot dan pemulihan sesi.
-7. [Referensi REST API](/id/development/api-reference): Integrasikan pengendali klien web dan eksternal.

@@ -8,14 +8,14 @@ search: false
 <RoleBadge role="developer" />
 
 ::: warning Pemberitahuan Arsitektur Tergantikan
-Orkestrasi siklus hidup 1-kontainer-per-unit yang dikelola oleh `unit_manager.js` **digantikan** oleh fleet relay yang dijelaskan di [Fleet Relay: Satu Kontainer untuk Setiap Unit](#fleet-relay-satu-kontainer-untuk-setiap-unit) di bawah, yang kini menjadi default. Jalur per-unit masih tersedia dan hanya berjarak satu environment variable; dokumen ini mencakup keduanya.
+Orkestrasi siklus hidup 1-kontainer-per-unit yang dikelola oleh `unit_manager.js` **digantikan** oleh unit relay yang dijelaskan di [Unit relay: Satu Kontainer untuk Setiap Unit](#unit-relay-satu-kontainer-untuk-setiap-unit) di bawah, yang kini menjadi default. Jalur per-unit masih tersedia dan hanya berjarak satu environment variable; dokumen ini mencakup keduanya.
 :::
 
-Dokumen ini merinci manajemen siklus hidup dinamis dari kontainer relay per-unit (`rosweb_unit_<ULID>`) pada server cloud, dikelola oleh `unit_manager.js` lewat Docker socket, serta fleet relay yang menggantikannya.
+Dokumen ini merinci manajemen siklus hidup dinamis dari kontainer relay per-unit (`rosweb_unit_<ULID>`) pada server cloud, dikelola oleh `unit_manager.js` lewat Docker socket, serta unit relay yang menggantikannya.
 
 ## Ikhtisar Arsitektur Kontainer (Legacy)
 
-Untuk menskalakan di seluruh fleet robot besar tanpa memboroskan CPU dan RAM server pada mesin yang idle, server hanya menyalakan sebuah kontainer relay ROS khusus ketika seorang operator membuka dashboard robot tersebut.
+Untuk menskalakan ke banyak unit tanpa memboroskan CPU dan RAM server pada mesin yang idle, server hanya menyalakan sebuah kontainer relay ROS khusus ketika seorang operator membuka dashboard robot tersebut.
 
 ![Ikhtisar Arsitektur Kontainer (Legacy)](../../development/diagrams/unit-container-lifecycle-container-architecture-overview-legacy.drawio)
 
@@ -39,25 +39,25 @@ Kontainer per-unit berjalan dengan kebijakan restart Docker `unless-stopped`. Ji
 | Environment Variable | Nilai Default | Deskripsi |
 | --- | --- | --- |
 | `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Saklar utama. Off juga menonaktifkan pelacakan holder, yang merusak handback lease saat logout. |
-| `UNIT_CONTAINERS_ENABLED` | `false` | Default adalah mode fleet. Set `true` untuk kembali ke satu kontainer per robot, lalu hentikan relay. |
+| `UNIT_CONTAINERS_ENABLED` | `false` | Default adalah mode multi-unit. Set `true` untuk kembali ke satu kontainer per robot, lalu hentikan relay. |
 | `FLEET_RELAY_CONTAINER` | diturunkan dari `UNIT_MODE` | Nama kontainer relay tunggal yang di-restart reconciler. |
 | `FLEET_ROSTER_POLL_MS` | `60000` | Seberapa sering roster dibaca ulang dari `units`. Sebuah backstop terhadap perubahan yang terlewat, bukan mekanisme utamanya. |
 | `MULTI_UNIT_LIST` | (tidak diset) | Override opsional. ULID dipisahkan koma atau spasi. Setel ini dan roster berhenti mengikuti pendaftaran. |
-| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Khusus fleet relay. MQTT client id untuk satu koneksi bersama. Harus unik per broker: `clean_session` bernilai true, sehingga id ganda memutus klien lainnya dan keduanya bergantian flap. |
-| `FLEET_MAX_INFLIGHT` | `200` | Khusus fleet relay. Membatasi pesan in-flight untuk seluruh fleet, di mana nilai per-unit sebesar `20` membatasi satu robot. Jika dibiarkan rendah, ledakan peta satu robot menahan update pose untuk setiap robot lainnya. |
-| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` | Image Docker target yang diinstansiasi untuk relay unit. |
+| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Khusus unit relay. MQTT client id untuk satu koneksi bersama. Harus unik per broker: `clean_session` bernilai true, sehingga id ganda memutus klien lainnya dan keduanya bergantian flap. |
+| `FLEET_MAX_INFLIGHT` | `200` | Khusus unit relay. Membatasi pesan in-flight untuk semua unit, di mana nilai per-unit sebesar `20` membatasi satu robot. Jika dibiarkan rendah, ledakan peta satu robot menahan update pose untuk setiap robot lainnya. |
+| `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` | Image Docker target yang diinstansiasi untuk unit relay. |
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 menit) | Ambang inaktivitas sebelum kontainer idle dihentikan. |
 | `UNIT_REAP_INTERVAL_MS` | `60000` (1 menit) | Periode eksekusi sapuan reaper latar belakang. |
 | `UNIT_REMOVE_ON_REAP` | `false` | Bila true, menghapus kontainer; bila false, mempertahankan state stopped. |
 | `UNIT_MODE` | `prod` (atau `dev`) | Menetapkan sufiks penamaan kontainer (`_nakayama` vs `_nakayama_dev`). |
 
-## Fleet Relay: Satu Kontainer untuk Setiap Unit
+## Unit relay: Satu Kontainer untuk Setiap Unit
 
-Desain per-unit membayar untuk setiap robot dengan sebuah kontainer utuh: build workspace-nya sendiri, sekitar 10 node relay Python-nya sendiri, dan koneksi TLS-nya sendiri ke broker. Tidak ada apa pun tentang ROS yang mengharuskan itu. Setiap topik sudah sepenuhnya berkualifikasi dengan `/unit_<ULID>/...`, dan setiap entri bridge MQTT adalah passthrough `std_msgs/String` `primitive: true`, sehingga satu proses dapat melayani seluruh fleet dengan menahan satu pasangan subscriber/publisher per unit.
+Desain per-unit membayar untuk setiap robot dengan sebuah kontainer utuh: build workspace-nya sendiri, sekitar 10 node relay Python-nya sendiri, dan koneksi TLS-nya sendiri ke broker. Tidak ada apa pun tentang ROS yang mengharuskan itu. Setiap topik sudah sepenuhnya berkualifikasi dengan `/unit_<ULID>/...`, dan setiap entri bridge MQTT adalah passthrough `std_msgs/String` `primitive: true`, sehingga satu proses dapat melayani semua unit dengan menahan satu pasangan subscriber/publisher per unit.
 
-Fleet relay menggabungkan **kedua paruh** dari data plane menjadi satu kontainer, `ros_web_ui_v2_unit_relays` (`_dev` suffix pada stack dev):
+Unit relay menggabungkan **kedua paruh** dari data plane menjadi satu kontainer, `ros_web_ui_v2_unit_relays` (`_dev` suffix pada stack dev):
 
-| Paruh | Jalur per-unit | Jalur fleet |
+| Paruh | Jalur per-unit | Jalur unit relay |
 | --- | --- | --- |
 | Relay ROS | `topic2string/launch/cloud.launch`, satu set node per unit | `topic2string/launch/cloud_multi.launch`, satu set node untuk semua unit |
 | Bridge MQTT | `aws_mqtt/launch/nakayama_cloud.launch`, satu nodelet per unit | `aws_mqtt/launch/nakayama_cloud_multi.launch`, satu nodelet, satu koneksi |
@@ -66,7 +66,7 @@ Fleet relay menggabungkan **kedua paruh** dari data plane menjadi satu kontainer
 
 ### Dari mana peta topik berasal
 
-roslaunch XML tidak bisa melakukan loop, yang merupakan satu-satunya alasan peta bridge dulunya per-unit. `aws_mqtt/scripts/gen_bridge_params.py` melakukan loop tersebut: ia memperluas peta di atas sebuah roster ULID dan menulis file YAML yang dimuat oleh fleet launch dalam satu `<rosparam command="load">`. Ini harus berjalan **sebelum** roslaunch, karena file tersebut dibaca saat XML diparse.
+roslaunch XML tidak bisa melakukan loop, yang merupakan satu-satunya alasan peta bridge dulunya per-unit. `aws_mqtt/scripts/gen_bridge_params.py` melakukan loop tersebut: ia memperluas peta di atas sebuah roster ULID dan menulis file YAML yang dimuat oleh peluncuran unit dalam satu `<rosparam command="load">`. Ini harus berjalan **sebelum** roslaunch, karena file tersebut dibaca saat XML diparse.
 
 Konfigurasi yang dihasilkan memberi makan nodelet `mqtt_client/MqttClient` bawaan yang sama dengan nama topik yang sama dan flag `primitive` yang sama, sehingga sisi robot tidak bisa membedakan jalur mana yang sedang berjalan. `scripts/test/test_gen_bridge_params.py` menegaskan bahwa sebuah roster berisi satu unit mereproduksi peta inline di `nakayama_cloud.launch` entri demi entri, yang merupakan apa yang mencegah keduanya melenceng selama kedua jalur masih ada.
 
@@ -100,15 +100,15 @@ Yang dihematnya adalah di sisi server: jumlah proses (N x 10 node relay menjadi 
 
 ### Mengapa tidak dilebur ke kontainer backend
 
-Sebuah redeploy backend kemudian akan menjatuhkan seluruh data plane fleet bersamanya. Menjaga relay di kontainernya sendiri berarti sebuah code deploy bukanlah sebuah outage fleet-wide. Ini adalah penalaran yang sama yang menjaga `hivemq` di luar image aplikasi.
+Sebuah redeploy backend kemudian akan menjatuhkan data plane semua unit bersamanya. Menjaga relay di kontainernya sendiri berarti sebuah code deploy tidak mematikan semua unit sekaligus. Ini adalah penalaran yang sama yang menjaga `hivemq` di luar image aplikasi.
 
 ### Blast radius berubah bentuk
 
-Setiap tipe relay masih merupakan prosesnya sendiri, sehingga sebuah crash hanya menghilangkan satu fungsi alih-alih segalanya. Tetapi kini crash itu menghilangkan fungsi tersebut **untuk setiap robot** alih-alih untuk satu robot. Sebelumnya: robot A mati, robot B tidak tersentuh. Sesudahnya: semua robot kehilangan overlay lidar sementara posisi, peta, dan navigasi tetap berfungsi. Koneksi MQTT tunggal adalah satu titik yang benar-benar fleet-wide: jika itu terputus, setiap robot kehilangan bridge-nya hingga reconnect (`reconnect_delay`, 5 detik).
+Setiap tipe relay masih merupakan prosesnya sendiri, sehingga sebuah crash hanya menghilangkan satu fungsi alih-alih segalanya. Tetapi kini crash itu menghilangkan fungsi tersebut **untuk setiap robot** alih-alih untuk satu robot. Sebelumnya: robot A mati, robot B tidak tersentuh. Sesudahnya: semua robot kehilangan overlay lidar sementara posisi, peta, dan navigasi tetap berfungsi. Koneksi MQTT tunggal adalah satu titik yang benar-benar lintas unit: jika itu terputus, setiap robot kehilangan bridge-nya hingga reconnect (`reconnect_delay`, 5 detik).
 
 ### Menjalankannya
 
-Tidak ada apa pun yang perlu dikonfigurasi. Relay adalah bagian dari profil normal dan mode fleet adalah default, sehingga sebuah bring-up biasa memberi Anda arsitektur yang telah digabung:
+Tidak ada apa pun yang perlu dikonfigurasi. Relay adalah bagian dari profil normal dan mode multi-unit adalah default, sehingga sebuah bring-up biasa memberi Anda arsitektur yang telah digabung:
 
 ```bash
 docker compose --profile server_prod up -d   # or --profile server_dev
@@ -133,7 +133,7 @@ Dua bridge yang subscribe ke topik MQTT yang sama mengirimkan setiap pesan dua k
 Dua guard membuat kesalahan itu nyaring alih-alih senyap:
 
 - Perintah start relay menolak untuk launch jika ada `/unit_<ULID>/cloud_mqtt_client` yang sudah terdaftar pada master.
-- `unit_manager.init()` mencatat sebuah error yang menyebutkan setiap kontainer per-unit yang ditemukannya masih berjalan sementara dalam mode fleet.
+- `unit_manager.init()` mencatat sebuah error yang menyebutkan setiap kontainer per-unit yang ditemukannya masih berjalan sementara dalam mode multi-unit.
 
 ### `UNIT_CONTAINERS_ENABLED` bukanlah `UNIT_MANAGER_ENABLED`
 

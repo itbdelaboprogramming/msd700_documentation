@@ -36,6 +36,10 @@ Map Sync mode is that surface. Selecting it (`Map Sync` in the Mode List, which 
 `Finish Map Sync` while active) toggles the underlying map canvas into an interactive
 pose-correction state; leaving it restores the normal Navigation canvas.
 
+**Contracts:** a pose the operator sets by hand is a `geometry_msgs/PoseWithCovarianceStamped` on
+[`<root>/initialpose`](/development/message-contracts/rosbridge#publications), carried as
+[`string/initialpose`](/development/message-contracts/bridge-topics#json-initialpose) to the robot's `/initialpose`.
+
 ## Auto Align
 
 Auto Align is a button shown only while Map Sync mode is active. It replaces "the operator manually
@@ -50,7 +54,7 @@ micro-jog fallback. This page only covers the button's own contract with the bac
 ### `/api/autoalign/start`
 
 `POST /api/autoalign/start` (documented in full in
-[API Reference § Auto Align System](/development/api-reference#auto-align-system)) initiates the
+[HTTP API § Auto Align](/development/message-contracts/http-api#autoalign)) initiates the
 scan-match. The frontend (`autoAlignApi.ts`, `postAutoAlign('start', { unit_id })`) disables the
 button immediately and polls status rather than waiting on this call to report convergence, since
 convergence is asynchronous on the robot side.
@@ -73,13 +77,11 @@ as "active"/"auto_aligning" until explicitly cleared, which would otherwise be m
 a stuck robot. It is also called if the operator leaves Map Sync mode mid-run, to tell the robot to
 stand down.
 
-::: info Not documented in source
-`api-reference.md` only documents `/api/autoalign/start`; the `status` and `reset` endpoints are
-confirmed from the frontend transport layer (`autoAlignApi.ts`) and its call sites, not from the
-REST reference. Their exact response shapes beyond the fields the frontend reads (a convergence
-boolean under `details`/`error_details`, and a `success`/`msg` envelope) are not covered by the
-current source material and are not guessed at here.
-:::
+**Contracts:** all three endpoints take `{ unit_id }` and map one-to-one onto the MQTT commands
+[`autoalign.start`, `status`, `reset`](/development/message-contracts/mqtt-commands#autoalign) (robot services `/alignment/start`,
+`/check_alignment`, `/alignment/reset`). The answer is the standard
+[command response](/development/message-contracts/http-api#envelopes): the robot's feedback envelope under `details` on success,
+under `error_details` on a refusal.
 
 ## Consent: Auto Align is a rotation-guard trust source
 
@@ -105,6 +107,7 @@ and is not repeated here.
 
 ## Related
 
+- [Message Contracts § Navigation page](/development/message-contracts/#trace-navigation): Auto Align and pose messages in context.
 - [Overview](/development/webui/navigation/overview): the Navigation page and its full Mode List.
 - [Coverage Cleaning](/development/webui/navigation/coverage-cleaning): the other stationary-start,
   autonomous-run feature on this page.
@@ -116,7 +119,7 @@ and is not repeated here.
   contract, including the Auto Align REST calls in context with the rest of the feature.
 - [Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment):
   the CSM algorithm and the in-place rotation guard.
-- [Message Contracts](/development/message-contracts): the full MQTT command/feedback reference.
-- [API Reference](/development/api-reference): the full REST API reference.
-- [WebSocket and rosbridge Protocol](/development/rosbridge-protocol): the full rosbridge wire
+- [Message Contracts](/development/message-contracts/): the full MQTT command/feedback reference.
+- [HTTP API](/development/message-contracts/http-api): the full REST API reference.
+- [rosbridge (WebSocket)](/development/message-contracts/rosbridge): the full rosbridge wire
   protocol.

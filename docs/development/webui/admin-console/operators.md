@@ -57,12 +57,13 @@ is setting the password on someone else's account, not their own.
 
 ## Related
 
+- [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`, `PATCH /admin/api/users/:id/status`, `PATCH /admin/api/users/:id/password`.
 - [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
-- [Units & Fleet](/development/webui/admin-console/units-and-fleet): the Fleet and Pending sub-views over the robot roster.
+- [Units](/development/webui/admin-console/units): Registered Units and Pending sub-views over the robot roster.
 - [Rentals](/development/webui/admin-console/rentals): where an operator account actually gets access to a robot.
 - [Backups](/development/webui/admin-console/backups): archiving and restoring whole rental profiles.
-- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the container fleet.
+- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the unit relay container.
 - [Architecture](/development/architecture): high-level system structure and two-machine model.
 - [Database Schema](/development/database-schema): the full schema reference, including the `users.status` caveat.
-- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the fleet relay.
+- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the unit relay.
 - [Backup, Restore, and Data Migration](/development/backup-and-restore): the standalone reference for the archive format and REST operations.

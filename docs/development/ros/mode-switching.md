@@ -58,4 +58,4 @@ timeouts:
 
 - [ROS Package Registry](/development/ros/ros-packages): Package structures and launch file definitions.
 - [State and Behavior](/development/state-and-behavior): Detailed finite state machines and watchdog tiers.
-- [Message Contracts](/development/message-contracts): MQTT and operation sync message payloads.
+- [Message Contracts](/development/message-contracts/): MQTT and operation sync message payloads.

@@ -3,165 +3,144 @@ outline: deep
 search: false
 ---
 
-# ナビゲーション: ROS連携
+# ナビゲーション: ROS 連携
 
 <RoleBadge role="developer" />
 
-ナビゲーションページ全体の裏にあるワイヤー契約。Mode
-Listの各機能(Map Sync、Coverage
-Area、ピンポイント運転、手動/オートパイロット)が実際に使用する、あらゆるMQTTコマンドエンベロープ、RESTエンドポイント、rosbridgeサブスクリプションである。本ページは、3つのより大きな共有リファレンス文書
-[メッセージ契約](/ja/development/message-contracts)、[APIリファレンス](/ja/development/api-reference)、
-[WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol)からナビゲーションに関連する部分だけを抜き出し、関心事ごとに整理したものである。ナビゲーション固有でない事項については、これら3つの文書が引き続き網羅的かつ正典のリファレンスであり、本ページはその内容を丸ごと複製するのではなくリンクで参照する。
+ナビゲーションページが送受信するものを、トランスポート別にまとめたページである。各ペイロードは
+[メッセージ仕様](/ja/development/message-contracts/) で一度だけ規定されている。本ページは、ナビゲーションページが
+どの仕様をなぜ使うかを述べ、該当箇所へリンクする。ボタンごとの一覧は
+[メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation) を参照。
 
-これらのワイヤー呼び出しが実装する機能レベルの挙動については、
+これらの呼び出しが実装する機能レベルの振る舞いについては、
 [概要](/ja/development/webui/navigation/overview)、
-[マップ同期 & Auto Align](/ja/development/webui/navigation/map-sync-and-alignment)、
+[マップ同期 & 位置合わせ](/ja/development/webui/navigation/map-sync-and-alignment)、
 [カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning)、
 [ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)、
-[手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)を参照。
+[手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot) を参照。
 
-::: info スコープ
-本ページは、ナビゲーションとBoustrophedonのMQTTサブシステム、ハートビート/リースの契約、operation
-supervisor同期、ナビゲーションcanvasがレンダーするテレメトリトピック、ナビゲーションとAuto
-AlignのRESTエンドポイント、ライブcanvasに供給するrosbridgeサブスクリプションを扱う。Mapping(SLAM)、ハードウェア/エンロールメント、WebRTCシグナリングは扱わない。これらは他の機能領域に属し、上記でリンクした共有リファレンス文書で完全に扱われている。
+## ロボットへの 2 つの経路 {#two-paths}
+
+本ページは [メッセージ仕様 § 2 つの制御経路](/ja/development/message-contracts/#two-control-paths) で説明した
+両方の経路を使う:
+
+- **コマンドチャネル (HTTP → MQTT `system_command`)**: モードを変えるもの、可否の応答が必要なものすべて。
+  マップを開く、カバレッジの開始・一時停止・停止、Auto Align、Manual Override、Autopilot、非常停止。
+- **ストリーミングチャネル (rosbridge → MQTT `string/*`)**: ピンポイントとルートのゴール、WASD のテレオペ、
+  operation supervisor への反映、ACK、キャンバスに描くすべてのオーバーレイ。
+
+## MQTT コマンド: Navigation サブシステム {#mqtt-commands-navigation-subsystem}
+
+| コマンド | 送信元 | ロボット上での処理 | 仕様 |
+| --- | --- | --- | --- |
+| `navigation.init` | データベースページからマップを開く、または本ページの自動再開 | `/map/retire`、`/switch_mode(navigation)`、続いて保存済みホームベースを `/initialpose` へ | [`navigation`](/ja/development/message-contracts/mqtt-commands#navigation) |
+| `navigation.deactivate` | ナビゲーションを離れる(idle、マップ切り替え) | `/switch_mode(idle)`、`/map/reset` | 同上 |
+| `navigation.pointstamped` | 現在のダッシュボードでは使われない | `/clicked_point` に publish | 同上 |
+
+HTTP ボディの `map_id` と MQTT ペイロードの `map_name` は同じマップ ULID である。名前が変わるのは HTTP の境界だけだ。
+
+::: warning ピンポイントは `pointstamped` ではない
+単一・複数のピンポイント、ルート、ホームベースへの走行は rosbridge 経由の `move_base` ゴールである
+([下記](#move-base-goals)参照)。`POST /api/navigation/pointstamped` は残っているが、ダッシュボードは呼ばない。
 :::
 
-## MQTTコマンド: ナビゲーションサブシステム
+## MQTT コマンド: Boustrophedon サブシステム {#mqtt-commands-boustrophedon-subsystem}
 
-エンベロープの完全な形状、リトライ/タイムアウトのパラメータ、`hardware`/`mapping`サブシステムについては
-[メッセージ契約 § コマンドリファレンスカタログ](/ja/development/message-contracts#コマンドリファレンスカタログ)にある。ナビゲーションに関連するコマンド(`header:
-"navigation"`)は以下のとおりである。
-
-| コマンド | ペイロード | 目的 |
-| --- | --- | --- |
-| `init` | `config.resource`: `map_name`(マップULID)、`default_save_path`、`homebase_x/y/z`、`homebase_ox/oy/oz/ow`。トップレベルの`ensure_unpaused: true`。 | 指定したマップでナビゲーションスタックを起動する。`ensure_unpaused`は残存する`/emergency_pause`ロックをクリアし、ナビゲーションが一時停止状態で立ち上がらないようにする。 |
-| `pointstamped` | `config.resource`: `X`、`Y`、`Z`。 | `move_base`へ単一のウェイポイントゴールを送信する。 |
-| `deactivate` | なし | アクティブなナビゲーションスタックを終了する。 |
-
-コマンドペイロード内の`map_name`と、下記のRESTボディ内の`map_id`は同じマップULIDを指す。このフィールドはHTTP境界でリネームされるが、ロボットへのワイヤー上ではリネームされない。
-
-## MQTTコマンド: Boustrophedonサブシステム
-
-`header: "boustrophedon"`コマンドは[カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning)を駆動する。
-
-| コマンド | ペイロード | 目的 |
-| --- | --- | --- |
-| `init` | `config`: `use_autocover`(bool)、`polygon`(単一のカスタム範囲境界)、`areas`(順序付きポリゴン配列: Auto
-  Coverageのマップ全体ケース、Custom
-  Rangeの単一ポリゴン、またはPlaylistのcover項目)、`exclusions`(keep-outポリゴン、Playlistの`no_cover`項目)、`ensure_unpaused:
-  true`。 | 掃引を開始する。`polygon`/`areas`/`exclusions`のどれが埋まるかは、どのCoverage Cleaningのエントリポイントから送信されたかに依存する(Auto
-  Coverageはどれも送らず、Custom
-  Rangeは`polygon`を送り、Playlistは`areas`と`exclusions`の両方を送る)。 |
-| `pause` | `{ "pause": true }`または`{ "pause": false }` | 計画を破棄せずに進行中の掃引を一時停止または再開する。 |
-| `deactivate` | なし | カバレッジ計画を完全に停止する。 |
-
-これらのポリゴンを実際の掃引経路に変換するアルゴリズム(セル分解、レーン間隔、障害物処理)は
-[Boustrophedonカバレッジ & Zero-Spinアラインメントアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment)で文書化されており、ここでは対象外である。
-
-## ハートビート/リース
-
-ナビゲーションページの読み込みとモード切り替えは、すべて同じハートビート契約に乗る。これは
-[メッセージ契約 § ハートビートPingとリース契約](/ja/development/message-contracts#ハートビート-ping-とリース契約)で完全に文書化されている。本ページに最も関連するフィールドは以下のとおり。
-
-- **リクエスト**: `page: "navigation"`と`claim: true`は、読み取り専用のフリート一覧(`claim:
-  false`)とは異なり、稼働中のナビゲーションセッションがpingごとに送信するものである。
-- **レスポンス**: `robot_activity`(例: `navigating`、`stuck`)と`active_page`はルーティングとstuck検出を駆動する。`manual_override`と`autopilot`は
-  [手動操作 &
-  オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)で扱う2つのモードを反映する。`in_use`と`origin_conflict`は、このタブが上記のコマンドを発行することすらできるかどうかを制御する。
-
-同じpingのREST側の形は`POST /api/hardware/ping`であり、
-[APIリファレンス § ロボットハートビートPing](/ja/development/api-reference#_2-ロボットハートビート-ping)で文書化されている。`data`ブロックはMQTT契約とフィールド単位で一致する。
-
-## Operation Supervisor同期
-
-`operation_supervisor.py`は、ブラウザが`/string/operation_sync`で送信するものをすべてミラーリングする。これにより、マルチピンポイントであれカバレッジであれ、ナビゲーションミッションはブラウザタブが閉じても実行を続ける。完全なプロトコルとシーケンス図は
-[メッセージ契約 §
-Operation
-Supervisor同期](/ja/development/message-contracts#operation-supervisor-同期)にある。ナビゲーション固有の点として、
-
-- Auto Coverage、Custom Range Coverage、またはPlaylist
-  runの開始はそれぞれ、その操作を記録する`batch`同期を送信する(`operation: "coverage" |
-  "custom_coverage" | "playlist"`と関連する`coverage`ペイロード)。カバレッジ実行は送信された時点ですでにロボット側で走っているため、これは記録専用のミラーであり、supervisorがそれをさらに駆動することはない。
-- `takeover`と`release`は、
-  [手動操作 &
-  オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)のAutopilotトグルが、ウェイポイントのシーケンシングをsupervisorへ引き渡し、また引き戻すために送信するものである。
-- `progress`は、ブラウザが自身の制御下でマルチピンポイントルートを進める際に送信される
-  (([ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes))を参照)。
-
-## ストリーミングテレメトリ
-
-ナビゲーションcanvasは、ユニット上で`topic2string`によりシリアライズされ、MQTT経由で運ばれ、cloudサーバー上で`rosbridge`向けに型付きROSメッセージへ再構成されるトピックのみから構築されている。ホップ単位の完全な詳細は
-[メッセージ契約 §
-ストリーミングテレメトリトピック](/ja/development/message-contracts#ストリーミングテレメトリトピック)にある。ナビゲーションcanvasに具体的に供給されるトピックは以下のとおり。
-
-| ロボットトピック | Cloudサーバートピック | レート | canvasでの役割 |
+| コマンド | 送信元 | ペイロード | 仕様 |
 | --- | --- | --- | --- |
-| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | ロボットアイコンの位置/向き、および[Show/Hide
-  Trace](/ja/development/webui/navigation/coverage-cleaning#show-hide-trace)の元となるポーズストリーム。 |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | 変化時 + ハートビート | レンダーされる平面図ビットマップ。キャンバスは次の送信を待たずにマウント時点で要求し、描画されるまで「Loading map from robot...」を表示します。[メッセージ契約 § マップの配送](/ja/development/message-contracts#map-delivery)を参照。 |
-| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | ロボット周囲の赤いレーザースキャン点。 |
-| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | プラン発生時 | ピンポイント/ルートナビゲーション用の青いグローバルプラン線。 |
-| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | 継続的 | ローカル軌道線。 |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | プラン発生時 | オレンジ色の[カバレッジパスオーバーレイ](/ja/development/webui/navigation/coverage-cleaning#カバレッジパスオーバーレイ)。 |
-| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | ラッチ | 再接続/リロード時にナビゲーションstateを復旧するために使われるミッションの完全なスナップショット。 |
+| `boustrophedon.init` | Auto Coverage | `use_autocover: true` | [`boustrophedon`](/ja/development/message-contracts/mqtt-commands#boustrophedon) |
+| `boustrophedon.init` | Custom Range Coverage | `use_autocover: false`、`polygon` | 同上 |
+| `boustrophedon.init` | Operation Playlist | `use_autocover: false`、`areas`(cover エントリ、順序どおり)、`exclusions`(keep-out エントリ) | 同上 |
+| `boustrophedon.pause` | 一時停止 / 再開 | `pause: true` または `false` | 同上 |
+| `boustrophedon.deactivate` | Cancel / Finish | 走行と一致する `use_autocover` | 同上 |
 
-## RESTエンドポイント
+これらのポリゴンを清掃パスに変えるアルゴリズムは
+[ブストロフェドン網羅走行 & ゼロスピン位置合わせアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment) にある。
 
-[APIリファレンス §
-ナビゲーションとミッション送信](/ja/development/api-reference#ナビゲーションとミッション送出)より。
+## REST エンドポイント {#rest-endpoints}
 
-### ナビゲーションモードの初期化: `POST /api/navigation/init`
+| エンドポイント | 用途 | 仕様 |
+| --- | --- | --- |
+| `POST /api/navigation/init` | マップを開く。別ユニットが記録したマップは `404` で拒否 | [HTTP API](/ja/development/message-contracts/http-api#navigation-init) |
+| `POST /api/navigation/deactivate` | ナビゲーションを離れる | [HTTP API](/ja/development/message-contracts/http-api#navigation-deactivate) |
+| `POST /api/boustrophedon/init`、`/pause`、`/deactivate` | カバレッジ (`coverageApi.ts`) | [HTTP API](/ja/development/message-contracts/http-api#coverage) |
+| `POST /api/autoalign/start`、`/status`、`/reset` | マップ同期の Auto Align (`autoAlignApi.ts`) | [HTTP API](/ja/development/message-contracts/http-api#autoalign) |
+| `POST /api/manual`、`POST /api/autopilot` | `ManualAutopilotPanel` の 2 つのトグル | [HTTP API](/ja/development/message-contracts/http-api#manual) |
+| `POST /api/emergency_stop` | 非常停止ボタン | [HTTP API](/ja/development/message-contracts/http-api#emergency-stop) |
+| `POST /api/routes`、`GET /api/routes/:map_id`、`PUT`/`DELETE /api/routes/:id` | ルートの保存・読込・名前変更・削除(`route_name`、`map_id`、`route_points`) | [HTTP API](/ja/development/message-contracts/http-api#routes) |
+| `/api/areas`、`/api/playlists` | カバレッジのエリアとプレイリスト | [HTTP API](/ja/development/message-contracts/http-api#areas) |
+| `PUT /api/maps_data/homebase/:mapId` | Set Home Base | [HTTP API](/ja/development/message-contracts/http-api#map-homebase) |
 
-`map_id`でナビゲーションスタックを起動する。そのマップは、呼び出し元が参加しているレンタル内の要求元ユニットに属していなければならない。呼び出し元からは見えるが同じレンタル上の**別の**ロボットによって記録されたマップは、転送されるのではなく`404`で拒否される。かつては転送していたため、ロボットが一度も記録したことのないマップファイルを見つけられずに静かに失敗する一方で、リクエスト自体は通過していた(この修正の元になったインシデントについては
-[APIリファレンス §
-ナビゲーションモードの初期化](/ja/development/api-reference#_1-ナビゲーションモードの初期化)を参照)。
+## `move_base` ゴール {#move-base-goals}
 
-### ウェイポイントゴールの送信: `POST /api/navigation/pointstamped`
+ピンポイント、ルート、Return to Home Base、新しいホームベースへの走行は、すべて `public/script/Nav2D.js` で
+作る `<root>/server/move_base` の roslibjs `ActionClient` を通る。クラウドのリレーは各ゴールとキャンセルを
+`string/move_base/goal` と `/cancel` の JSON に変え、ロボットの `action_client.py` が `/move_base/goal` と
+`/move_base/cancel` に戻す。
 
-`{ unit_id, X, Y, Z }`という単一の目的地を送信する。これは上記の`navigation`/`pointstamped`
-MQTTコマンドのRESTラッパーである。単一/複数ピンポイント運転がこれをどう使うかについては
-[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)を参照。
+- 配送: そのゴールの status か result が届くまで、同じゴールを毎秒再送する。
+- 完了: `/status` か `/result` から来た最初の終端コードで Arrived、Failed、Cancelled が決まる。
+- すべての result は `string/move_base/result_ack` で ACK され、それまでロボットは result を再送する。
 
-### Boustrophedonエリアカバレッジの開始: `POST /api/boustrophedon/init`
+完全な仕様: [rosbridge § move_base アクションクライアント](/ja/development/message-contracts/rosbridge#move-base-action)、
+[ブリッジトピック § ゴール](/ja/development/message-contracts/bridge-topics#json-goal)。
 
-上記の`boustrophedon`/`init` MQTTコマンド(`unit_id`、`areas`、`exclusions`)のRESTラッパーである。これと兄弟の`deactivate`/`pause`呼び出しのフロントエンドトランスポートは`src/components/navigationMap/coverageApi.ts`にある。どのUI操作がどのフィールドを埋めるかについては
-[カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning)を参照。
+## ハートビートとリース {#heartbeat-lease}
 
-### カスタムウェイポイントルートの保存: `POST /api/routes`
+本ページは毎秒 `page: "navigation"`、`claim: true` で `POST /api/hardware/ping` を送る。ユニット一覧の読み取り専用
+`claim: false` とは異なり、離れるときには `release: true` を送る。応答がページを動かす:
 
-名前付きウェイポイント列(`profile_id`、`map_id`、`route_name`、`route_type`、`waypoints`)を永続化する。詳細は
-[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)で扱う。同じAPIリファレンスのセクションにあるためここに挙げているにすぎない。
+- `robot_activity` と `active_page` はオペレーターの誘導とスタック検出に使う。
+- `manual_override` と `autopilot` は [手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)
+  の 2 つのトグルに反映する。
+- `in_use` と `origin_conflict` は、このタブがそもそもコマンドを出せるかを決める。
+- `motion_locked` は `/emergency_pause` がロボットを止めていることを示す。
+- `intended_mode` と `needs_recovery`(バックエンドが付加)が自動再開を起動する。
 
-### Auto Alignシステム: `POST /api/autoalign/start`
+完全な仕様: [ハートビート & リース](/ja/development/message-contracts/heartbeat-and-lease)。
 
-[APIリファレンス § Auto
-Alignシステム](/ja/development/api-reference#auto-align-システム)より、パーティクルフィルター/スキャンマッチの収束チェックを開始する。`api-reference.md`は`start`のみを文書化している。フロントエンドも呼び出す(`src/components/navigationMap/autoAlignApi.ts`)`status`と`reset`の対については、現時点でRESTリファレンス自体には書かれていないため、
-[マップ同期 & Auto
-Align](/ja/development/webui/navigation/map-sync-and-alignment#api-autoalign-status)でソースから文書化されている。
+## Operation supervisor 同期 {#operation-sync}
 
-## rosbridgeサブスクリプション
+本ページが始める走行はすべて `string/operation_sync` で `operation_supervisor.py` に反映される:
 
-ナビゲーションcanvasは、
-[WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol)で完全に文書化されているWebSocketプロトコルを通じて`rosbridge_suite`と通信する。環境ごとの接続エンドポイント、`subscribe`/`publish`/`call_service`操作の形状、フロントエンドのレジリエンス/自己修復(EaselJSの`createjs.Stage`プロトタイプパッチと3回失敗での再接続デバウンス)はすべてナビゲーションにも変更なく適用され、ここでは繰り返さない。
+| ページの操作 | 同期メッセージ |
+| --- | --- |
+| Play、単一または複数ピンポイント | `batch`(`single_pinpoint` / `multi_pinpoint`、`route_mode`、`waypoints`)、ウェイポイントごとの `progress`、最後に `complete` |
+| Pause、Stop | `pause`、`stop` |
+| Autopilot オン / オフ | `batch` + `takeover`(スナップショットで確認)、`release` |
+| Set Home Base の走行 | `homebase` の `batch`(記録のみ) |
+| Auto Coverage、Custom Range、Playlist | `coverage`、`custom_coverage`、`playlist` の `batch`(記録のみ: カバレッジは既にロボット上で動く) |
+| ページ読込、再接続 | `resync`、応答は `operation_snapshot` |
 
-ナビゲーションが実際にレンダーする
-[主要Web Canvasサブスクリプション](/ja/development/rosbridge-protocol#主要な-web-キャンバスのサブスクリプション)のサブセットは、上記の[ストリーミングテレメトリ](#ストリーミングテレメトリ)に挙げたのと同じトピック群であるが、MQTT側の`/unit_<ULID>/server/...`形式ではなく、rosbridge側の名前(例:
-`/server/robot_pose`、`/server/boustrophedon_path`)でアドレス指定される。rosbridgeはユニットごとのrelayに対してサブスクライブするため、ULIDセグメントはそのレイヤーの各トピック名に繰り返されるのではなく、ブラウザがどのrelayに接続しているかに暗黙的に含まれる。
+完全な仕様: [オペレーション同期](/ja/development/message-contracts/operation-sync)。
+
+## ストリーミングテレメトリ {#streaming-telemetry}
+
+キャンバスが描くものはすべて rosbridge 経由で届く。トピック名にはユニットの接頭辞(`<root>` = `/unit_<ULID>`)が
+含まれる。1 本の rosbridge 接続がすべてのユニットを扱うので、ロボットを選ぶのはこの接頭辞である。
+
+| rosbridge トピック | 型 | キャンバスでの役割 |
+| --- | --- | --- |
+| `<root>/server/robot_pose` | `geometry_msgs/Pose` | ロボットのアイコン、および [Show/Hide Trace](/ja/development/webui/navigation/coverage-cleaning) の元になる姿勢ストリーム |
+| `<root>/server/slam/map` | `nav_msgs/OccupancyGrid` | マップ。次の送信を待たずマウント時に `string/map_request` で要求し、描画されるまで "Loading map from robot..." を表示。[ブリッジトピック § マップ配信](/ja/development/message-contracts/bridge-topics#map-delivery) 参照。 |
+| `<root>/server/scan`、`<root>/server/scan_holes` | `sensor_msgs/LaserScan` | LiDAR の点、ライブの穴 |
+| `<root>/server/hazard_cells` | `nav_msgs/Path` | 走行中の穴の軌跡 |
+| `<root>/server/move_base/NavfnROS/plan`、`.../TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | グローバル・ローカル計画の線 |
+| `<root>/server/boustrophedon_path` | `nav_msgs/Path` | カバレッジパスのオーバーレイ。リビジョンごとに ACK |
+| `<root>/server/skipped_waypoints`、`<root>/string/uncovered_regions` | `nav_msgs/Path`、`std_msgs/String` | カバレッジの取り残し |
+| `<root>/string/operation_snapshot`、`<root>/string/operation_progress` | `std_msgs/String` | 走行の復元と supervisor の進捗 |
+
+頻度はユニットの egress プロファイル(idle、watching、driving)による。
+[ブリッジトピック § presence と egress プロファイル](/ja/development/message-contracts/bridge-topics#egress-profiles) を参照。
+subscribe の詳細: [rosbridge § Subscribe](/ja/development/message-contracts/rosbridge#subscriptions)。
 
 ## 関連
 
-- [概要](/ja/development/webui/navigation/overview): ナビゲーションページとその完全なMode
-  List。
-- [マップ同期 & Auto Align](/ja/development/webui/navigation/map-sync-and-alignment):
-  ポーズ補正とAuto Align REST呼び出しをその機能文脈で。
-- [カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning):
-  boustrophedon機能をその機能文脈で。
-- [ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes):
-  単一/複数ピンポイント運転と保存済みルート。
-- [手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot):
-  テレオペとオートパイロットシーケンサー、およびOperation Supervisorのtakeover/release呼び出し。
-- [Boustrophedonカバレッジ & Zero-Spinアラインメントアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment):
-  掃引アルゴリズムとその場回転ガード。
-- [メッセージ契約](/ja/development/message-contracts): 完全なMQTTコマンド/フィードバックリファレンス。
-- [APIリファレンス](/ja/development/api-reference): 完全なREST APIリファレンス。
-- [WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol): 完全なrosbridgeワイヤープロトコル。
+- [メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation): ボタンごとの全メッセージ。
+- [概要](/ja/development/webui/navigation/overview): ナビゲーションページと Mode List 全体。
+- [マップ同期 & 位置合わせ](/ja/development/webui/navigation/map-sync-and-alignment): 姿勢補正と Auto Align。
+- [カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning): ブストロフェドン機能。
+- [ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes): ピンポイント走行と保存ルート。
+- [手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot): テレオペ、オートパイロット、復旧。
+- [ブストロフェドン網羅走行 & ゼロスピン位置合わせアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment):
+  清掃アルゴリズムとその場回転ガード。

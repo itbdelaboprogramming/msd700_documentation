@@ -19,7 +19,7 @@
 1. **サーバースタック稼働?** `ros-web-ui`から`docker compose --profile server_prod ps`(開発は`server_dev`+`_dev`名)。長期サービスは`Up`/`healthy`のはず。`fix_perms_*`は通常exit `0`のワンショットです。
 2. **ユニットコンテナ稼働?** ユニット上で`./scripts/docker-manager.sh status`。
 3. **ユニット登録済み?** 管理コンソールの**Registered Units**でULIDを探し、オンライン表示を確認。
-4. **フリートリレー稼働?** サーバー上で`docker ps --filter name=unit_relays`。
+4. **ユニットリレー稼働?** サーバー上で`docker ps --filter name=unit_relays`。
 5. **ネットワーク経路は開通?** [システム構築](/ja/setup/system-setup#_1-ネットワーク経路の確認)のポート。
 6. **ログ**: サーバーで`docker compose logs -f <service>`、ユニットで`docker exec -it msd700 tmux attach -t robot_services`(ウィンドウ: `roscore`、`ros_webui`、`camera_client`、`switch_mode`、`log_janitor`、`token_refresh`)。
 
@@ -42,11 +42,11 @@
 | シミュレータービルド失敗`resource not found: gazebo_ros` | `--simulator`なしでビルドしたイメージ | `docker-manager.sh build --simulator`後`up --simulator` |
 | 地図保存の権限エラー、開発PCのみ | `docker/.env`の`USER_UID`/`USER_GID`がJetsonデフォルトのまま | 自分の`id -u` / `id -g`に設定(空の時のみ自動検出) |
 | 既存コンテナが正常起動しない | 前回実行の残り状態 | そのComposeファイルから`down --remove-orphans`後`up` |
-| 地図空白、ユニットオンライン、コマンド可 | フリートリレー欠落/未登録か下流の地図/rosbridge問題 | `unit_relays[_dev]`コンテナとログを確認。欠落リレーはComposeが作成します。マネージャーは既存の再起動のみです。開発の修正に本番を起動しないでください。レガシーは対応する`rosweb_unit_*`サフィックス |
+| 地図空白、ユニットオンライン、コマンド可 | ユニットリレー欠落/未登録か下流の地図/rosbridge問題 | `unit_relays[_dev]`コンテナとログを確認。欠落リレーはComposeが作成します。マネージャーは既存の再起動のみです。開発の修正に本番を起動しないでください。レガシーは対応する`rosweb_unit_*`サフィックス |
 | ブラウザコンソールでrosbridgeハンドシェイク失敗 | Apacheが`Host`ヘッダー書換なしでrosbridgeをプロキシ | [サーバー構築](/ja/setup/server-setup)の`<Location /services/rosbridge>`ブロックを追加 |
 | WebSocket経路全滅、HTTPは正常 | `mod_proxy_wstunnel`が無効 | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
 | カメラはLAN内のみ、外部なし | TURNが到達不能アドレスを広告かポート未転送 | `TURN_EXTERNAL_IP`+ルーター転送を確認([メンテナンス](/ja/setup/maintenance#turnリレー)) |
-| フリート全体が同時オフライン、TLSエラー | HiveMQが期限切れ証明書を提示(`certbot renew`だけでは更新されません) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`後メンテナンス時間帯にブローカー再起動 |
+| 全ユニットが同時オフライン、TLSエラー | HiveMQが期限切れ証明書を提示(`certbot renew`だけでは更新されません) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`後メンテナンス時間帯にブローカー再起動 |
 | `coturn`がループしバインドしない | apt/systemd版`coturn`がポート3478を保持 | `sudo systemctl disable --now coturn`後コンテナ起動 |
 | バックエンドログ`ECONNREFUSED 127.0.0.1:1883` | 旧起動や上書きがMQTTをループバックに向けた。現サーバーデフォルトは`nakayama` | そのサービスのconfigを修正し限定再作成。(ユニットの`backend_local`は意図的ループバック:`mosquitto_local`を確認) |
 | バックエンドログ`EACCES /var/run/docker.sock` | `DOCKER_GID`がホストのdockerグループと不一致 | `getent group docker \| cut -d: -f3`で確認し`.env`修正、バックエンド再作成 |

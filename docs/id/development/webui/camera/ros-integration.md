@@ -121,7 +121,7 @@ Dua port, keduanya wajib dari env (proses exit bila salah satunya unset): `PORT_
 Loop koneksi `camera_client.py` tidak pernah menyerah secara permanen. Versi sebelumnya berhenti
 setelah jatah percobaan tertentu dan membiarkan kamera mati sampai seseorang me-restart `run_msd.sh`
 secara manual. Delay retry menggunakan exponential backoff dengan jitter: basis 2 detik, digandakan
-setiap percobaan yang gagal, dibatasi hingga maksimum 60 detik, dan diacak agar sebuah armada unit
+setiap percobaan yang gagal, dibatasi hingga maksimum 60 detik, dan diacak agar banyak unit
 yang berbagi satu signalling server cloud tidak melakukan retry secara serentak setelah sebuah
 gangguan bersama.
 

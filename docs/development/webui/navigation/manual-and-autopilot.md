@@ -25,6 +25,14 @@ page, but the two toggles carry different practical weight here:
 - **Autopilot** keeps a dispatched run alive without the browser tab needing to stay open, because
   the unit-side `operation_supervisor` takes over dispatching the run itself.
 
+**Contracts:** the Manual Override toggle is [`POST /api/manual`](/development/message-contracts/http-api#manual) →
+[`manual.enable` / `disable`](/development/message-contracts/mqtt-commands#manual). WASD driving is a `geometry_msgs/Twist` on
+[`server/key_vel`](/development/message-contracts/rosbridge#publications) at 10 Hz, which reaches the robot as
+[`string/key_vel`](/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel`. The Autopilot toggle is
+[`POST /api/autopilot`](/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/development/message-contracts/mqtt-commands#autopilot),
+paired with [`batch` + `takeover`](/development/message-contracts/operation-sync#takeover) on enable and
+[`release`](/development/message-contracts/operation-sync#release) on disable.
+
 The same panel appears in the Mapping page's sidebar as well, where the two toggles govern the
 active SLAM session rather than a navigation run; that page's own write-up covers what Manual
 Override and Autopilot mean there.
@@ -64,6 +72,11 @@ during manual leaves the activity at `paused`, so neither one resumed the sweep.
 | Pause pressed, at any time | `~pause` | `paused` |
 | Manual Override off after that Pause | untouched | `paused` |
 | Cancel Coverage | `~cancel` | `idle` |
+
+**Contracts:** the Pause button is [`POST /api/boustrophedon/pause`](/development/message-contracts/http-api#boustrophedon-pause) →
+[`boustrophedon.pause`](/development/message-contracts/mqtt-commands#boustrophedon); Cancel Coverage is
+[`POST /api/boustrophedon/deactivate`](/development/message-contracts/http-api#boustrophedon-deactivate). The lifecycle strings
+come back on [`string/coverage_status`](/development/message-contracts/bridge-topics#robot-to-cloud).
 
 ::: warning Never report a run you could not restart
 When the resume is refused the activity becomes `coverage_failed`, not `boustrophedon_ready`. The
@@ -134,6 +147,12 @@ from a new workstation, not just the high-level behavior.
    reports `idle` across 4 consecutive ~1 Hz ping samples (`PHANTOM_IDLE_SAMPLES = 4`), the frontend automatically resets to
    `idle` to prevent phantom execution displays.
 
+**Contracts:** routing reads `active_page` and `robot_activity` from the
+[ping response](/development/message-contracts/heartbeat-and-lease#ping-response) and `intended_mode`/`needs_recovery` from the
+[HTTP ping answer](/development/message-contracts/http-api#hardware-ping). The rebuild reads
+[`operation_snapshot`](/development/message-contracts/operation-sync#snapshot), prompted by a
+[`resync`](/development/message-contracts/operation-sync#resync).
+
 ### Logout ends the session, unless autopilot is on
 
 The two logout contracts are deliberately opposite, and both hinge on the robot's `autopilot` flag
@@ -144,6 +163,9 @@ as reported by the pre-flight peek ping.
 - **Autopilot OFF**: logout ends the run. `shutdownFlow.ts` sends `POST /api/hardware/idle` before
   `/user/logout` (`endRobotOperation`, skipped for autonomous runs and for the emergency stop). This
   is a deliberate sign-out, so the next login starts from zero.
+
+**Contracts:** [`POST /api/hardware/idle`](/development/message-contracts/http-api#hardware-commands) →
+[`hardware.idle`](/development/message-contracts/mqtt-commands#hardware), then [`POST /user/logout`](/development/message-contracts/http-api#user-logout).
 
 Ending the run means clearing **every** piece of state the recovery path reads, and three sinks
 used to disagree:
@@ -216,6 +238,7 @@ cyan drawer polygon so the operator still has an area to retry with.
 
 ## Related
 
+- [Message Contracts § Navigation page](/development/message-contracts/#trace-navigation): every message behind these toggles.
 - [Overview](/development/webui/navigation/overview): the Mode List/Action Bar pattern and canvas
   pipeline this panel and recovery logic sit alongside.
 - [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes): the point-and-go modes

@@ -14,7 +14,7 @@ Routine care for a deployed MSD700 system. Each task says which machine it runs 
 | --- | --- | --- | --- |
 | Rotate the JWT keyring | Every few months, or right after a suspected leak | Server | [Rotating secrets](#rotating-secrets) |
 | Renew the TLS certificate | Before expiry | Server | [Certificates](#certificates). Plain `certbot renew` does **not** update HiveMQ |
-| Check the fleet relay runs | Now and then | Server | `docker ps --filter name=unit_relays`. In fleet mode (default) one stopped relay drops the whole fleet |
+| Check the unit relay runs | Now and then | Server | `docker ps --filter name=unit_relays`. In multi-unit mode (default) one stopped relay drops all units |
 | Prune expired keys | After a rotation's grace window | Server | `./scripts/secrets.sh prune --dev` |
 | Check Docker disk use | Monthly | Both | `docker system df`, then prune images/build cache |
 | Check the TURN relay | After any network/router change | Server | [The TURN relay](#the-turn-relay) |
@@ -80,7 +80,7 @@ Key files are read once at process start. After rotating, recreate the three dev
 docker compose --profile server_dev up -d --no-deps --force-recreate nakayama_cloud_dev nakayama_media_dev nakayama_signalling_dev
 ```
 
-This restarts the dev fleet relay too, briefly interrupting dev units. Tokens stay valid through the grace window, but sockets still drop during recreation.
+This restarts the dev unit relay too, briefly interrupting dev units. Tokens stay valid through the grace window, but sockets still drop during recreation.
 
 ## Certificates
 
@@ -150,7 +150,7 @@ docker compose --profile server_dev  build && docker compose --profile server_de
 docker compose --profile server_prod build && docker compose --profile server_prod up -d
 ```
 
-Recreating the backend restarts the existing `unit_relays` container (fleet mode default). No manual relay step needed, but every unit's data plane blips briefly and recovers alone. A missing relay is never created by the backend; only Compose creates it.
+Recreating the backend restarts the existing `unit_relays` container (multi-unit mode default). No manual relay step needed, but every unit's data plane blips briefly and recovers alone. A missing relay is never created by the backend; only Compose creates it.
 
 Legacy mode (`UNIT_CONTAINERS_ENABLED=true`): running `rosweb_unit_*` containers are adopted on startup, but their ROS nodes are not re-registered against a new master. List one environment only before touching anything (prod names end `_nakayama`, dev `_nakayama_dev`):
 

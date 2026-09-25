@@ -60,7 +60,7 @@ blocks any operation state pointing at it.
 
 ## REST endpoints
 
-From [API Reference § Map and Route Data Management](/development/api-reference#map-and-route-data-management):
+From [HTTP API § Maps](/development/message-contracts/http-api#maps):
 
 ### List Maps
 
@@ -80,18 +80,16 @@ the same thing with different `id` values; dropping the "duplicate" drops a real
 by `id`, and always scope by `unit_id`.
 :::
 
-### Rename and delete: not yet documented here
+### Rename and delete
 
-The API Reference's Map and Route Data Management section does not currently document a rename or
-delete endpoint for `maps_data`. The Database page's rename and delete behavior (described in
-[Rename and Delete](/development/webui/database/rename-and-delete)) is confirmed against the
-frontend (`updateMapName` in `services.ts`, and a `ConfirmDelete`-gated delete call), but the
-exact HTTP method and path are not covered by the current source material and are not guessed at
-here.
+Rename is [`PUT /api/maps_data/rename/:mapId`](/development/message-contracts/http-api#map-rename) (`updateMapName` in
+`services.ts`) and delete is [`DELETE /api/maps_data`](/development/message-contracts/http-api#map-delete) with `{ map_id }`
+(the `ConfirmDelete`-gated call). Behaviour on the page:
+[Rename and Delete](/development/webui/database/rename-and-delete).
 
 ### Out of scope: Save Custom Waypoint Route
 
-The same API Reference section also documents `POST /api/routes` for saving a waypoint route.
+[HTTP API § Routes](/development/message-contracts/http-api#routes) also documents `POST /api/routes` for saving a waypoint route.
 That endpoint belongs to the Navigation feature, not Database: routes are not listed or managed
 from this page (see [Overview § Scope](/development/webui/database/overview#scope)), so it is
 not repeated here.

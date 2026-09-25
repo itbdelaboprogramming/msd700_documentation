@@ -106,5 +106,5 @@ $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta
 ## 関連ドキュメント
 
 - [シミュレーション (Gazebo)](/ja/development/ros/simulation): 倉庫テスト環境とスケールモデル。
-- [Message Contracts](/ja/development/message-contracts): 網羅走行コマンドのエンベロープとACKプロトコル。
+- [メッセージ仕様](/ja/development/message-contracts/): 網羅走行コマンドのエンベロープとACKプロトコル。
 - [State and Behavior](/ja/development/state-and-behavior): ナビゲーションと網羅走行の有限状態機械。

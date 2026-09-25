@@ -11,8 +11,8 @@ The Backups tab (`BackupsPanel.tsx`) is the admin console's front end onto the a
 documented in full in [Backup, Restore, and Data
 Migration](/development/backup-and-restore): archives of **whole rental profiles**. The Units tab
 has its own, narrower entry point into the unit-scoped half of the same architecture (see
-[Units & Fleet § Backup this unit's rental-scoped
-data](/development/webui/admin-console/units-and-fleet#backup-this-unit-s-rental-scoped-data)) but
+[Units § Backup this unit's rental-scoped
+data](/development/webui/admin-console/units#backup-this-unit-s-rental-scoped-data)) but
 this tab is where an admin manages archives as first-class objects: create, delete, download,
 upload, and restore.
 
@@ -93,12 +93,13 @@ those run against the database directly and are out of scope for `BackupsPanel.t
 
 ## Related
 
+- [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`, `POST /admin/api/profiles/:id/backups`, `GET /admin/api/backups/:id/download`, `POST /admin/api/backups/upload`, `POST /admin/api/backups/:id/plan`, `POST /admin/api/backups/:id/restore`, `DELETE /admin/api/backups/:id`.
 - [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
-- [Units & Fleet](/development/webui/admin-console/units-and-fleet): the unit-scoped backup entry point reached from the Fleet view.
+- [Units](/development/webui/admin-console/units): the unit-scoped backup entry point reached from the Registered Units view.
 - [Rentals](/development/webui/admin-console/rentals): the one-click backup shortcut into this tab, and the profile this archive belongs to.
-- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the container fleet.
+- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the unit relay container.
 - [Architecture](/development/architecture): high-level system structure and two-machine model.
 - [Database Schema](/development/database-schema): the full schema reference, including `profile_backups`.
-- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the fleet relay.
+- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the unit relay.
 - [Backup, Restore, and Data Migration](/development/backup-and-restore): the full reference this tab is built on.

@@ -106,5 +106,5 @@ Arbitrasi gerakan kini berada di `twist_mux` semata: navigasi pada `/mux/nav_vel
 ## Dokumentasi Terkait
 
 - [Simulasi](/id/development/ros/simulation): Lingkungan pengujian warehouse dan model skala.
-- [Kontrak Pesan](/id/development/message-contracts): Envelope perintah cakupan dan protokol ACK.
+- [Kontrak Pesan](/id/development/message-contracts/): Envelope perintah cakupan dan protokol ACK.
 - [State dan Perilaku](/id/development/state-and-behavior): Finite state machine navigasi dan cakupan.

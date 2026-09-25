@@ -141,7 +141,7 @@ Encrypted transport bridge linking local ROS topics to the central HiveMQ broker
 Top-level launch files that start a whole side of the system.
 
 - `bringup_msd.launch`: the unit. Always-on base (`twist_mux`, `bridger`, robot description, hardware monitor), `topic2string` (C++ by default), MQTT bridge, `system_command`, `switch_mode`, idle detector.
-- `bringup_cloud.launch`: the cloud server. Per-unit or fleet relays (`use_unit_relays`, `use_multi_unit_bridge`), backend, rosbridge.
+- `bringup_cloud.launch`: the cloud server. Per-unit or unit relays (`use_unit_relays`, `use_multi_unit_bridge`), backend, rosbridge.
 - `bringup_local_server.launch`: the unit's local server half (backend, rosbridge, `topic2string/local.launch`) in a separate container sharing the roscore.
 - `debug_local.launch`: cloud + unit on one machine for debugging.
 
@@ -156,7 +156,7 @@ Message and service types for mode switching: `SwitchModeMsg.msg`, `SwitchMode.s
 C++ node publishing the robot pose in `map` from TF as `/robot_pose`, which `topic2string` serializes for the dashboard.
 
 ### 8. `dependencies/ROS-dashboard-backend` (package `ros_dashboard_backend`)
-The Node.js REST API (`scripts/backend_node`, `admin_api.js`, `enroll_api.js`, `sync_*.js`), launched by `launch/ros_dashboard_backend.launch`. See [API Reference](/development/api-reference).
+The Node.js REST API (`scripts/backend_node`, `admin_api.js`, `enroll_api.js`, `sync_*.js`), launched by `launch/ros_dashboard_backend.launch`. See [HTTP API](/development/message-contracts/http-api).
 
 ## Related Documentation
 

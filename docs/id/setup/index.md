@@ -35,4 +35,4 @@ MSD700 selalu terdiri dari dua mesin: satu Server plus satu atau lebih Unit. Ins
 4. [Setup Sistem](/id/setup/system-setup): jalankan checklist end-to-end (10 item).
 5. [Checklist Commissioning](/id/setup/commissioning-checklist): terima satu unit baru, box per box.
 
-Setelah itu, lihat [Maintenance](/id/setup/maintenance) dan [Troubleshooting](/id/setup/troubleshooting) untuk perawatan armada.
+Setelah itu, lihat [Maintenance](/id/setup/maintenance) dan [Troubleshooting](/id/setup/troubleshooting) untuk perawatan unit sehari-hari.

@@ -19,7 +19,7 @@ hero:
 
 features:
   - title: Panduan Pengguna
-    details: "Untuk operator armada: pelajari cara mengendalikan robot, merekam peta SLAM, menjalankan penyapuan area, dan memantau video langsung."
+    details: "Untuk operator unit: pelajari cara mengendalikan robot, merekam peta SLAM, menjalankan penyapuan area, dan memantau video langsung."
     link: /id/user-guide/
     linkText: Baca panduan operator
   - title: Instalasi & Penerapan

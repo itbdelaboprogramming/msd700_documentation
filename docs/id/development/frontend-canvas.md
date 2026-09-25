@@ -86,6 +86,6 @@ Ketika seorang operator mendefinisikan poligon sweep coverage area atau zona kee
 
 ## Dokumentasi Terkait
 
-- [Protokol rosbridge](/id/development/rosbridge-protocol): Operasi JSON WebSocket dan topik streaming.
+- [rosbridge (WebSocket)](/id/development/message-contracts/rosbridge): Operasi JSON WebSocket dan topik streaming.
 - [Coverage Boustrophedon](/id/development/ros/boustrophedon-and-alignment): Kalkulasi sweep dual-geometri.
-- [Referensi API](/id/development/api-reference): Endpoint REST peta dan rute.
+- [HTTP API](/id/development/message-contracts/http-api): Endpoint REST peta dan rute.

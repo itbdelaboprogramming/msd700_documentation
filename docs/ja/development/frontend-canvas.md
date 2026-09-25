@@ -86,6 +86,6 @@ const ensureStagePrototype = (): boolean => {
 
 ## 関連ドキュメント
 
-- [rosbridge プロトコル](/ja/development/rosbridge-protocol): WebSocket の JSON 操作とストリーミングトピック。
+- [rosbridge (WebSocket)](/ja/development/message-contracts/rosbridge): WebSocket の JSON 操作とストリーミングトピック。
 - [ボウストロフェドン・カバレッジ](/ja/development/ros/boustrophedon-and-alignment): デュアルジオメトリのスイープ計算。
-- [API リファレンス](/ja/development/api-reference): マップおよびルートの REST エンドポイント。
+- [HTTP API](/ja/development/message-contracts/http-api): マップおよびルートの REST エンドポイント。

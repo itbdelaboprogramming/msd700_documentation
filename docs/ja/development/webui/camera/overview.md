@@ -32,6 +32,9 @@ MappingおよびNavigation画面のダッシュボードサイドバー(`src/com
 れる。これが、クラウド側とユニットローカル側両方のトークン発行者がそれを明示的に含めている理由である
 ([アーキテクチャ § 信頼ドメイン](/ja/development/architecture#マルチティア・トラストドメインとセキュリティ)を参照)。
 
+**メッセージ仕様:** メッセージの種類(`authenticate`、`offer`、`answer`、`candidate`、`client_ready`、`ping`)は
+[WebRTC シグナリング](/ja/development/message-contracts/webrtc-signalling#messages) で規定している。
+
 ## ブラウザ側でのスタール検知
 
 ブラウザ標準の `oniceconnectionstatechange`(状態が `failed` になるとブラウザ自身の `restartIce()` を
@@ -54,6 +57,7 @@ MappingおよびNavigation画面のダッシュボードサイドバー(`src/com
 
 ## 関連項目
 
+- [メッセージ仕様: WebRTC シグナリング](/ja/development/message-contracts/webrtc-signalling): シグナリングのメッセージ仕様。
 - [ROS連携](/ja/development/webui/camera/ros-integration): `camera_client.py`、ICE/STUN/TURN設定、
   mDNS候補のバグ、再接続ロジック
 - [アーキテクチャ](/ja/development/architecture): `signalling_server` と `coturn` がより広いシステムの

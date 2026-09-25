@@ -13,7 +13,7 @@
         <mxCell id="n4" value="Apache2 Reverse Proxy&lt;br&gt;TLS + routing" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="138" y="30" width="185" height="59" as="geometry" />
         </mxCell>
-        <mxCell id="n5" value="HiveMQ (:8883)&lt;br&gt;Broker armada" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n5" value="HiveMQ (:8883)&lt;br&gt;Broker bersama" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="839" y="164" width="141" height="60" as="geometry" />
         </mxCell>
         <mxCell id="n6" value="coturn (:3478)&lt;br&gt;Relay WebRTC" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
@@ -34,7 +34,7 @@
         <mxCell id="n11" value="signalling_server (:3001)&lt;br&gt;Signalling WebRTC" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="216" y="164" width="187" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="n12" value="unit_relays&lt;br&gt;Relay armada bersama" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n12" value="unit_relays&lt;br&gt;Unit relay bersama" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="819" y="265" width="181" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n13" value="MySQL (:3307)&lt;br&gt;Database: ROS_DB" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;shape=cylinder3;boundedLbl=1;backgroundOutline=1;size=12;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">

@@ -3,14 +3,14 @@ outline: deep
 search: false
 ---
 
-# Konsol Admin: Unit & Armada
+# Konsol Admin: Unit
 
 <RoleBadge role="developer" />
 
 Tab Unit (`UnitsPanel.tsx`) adalah tempat admin mengelola `units`: tabel satu-baris-per-robot-fisik
 yang dijelaskan di
 [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses). Ia
-punya dua sub-tampilan, **Armada** dan **Tertunda**, ditambah badge jumlah robot tertunda yang
+punya dua sub-tampilan, **Unit Terdaftar** dan **Tertunda**, ditambah badge jumlah robot tertunda yang
 hidup. Halaman ini mencakup apa yang dilakukan setiap tampilan dan, di mana pun materi sumber
 mendukungnya, persis mekanisme backend mana di
 [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle) atau
@@ -21,13 +21,13 @@ kontainer di balik aksi-aksi ini secara lebih mendalam, lihat
 [Integrasi ROS](/id/development/webui/admin-console/ros-integration).
 
 ::: info Mendaftarkan sebuah unit tidak memberikan akses mengemudi
-Sebuah baris di `units` hanya berarti robot tersebut ada di armada. Apakah siapa pun dapat
+Sebuah baris di `units` hanya berarti robot tersebut terdaftar sebagai unit. Apakah siapa pun dapat
 mengemudikannya diputuskan sepenuhnya di tab [Penyewaan](/id/development/webui/admin-console/rentals),
 oleh profil penyewaan mana (jika ada) yang ditugaskan ke unit tersebut: lihat `profile_units` di
 [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses).
 :::
 
-## Tampilan Armada
+## Tampilan Unit Terdaftar
 
 ### Mendaftarkan unit secara manual
 
@@ -38,20 +38,24 @@ sekali-pakai untuk mengklaim unit tertentu sebelum robotnya ada." Unit yang dida
 manual persis jenis unit itu: identitas placeholder yang akan diklaim robot nanti, alih-alih yang
 sudah mengumumkan dirinya di tampilan Tertunda di bawah.
 
+**Kontrak:** `POST /admin/api/units`; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ### Ganti nama unit
 
 Menyunting `unit_name` saja. Sesuai
 [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses),
 `unit_name` "adalah label tampilan yang dapat diganti nama, bukan identitas": `id` (ULID) baris
 tersebut adalah alamat sungguhan robot (`/unit_<id>/...`) pada setiap topik ROS dan subscription
-MQTT. Mengganti nama unit tidak mengubah apa pun tentang routing, roster relay armada, atau topik
+MQTT. Mengganti nama unit tidak mengubah apa pun tentang routing, roster unit relay, atau topik
 apa pun yang dipublikasikan robot.
+
+**Kontrak:** `PATCH /admin/api/units/:id` (`unit_name`); lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
 
 ### Hapus unit
 
 Menghapus baris `units`, dijaga oleh konfirmasi yang secara eksplisit sadar bahwa perubahan
 tersebut mungkin belum sampai ke sistem yang sedang berjalan. Kebasian data itu nyata, bukan salinan
-UI defensif: relay armada menyimpan rosternya di memori dan hanya membaca ulang tabel `units` saat
+UI defensif: unit relay menyimpan rosternya di memori dan hanya membaca ulang tabel `units` saat
 polling, `FLEET_ROSTER_POLL_MS` (default 60 dtk): lihat
 [Siklus Hidup Kontainer Unit § Roster berasal dari basis
 data](/id/development/unit-container-lifecycle#roster-berasal-dari-database). Penghapusan
@@ -71,6 +75,8 @@ perangkatnya (`unit_devices`), serta ke peta tercatatnya: lihat
 [Basis Data](/id/development/webui/database/ros-integration) untuk apa yang terjadi pada peta milik
 sebuah unit secara khusus, yang di luar cakupan di sini.
 
+**Kontrak:** `DELETE /admin/api/units/:id`; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ### Cadangkan data bercakupan-penyewaan unit ini
 
 Membuat arsip **bercakupan-unit** (`scope: 'unit'`), sumbu kedua dari arsitektur backup dua-cakupan
@@ -82,6 +88,8 @@ di [Cadangan dan Pemulihan](/id/development/backup-and-restore#arsitektur-backup
 tersebut. Kegunaan khas cakupan ini, menurut sumber yang sama, adalah "Mengarsipkan sebuah robot
 sebelum servis atau pembaruan perangkat keras pabrikan."
 
+**Kontrak:** `POST /admin/api/units/:id/backups` dengan `{ profile_id }` atau `{ all_profiles: true }`; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ### Tukar data antara dua unit
 
 Menukar dataset bercakupan-unit ("seluruh riwayat operasional yang tercatat oleh robot fisik
@@ -90,6 +98,8 @@ mengangkatnya keluar ke sebuah arsip. Ini adalah rekan dua-arah dari operasi bac
 yang dijelaskan di [Cadangan](/id/development/webui/admin-console/backups): riwayat milik sebuah
 robot berpindah ke identitas unit lain alih-alih meninggalkan sistem yang hidup.
 
+**Kontrak:** `POST /admin/api/units/:id/swap` dengan `target_unit_id` dan cakupan rental; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ### Bersihkan semua data untuk sebuah unit/penyewaan
 
 Menghapus peta, rute, area, dan playlist yang dipegang pada salah satu dari dua cakupan: semua
@@ -97,6 +107,8 @@ yang pernah direkam sebuah unit tertentu, atau semua yang dimiliki sebuah penyew
 unit itu. Ini mencerminkan pemisahan cakupan profil vs. unit yang dipakai untuk cadangan (lihat
 [Cadangan dan Pemulihan § Arsitektur Backup Dua-Cakupan](/id/development/backup-and-restore#arsitektur-backup-dua-lingkup)),
 diterapkan sebagai penghapusan alih-alih arsip.
+
+**Kontrak:** `DELETE /admin/api/units/:id/data` dengan cakupan rental; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
 
 ### Pindahkan data unit ke robot terdaftar lain
 
@@ -107,6 +119,8 @@ bercakupan-**profil** bersifat aditif dan memungkinkan robot yang hilang dipetak
 fisik yang berbeda adalah mekanisme yang sama persis dengan backup dan restore profil, ditampilkan
 di sini sebagai aksi langsung alih-alih ekspor/impor dua langkah.
 
+**Kontrak:** `POST /admin/api/units/:id/transfer` dengan `target_unit_id` dan `profile_id` atau `all_profiles`; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ### Lepas ikatan perangkat terdaftar milik sebuah unit
 
 Menghapus ikatan `unit_devices` yang hidup milik unit tersebut, memaksa pendaftaran ulang. Lihat
@@ -114,6 +128,8 @@ Menghapus ikatan `unit_devices` yang hidup milik unit tersebut, memaksa pendafta
 unit](/id/development/webui/admin-console/ros-integration#enrolmen-dan-pelepasan-ikatan-unit) untuk apa
 persisnya yang rusak di sisi robot dan mengapa robot tidak dapat diam-diam memulihkan identitas
 lamanya setelah itu.
+
+**Kontrak:** `DELETE /admin/api/units/:id/device`; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
 
 ## Tampilan Tertunda
 
@@ -139,8 +155,11 @@ halaman ini hanya mencakup apa yang dilakukan admin terhadap sebuah baris setela
   tersebut alih-alih mulai dari awal sebagai robot baru.
 - **Tolak**: menetapkan `status` menjadi `rejected` dan tidak berlanjut lebih jauh.
 
+**Kontrak:** `GET /admin/api/pending-units`, `POST /admin/api/pending-units/:id/register` (`unit_name`) atau `/adopt` (`unit_id`), `DELETE /admin/api/pending-units/:id`; sisi robot dari handshake: [Firmware & Enrolment § Enrolment](/id/development/message-contracts/firmware-and-enrolment#enrolment); lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+
 ## Terkait
 
+- [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): semua endpoint yang dipanggil tab ini.
 - [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
 - [Penyewaan](/id/development/webui/admin-console/rentals): sungguhan disewa kepada siapa sebuah unit terdaftar, dan siapa yang dapat mengemudikannya.
@@ -148,5 +167,5 @@ halaman ini hanya mencakup apa yang dilakukan admin terhadap sebuah baris setela
 - [Integrasi ROS](/id/development/webui/admin-console/ros-integration): mekanisme enrolmen dan orkestrasi kontainer di balik tab ini.
 - [Arsitektur](/id/development/architecture): struktur sistem tingkat tinggi dan model dua-mesin.
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap, termasuk `units`, `profile_units`, dan `unit_devices`.
-- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js`, roster, dan relay armada.
+- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js`, roster, dan unit relay.
 - [Cadangan, Pemulihan, dan Migrasi Data](/id/development/backup-and-restore): referensi mandiri untuk format arsip dan operasi REST.

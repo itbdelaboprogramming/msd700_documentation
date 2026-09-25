@@ -10,13 +10,13 @@ search: false
 Sisi back-office dari MSD700, dicapai lewat [login admin](/id/development/webui/accounts/overview#login-admin-admin)
 terpisah yang dijelaskan di Akun & Akses: sebuah shell lima-tab (`admin/dashboard.tsx`, satu
 komponen `*Panel.tsx` per tab di bawah `src/components/admin/`) untuk staf yang menjalankan seluruh
-armada alih-alih mengemudikan satu robot. Halaman ini memperkenalkan shell itu sendiri, dua peran
+unit-unit alih-alih mengemudikan satu robot. Halaman ini memperkenalkan shell itu sendiri, dua peran
 admin yang dilayaninya, dan menu akun yang dipakai bersama di setiap tab. Setiap tab punya
 halamannya sendiri: [Operator](/id/development/webui/admin-console/operators),
-[Unit & Armada](/id/development/webui/admin-console/units-and-fleet),
+[Unit](/id/development/webui/admin-console/units),
 [Penyewaan](/id/development/webui/admin-console/rentals), dan
 [Cadangan](/id/development/webui/admin-console/backups). Yang menghubungkan aksi konsol kembali
-ke robot dan armada kontainer di bawahnya adalah
+ke robot dan kontainer unit di bawahnya adalah
 [Integrasi ROS](/id/development/webui/admin-console/ros-integration).
 
 ## Lima tab
@@ -24,12 +24,12 @@ ke robot dan armada kontainer di bawahnya adalah
 | Tab | Komponen | Terlihat oleh | Mengelola |
 | --- | --- | --- | --- |
 | Operator | `UsersPanel.tsx` | admin, superadmin | `users`: akun yang login dan mengemudikan robot |
-| Unit | `UnitsPanel.tsx` | admin, superadmin | `units`: robot fisik mana saja yang ada, armada dan tertunda |
+| Unit | `UnitsPanel.tsx` | admin, superadmin | `units`: robot fisik mana saja yang ada, terdaftar dan tertunda |
 | Penyewaan | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: sebuah unit disewakan kepada siapa |
 | Cadangan | `BackupsPanel.tsx` | admin, superadmin | Arsip profil penyewaan secara utuh |
 | Admin | `AdminsPanel.tsx` | superadmin saja | `admin_accounts`: staf back-office itu sendiri |
 
-Empat tab pertama mengelola armada yang *menghadap-operator*: orang yang mengemudi, robot yang
+Empat tab pertama mengelola sisi unit yang *menghadap-operator*: orang yang mengemudi, robot yang
 mereka kemudikan, dan hubungan penyewaan yang menghubungkan keduanya. Tab kelima mengelola operator
 konsol itu sendiri. Ketidaksimetrisan itu disengaja, bukan kelalaian: seorang admin dapat melakukan
 semua yang dibutuhkan untuk menjalankan penyewa dan robot sehari-hari tanpa pernah bisa membuat
@@ -61,14 +61,14 @@ sendiri:
 - **Siapa yang bisa mengemudi sama sekali**: akun operator, dikelola di
   [Operator](/id/development/webui/admin-console/operators).
 - **Robot apa saja yang ada**: baris unit, dikelola di
-  [Unit & Armada](/id/development/webui/admin-console/units-and-fleet).
+  [Unit](/id/development/webui/admin-console/units).
 - **Siapa menyewa robot mana**: profil penyewaan dan penugasannya, dikelola di
   [Penyewaan](/id/development/webui/admin-console/rentals).
 
 Membuat akun operator tidak memberikan akses apa pun dengan sendirinya, dan mendaftarkan sebuah
 unit juga tidak memberi siapa pun kemampuan untuk mengemudikannya: keduanya baru bermakna begitu
 profil penyewaan menghubungkan mereka, dengan menjadikan operator sebagai anggota dan unit sebagai
-penugasan. Lihat [Unit & Armada](/id/development/webui/admin-console/units-and-fleet) dan
+penugasan. Lihat [Unit](/id/development/webui/admin-console/units) dan
 [Penyewaan](/id/development/webui/admin-console/rentals) untuk cara kerja setiap sisi hubungan itu.
 
 ## Tab Admin (superadmin saja)
@@ -106,12 +106,13 @@ operator) bukan sesuatu yang dapat dicapai dari menu ini.
 
 ## Terkait
 
+- [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): setiap tab memanggil `/admin/api/*` dengan token `admin` dari `POST /admin/api/login`.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
-- [Unit & Armada](/id/development/webui/admin-console/units-and-fleet): sub-tampilan Armada dan Tertunda di atas daftar robot.
+- [Unit](/id/development/webui/admin-console/units): sub-tampilan Unit Terdaftar dan Tertunda di atas daftar robot.
 - [Penyewaan](/id/development/webui/admin-console/rentals): CRUD profil penyewaan, keanggotaan, dan penugasan unit.
 - [Cadangan](/id/development/webui/admin-console/backups): mengarsipkan dan memulihkan profil penyewaan secara utuh.
-- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi-aksi ini menjangkau robot dan armada kontainer.
+- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi-aksi ini menjangkau robot dan kontainer unit.
 - [Arsitektur](/id/development/architecture): struktur sistem tingkat tinggi dan model dua-mesin.
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap di balik setiap tab.
-- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan relay armada.
+- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan unit relay.
 - [Cadangan, Pemulihan, dan Migrasi Data](/id/development/backup-and-restore): referensi mandiri untuk format arsip dan operasi REST.

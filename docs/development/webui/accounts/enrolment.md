@@ -19,6 +19,9 @@ claim code off the terminal. This protocol produces the Robot Cloud Domain crede
 Unenrolled robots register themselves with the cloud server through a three-stage cryptographic
 handshake.
 
+**Contracts:** [`POST /enroll/claim`, `/enroll/status`, `/enroll/token`](/development/message-contracts/firmware-and-enrolment#enrolment)
+(request bodies, status codes and the credential shape).
+
 ![Cryptographic hardware enrolment (the nonce protocol)](./diagrams/enrolment-cryptographic-hardware-enrolment-the-non.drawio)
 
 ### Why the 32-byte nonce protocol is critical
@@ -74,6 +77,7 @@ cuts over immediately, with no grace for the box being replaced.
 
 ## Related
 
+- [Message Contracts: Firmware & Enrolment](/development/message-contracts/firmware-and-enrolment#enrolment): the `/enroll` request and response shapes.
 - [Overview](/development/webui/accounts/overview): the four Accounts & Access pages and how
   they relate.
 - [Security & Tokens](/development/webui/accounts/security-and-tokens): JWT keyring, trust domains,

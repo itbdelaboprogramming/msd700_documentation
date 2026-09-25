@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="user" />
 
-Selamat datang di **Panduan Pengguna Operator MSD700**. Dokumentasi ini dirancang untuk operator armada, peneliti, dan teknisi lapangan yang menggunakan dashboard web untuk mengendalikan, memetakan, dan mengawasi robot otonom MSD700. Tidak diperlukan pengalaman pemrograman atau robotika.
+Selamat datang di **Panduan Pengguna Operator MSD700**. Dokumentasi ini dirancang untuk operator unit, peneliti, dan teknisi lapangan yang menggunakan dashboard web untuk mengendalikan, memetakan, dan mengawasi robot otonom MSD700. Tidak diperlukan pengalaman pemrograman atau robotika.
 
 ## Tentang MSD700
 
@@ -23,7 +23,7 @@ Dengan ROS Web UI, Anda dapat:
 - **Menyapu Area**: Gambar zona dan perintahkan robot untuk menyapu seluruh ruangan atau koridor secara sistematis
 - **Memantau Langsung**: Lihat rekaman kamera robot secara real-time dengan latensi sangat rendah
 - **Mengelola Rute**: Simpan jalur yang sering dilalui dan rangkai menjadi playlist misi otomatis
-- **Mengelola Armada**: Jika Anda administrator, kelola beberapa robot, operator, dan profil penyewaan
+- **Mengelola Unit**: Jika Anda administrator, kelola beberapa robot, operator, dan profil penyewaan
 - **Bekerja Offline**: Gunakan dashboard lengkap langsung di Wi-Fi lokal robot tanpa internet
 
 ## Cara Menggunakan Panduan Ini
@@ -40,7 +40,7 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
   <LinkCard icon="📍" title="Rute & Coverage" details="Simpan rute titik-ke-titik dan gambar area untuk penyapuan sistematis." link="/id/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="Kamera Langsung" details="Lihat sudut pandang robot secara real-time dari mana saja." link="/id/user-guide/camera" />
   <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami watchdog keselamatan, lease operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/user-guide/behavior" />
-  <LinkCard icon="🛠️" title="Konsol Admin" details="Untuk manajer armada: tambah operator, kelola penyewaan, dan pantau status armada." link="/id/user-guide/admin-console" />
+  <LinkCard icon="🛠️" title="Konsol Admin" details="Untuk manajer unit: tambah operator, kelola penyewaan, dan pantau status semua unit." link="/id/user-guide/admin-console" />
   <LinkCard icon="❓" title="Tanya Jawab (FAQ)" details="Jawaban untuk pertanyaan operasional umum mengenai baterai, peta, dan konektivitas." link="/id/user-guide/faq" />
   <LinkCard icon="🩹" title="Pemecahan Masalah" details="Solusi cepat untuk gejala umum operator seperti video macet dan goal dibatalkan." link="/id/user-guide/troubleshooting" />
 </LinkCards>
@@ -58,7 +58,7 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
 7. **[Rute & Coverage](/id/user-guide/routes-coverage)**: Rencanakan misi otomatis
 8. **[Kamera Langsung](/id/user-guide/camera)**: Pantau robot dari jarak jauh
 9. **[Bagaimana Robot Berperilaku](/id/user-guide/behavior)**: Pahami jeda keselamatan, lease, dan Autopilot
-10. **[Konsol Admin](/id/user-guide/admin-console)**: (Khusus manajer armada) Kelola operator dan unit
+10. **[Konsol Admin](/id/user-guide/admin-console)**: (Khusus manajer unit) Kelola operator dan unit
 
 ## Persyaratan Sistem
 

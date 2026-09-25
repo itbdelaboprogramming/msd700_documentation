@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="admin" />
 
-Konsol Admin hanya terlihat untuk akun dengan akses **Administrator**. Digunakan untuk mengelola operator, robot, dan profil penyewaan di seluruh armada Anda.
+Konsol Admin hanya terlihat untuk akun dengan akses **Administrator**. Digunakan untuk mengelola operator, robot, dan profil penyewaan di semua unit Anda.
 
 ## Operator
 
@@ -14,12 +14,12 @@ Konsol Admin hanya terlihat untuk akun dengan akses **Administrator**. Digunakan
 2. Di sini Anda bisa melihat semua akun operator, mengundang yang baru, dan menyesuaikan peran atau penyewaan mana yang bisa mereka akses.
 3. Untuk mencabut akses, klik **Remove** di samping nama operator.
 
-## Unit & Armada
+## Unit
 
-Tab **Units** memiliki dua tampilan: **Fleet** (semua robot yang sudah terdaftar) dan **Pending** (robot baru yang menunggu persetujuan).
+Tab **Units** memiliki dua tampilan: **Unit Terdaftar** (semua robot yang sudah terdaftar) dan **Pending** (robot baru yang menunggu persetujuan).
 
-- Robot yang benar-benar baru muncul dulu di **Pending**. Administrator meninjaunya di sana dan klik **Register** (atau **Adopt**) untuk menerimanya ke dalam armada. Registrasi saja tidak memberi akses ke siapa pun: siapa yang boleh mengendarainya ditentukan oleh penetapan penyewaannya.
-- Tampilan **Fleet** mendaftar semua robot terdaftar: penyewaan mana yang menyewanya, jumlah operator dan peta, kapan didaftarkan, dan aksi per-unit (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). Tampilan ini tidak menunjukkan status koneksi langsung: itu hanya ada di tabel unit milik operator.
+- Robot yang benar-benar baru muncul dulu di **Pending**. Administrator meninjaunya di sana dan klik **Register** (atau **Adopt**) untuk mendaftarkannya sebagai unit. Registrasi saja tidak memberi akses ke siapa pun: siapa yang boleh mengendarainya ditentukan oleh penetapan penyewaannya.
+- Tampilan **Unit Terdaftar** mendaftar semua robot terdaftar: penyewaan mana yang menyewanya, jumlah operator dan peta, kapan didaftarkan, dan aksi per-unit (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). Tampilan ini tidak menunjukkan status koneksi langsung: itu hanya ada di tabel unit milik operator.
 - Operator melihat robot yang sama di tabel unit tepat setelah login: pilih baris berstatus **Ready** dan klik **Start** untuk terhubung.
 
 ## Penyewaan (Rental)

@@ -22,10 +22,10 @@
         <mxCell id="n6" value="地図キャンバスは表示?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="487" y="632" width="170" height="171" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="フリートリレー&lt;br&gt;(unit_relays)は稼働?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n7" value="ユニットリレー&lt;br&gt;(unit_relays)は稼働?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="460" y="899" width="167" height="168" as="geometry" />
         </mxCell>
-        <mxCell id="n8" value="フリートリレー。&lt;br&gt;unit_relaysかレガシーの&lt;br&gt;ユニット単位コンテナ。" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n8" value="ユニットリレー。&lt;br&gt;unit_relaysかレガシーの&lt;br&gt;ユニット単位コンテナ。" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="223" y="1164" width="187" height="74" as="geometry" />
         </mxCell>
         <mxCell id="n9" value="rosbridge層。&lt;br&gt;ApacheのHostヘッダーブロック。" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

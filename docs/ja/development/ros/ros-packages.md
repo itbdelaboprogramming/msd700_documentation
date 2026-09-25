@@ -141,7 +141,7 @@ Webコマンドとダッシュボードテレメトリを物理ロボットハ�
 システムの片側全体を起動する最上位のlaunchファイル。
 
 - `bringup_msd.launch`: ユニット側。常時起動のベース(`twist_mux`、`bridger`、ロボット記述、ハードウェアモニター)、`topic2string`(既定はC++)、MQTTブリッジ、`system_command`、`switch_mode`、idle detector。
-- `bringup_cloud.launch`: クラウドサーバー側。ユニット単位またはフリートのリレー(`use_unit_relays`、`use_multi_unit_bridge`)、バックエンド、rosbridge。
+- `bringup_cloud.launch`: クラウドサーバー側。ユニット単位のリレーまたは共有ユニットリレー(`use_unit_relays`、`use_multi_unit_bridge`)、バックエンド、rosbridge。
 - `bringup_local_server.launch`: ユニットのローカルサーバー側(バックエンド、rosbridge、`topic2string/local.launch`)。同じroscoreを共有する別コンテナで動く。
 - `debug_local.launch`: デバッグ用にクラウドとユニットを1台で起動する。
 
@@ -156,7 +156,7 @@ Webコマンドとダッシュボードテレメトリを物理ロボットハ�
 TFから`map`フレームのロボット姿勢を`/robot_pose`としてパブリッシュするC++ノード。`topic2string`がダッシュボード向けにシリアライズする。
 
 ### 8. `dependencies/ROS-dashboard-backend`(パッケージ`ros_dashboard_backend`)
-Node.jsのREST API(`scripts/backend_node`、`admin_api.js`、`enroll_api.js`、`sync_*.js`)。`launch/ros_dashboard_backend.launch`で起動する。[APIリファレンス](/ja/development/api-reference)を参照。
+Node.jsのREST API(`scripts/backend_node`、`admin_api.js`、`enroll_api.js`、`sync_*.js`)。`launch/ros_dashboard_backend.launch`で起動する。[HTTP API](/ja/development/message-contracts/http-api)を参照。
 
 ## 関連ドキュメント
 

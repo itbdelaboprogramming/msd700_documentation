@@ -40,10 +40,10 @@
         <mxCell id="n15" value="unit_manager.js&lt;br&gt;restart/reconcile via Docker API,&lt;br&gt;never create" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="135" y="30" width="246" height="75" as="geometry" />
         </mxCell>
-        <mxCell id="n16" value="ros_web_ui_v2_unit_relays&lt;br&gt;one shared relay, prod fleet" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n16" value="ros_web_ui_v2_unit_relays&lt;br&gt;one shared relay, prod units" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="12" y="135" width="201" height="59" as="geometry" />
         </mxCell>
-        <mxCell id="n17" value="ros_web_ui_v2_unit_relays_dev&lt;br&gt;one shared relay, dev fleet" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n17" value="ros_web_ui_v2_unit_relays_dev&lt;br&gt;one shared relay, dev units" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="244" y="135" width="227" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.1991;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="n3" source="n7" target="n8">

@@ -20,6 +20,9 @@ search: false
 
 ![暗号によるハードウェア登録(nonceプロトコル)](../../../../id/development/webui/accounts/diagrams/enrolment-cryptographic-hardware-enrolment-the-non.drawio)
 
+**メッセージ仕様:** [`POST /enroll/claim`、`/enroll/status`、`/enroll/token`](/ja/development/message-contracts/firmware-and-enrolment#enrolment)
+(リクエストボディ、ステータスコード、資格情報の形)。
+
 ### 32バイトのnonceプロトコルがなぜ重要なのか
 
 - **MAC/フィンガープリントのなりすまし対策**: ハードウェアのMACアドレスやシリアル番号はローカルネッ
@@ -76,6 +79,7 @@ nonceフローはロボットから始まる。バウチャーフローは手動
 
 ## 関連項目
 
+- [メッセージ仕様: ファームウェア & エンロール](/ja/development/message-contracts/firmware-and-enrolment#enrolment): `/enroll` のリクエストと応答の形。
 - [概要](/ja/development/webui/accounts/overview): Accounts & Accessの4画面とその関係。
 - [セキュリティ & トークン](/ja/development/webui/accounts/security-and-tokens): JWTキーリング、信頼ド
   メイン、TLS終端。

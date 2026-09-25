@@ -11,8 +11,8 @@ Tab Cadangan (`BackupsPanel.tsx`) adalah front end konsol admin ke mesin arsip y
 didokumentasikan lengkap di [Cadangan, Pemulihan, dan Migrasi
 Data](/id/development/backup-and-restore): arsip **seluruh profil penyewaan**. Tab Unit punya
 titik masuknya sendiri yang lebih sempit ke separuh bercakupan-unit dari arsitektur yang sama:
-lihat [Unit & Armada § Cadangkan data bercakupan-penyewaan unit
-ini](/id/development/webui/admin-console/units-and-fleet#cadangkan-data-bercakupan-penyewaan-unit-ini):
+lihat [Unit § Cadangkan data bercakupan-penyewaan unit
+ini](/id/development/webui/admin-console/units#cadangkan-data-bercakupan-penyewaan-unit-ini):
 tetapi tab ini adalah tempat admin mengelola arsip sebagai objek kelas satu: buat, hapus, unduh,
 unggah, dan pulihkan.
 
@@ -95,12 +95,13 @@ ini: skrip itu berjalan langsung terhadap basis data dan di luar cakupan untuk `
 
 ## Terkait
 
+- [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`, `POST /admin/api/profiles/:id/backups`, `GET /admin/api/backups/:id/download`, `POST /admin/api/backups/upload`, `POST /admin/api/backups/:id/plan`, `POST /admin/api/backups/:id/restore`, `DELETE /admin/api/backups/:id`.
 - [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
-- [Unit & Armada](/id/development/webui/admin-console/units-and-fleet): titik masuk backup bercakupan-unit yang dicapai dari tampilan Armada.
+- [Unit](/id/development/webui/admin-console/units): titik masuk backup bercakupan-unit yang dicapai dari tampilan Unit Terdaftar.
 - [Penyewaan](/id/development/webui/admin-console/rentals): pintasan backup satu-klik ke tab ini, dan profil yang dimiliki arsip ini.
-- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan armada kontainer.
+- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan kontainer unit.
 - [Arsitektur](/id/development/architecture): struktur sistem tingkat tinggi dan model dua-mesin.
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap, termasuk `profile_backups`.
-- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan relay armada.
+- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan unit relay.
 - [Cadangan, Pemulihan, dan Migrasi Data](/id/development/backup-and-restore): referensi lengkap yang menjadi dasar tab ini.

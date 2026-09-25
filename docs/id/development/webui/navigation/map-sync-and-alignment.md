@@ -38,6 +38,10 @@ Mode Map Sync adalah permukaan itu. Memilihnya (`Map Sync` di Mode List, yang be
 menjadi `Finish Map Sync` saat aktif) mengalihkan canvas peta yang mendasarinya ke state koreksi
 pose interaktif; meninggalkannya mengembalikan canvas Navigasi normal.
 
+**Kontrak:** pose yang diatur operator secara manual adalah
+`geometry_msgs/PoseWithCovarianceStamped` di [`<root>/initialpose`](/id/development/message-contracts/rosbridge#publications), dibawa sebagai
+[`string/initialpose`](/id/development/message-contracts/bridge-topics#json-initialpose) ke `/initialpose` robot.
+
 ## Auto Align
 
 Auto Align adalah tombol yang hanya ditampilkan saat mode Map Sync aktif. Ia menggantikan cara
@@ -54,7 +58,7 @@ backend.
 ### `/api/autoalign/start`
 
 `POST /api/autoalign/start` (didokumentasikan lengkap di
-[Referensi API § Sistem Auto Align](/id/development/api-reference#sistem-auto-align)) memulai
+[HTTP API § Auto Align](/id/development/message-contracts/http-api#autoalign)) memulai
 pencocokan scan. Frontend (`autoAlignApi.ts`, `postAutoAlign('start', { unit_id })`)
 menonaktifkan tombol tersebut segera dan melakukan polling status alih-alih menunggu panggilan ini
 melaporkan konvergensi, karena konvergensi bersifat asinkron di sisi robot.
@@ -79,13 +83,10 @@ eksplisit, yang jika dibiarkan akan salah dibaca di tempat lain sebagai robot ya
 Ini juga dipanggil jika operator meninggalkan mode Map Sync di tengah run, untuk memberi tahu
 robot agar berhenti (stand down).
 
-::: info Tidak didokumentasikan di sumber
-`api-reference.md` hanya mendokumentasikan `/api/autoalign/start`; endpoint `status` dan `reset`
-dikonfirmasi dari lapisan transport frontend (`autoAlignApi.ts`) dan titik pemanggilannya, bukan
-dari referensi REST. Bentuk respons persisnya di luar field yang dibaca frontend (boolean
-konvergensi di bawah `details`/`error_details`, dan envelope `success`/`msg`) tidak dibahas oleh
-materi sumber yang tersedia saat ini dan tidak ditebak di sini.
-:::
+**Kontrak:** ketiga endpoint menerima `{ unit_id }` dan dipetakan satu-satu ke perintah MQTT
+[`autoalign.start`, `status`, `reset`](/id/development/message-contracts/mqtt-commands#autoalign) (service robot `/alignment/start`,
+`/check_alignment`, `/alignment/reset`). Jawabannya [respons perintah](/id/development/message-contracts/http-api#envelopes) standar: amplop
+feedback robot di `details` saat berhasil, di `error_details` saat ditolak.
 
 ## Consent: Auto Align adalah sumber kepercayaan guard rotasi
 
@@ -113,6 +114,7 @@ dan tidak diulang di sini.
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Navigasi](/id/development/message-contracts/#trace-navigation): Auto Align dan pesan pose dalam konteksnya.
 - [Ikhtisar](/id/development/webui/navigation/overview): halaman Navigasi dan Mode List
   lengkapnya.
 - [Pembersihan Cakupan](/id/development/webui/navigation/coverage-cleaning): fitur lain yang
@@ -125,7 +127,7 @@ dan tidak diulang di sini.
   lengkap, termasuk panggilan REST Auto Align dalam konteks fitur selebihnya.
 - [Arsitektur Cakupan Boustrophedon & Penyelarasan Zero-Spin](/id/development/ros/boustrophedon-and-alignment):
   algoritma CSM dan guard rotasi di tempat.
-- [Kontrak Pesan](/id/development/message-contracts): referensi lengkap perintah/feedback MQTT.
-- [Referensi API](/id/development/api-reference): referensi lengkap REST API.
-- [Protokol WebSocket dan rosbridge](/id/development/rosbridge-protocol): protokol jalur
+- [Kontrak Pesan](/id/development/message-contracts/): referensi lengkap perintah/feedback MQTT.
+- [HTTP API](/id/development/message-contracts/http-api): referensi lengkap REST API.
+- [rosbridge (WebSocket)](/id/development/message-contracts/rosbridge): protokol jalur
   rosbridge lengkap.

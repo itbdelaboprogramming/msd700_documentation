@@ -29,7 +29,7 @@ search: false
 `unit_operation_state` も `map_id` 外部キーを持つが、`CASCADE` ではなく `ON DELETE SET NULL` である。
 ユニットが現在読み込んでいるマップを削除すると、ブロックされる代わりにそのポインターがクリアされる。
 このレコードの由来については
-[データベーススキーマ § 運用データ（マップごと）](/ja/development/database-schema#運用データ-マップごと)
+[データベーススキーマ § 運用データ（マップごと）](/ja/development/database-schema#運用データ-マップごと)
 を参照。
 
 `users`、`units`、`rental_profiles` は、それ自体のページでカバーされるアイデンティティ/アクセス
@@ -40,7 +40,7 @@ search: false
 `maps_data.unique_map_unit (map_name, unit_id, profile_id)` があるからこそ、1つのレンタル上の2台の
 ロボットがそれぞれ同名のマップを衝突なく持つことができ、またデータベース画面が名前ではなく `unit_id`
 でスコープし `id` で重複排除しなければならない理由でもある（
-[概要 § マップ一覧](/ja/development/webui/database/overview#マップ一覧) を参照）。
+[概要 § マップ一覧](/ja/development/webui/database/overview#マップ一覧) を参照）。
 
 上記4つのテーブルはすべて、共通の `created_at` / `modified_at` 規約に従っており、その `created_by` /
 `modified_by` 列はユーザーの ULID を帰属のためだけに記録するのであって、アクセス制御のためではない。
@@ -56,13 +56,13 @@ search: false
 ![外部キー](../../../../development/webui/database/diagrams/ros-integration-foreign-keys.drawio)
 
 これが
-[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)
+[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)
 を支えている仕組みである。`maps_data` の行を削除すると、そのルート、エリア、プレイリストへとカスケード
 し、それを指す操作状態はブロックされるのではなくクリアされる。
 
 ## REST エンドポイント
 
-[API リファレンス § マップとルートデータ管理](/ja/development/api-reference#マップとルートのデータ管理)
+[HTTP API § マップ](/ja/development/message-contracts/http-api#maps)
 より:
 
 ### マップ一覧の取得
@@ -84,20 +84,17 @@ search: false
 常に `unit_id` でスコープすること。
 :::
 
-### 名前変更と削除: ここではまだ未記載
+### 名前変更と削除
 
-API リファレンスのマップとルートデータ管理セクションは、現在のところ `maps_data` の名前変更または
-削除エンドポイントを記載していない。データベース画面の名前変更・削除の挙動（
-[名前変更 & 削除](/ja/development/webui/database/rename-and-delete) で説明）はフロントエンド
-（`services.ts` の `updateMapName`、および `ConfirmDelete` によってゲートされた削除呼び出し）に基づいて
-確認されているが、正確な HTTP メソッドとパスは現在のソース資料ではカバーされておらず、ここで推測する
-こともしない。
+名前変更は [`PUT /api/maps_data/rename/:mapId`](/ja/development/message-contracts/http-api#map-rename)(`services.ts` の `updateMapName`)、削除は
+`{ map_id }` を付けた [`DELETE /api/maps_data`](/ja/development/message-contracts/http-api#map-delete)(`ConfirmDelete` で確認する呼び出し)である。
+ページ上の振る舞い: [名前変更と削除](/ja/development/webui/database/rename-and-delete)。
 
 ### 対象外: カスタムウェイポイントルートの保存
 
-同じ API リファレンスセクションは、ウェイポイントルートを保存するための `POST /api/routes` も記載して
+[HTTP API § ルート](/ja/development/message-contracts/http-api#routes) は、ウェイポイントルートを保存するための `POST /api/routes` も記載して
 いる。そのエンドポイントは Database 機能ではなく Navigation 機能に属する。ルートはこの画面から一覧
-表示も管理もされないため（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、
+表示も管理もされないため（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、
 ここでは繰り返さない。
 
 ## 関連

@@ -33,6 +33,10 @@ because no SLAM node is running and no occupancy grid exists.
 - **Pause** temporarily halts exploration without ending the session.
 - **Stop** ends the session and moves into the save flow described below.
 
+**Contracts:** Play and Pause are [`POST /api/mapping`](/development/message-contracts/http-api#mapping-control) with
+`{ start: true }` or `{ pause: true }` → [`mapping.start` / `mapping.pause`](/development/message-contracts/mqtt-commands#mapping)
+(`/switch_mode(explore)`, then the `operator_pause` motion lock). Stop leads to the save flow below.
+
 The robot reports its own activity string on every heartbeat (`mapping_active`, `mapping_paused`,
 and, if a save fails, `mapping_stop_failed`, which keeps the SLAM session alive so the operator can
 retry saving). The full state machine these keys belong to is out of scope for this page; see
@@ -43,6 +47,10 @@ retry saving). The full state machine these keys belong to is out of scope for t
 While a session is active, the occupancy grid being built is rendered inline, reusing the same
 canvas machinery as the Navigation page: pan, zoom, rotate, and focus-follow on the robot's live
 pose. No separate viewer or page is involved.
+
+**Contracts:** the growing grid on [`<root>/server/slam/map`](/development/message-contracts/rosbridge#subscriptions) and the pose on
+`<root>/server/robot_pose`, both through rosbridge; see [Bridge Topics](/development/message-contracts/bridge-topics#topic-map) for
+how they leave the robot.
 
 ## Robot Stuck notification
 
@@ -60,6 +68,13 @@ the robot writes the map and uploads it (see
 for what happens on the wire during this window, including why the save does not complete inside a
 single HTTP request/response).
 
+**Contracts:** the name check is [`GET /api/media/checkMapName`](/development/message-contracts/http-api#media-server). Saving is
+[`POST /api/mapping`](/development/message-contracts/http-api#mapping-control) with `{ stop: true, map_name, homebase_* }`, which
+answers at once with `{ request_id, map_ulid }`; the overlay then follows
+[`GET /api/mapping/progress/:request_id`](/development/message-contracts/http-api#mapping-progress), whose events are the robot's
+[`mapping_progress`](/development/message-contracts/mqtt-commands#mapping-progress) messages. Discarding instead is
+[`POST /api/mapping/discard`](/development/message-contracts/http-api#mapping-discard).
+
 ::: info Homebase pose is captured automatically, not entered by hand
 The map's homebase pose is captured automatically from the robot's first reported pose after mapping
 starts. The operator is not asked to set it manually as part of the save dialog; it simply travels
@@ -71,6 +86,9 @@ along with the rest of the map's metadata once Stop is confirmed.
 `EmergencyButton` is available throughout the Mapping page. Triggering it exits to
 `/emergency-mode`, the same shared emergency flow used elsewhere in the dashboard.
 
+**Contracts:** [`POST /api/emergency_stop`](/development/message-contracts/http-api#emergency-stop) `{ enable: true }` →
+[`emergency_stop.activate`](/development/message-contracts/mqtt-commands#emergency-stop).
+
 ## Shared chrome
 
 The rest of the page is chrome shared with other operational pages: `Header`, a sidebar carrying
@@ -80,6 +98,7 @@ plus `Footer`, `ControlInstruction`, and `TokenExpired`.
 
 ## Related
 
+- [Message Contracts § Mapping page](/development/message-contracts/#trace-mapping): every message a mapping session sends.
 - [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous):
   the two ways of driving the robot during a mapping session
 - [ROS Integration](/development/webui/mapping/ros-integration): the REST/MQTT wire contract and the

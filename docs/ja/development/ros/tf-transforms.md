@@ -73,4 +73,4 @@ MSD700は右手系デカルト座標系を厳格に適用する:
 
 - [センサーフュージョン & 制御](/ja/development/ros/sensor-fusion-and-control): 運動状態推定とEKF。
 - [コストマップ & プランナー](/ja/development/ros/costmaps-and-planners): ナビゲーションコストマップの座標フレーム。
-- [rosbridgeプロトコル](/ja/development/rosbridge-protocol): WebSocketトピックのシリアライゼーション。
+- [rosbridgeプロトコル](/ja/development/message-contracts/rosbridge): WebSocketトピックのシリアライゼーション。

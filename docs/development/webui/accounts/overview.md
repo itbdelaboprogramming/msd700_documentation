@@ -23,12 +23,19 @@ signup, described below, but that link is hidden entirely on a unit or local bui
 accounts of its own, so there is nothing to sign up for there. Apart from that one link, this page
 is purely about logging in as an operator.
 
+**Contracts:** [`POST /user/login`](/development/message-contracts/http-api#user-login), then [`GET /unit/all`](/development/message-contracts/http-api#unit-list)
+for the unit picker and a read-only [`POST /api/hardware/ping`](/development/message-contracts/http-api#hardware-ping)
+(`claim: false`) per unit for its status. Tokens are renewed with
+[`POST /user/refresh`](/development/message-contracts/http-api#user-refresh).
+
 ## Operator signup (`/signup`)
 
 A self-registration form for new operator accounts: username and email uniqueness checks, a
 password and confirmation field, and a `ConfirmRegister` success dialog once the account is
 created. Like the signup link on the login page, this page is not present at all in local or unit
 builds.
+
+**Contracts:** [`POST /user/check-username`, `/user/check-email`, `/user/register`](/development/message-contracts/http-api#user-register).
 
 ::: warning Signing up does not grant access to any robot
 Creating an account here only creates a bare operator identity. It does not, by itself, grant
@@ -41,7 +48,10 @@ authorization.
 
 A second, unlisted login page, reached only by navigating to `/admin` directly, that calls a
 distinct `adminLogin()` rather than the operator `/user/login` used on the root page. This is the
-back-office door for fleet and tenant management staff, separate from anything an operator sees.
+back-office door for the staff who manage units and tenants, separate from anything an operator sees.
+
+**Contracts:** `POST /admin/api/login`, which issues an `admin` token accepted only on
+[`/admin/api/*`](/development/message-contracts/http-api#admin-api).
 
 ## Admin change password (`/admin/change-password`)
 
@@ -65,6 +75,7 @@ not share a login form, a session, or a redirect path into one another.
 
 ## Related
 
+- [Message Contracts § Session and unit list](/development/message-contracts/#trace-session): login, ping and logout messages.
 - [Security & Tokens](/development/webui/accounts/security-and-tokens): JWT keyring, trust domains,
   and TLS termination.
 - [Hardware Enrolment](/development/webui/accounts/enrolment): the nonce protocol a robot uses to

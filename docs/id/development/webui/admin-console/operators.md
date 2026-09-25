@@ -59,12 +59,13 @@ seorang admin menetapkan kata sandi pada akun orang lain, bukan akunnya sendiri.
 
 ## Terkait
 
+- [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`, `PATCH /admin/api/users/:id/status`, `PATCH /admin/api/users/:id/password`.
 - [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
-- [Unit & Armada](/id/development/webui/admin-console/units-and-fleet): sub-tampilan Armada dan Tertunda di atas daftar robot.
+- [Unit](/id/development/webui/admin-console/units): sub-tampilan Unit Terdaftar dan Tertunda di atas daftar robot.
 - [Penyewaan](/id/development/webui/admin-console/rentals): tempat sebuah akun operator sungguhan mendapatkan akses ke robot.
 - [Cadangan](/id/development/webui/admin-console/backups): mengarsipkan dan memulihkan profil penyewaan secara utuh.
-- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan armada kontainer.
+- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan kontainer unit.
 - [Arsitektur](/id/development/architecture): struktur sistem tingkat tinggi dan model dua-mesin.
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap, termasuk catatan `users.status`.
-- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan relay armada.
+- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan unit relay.
 - [Cadangan, Pemulihan, dan Migrasi Data](/id/development/backup-and-restore): referensi mandiri untuk format arsip dan operasi REST.

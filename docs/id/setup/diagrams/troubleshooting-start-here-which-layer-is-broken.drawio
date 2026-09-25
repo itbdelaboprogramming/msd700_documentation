@@ -22,10 +22,10 @@
         <mxCell id="n6" value="Kanvas peta terisi?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="469" y="602" width="145" height="146" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="Relay armada&lt;br&gt;(unit_relays) jalan?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n7" value="Unit relay&lt;br&gt;(unit_relays) jalan?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="438" y="845" width="160" height="160" as="geometry" />
         </mxCell>
-        <mxCell id="n8" value="Relay armada.&lt;br&gt;unit_relays, atau container&lt;br&gt;per-unit legacy." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n8" value="Unit relay.&lt;br&gt;unit_relays, atau container&lt;br&gt;per-unit legacy." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="209" y="1102" width="197" height="74" as="geometry" />
         </mxCell>
         <mxCell id="n9" value="Layer rosbridge.&lt;br&gt;Blok Host-header Apache." style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

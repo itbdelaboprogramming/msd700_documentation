@@ -24,12 +24,9 @@ in the schema (see [ROS Integration § Tables](/development/webui/database/ros-i
 so a rejected duplicate there is more likely to be a genuine naming mistake than a natural
 collision.
 
-::: info Not documented in the API Reference
-The current [API Reference § Map and Route Data Management](/development/api-reference#map-and-route-data-management)
-covers listing maps but not the rename endpoint itself. The behavior above is confirmed against
-the frontend component (`updateMapName` in `services.ts`); the exact HTTP method and path are not
-covered by the current API Reference and are not guessed at here.
-:::
+**Contracts:** [`PUT /api/maps_data/rename/:mapId`](/development/message-contracts/http-api#map-rename) with
+`{ new_map_name }`; a taken name is a `409`. Backend only; the unit receives the new name through
+[data sync](/development/data-sync).
 
 ## Cascade delete
 
@@ -44,6 +41,10 @@ There is no undo. Because routes, areas, and playlists are not separately listed
 is not shown an itemized list of what it is about to take with it beyond the confirmation prompt
 itself.
 
+**Contracts:** [`DELETE /api/maps_data`](/development/message-contracts/http-api#map-delete) with `{ map_id }` in the body. The
+answer lists which files were removed (`data.files`), and a deletion tombstone goes to the unit
+through [data sync](/development/data-sync).
+
 ## Session-conflict guard
 
 Opening a map (see
@@ -56,18 +57,20 @@ depending on which map is being opened:
   instead of silently discarding the in-progress map:
   - **Save**: the in-progress map is saved before the new one loads. This follows the same
     stop-and-save path documented in
-    [API Reference § Mapping Control](/development/api-reference#_1-mapping-control)
-    (`POST /api/mapping/stop`).
+    [HTTP API § `POST /api/mapping`](/development/message-contracts/http-api#mapping-control)
+    (`POST /api/mapping` with `stop: true`).
   - **Discard**: the in-progress map is dropped without saving.
   - **Cancel**: the operator stays on the current map and the mapping session continues
     unchanged.
 
-The current API Reference documents the save path (`POST /api/mapping/stop`) but not a separate
-endpoint for discard; that detail is not covered by the source material and is not guessed at
-here.
+**Contracts:** Save is [`POST /api/mapping`](/development/message-contracts/http-api#mapping-control) `{ stop: true, map_name }`
+followed by the [progress stream](/development/message-contracts/http-api#mapping-progress); Discard is
+[`POST /api/mapping/discard`](/development/message-contracts/http-api#mapping-discard) → [`mapping.discard`](/development/message-contracts/mqtt-commands#mapping).
+Opening the new map is then [`POST /api/navigation/init`](/development/message-contracts/http-api#navigation-init).
 
 ## Related
 
+- [Message Contracts § Database page](/development/message-contracts/#trace-database): every call these actions make
 - [Overview](/development/webui/database/overview): the map list, search/sort/pagination, and states this feature sits on top of
 - [ROS Integration](/development/webui/database/ros-integration): the schema and REST endpoints behind these actions
 - [Architecture](/development/architecture)

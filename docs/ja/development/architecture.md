@@ -9,19 +9,19 @@ search: false
 
 このドキュメントは MSD700 自律ロボティクスプラットフォームのアーキテクチャ設計を詳述し、コンポーネント同士がどう相互作用するか、コンポーネント間のデータ境界、そして各サブシステムの背後にあるエンジニアリング上の根拠を説明します。
 
-リポジトリの場所については [リポジトリ構成](/ja/development/repository-structure) を、正確なデータペイロードについては [メッセージ仕様](/ja/development/message-contracts) を、有限状態機械については [State and Behavior](/ja/development/state-and-behavior) を、デプロイトポロジーについては [System Setup](/ja/setup/system-setup) を参照してください。
+リポジトリの場所については [リポジトリ構成](/ja/development/repository-structure) を、正確なデータペイロードについては [メッセージ仕様](/ja/development/message-contracts/) を、有限状態機械については [State and Behavior](/ja/development/state-and-behavior) を、デプロイトポロジーについては [System Setup](/ja/setup/system-setup) を参照してください。
 
 ## 2マシンモデル
 
-MSD700 における中心的なアーキテクチャ上の決定は、**ユニット(物理ロボット)が完全なローカルサーバースタックを実行する**一方で、**MSD700 サーバー(クラウド)**がフリート全体の中央管理スタックを実行する、というものです。両者は同一のデータ構造を共有するピアであり、暗号化された MQTT トランスポートで接続されています。
+MSD700 における中心的なアーキテクチャ上の決定は、**ユニット(物理ロボット)が完全なローカルサーバースタックを実行する**一方で、**MSD700 サーバー(クラウド)**が全ユニットの中央管理スタックを実行する、というものです。両者は同一のデータ構造を共有するピアであり、暗号化された MQTT トランスポートで接続されています。
 
 ![MSD700システム図](../../development/diagrams/msd700-system-diagram.drawio)
 
 | 軸 | MSD700 ユニット(ロボット) | MSD700 サーバー(クラウド) |
 | --- | --- | --- |
 | **実行内容** | ROS 1 Noetic の bringup、move_base、gmapping、センサードライバー、加えて `backend_local`、`db_local`、`mosquitto_local`、`frontend_local`。 | 中央の `backend_node`、`db`(MySQL)、`hivemq`(MQTT ブローカー)、`rosbridge`、`signalling_server`、`media-server`、`frontend_prod`。 |
-| **権限** | 稼働中の物理ロボット、センサー読み取り値、ローカルの operation lease、生のマップ記録を所有する。 | ユーザーアカウント、認証キーリング、レンタルプロファイル、ロボット登録レジストリ、フリート全体で同期されたマップ/ルートを所有する。 |
-| **耐障害性** | インターネットまたは Wi-Fi 接続が完全に失われている間も自律的にオフラインで動作する。 | ロボットのシャットダウン、ネットワーク切断、再起動を経てもフリートのメタデータを失わずに存続する。 |
+| **権限** | 稼働中の物理ロボット、センサー読み取り値、ローカルの operation lease、生のマップ記録を所有する。 | ユーザーアカウント、認証キーリング、レンタルプロファイル、ロボット登録レジストリ、全ユニットで同期されたマップ/ルートを所有する。 |
+| **耐障害性** | インターネットまたは Wi-Fi 接続が完全に失われている間も自律的にオフラインで動作する。 | ロボットのシャットダウン、ネットワーク切断、再起動を経ても全ユニットのメタデータを失わずに存続する。 |
 | **制約** | 自身のグローバルなアイデンティティを割り当てることはできない(初回のクラウド登録が必要)。 | アクティブなロボット接続なしに物理ロボットを動かすことはできない。 |
 
 ::: tip コア設計原則: オフラインキャッシュとしてのローカル
@@ -34,8 +34,8 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 | --- | --- | --- | --- |
 | **フロントエンドダッシュボード** | Next.js、React、TypeScript | マップキャンバス、テレメトリウィジェット、手動テレオペ、ナビゲーションコントロールを備えたシングルページのオペレーターインターフェース。 | `ROS-dashboard-next-ts`(クラウドでは `frontend_prod`/`frontend_dev`、ユニットでは `frontend_local` としてビルド) |
 | **backend_node** | Node.js、Express | 認証ミドルウェア、マップ/ルート/エリア/プレイリストの CRUD、ロボットコマンドのディスパッチ、同期の調整。 | `nakayama_cloud` サービス内のプロセス(`ros-web-ui/source/dependencies/ROS-dashboard-backend`) |
-| **multi_unit.py / cloud_multi.launch** | Python、ROS 1 Noetic | `/unit_<ULID>/...` 名前空間を介して、単一の統合 ROS ランタイム内ですべてのロボットにサービスを提供する、マルチユニット・テンプレート化リレーノード。 | フリートリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`)。コードデプロイがフリート全体のデータプレーン障害にならないよう、意図的にバックエンドから分離されている | 
-| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python、ROS 1 Noetic | MQTT ブリッジのトピックマップをユニットのロスターにわたって展開し、1つの `mqtt_client` nodelet と1つの TLS 接続がフリート全体にサービスを提供できるようにする。 | フリートリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`) |
+| **multi_unit.py / cloud_multi.launch** | Python、ROS 1 Noetic | `/unit_<ULID>/...` 名前空間を介して、単一の統合 ROS ランタイム内ですべてのロボットにサービスを提供する、マルチユニット・テンプレート化リレーノード。 | ユニットリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`)。コードデプロイが全ユニットのデータプレーン障害にならないよう、意図的にバックエンドから分離されている | 
+| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python、ROS 1 Noetic | MQTT ブリッジのトピックマップをユニットのロスターにわたって展開し、1つの `mqtt_client` nodelet と1つの TLS 接続が全ユニットにサービスを提供できるようにする。 | ユニットリレーコンテナ(`ros_web_ui_v2_unit_relays[_dev]`) |
 | **unit_manager.js(レガシー)** | Node.js(Docker API) | (非推奨)ロボット1台につき1コンテナをインスタンス化していたレガシーな動的コンテナマネージャー。単一 ROS ランタイムのマルチユニットリレーに置き換えられた。 | `backend_node` に組み込み |
 | **rosbridge** | `rosbridge_suite`(WebSocket) | port 9090(開発9091)経由で、すべてのユニットのライブ ROS トピックをブラウザキャンバスへストリーミングする統合 WebSocket ブリッジ。 | `nakayama_cloud` コンテナ内およびユニットのローカルスタック |
 | **HiveMQ(MQTT)** | HiveMQ CE(Java) | port 8883(TLS)経由でロボットとサーバーを接続する、暗号化された高スループットのメッセージブローカー。 | サーバーコンテナ(`hivemq` / `hivemq_dev`) |
@@ -53,7 +53,7 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 ### アーキテクチャ上の主要ルール:
 1. **単一の公開入り口としての Apache**: すべての HTTP および WebSocket リクエストは Apache の port 443 を通って入ります。バックエンドサービスは内部ポートまたはループバックアドレスにバインドします。ロボットが直接到達する唯一の外部ポートは、port 8883(TLS)の HiveMQ です。
 2. **コマンドは ROS ではなく MQTT 経由で流れる**: `backend_node` がディスパッチするコマンドは `/unit_<ULID>/system_command` MQTT トピックに乗り、`/unit_<ULID>/system_feedback` 経由で確認応答されます。クラウド上の ROS トピックは、ブラウザのマップキャンバスとテレメトリ表示に供給するためだけに存在します。
-3. **デシリアライザーとしてのユニット単位コンテナ**: コンテナ `rosweb_unit_<u>_<unit>_nakayama`(レガシーなユニット単位の経路。フリートのデフォルト`ros_web_ui_v2_unit_relays`が代わりに全ユニットにサービス提供する)はオンデマンドで実行され、MQTT からの JSON/文字列ペイロードをネイティブな ROS メッセージ(`nav_msgs/OccupancyGrid`、`geometry_msgs/PoseStamped`、`sensor_msgs/LaserScan`)へ変換し戻すことで、`rosbridge` がそれをダッシュボードへストリーミングできるようにします。
+3. **デシリアライザーとしてのユニット単位コンテナ**: コンテナ `rosweb_unit_<u>_<unit>_nakayama`(レガシーなユニット単位の経路。デフォルトでは共有の`ros_web_ui_v2_unit_relays`が代わりに全ユニットにサービス提供する)はオンデマンドで実行され、MQTT からの JSON/文字列ペイロードをネイティブな ROS メッセージ(`nav_msgs/OccupancyGrid`、`geometry_msgs/PoseStamped`、`sensor_msgs/LaserScan`)へ変換し戻すことで、`rosbridge` がそれをダッシュボードへストリーミングできるようにします。
 
 ## 2つの診断チャネル
 
@@ -65,7 +65,7 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS(8883) | コマンド、確認応答、ポーズ文字列、ステータス ping。 | コンソール上でロボットが**オフライン**と表示される。コマンドは即座に HTTP 504 で失敗する。 |
 | **rosbridge** | WebSocket(WSS) | 型付き ROS メッセージ(`/map`、`/robot_pose`、`/scan`、`/global_plan`)。 | ロボットは**オンライン**と表示されコマンドも受け付けるが、マップキャンバスは空のまま。 |
-| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、フリートリレーがダウンしている。あるいはレガシーなユニット単位の経路では `rosweb_unit_<u>_<unit>_nakayama` が停止または非アクティブによって reap されている。ため、キャンバスは空のまま。 |
+| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、ユニットリレーがダウンしている。あるいはレガシーなユニット単位の経路では `rosweb_unit_<u>_<unit>_nakayama` が停止または非アクティブによって reap されている。ため、キャンバスは空のまま。 |
 
 ## エンドツーエンドのコマンド実行フロー
 
@@ -79,8 +79,8 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 
 ## ユニット単位コンテナのライフサイクル
 
-::: info フリートリレーがデフォルト
-マルチユニットのテレメトリは、名前空間化されたトピック(`/unit_<ULID>/...`)とテンプレート化されたリレー(`multi_unit.py` / `cloud_multi.launch`、および MQTT 側の `nakayama_cloud_multi.launch`)を通じて、フリート全体にサービスを提供する単一の**フリートリレー**コンテナによって処理されます。そのロスターは `units` テーブルから得られるため、ロボットを登録することだけが、それを到達可能にするために必要なことです。下記のユニット単位の経路は依然として提供されており、環境変数1つで切り替えられますが、この2つを同じユニットに対して同時に実行してはいけません。[ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle#フリートリレー-すべてのユニットに1つのコンテナ) を参照してください。
+::: info ユニットリレーがデフォルト
+マルチユニットのテレメトリは、名前空間化されたトピック(`/unit_<ULID>/...`)とテンプレート化されたリレー(`multi_unit.py` / `cloud_multi.launch`、および MQTT 側の `nakayama_cloud_multi.launch`)を通じて、全ユニットにサービスを提供する単一の**ユニットリレー**コンテナによって処理されます。そのロスターは `units` テーブルから得られるため、ロボットを登録することだけが、それを到達可能にするために必要なことです。下記のユニット単位の経路は依然として提供されており、環境変数1つで切り替えられますが、この2つを同じユニットに対して同時に実行してはいけません。[ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle#ユニットリレー-すべてのユニットに1つのコンテナ) を参照してください。
 :::
 
 ユニット単位の経路では、`backend_node` 内部の `unit_manager.js` が `/var/run/docker.sock` 経由で、アクティブなユニットごとに1つのコンテナを動的に管理します。
@@ -142,7 +142,7 @@ MSD700 のコアとなるアーキテクチャ原則: **物理ロボットが唯
 | **アクティブミッションバッチ** | `operation_supervisor.py` | ブラウザのクローズを経ても存続する。RAM に保存される。 | ラッチされた `/string/operation_snapshot` |
 | **コンテナライフサイクル** | `unit_manager.js`(サーバー RAM) | サーバーランタイムのみ。起動時に `adoptExisting()` によって再構築される。 | 管理者用 Web コンソールとリーパー |
 | **UI ドラフト & 選択状態** | ブラウザの `sessionStorage` | セッションの寿命。タブを閉じるとクリアされる。 | ダッシュボードの React コンポーネント |
-| **フリートレコード & マップ** | 中央 MySQL(`db`) | 永続的な保存。 | バックエンド REST API |
+| **ユニットレコード & マップ** | 中央 MySQL(`db`) | 永続的な保存。 | バックエンド REST API |
 
 ::: warning ブラウザストレージの制限
 ブラウザタブを閉じると `sessionStorage` はクリアされます。シームレスなミッション再開を保証するため、アクティブなウェイポイントとカバレッジ境界は `/string/operation_snapshot` にラッチされます。オペレーターが新しいタブでダッシュボードを再度開くと、UI はこのラッチされたトピックをサブスクライブし、アクティブな run を完全に再構築します。セッション復旧の仕組み全体については [ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot) を、このテーブルの「Operating Lease」および「Autopilot」の行が依存するロボット側のタイミング階層については [セーフティウォッチドッグ](/ja/development/ros/safety-watchdog) を参照してください。
@@ -150,9 +150,9 @@ MSD700 のコアとなるアーキテクチャ原則: **物理ロボットが唯
 
 ## 関連ドキュメント
 
-- [メッセージ仕様](/ja/development/message-contracts): MQTT、ROS、WebSocket ペイロードの完全な仕様。
+- [メッセージ仕様](/ja/development/message-contracts/): MQTT、ROS、WebSocket ペイロードの完全な仕様。
 - [State and Behavior](/ja/development/state-and-behavior): ナビゲーション、ボウストロフェドン・スイープ、E-Stop の詳細なステートマシン。
-- [API リファレンス](/ja/development/api-reference): REST API エンドポイントと認証コントラクト。
+- [HTTP API](/ja/development/message-contracts/http-api): REST API エンドポイントと認証コントラクト。
 - [データベース設計](/ja/development/database-schema): MySQL スキーマ、テーブル、外部キー、マイグレーションスクリプト。
 - [カメラストリーミング](/ja/development/webui/camera/overview): WebRTC ビデオパイプラインと ICE candidate ネゴシエーション。
 - [データ同期](/ja/development/data-sync): ユニットキャッシュと中央サーバー間の同期メカニズム。

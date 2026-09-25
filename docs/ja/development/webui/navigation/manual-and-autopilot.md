@@ -22,6 +22,13 @@ List/Action Barパターンとcanvasパイプラインについては[概要](/j
 同じパネルはMappingページのサイドバーにも表示されるが、そこでは2つのトグルはナビゲーションのrunではなくアクティブなSLAMセッションを制御する。そのページ独自の説明では、そちらでのManual
 OverrideとAutopilotの意味を扱っている。
 
+**メッセージ仕様:** Manual Override のトグルは
+[`POST /api/manual`](/ja/development/message-contracts/http-api#manual) → [`manual.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#manual)。WASD の運転は
+10 Hz の [`server/key_vel`](/ja/development/message-contracts/rosbridge#publications) 上の `geometry_msgs/Twist` で、ロボットには
+[`string/key_vel`](/ja/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel` として届く。Autopilot のトグルは
+[`POST /api/autopilot`](/ja/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#autopilot) で、
+オン時は [`batch` + `takeover`](/ja/development/message-contracts/operation-sync#takeover)、オフ時は [`release`](/ja/development/message-contracts/operation-sync#release) と組になる。
+
 ## カバレッジ掃引をオペレーターに渡し、また受け取る
 
 Manual Overrideはボストロフェドン走行を**一時停止**するだけで、終了させません。ハンドルを離せば、
@@ -66,6 +73,11 @@ Manual Overrideの解除は自分が取った一時停止だけを再開する�
 キャンセルされた走行は自分では終端ステータスを一切発行しないため、これがないと掃引は死んだのに
 上位のすべての層が生きた走行を報告し続けます。
 :::
+
+**メッセージ仕様:** Pause ボタンは
+[`POST /api/boustrophedon/pause`](/ja/development/message-contracts/http-api#boustrophedon-pause) → [`boustrophedon.pause`](/ja/development/message-contracts/mqtt-commands#boustrophedon)。
+Cancel Coverage は [`POST /api/boustrophedon/deactivate`](/ja/development/message-contracts/http-api#boustrophedon-deactivate)。ライフサイクルの文字列は
+[`string/coverage_status`](/ja/development/message-contracts/bridge-topics#robot-to-cloud) で戻る。
 
 ## アクティビティステートマシン: ダッシュボードタブへのルーティング
 
@@ -112,6 +124,10 @@ Manual Overrideの解除は自分が取った一時停止だけを再開する�
 2. **ラッチされたスナップショットの再構築**: ミッションの全state(アクティブなウェイポイント、現在のインデックス、進行方向、カバレッジのポリゴン)は、ラッチされたROSトピック`/string/operation_snapshot`から復元される。
 3. **ゴーストステート検証**: ブラウザキャッシュが進行中のミッションを示している一方でロボットが約1 Hzのpingサンプルで4回連続(`PHANTOM_IDLE_SAMPLES = 4`)`idle`を報告している場合、フロントエンドは幻の実行表示を防ぐため自動的に`idle`にリセットする。
 
+**メッセージ仕様:** ルーティングは [ping 応答](/ja/development/message-contracts/heartbeat-and-lease#ping-response) の `active_page` と
+`robot_activity`、[HTTP の ping 応答](/ja/development/message-contracts/http-api#hardware-ping) の `intended_mode`/`needs_recovery` を読む。再構築は
+[`resync`](/ja/development/message-contracts/operation-sync#resync) で促した [`operation_snapshot`](/ja/development/message-contracts/operation-sync#snapshot) を読む。
+
 ### ログアウトはセッションを終了する(autopilotがオンの場合を除く)
 
 2つのログアウト契約は意図的に正反対であり、どちらもプリフライトのpeek pingが報告するロボットの
@@ -146,6 +162,9 @@ Manual Overrideの解除は自分が取った一時停止だけを再開する�
 開かれうる。これをクリアする動作は緊急停止とナビゲーション無効化の経路が既に行っていることと同じであり、
 このエンドポイントに到達しないautopilotの保持には影響しない。
 
+**メッセージ仕様:** [`POST /api/hardware/idle`](/ja/development/message-contracts/http-api#hardware-commands) →
+[`hardware.idle`](/ja/development/message-contracts/mqtt-commands#hardware)、続いて [`POST /user/logout`](/ja/development/message-contracts/http-api#user-logout)。
+
 ### 何がスナップショット再構築を引き起こすか
 
 再構築は真新しいタブに限られない。次のいずれかに該当し、タブに保持する価値のあるローカルセッションがない場合は常に実行される。
@@ -169,6 +188,7 @@ Manual Overrideの解除は自分が取った一時停止だけを再開する�
 
 ## 関連
 
+- [メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation): これらのトグルの裏にある全メッセージ。
 - [概要](/ja/development/webui/navigation/overview): このパネルと復旧ロジックが並んで配置される
   Mode List/Action Barパターンとcanvasパイプライン。
 - [ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes): 上記の復旧フローが復元するピンとルートを持つポイント・アンド・ゴー系モード。

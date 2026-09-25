@@ -9,13 +9,13 @@ search: false
 
 The back-office side of MSD700, reached through the separate [admin login](/development/webui/accounts/overview#admin-login-admin)
 described in Accounts & Access: a five-tab shell (`admin/dashboard.tsx`, one `*Panel.tsx` component
-per tab under `src/components/admin/`) for the staff who run the whole fleet rather than drive any
+per tab under `src/components/admin/`) for the staff who manage the units rather than drive any
 one robot. This page introduces the shell itself, the two admin roles it serves, and the account
 menu shared across every tab. Each tab gets its own page: [Operators](/development/webui/admin-console/operators),
-[Units & Fleet](/development/webui/admin-console/units-and-fleet),
+[Units](/development/webui/admin-console/units),
 [Rentals](/development/webui/admin-console/rentals), and
 [Backups](/development/webui/admin-console/backups). What ties the console's actions back to the
-robot and the container fleet underneath it is
+robot and the unit relay container underneath it is
 [ROS Integration](/development/webui/admin-console/ros-integration).
 
 ## The five tabs
@@ -23,12 +23,12 @@ robot and the container fleet underneath it is
 | Tab | Component | Visible to | Manages |
 | --- | --- | --- | --- |
 | Operators | `UsersPanel.tsx` | admin, superadmin | `users`: the accounts that log in and drive robots |
-| Units | `UnitsPanel.tsx` | admin, superadmin | `units`: which physical robots exist, fleet and pending |
+| Units | `UnitsPanel.tsx` | admin, superadmin | `units`: which physical robots exist, registered and pending |
 | Rentals | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: who a unit is rented to |
 | Backups | `BackupsPanel.tsx` | admin, superadmin | Archives of whole rental profiles |
 | Admins | `AdminsPanel.tsx` | superadmin only | `admin_accounts`: back-office staff themselves |
 
-The first four tabs manage the *operator-facing* fleet: the people who drive, the robots they
+The first four tabs manage the *operator-facing* side of the units: the people who drive, the robots they
 drive, and the rental relationship that connects the two. The fifth tab manages the console's own
 operators. That asymmetry is deliberate, not an oversight: an admin can do everything needed to run
 tenants and robots day to day without ever being able to create or remove another back-office
@@ -56,14 +56,14 @@ the backend, not merely kept from seeing the button.
 The console keeps three questions deliberately separate, each with its own tab and its own table:
 
 - **Who can drive at all**: an operator account, managed on [Operators](/development/webui/admin-console/operators).
-- **What robots exist**: a unit row, managed on [Units & Fleet](/development/webui/admin-console/units-and-fleet).
+- **What robots exist**: a unit row, managed on [Units](/development/webui/admin-console/units).
 - **Who is renting which robot**: a rental profile and its assignments, managed on
   [Rentals](/development/webui/admin-console/rentals).
 
 Creating an operator account grants no access to anything by itself, and registering a unit grants
 no one the ability to drive it either: both only become meaningful once a rental profile connects
 them, by holding the operator as a member and the unit as an assignment. See
-[Units & Fleet](/development/webui/admin-console/units-and-fleet) and
+[Units](/development/webui/admin-console/units) and
 [Rentals](/development/webui/admin-console/rentals) for how each side of that connection works.
 
 ## Admins tab (superadmin only)
@@ -101,12 +101,13 @@ operator account) not something reachable from this menu.
 
 ## Related
 
+- [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): every tab calls `/admin/api/*` with an `admin` token from `POST /admin/api/login`.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
-- [Units & Fleet](/development/webui/admin-console/units-and-fleet): the Fleet and Pending sub-views over the robot roster.
+- [Units](/development/webui/admin-console/units): Registered Units and Pending sub-views over the robot roster.
 - [Rentals](/development/webui/admin-console/rentals): rental profile CRUD, membership, and unit assignment.
 - [Backups](/development/webui/admin-console/backups): archiving and restoring whole rental profiles.
-- [ROS Integration](/development/webui/admin-console/ros-integration): how these actions reach the robot and the container fleet.
+- [ROS Integration](/development/webui/admin-console/ros-integration): how these actions reach the robot and the unit relay container.
 - [Architecture](/development/architecture): high-level system structure and two-machine model.
 - [Database Schema](/development/database-schema): the full schema reference underneath every tab.
-- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the fleet relay.
+- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the unit relay.
 - [Backup, Restore, and Data Migration](/development/backup-and-restore): the standalone reference for the archive format and REST operations.

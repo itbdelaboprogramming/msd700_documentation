@@ -17,7 +17,7 @@
 | 3 | シグナリング | WebRTCネゴシエーション | 映像なし、それ以外は正常 |
 | 4 | WebRTCメディア | カメラ映像自体 | LAN内では映るが外部では映らない:TURNリレー |
 
-#2に似たもう一つの故障:ユニットはオンライン、rosbridgeも接続済みだが、共有フリートリレー(`unit_relays`)が停止し、rosbridgeが読むクラウドトピックが存在しない。同じ空白地図、原因は別です。`docker ps --filter name=unit_relays`で確認してください。(ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。)
+#2に似たもう一つの故障:ユニットはオンライン、rosbridgeも接続済みだが、共有ユニットリレー(`unit_relays`)が停止し、rosbridgeが読むクラウドトピックが存在しない。同じ空白地図、原因は別です。`docker ps --filter name=unit_relays`で確認してください。(ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。)
 
 ## 1. ネットワーク経路の確認
 
@@ -41,7 +41,7 @@ openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/n
 :::
 
 ::: info 本番か開発か?
-ユニット側の`./scripts/docker-manager.sh up --dev`は登録とMQTTを`server_prod`ではなく`server_dev`に向けます:ポート別、DB別、フリート別です。テスト中はこれを使い、本番ではフラグを外します。開発で登録したユニットは本番には**登録されません**。逆も同様です。
+ユニット側の`./scripts/docker-manager.sh up --dev`は登録とMQTTを`server_prod`ではなく`server_dev`に向けます:ポート別、DB別、登録ユニット一覧も別です。テスト中はこれを使い、本番ではフラグを外します。開発で登録したユニットは本番には**登録されません**。逆も同様です。
 :::
 
 ## 2. ユニット登録の確認
@@ -49,7 +49,7 @@ openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/n
 管理コンソールの**Registered Units**で、[ユニット構築](/ja/setup/unit-setup)で承認したユニットを探します。ULIDをメモしてください。
 
 ```bash
-# サーバー上で。共有フリートリレーがRUNNINGでないとこれらのトピックは存在しません。
+# サーバー上で。共有ユニットリレーがRUNNINGでないとこれらのトピックは存在しません。
 docker ps --filter "name=unit_relays"
 docker exec -it ros_web_ui_v2_nakayama_ros bash -lc \
   'source /home/itbdelabo/ros-web-ui-ws/devel/setup.bash && rostopic list | grep unit_<ULID>'
@@ -71,7 +71,7 @@ mosquitto_sub -h msd.nglobal.jp -p 8883 --capath /etc/ssl/certs \
 - [ ] サーバー正常: `docker compose --profile server_prod ps`ですべて`Up`または`healthy`
 - [ ] ユニットのROSグラフ正常: ユニットコンテナ内の`rosnode list`にbringupノードが見える
 - [ ] Registered Unitsでユニットが**オンライン**(経路1、MQTT)
-- [ ] 共有フリートリレー稼働中: `docker ps --filter name=unit_relays`
+- [ ] 共有ユニットリレー稼働中: `docker ps --filter name=unit_relays`
 - [ ] ユニットを開くと現在位置とライブ地図が見える(経路2、rosbridge)
 - [ ] カメラ映像がユニットLANの**外から**見える(経路3と4)
 - [ ] W-A-S-D操作でロボットが動き、ダッシュボード位置が追従する

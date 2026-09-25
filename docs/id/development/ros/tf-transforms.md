@@ -73,4 +73,4 @@ Ketika telemetri (seperti pose robot dan laser scan) dijembatani dari robot fisi
 
 - [Sensor Fusion & Kontrol](/id/development/ros/sensor-fusion-and-control): Estimasi state kinematik dan EKF.
 - [Costmap & Planner](/id/development/ros/costmaps-and-planners): Frame koordinat costmap navigasi.
-- [Protokol rosbridge](/id/development/rosbridge-protocol): Serialisasi topic WebSocket.
+- [rosbridge (WebSocket)](/id/development/message-contracts/rosbridge): Serialisasi topic WebSocket.

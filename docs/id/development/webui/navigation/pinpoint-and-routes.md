@@ -36,10 +36,24 @@ tujuan, bukan batas.
 Mode point-and-go sekali pakai: operator mengklik tujuan di canvas, klik tersebut dikonversi
 menjadi goal metrik, dan robot dikirim ke titik tunggal tersebut.
 
+**Kontrak:** menaruh pin tidak mengirim apa pun. Play mengirim
+[goal `move_base` lewat rosbridge](/id/development/message-contracts/rosbridge#move-base-action) (dibawa ke robot sebagai
+[`string/move_base/goal`](/id/development/message-contracts/bridge-topics#json-goal)) dan mencatat run dengan
+[`operation_sync` `batch`](/id/development/message-contracts/operation-sync#batch) (`single_pinpoint`). Penyelesaian kembali di
+`server/move_base/status` dan `/result`, tiap result di-ACK di [`result_ack`](/id/development/message-contracts/bridge-topics#acks).
+Pause dan Stop membatalkan goal ([`cancel`](/id/development/message-contracts/bridge-topics#json-cancel)) dan mengirim
+[`pause`](/id/development/message-contracts/operation-sync#pause) atau [`stop`](/id/development/message-contracts/operation-sync#stop-complete).
+
 ## Multiple Pinpoint
 
 Mekanisme klik-untuk-menempatkan yang sama diulang untuk membangun urutan waypoint yang berurutan,
 yang kemudian dilintasi robot secara berurutan.
+
+**Kontrak:** browser mengirim satu [goal `move_base`](/id/development/message-contracts/rosbridge#move-base-action) per
+waypoint dan maju saat selesai. Run dicatat dengan [`batch`](/id/development/message-contracts/operation-sync#batch) (`multi_pinpoint`,
+dengan `route_mode` dan semua `waypoints`), setiap waypoint yang di-dispatch dicerminkan dengan
+[`progress`](/id/development/message-contracts/operation-sync#progress), dan akhir rute dengan [`complete`](/id/development/message-contracts/operation-sync#stop-complete).
+Saat Autopilot aktif, supervisor robot yang men-dispatch ([`takeover`](/id/development/message-contracts/operation-sync#takeover)).
 
 ### Save Route / Load Route
 
@@ -48,11 +62,21 @@ kembali kemudian lewat `LoadRouteModal.tsx`, yang mengisi ulang canvas dengan ur
 tersimpan. Kegagalan pada salah satu jalur ini ditampilkan lewat komponen `TopToast` yang
 dijelaskan di [Ikhtisar § UI pendukung](/id/development/webui/navigation/overview#ui-pendukung).
 
+**Kontrak:** Save Route adalah [`POST /api/routes`](/id/development/message-contracts/http-api#routes) dengan pinpoint
+sebagai `route_points` (satu pose ROS per titik), lalu thumbnail canvas ke
+[`POST /api/media/uploadRouteImage`](/id/development/message-contracts/http-api#media-server). Load Route adalah
+[`GET /api/routes/:map_id`](/id/development/message-contracts/http-api#routes) plus `GET /api/media/images/<id rute>.jpg` untuk thumbnail;
+rename dan hapus adalah `PUT` dan `DELETE /api/routes/:id`. Tidak ada yang sampai ke robot.
+
 ### Round Trip / Loop Route
 
 `RouteControls.tsx` menampilkan dua toggle independen, Round Trip dan Loop Route, yang mengubah
 apa yang terjadi begitu rute Multiple Pinpoint mencapai waypoint terakhirnya, berdampingan dengan
 kontrol Save/Load Route di atas.
+
+**Kontrak:** mode ini tidak dikirim ke robot secara tersendiri dan tidak disimpan bersama
+rute. Ia ikut sebagai `route_mode` (`basic`, `round-trip`, `loop`) plus `direction` di
+[`operation_sync` `batch`](/id/development/message-contracts/operation-sync#batch), agar supervisor bisa melanjutkan polanya bila mengambil alih.
 
 ## Set Home Base
 
@@ -63,14 +87,23 @@ Database (kolom `homebase_x`/`homebase_y`; lihat
 yang dipakai oleh aksi Return to Home Base pada Action Bar
 (lihat [Ikhtisar § Satu halaman, banyak mode](/id/development/webui/navigation/overview#satu-halaman-banyak-mode)).
 
+**Kontrak:** [`PUT /api/maps_data/homebase/:mapId`](/id/development/message-contracts/http-api#map-homebase) dengan
+`{ x, y, z, ox, oy, oz, ow }`, lalu perjalanan ke sana sebagai [goal `move_base`](/id/development/message-contracts/rosbridge#move-base-action)
+yang dicatat dengan [`batch`](/id/development/message-contracts/operation-sync#batch) operasi `homebase`. Pada peta yang baru disimpan,
+home base ikut di dalam [`mapping.stop`](/id/development/message-contracts/mqtt-commands#mapping), dan `navigation.init` memberikannya ke
+`/initialpose` robot ([MQTT `navigation`](/id/development/message-contracts/mqtt-commands#navigation)).
+
 ## Delete All Pinpoints
 
 Entri permanen di Mode List, bukan sesuatu yang terikat pada mode tertentu: menghapus seluruh
 pinpoint yang sudah ditempatkan sekaligus. Entri ini di-nonaktifkan (greyed out) ketika tidak ada
 apa pun untuk dihapus.
 
+**Kontrak:** hanya klien; tidak ada yang dikirim ke robot maupun backend.
+
 ## Terkait
 
+- [Kontrak Pesan § Halaman Navigasi](/id/development/message-contracts/#trace-navigation): semua pesan yang dikirim mode-mode ini, dalam satu tabel.
 - [Ikhtisar](/id/development/webui/navigation/overview): pola Mode List/Action Bar, pipeline
   canvas, dan transformasi koordinat yang menjadi dasar mode-mode ini.
 - [Manual & Autopilot](/id/development/webui/navigation/manual-and-autopilot): mengemudi manual,

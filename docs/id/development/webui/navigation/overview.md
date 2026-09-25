@@ -41,6 +41,11 @@ Karena canvas itu sendiri tidak pernah di-remount saat operator berpindah mode, 
 helper konversi koordinat, dan UI pendukung yang dijelaskan di bawah ini adalah infrastruktur
 bersama di bawah setiap mode, bukan sesuatu yang diimplementasikan ulang oleh masing-masing mode.
 
+**Kontrak:** Play, Pause, dan Stop bekerja pada goal `move_base` lewat
+[rosbridge](/id/development/message-contracts/rosbridge#move-base-action) dan mencerminkan run dengan [operation sync](/id/development/message-contracts/operation-sync);
+Return to Home Base adalah goal `move_base` ke home base tersimpan; Focus View hanya klien. Daftar per tombol:
+[Kontrak Pesan § Halaman Navigasi](/id/development/message-contracts/#trace-navigation).
+
 ## Pipeline rendering canvas
 
 `MapComponent` menyusun tampilannya sebagai tumpukan layer EaselJS di atas satu stage HTML5
@@ -53,6 +58,10 @@ Base menggambar saat operator mengklik canvas; lihat
 [Pinpoint & Rute](/id/development/webui/navigation/pinpoint-and-routes) untuk cara overlay itu
 dikendalikan. Layer 2 dan 4 (polygon keep-out dan jalur sapu boustrophedon) adalah milik mode yang
 dibahas di halaman-halaman sejenis lainnya.
+
+**Kontrak:** setiap layer adalah satu subscription rosbridge, didaftar beserta tipe pesannya di
+[rosbridge § Subscription](/id/development/message-contracts/rosbridge#subscriptions); peta sendiri diminta saat mount lewat
+[`string/map_request`](/id/development/message-contracts/bridge-topics#map-delivery).
 
 ## Transformasi koordinat: ruang metrik ke piksel layar
 
@@ -122,6 +131,7 @@ Ada beberapa komponen yang muncul lintas mode alih-alih menjadi milik satu mode 
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Navigasi](/id/development/message-contracts/#trace-navigation): semua pesan yang dikirim dan diterima halaman ini.
 - [Pinpoint & Rute](/id/development/webui/navigation/pinpoint-and-routes): Single/Multiple
   Pinpoint, Save/Load Route, Round Trip/Loop Route, Set Home Base, Delete All Pinpoints.
 - [Manual & Autopilot](/id/development/webui/navigation/manual-and-autopilot): `ManualAutopilotPanel`

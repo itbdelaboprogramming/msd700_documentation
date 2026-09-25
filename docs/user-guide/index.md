@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="user" />
 
-Welcome to the **MSD700 Operator User Guide**. This documentation is designed for fleet operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots. No programming or robotics experience is required.
+Welcome to the **MSD700 Operator User Guide**. This documentation is designed for operators, researchers, and field technicians who use the web dashboard to control, map, and supervise MSD700 autonomous robots. No programming or robotics experience is required.
 
 ## About MSD700
 
@@ -23,7 +23,7 @@ With the ROS Web UI, you can:
 - **Cover Areas**: Draw zones and command the robot to systematically sweep entire rooms or corridors
 - **Monitor Live**: Watch the robot's camera feed in real time with ultra-low latency streaming
 - **Manage Routes**: Save frequently traveled paths and chain them into automated mission playlists
-- **Manage a Fleet**: If you're an administrator, oversee multiple robots, operators, and rental profiles
+- **Manage your units**: If you're an administrator, oversee multiple robots, operators, and rental profiles
 - **Work Offline**: Use the full dashboard directly on the robot's local Wi-Fi without internet
 
 ## How to Use This Guide
@@ -40,7 +40,7 @@ Each section below walks through a specific feature with step-by-step instructio
   <LinkCard icon="📍" title="Routes & Coverage" details="Save point-to-point routes and draw areas for systematic cleaning sweeps." link="/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="Live Camera" details="Watch the robot's point of view in real time from anywhere." link="/user-guide/camera" />
   <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/user-guide/behavior" />
-  <LinkCard icon="🛠️" title="Admin Console" details="For fleet managers: add operators, manage rentals, and monitor fleet status." link="/user-guide/admin-console" />
+  <LinkCard icon="🛠️" title="Admin Console" details="For operators: add operators, manage rentals, and monitor unit status." link="/user-guide/admin-console" />
   <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/user-guide/faq" />
   <LinkCard icon="🩹" title="Troubleshooting" details="Quick solutions for common operator symptoms like video stalls and goal aborts." link="/user-guide/troubleshooting" />
 </LinkCards>
@@ -58,7 +58,7 @@ Each section below walks through a specific feature with step-by-step instructio
 7. **[Routes & Coverage](/user-guide/routes-coverage)**: Plan automated missions
 8. **[Live Camera](/user-guide/camera)**: Monitor the robot remotely
 9. **[How the Robot Behaves](/user-guide/behavior)**: Understand safety pauses, leases, and Autopilot
-10. **[Admin Console](/user-guide/admin-console)**: (Fleet managers only) Manage operators and units
+10. **[Admin Console](/user-guide/admin-console)**: (Operators only) Manage operators and units
 
 ## System Requirements
 

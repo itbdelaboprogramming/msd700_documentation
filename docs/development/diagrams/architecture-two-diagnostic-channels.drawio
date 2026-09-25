@@ -22,7 +22,7 @@
         <mxCell id="n8" value="Serialized ROS Topics" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="12" y="69" width="175" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="n9" value="fleet relay&lt;br&gt;ros_web_ui_v2_unit_relays&lt;br&gt;(legacy:&lt;br&gt;rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n9" value="unit relay&lt;br&gt;ros_web_ui_v2_unit_relays&lt;br&gt;(legacy:&lt;br&gt;rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="217" y="46" width="254" height="91" as="geometry" />
         </mxCell>
         <mxCell id="n10" value="rosbridge (:9090)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">

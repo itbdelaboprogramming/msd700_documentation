@@ -21,6 +21,9 @@ kriptografis tiga tahap.
 
 ![Pendaftaran perangkat keras kriptografis (protokol nonce)](./diagrams/enrolment-cryptographic-hardware-enrolment-the-non.drawio)
 
+**Kontrak:** [`POST /enroll/claim`, `/enroll/status`, `/enroll/token`](/id/development/message-contracts/firmware-and-enrolment#enrolment)
+(body request, kode status, dan bentuk kredensial).
+
 ### Mengapa protokol nonce 32-byte ini krusial
 
 - **Perlindungan Terhadap Spoofing MAC / Fingerprint**: Alamat MAC dan nomor seri perangkat keras
@@ -78,6 +81,7 @@ dipotong, tanpa masa tenggang untuk perangkat yang sedang digantikan.
 
 ## Terkait
 
+- [Kontrak Pesan: Firmware & Enrolment](/id/development/message-contracts/firmware-and-enrolment#enrolment): bentuk request dan respons `/enroll`.
 - [Ikhtisar](/id/development/webui/accounts/overview): keempat halaman Akun & Akses dan bagaimana
   hubungannya.
 - [Keamanan & Token](/id/development/webui/accounts/security-and-tokens): keyring JWT, domain

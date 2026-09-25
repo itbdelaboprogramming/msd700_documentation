@@ -42,7 +42,7 @@ Composeは宣言プロファイルの**いずれか**が有効だとサービス
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | ヘルスチェック付き。バックエンドは待機します |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | コンテナ内は両方`8883` |
 | `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API、`9090`/`9091` rosbridge、`11311`/`11312` ROSマスター | 環境ごとに共有ROSグラフ1つ |
-| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | なし(リレー) | フリート共有データプレーン1つ(デフォルト) |
+| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | なし(リレー) | 全ユニット共有データプレーン1つ(デフォルト) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS、`3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apacheキャッチオールは`3000`向き |
@@ -190,7 +190,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add`はコンテナユーザーをホスト`docker`グループに入れ、マウント済み`/var/run/docker.sock`を`backend_node`が使えるようにします。フリートモードは共有リレーを名簿に追従させ、レガシーはユニット単位コンテナを管理します。値はホストの`getent group docker | cut -d: -f3`で取得します。
+`group_add`はコンテナユーザーをホスト`docker`グループに入れ、マウント済み`/var/run/docker.sock`を`backend_node`が使えるようにします。マルチユニットモードは共有リレーを名簿に追従させ、レガシーはユニット単位コンテナを管理します。値はホストの`getent group docker | cut -d: -f3`で取得します。
 
 HiveMQは代わりに`user: "1001:0"`を使い、両方に意味があります:uid `1001`が`0600`キーストアの所有者(コンテナが*そのユーザー*でないと鍵を読めません)。gid `0`はイメージの`/opt/hivemq`書込チェックをchownなしで満たします。
 
@@ -251,8 +251,8 @@ logging:
 
 | タグ | 使用者 |
 | --- | --- |
-| `ros-noetic-webui-app-v2:latest` | 本番サービス(フリートリレー含む)+レガシー本番ユニット単位コンテナ |
-| `ros-noetic-webui-app-v2:dev` | 開発サービス(開発フリートリレー含む)+レガシー開発ユニット単位コンテナ |
+| `ros-noetic-webui-app-v2:latest` | 本番サービス(ユニットリレー含む)+レガシー本番ユニット単位コンテナ |
+| `ros-noetic-webui-app-v2:dev` | 開発サービス(開発ユニットリレー含む)+レガシー開発ユニット単位コンテナ |
 | `ros-dashboard-next-v2:prod` / `:dev` | 2つのダッシュボードビルド |
 | `ros-noetic-webui-app-local:latest` | ユニット自前のバックエンド・メディア・シグナリング・ネットワークエージェント |
 | `ros-dashboard-next-local:latest` | ユニット自前のダッシュボード |
@@ -383,7 +383,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | `ENROLL_CODE` | 未設定 | 使い切り登録バウチャー、保留プールを省略 |
 | `DEV_SERVER_HOST` | `118.22.31.252` | `--dev`の宛先(当ホスト実行時は`localhost`) |
 | `DEV_BACKEND_PORT` | `5001` | `--dev`のバックエンドポート |
-| `CLOUD_BASE_URL` | 導出 | コード変更なしでフリート全体を別クラウドに向けます |
+| `CLOUD_BASE_URL` | 導出 | コード変更なしで全ユニットを別クラウドに向けます |
 | `ROS_MASTER_PORT` | `--dev`で`11322`、他は`11321` | コンテナ**と**`backend_local`の両方へ。クラウドの`11311`/`11312`決して不可 |
 | `BACKEND_PORT_LOCAL` | `5002` | ローカルダッシュボードのバックエンドポート。`camera_client`はここでユニットローカルトークン取得 |
 
@@ -407,7 +407,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ### `manage-unit.sh`(サーバー側、手動/デバッグ専用)
 
-**レガシーのユニット単位**クラウドコンテナをULIDのみで駆動します(名前は拒否):`start|stop|restart|status|logs|list|loop`。`loop` は10秒ごとに期待の7中継ノードをポーリングし、欠落で再起動します。通常は不要です。ダッシュボード展開時の自動起動とアイドルタイムアウト停止がバックエンド側で面倒を見ます。フリートモードのユニットには決して使わないでください。
+**レガシーのユニット単位**クラウドコンテナをULIDのみで駆動します(名前は拒否):`start|stop|restart|status|logs|list|loop`。`loop` は10秒ごとに期待の7中継ノードをポーリングし、欠落で再起動します。通常は不要です。ダッシュボード展開時の自動起動とアイドルタイムアウト停止がバックエンド側で面倒を見ます。マルチユニットモードのユニットには決して使わないでください。
 
 ## ユニット: `run_msd.sh`
 
@@ -512,25 +512,25 @@ docker exec -it msd700 tmux list-windows -t robot_services
 ダッシュボードJSはページを開いたブラウザのアドレスを**ホスト**にします。ビルド由来は**ポート**のみです。IP・ホスト名・mDNS(`msd700.local`)・`localhost` SSHトンネル全て動作します。`LOCAL_IP`は表示URLヒントとDHCPレス予備のみに残ります。
 :::
 
-## フリートリレー (デフォルト)とユニット単位コンテナ (レガシー)
+## ユニットリレー (デフォルト)とユニット単位コンテナ (レガシー)
 
-各ロボットのクラウドデータプレーンは共有コンテナ1台で動作します。本番`ros_web_ui_v2_unit_relays`・開発`..._dev`です。バックエンドのROSマスターとrosbridgeを共有します。環境ごとにROSグラフ1つです。フリート用`mqtt_client` nodelet/TLS接続1つと複数ユニットトピックリレーを持ちます。起動コマンドはDB名簿(または`MULTI_UNIT_LIST`上書き)からブリッジ表を生成します。空名簿やDB到達不能では待機再試行します。ロボット追加でユニット単位コンテナは生まれません。
+各ロボットのクラウドデータプレーンは共有コンテナ1台で動作します。本番`ros_web_ui_v2_unit_relays`・開発`..._dev`です。バックエンドのROSマスターとrosbridgeを共有します。環境ごとにROSグラフ1つです。全ユニット用`mqtt_client` nodelet/TLS接続1つと複数ユニットトピックリレーを持ちます。起動コマンドはDB名簿(または`MULTI_UNIT_LIST`上書き)からブリッジ表を生成します。空名簿やDB到達不能では待機再試行します。ロボット追加でユニット単位コンテナは生まれません。
 
-`UNIT_CONTAINERS_ENABLED`既定`false`のためデフォルトです。`unit_manager.js`は**フリートモード**で動作し、ユニット利用を追跡して単一リレーを名簿に追従させ、ユニット単位生成はしません。
+`UNIT_CONTAINERS_ENABLED`既定`false`のためデフォルトです。`unit_manager.js`は**マルチユニットモード**で動作し、ユニット利用を追跡して単一リレーを名簿に追従させ、ユニット単位生成はしません。
 
 ```bash
-docker ps --filter "name=unit_relays"       # 共有フリートリレー
-docker logs -f ros_web_ui_v2_unit_relays    # フリート全体のMQTT/ROSブリッジ
+docker ps --filter "name=unit_relays"       # 共有ユニットリレー
+docker logs -f ros_web_ui_v2_unit_relays    # 全ユニット共通のMQTT/ROSブリッジ
 docker restart ros_web_ui_v2_unit_relays    # 名簿変更の取込
 ```
 
-::: warning フリートリレーとユニット単位コンテナの併用禁止
-同MQTTトピック上の2ブリッジは全ゴール・結果を二重配送し、ウェイポイントACKループを二重進行させます(ウェイポイント飛ばしに見えます)。リレーはユニット単位`cloud_mqtt_client`ノード登録中は起動拒否し、`unit_manager.js`はフリートモードの迷子`rosweb_unit_*`を記録します( kill しません)。
+::: warning ユニットリレーとユニット単位コンテナの併用禁止
+同MQTTトピック上の2ブリッジは全ゴール・結果を二重配送し、ウェイポイントACKループを二重進行させます(ウェイポイント飛ばしに見えます)。リレーはユニット単位`cloud_mqtt_client`ノード登録中は起動拒否し、`unit_manager.js`はマルチユニットモードの迷子`rosweb_unit_*`を記録します( kill しません)。
 :::
 
 ### レガシー: ユニット単位コンテナ
 
-バックエンドプロセス環境の`UNIT_CONTAINERS_ENABLED=true`でロボット毎リレーコンテナ1台に戻ります:本番`rosweb_unit_<ULID>_nakayama`・開発`..._nakayama_dev`で、オンデマンド作成・アイドル30分後回収(Autopilotはpin)です。チェックインComposeファイルは当該変数を転送しないため、`.env`編集だけでは有効化しません。デプロイ設定で明示転送し、当該環境のフリートリレーを除外します。次回プロファイル`up`でリレーが再起動します。これら動的コンテナを表すComposeサービスはありません。
+バックエンドプロセス環境の`UNIT_CONTAINERS_ENABLED=true`でロボット毎リレーコンテナ1台に戻ります:本番`rosweb_unit_<ULID>_nakayama`・開発`..._nakayama_dev`で、オンデマンド作成・アイドル30分後回収(Autopilotはpin)です。チェックインComposeファイルは当該変数を転送しないため、`.env`編集だけでは有効化しません。デプロイ設定で明示転送し、当該環境のユニットリレーを除外します。次回プロファイル`up`でリレーが再起動します。これら動的コンテナを表すComposeサービスはありません。
 
 ```bash
 docker ps --filter "name=rosweb_unit_"           # ユニット単位ブリッジ (レガシーのみ)
@@ -538,7 +538,7 @@ docker logs -f rosweb_unit_<ULID>_nakayama       # 1台のリレー
 docker stop rosweb_unit_<ULID>_nakayama          # 停止。次回利用時にバックエンドが再起動
 ```
 
-フリートモード:`unit_manager.init()`はバックエンド起動時に既存共有リレーを再起動し、新マスターにノード登録させます。60秒名簿ポーリングも名簿変更時に再起動します。欠落リレーをマネージャーが作ることはありません。作成はComposeのみです。リレー再起動毎に全ユニットのクラウドデータプレーンが一瞬切れます。
+マルチユニットモード:`unit_manager.init()`はバックエンド起動時に既存共有リレーを再起動し、新マスターにノード登録させます。60秒名簿ポーリングも名簿変更時に再起動します。欠落リレーをマネージャーが作ることはありません。作成はComposeのみです。リレー再起動毎に全ユニットのクラウドデータプレーンが一瞬切れます。
 
 レガシーモード:`adoptExisting()`は稼働中コンテナをライフサイクル管理に引継ぎますが、ROSノード再起動はしません。マスター置換時は登録を確認し、当該環境の影響コンテナのみ復旧します。開発と本番に跨る無限定`rosweb_unit_*`一括再起動は禁止です。
 

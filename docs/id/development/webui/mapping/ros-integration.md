@@ -14,138 +14,88 @@ serta di jaringan saat sebuah peta disimpan. Untuk perilaku halaman itu sendiri,
 [Ikhtisar](/id/development/webui/mapping/overview) dan
 [Override Manual dan Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous).
 
-## Memulai dan menghentikan sesi pemetaan
+## Memulai dan menghentikan sesi pemetaan {#starting-and-stopping-a-mapping-session}
 
-Dari [Referensi API § Operasi Pemetaan (SLAM)](/id/development/api-reference#operasi-mapping-slam):
+Satu endpoint, [`POST /api/mapping`](/id/development/message-contracts/http-api#mapping-control), menggerakkan
+seluruh sesi; tepat satu dari `start`, `pause`, `stop` bernilai `true` per panggilan. Discard punya endpoint sendiri.
 
-### Start
+| Tombol | HTTP | MQTT ke robot | Sisi robot |
+| --- | --- | --- | --- |
+| Play | `POST /api/mapping` `{ unit_id, start: true }` | [`mapping.start`](/id/development/message-contracts/mqtt-commands#mapping) | `/switch_mode(explore)`; aktivitas `mapping_active` |
+| Pause | `POST /api/mapping` `{ unit_id, pause: true }` | [`mapping.pause`](/id/development/message-contracts/mqtt-commands#mapping) | motion lock `operator_pause`; aktivitas `mapping_paused` |
+| Stop, lalu Simpan | `POST /api/mapping` `{ unit_id, stop: true, map_name, homebase_* }` | [`mapping.stop`](/id/development/message-contracts/mqtt-commands#mapping) | simpan dan upload, di bawah |
+| Stop, lalu Buang | [`POST /api/mapping/discard`](/id/development/message-contracts/http-api#mapping-discard) `{ unit_id }` | [`mapping.discard`](/id/development/message-contracts/mqtt-commands#mapping) | `/switch_mode(idle)`, `/map/reset` |
 
-`POST /api/mapping/start` memulai mode SLAM (gmapping) pada unit target.
-
-```json
-{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }
-```
-
-### Stop dan simpan
-
-`POST /api/mapping/stop` menyimpan occupancy grid yang aktif, membuat metadata thumbnail, dan
-mengunggah asetnya. Ini adalah request yang dikirim dialog `ConfirmSaving` begitu operator memberi
-nama peta:
+Request simpan yang dikirim dialog `ConfirmSaving` setelah operator memberi nama peta:
 
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
-  "homebase_x": 0.0,
-  "homebase_y": 0.0
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
+  "homebase_x": 0.0, "homebase_y": 0.0, "homebase_z": 0.0,
+  "homebase_ox": 0.0, "homebase_oy": 0.0, "homebase_oz": 0.0, "homebase_ow": 1.0
 }
 ```
 
-`homebase_x` / `homebase_y` di sini adalah pose yang ditangkap secara otomatis saat pemetaan
-dimulai (lihat
-[Ikhtisar § Menyimpan peta](/id/development/webui/mapping/overview#menyimpan-peta-alur-stop)),
-bukan nilai yang dimasukkan operator.
+Pose `homebase_*` adalah pose yang ditangkap otomatis saat mapping dimulai (lihat
+[Ikhtisar § Menyimpan peta](/id/development/webui/mapping/overview)), bukan nilai yang diisi operator.
+Backend membuat ULID peta, memakai `map_name` sebagai nama tampilan, dan meneruskan pose ke robot agar
+tersimpan dalam upload yang sama yang membuat baris peta.
 
 ::: info Penyimpanan bersifat asinkron
-Menyimpan peta SLAM memakan waktu lebih lama daripada budget timeout HTTP standar 30 detik yang
-dipakai di tempat lain pada platform ini (lihat
-[Kontrak Pesan § Arsitektur Korelasi dan Retry Perintah](/id/development/message-contracts#arsitektur-korelasi-dan-retry-perintah)).
-`POST /api/mapping/stop` karena itu langsung mengembalikan `200 OK` beserta `request_id` dan
-`map_ulid`:
+Penyimpanan butuh waktu lebih lama dari batas HTTP 30 detik yang dipakai perintah lain (lihat
+[Perintah MQTT § Korelasi dan retry](/id/development/message-contracts/mqtt-commands#correlation-and-retry)).
+Karena itu panggilan stop langsung menjawab:
 
 ```json
 {
   "success": true,
   "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
+  "map_ulid": "01JZ8QK2H0000000000000MAP",
+  "msg": "Map save initiated. Track progress via /api/mapping/progress/:request_id"
 }
 ```
 
-Frontend kemudian terhubung ke stream SSE di `GET /api/mapping/progress/:request_id` untuk
-mengikuti penyimpanan hingga selesai. Inilah yang kemungkinan besar menjadi dasar overlay progres
-`MapSaving` yang dijelaskan di
-[Ikhtisar](/id/development/webui/mapping/overview#menyimpan-peta-alur-stop); kode subscription
-sisi klien yang persis tidak dibahas dalam materi sumber yang tersedia untuk halaman ini. Lihat
-[Kontrak Pesan § Subsistem Pemetaan](/id/development/message-contracts#_3-subsistem-mapping-header-mapping).
+Overlay `MapSaving` lalu membuka
+[`GET /api/mapping/progress/:request_id?token=<jwt>`](/id/development/message-contracts/http-api#mapping-progress)
+(Server-Sent Events) dan mengikutinya sampai event terminal.
 :::
 
 ## Envelope perintah MQTT (`header: "mapping"`)
 
-Request stop HTTP di atas diteruskan ke robot sebagai perintah `mapping` / `stop` pada
-`/unit_<ULID>/system_command`, memakai
-[envelope perintah](/id/development/message-contracts#amplop-payload-perintah) bersama:
-
-```json
-{
-  "header": "mapping",
-  "command": "stop",
-  "config": {
-    "resource": {
-      "map_name": "01JZ8QK2H0000000000000MAP",
-      "display_map_name": "Production Hall Level 1",
-      "map_ulid": "01JZ8QK2H0000000000000MAP",
-      "created_by": "01JZ7YV5CQUSER00000000000",
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
-      "homebase_x": 1.2,
-      "homebase_y": 0.5,
-      "homebase_z": 0.0,
-      "homebase_ox": 0.0,
-      "homebase_oy": 0.0,
-      "homebase_oz": 0.0,
-      "homebase_ow": 1.0
-    }
-  }
-}
-```
-
-Perhatikan bahwa pose homebase lengkap di sini membawa quaternion orientasi (`homebase_o{x,y,z,w}`)
-selain posisi `x`/`y` yang dibawa body REST dan tabel `maps_data`. Ini adalah bentuk yang sama
-yang kemudian dibaca kembali oleh `navigation` / `init` saat peta dimuat (lihat
-[Kontrak Pesan § Subsistem Navigasi](/id/development/message-contracts#_2-subsistem-navigasi-header-navigation)),
-yang di luar cakupan halaman ini.
-
-::: warning Hanya `stop` yang didokumentasikan di katalog perintah
-Mesin state aktivitas milik [State & Perilaku](/id/development/state-and-behavior) mengisyaratkan
-bahwa transisi `pause`, `resume`, dan `discard` ada untuk sebuah sesi pemetaan (`mapping_active`
-↔ `mapping_paused`, dan `mapping_active` → `idle` saat discard). Entri Subsistem Pemetaan di
-Katalog Referensi Perintah hanya mendokumentasikan `stop` pada tingkat detail ini; kata kerja
-perintah dan payload persis untuk pause/resume/discard tidak dijabarkan di sana dan tidak ditebak
-di sini.
-:::
+Request stop sampai di robot sebagai `mapping.stop` di `/unit_<ULID>/system_command`, dalam
+[amplop perintah](/id/development/message-contracts/mqtt-commands#command-envelope) bersama. `config.resource`
+membawa `map_name` dan `map_ulid` (keduanya ULID baru, yaitu nama file di disk), `display_map_name` (yang
+diketik operator), `created_by`, `unit_id`, dan tujuh field `homebase_*`. Payload lengkap ada di
+[Perintah MQTT § `mapping`](/id/development/message-contracts/mqtt-commands#mapping); `navigation.init`
+nantinya membaca home base yang sama.
 
 ### Feedback progres pemetaan (`header: "mapping_progress"`)
 
-Progres pada sebuah penyimpanan mengalir kembali sebagai feedback `mapping_progress`, cocok
-dengan `request_id` dari perintah stop:
+Robot melaporkan penyimpanan di `system_feedback` dengan `header: "mapping_progress"` dan `request_id`
+milik perintah stop; backend meneruskan setiap blok `data` ke stream SSE:
 
-```json
-{
-  "header": "mapping_progress",
-  "command": "stop",
-  "data": {
-    "status": true,
-    "progress": 100,
-    "stage": "completed",
-    "message": "Saved on the robot and the server.",
-    "terminal": true,
-    "outcome": "completed"
-  },
-  "metadata": {
-    "timestamp": 1734000000.0,
-    "request_id": "..."
-  }
-}
-```
-
-| Nilai Outcome | Deskripsi |
+| `progress` | `stage` |
 | --- | --- |
-| `completed` | Berhasil ditulis ke media-server Unit lokal maupun server cloud. |
-| `cloud_pending` | Ditulis hanya ke media-server Unit lokal. Replikasi cloud selesai pada interval sync berikutnya. |
-| `failed` | Penyimpanan pemetaan gagal. Sesi tetap terbuka untuk dicoba ulang (aktivitas robot melaporkan `mapping_stop_failed`). |
+| 15 | `saving_map` |
+| 30 | `map_saved` |
+| 50 | `uploading` |
+| 85 | `upload_complete` atau `cloud_pending` |
+| 95 | `switching_mode` |
+| 100 | `completed` (terminal) |
+| -1 | `save_failed` (terminal) |
 
-Lihat
-[Kontrak Pesan § Feedback Progres Pemetaan](/id/development/message-contracts#feedback-progres-mapping-header-mapping-progress)
-untuk sumber tabel ini.
+Event terakhir membawa `terminal: true` dan `outcome`:
+
+| Outcome | Deskripsi |
+| --- | --- |
+| `completed` | Tertulis di media server unit dan cloud. |
+| `cloud_pending` | Tertulis di media server unit saja; salinan cloud menyusul lewat sync. |
+| `failed` | Tidak ada yang tersimpan. Sesi tetap terbuka untuk dicoba lagi (aktivitas `mapping_stop_failed`). |
+
+Bila robot diam 90 detik, backend mengakhiri stream sendiri dengan `stage: "no_response"`. Kontrak
+lengkap: [Perintah MQTT § `mapping_progress`](/id/development/message-contracts/mqtt-commands#mapping-progress).
 
 ## Penyimpanan sisi robot: `map_saver` dan pemeriksaan preflight
 
@@ -172,7 +122,7 @@ Output `map_saver` kemudian diunggah ke dua target independen, dengan tingkat ke
 Desain dua-target ini adalah alasan mengapa sebuah peta yang direkam di gudang tanpa internet tetap
 langsung bisa dipakai untuk navigasi di unit itu sendiri: hanya unggahan lokal wajib yang menjadi
 gerbangnya. Ketersediaan cloud (dibutuhkan untuk melihat peta dari tempat lain, atau untuk backup
-lintas-fleet) menyusul kemudian lewat `sync_agent` tanpa memblokir operator.
+lintas unit) menyusul kemudian lewat `sync_agent` tanpa memblokir operator.
 
 Untuk mesin state aktivitas robot dan perilaku pemulihan sesi yang berinteraksi dengan alur
 penyimpanan ini (tidak diulang di sini), lihat
@@ -181,6 +131,7 @@ dan [Safety Watchdog](/id/development/ros/safety-watchdog).
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Pemetaan](/id/development/message-contracts/#trace-mapping): semua pesan yang dikirim sesi mapping.
 - [Ikhtisar](/id/development/webui/mapping/overview): Play/Pause/Stop, tampilan peta live, dan
   alur UI simpan-saat-stop
 - [Override Manual dan Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous):

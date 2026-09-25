@@ -23,6 +23,10 @@ titik masuk ke signup, dijelaskan di bawah, tetapi tautan tersebut disembunyikan
 unit atau build lokal: unit tidak punya akun sendiri, jadi tidak ada yang perlu didaftarkan di sana.
 Selain satu tautan itu, halaman ini murni tentang login sebagai operator.
 
+**Kontrak:** [`POST /user/login`](/id/development/message-contracts/http-api#user-login), lalu [`GET /unit/all`](/id/development/message-contracts/http-api#unit-list)
+untuk pemilih unit dan [`POST /api/hardware/ping`](/id/development/message-contracts/http-api#hardware-ping) read-only (`claim: false`) per unit
+untuk statusnya. Token diperbarui dengan [`POST /user/refresh`](/id/development/message-contracts/http-api#user-refresh).
+
 ## Signup operator (`/signup`)
 
 Formulir pendaftaran mandiri untuk akun operator baru: pemeriksaan keunikan username dan email, bidang
@@ -36,12 +40,17 @@ ke sebuah profil penyewaan sebelum ia bisa melihat atau mengoperasikan robot. Si
 identitas, bukan otorisasi.
 :::
 
+**Kontrak:** [`POST /user/check-username`, `/user/check-email`, `/user/register`](/id/development/message-contracts/http-api#user-register).
+
 ## Login admin (`/admin`)
 
 Halaman login kedua yang tidak dicantumkan di navigasi, hanya bisa dijangkau dengan menuju `/admin`
 secara langsung, yang memanggil `adminLogin()` yang berbeda, bukan `/user/login` operator yang dipakai
-di halaman root. Ini adalah pintu back-office untuk staf manajemen armada dan tenant, terpisah dari
+di halaman root. Ini adalah pintu back-office untuk staf yang mengelola unit dan tenant, terpisah dari
 apa pun yang dilihat operator.
+
+**Kontrak:** `POST /admin/api/login`, yang menerbitkan token `admin` yang hanya diterima di
+[`/admin/api/*`](/id/development/message-contracts/http-api#admin-api).
 
 ## Ganti password admin (`/admin/change-password`)
 
@@ -65,6 +74,7 @@ operator): kedua halaman ini tidak berbagi formulir login, sesi, maupun jalur pe
 
 ## Terkait
 
+- [Kontrak Pesan § Sesi dan daftar unit](/id/development/message-contracts/#trace-session): pesan login, ping, dan logout.
 - [Keamanan & Token](/id/development/webui/accounts/security-and-tokens): keyring JWT, domain
   kepercayaan, dan terminasi TLS.
 - [Pendaftaran Perangkat Keras](/id/development/webui/accounts/enrolment): protokol nonce yang dipakai

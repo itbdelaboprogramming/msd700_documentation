@@ -11,7 +11,7 @@ Dokumen ini merinci bagaimana database MySQL lokal sebuah Unit (`ROS_DB`) dan da
 
 Mencakup loop rekonsiliasi berulang (`sync_agent.js`, `sync_engine.js`, `sync_tables.js`), algoritma resolusi konflik, pelacakan watermark, dan badge status operator Local Mode.
 
-Untuk kontrak sinkronisasi HTTP, lihat [Referensi API](/id/development/api-reference). Untuk upload penyimpanan peta real-time, lihat [State and Behavior](/id/development/state-and-behavior).
+Untuk kontrak sinkronisasi HTTP, lihat [HTTP API](/id/development/message-contracts/http-api). Untuk upload penyimpanan peta real-time, lihat [State and Behavior](/id/development/state-and-behavior).
 
 ::: info Prinsip Inti: Lokal sebagai Cache
 Sebuah Unit berfungsi offline tanpa batas waktu setelah terdaftar. Akun pengguna, izin, dan rental profile berasal dari cloud, sementara peta, rute, dan playlist yang direkam pada robot disinkronkan kembali ke cloud saat koneksi jaringan terbentuk.
@@ -23,7 +23,7 @@ Tidak semua tabel database bersinkronisasi ke arah yang sama:
 
 | Arah Sinkronisasi | Tabel yang Terpengaruh | Rasional Arsitektur |
 | --- | --- | --- |
-| **Hanya Downstream** (Cloud ke Unit) | `units`, `rental_profiles`, `users` (termasuk hash password bcrypt untuk login offline), `profile_members`, `profile_units`. | Batas keamanan: identitas dan tenancy rental berasal secara ketat dari server cloud. Sebuah unit lokal tidak bisa mencetak akun global baru atau menugaskan ulang tenancy fleet-nya sendiri. |
+| **Hanya Downstream** (Cloud ke Unit) | `units`, `rental_profiles`, `users` (termasuk hash password bcrypt untuk login offline), `profile_members`, `profile_units`. | Batas keamanan: identitas dan tenancy rental berasal secara ketat dari server cloud. Sebuah unit lokal tidak bisa mencetak akun global baru atau menugaskan ulang tenancy unit-nya sendiri. |
 | **Dua Arah** (Last-Write-Wins per baris) | `maps_data`, `routes_data`, `areas_data`, `playlists_data`. | Data operasional dibuat di kedua sisi: peta SLAM direkam pada robot, dan rute waypoint atau playlist dibuat di dashboard web. |
 
 Aset biner (seperti occupancy grid `.pgm`, metadata `.yaml`, dan thumbnail peta) disinkronkan lewat endpoint khusus (`/sync/file/:mapId/:kind`) dan diverifikasi lewat ukuran file yang tepat.
@@ -87,7 +87,7 @@ Lihat `classifyFailure()` di `sync_agent.js` untuk aturan prioritas yang tepat.
 
 ## Dokumentasi Terkait
 
-- [Referensi API](/id/development/api-reference): Endpoint dan payload sinkronisasi REST.
+- [HTTP API](/id/development/message-contracts/http-api): Endpoint dan payload sinkronisasi REST.
 - [State and Behavior](/id/development/state-and-behavior): Alur penyimpanan peta dan replikasi storage.
 - [Arsitektur](/id/development/architecture): Model trust domain hardware dan cloud.
 - [Skema Database](/id/development/database-schema): Definisi skema untuk `sync_state` dan `sync_tombstones`.

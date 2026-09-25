@@ -11,7 +11,7 @@ This document details how a Unit's local MySQL database (`ROS_DB`) and the centr
 
 It covers the recurring reconciliation loop (`sync_agent.js`, `sync_engine.js`, `sync_tables.js`), conflict resolution algorithms, watermark tracking, and the Local Mode operator status badge.
 
-For the HTTP sync contract, see [API Reference](/development/api-reference). For real-time map save uploads, see [State and Behavior](/development/state-and-behavior).
+For the HTTP sync contract, see [HTTP API](/development/message-contracts/http-api). For real-time map save uploads, see [State and Behavior](/development/state-and-behavior).
 
 ::: info Core Principle: Local as Cache
 A Unit functions offline indefinitely once enrolled. User accounts, permissions, and rental profiles originate from the cloud, while maps, routes, and playlists recorded on the robot synchronize back to the cloud when network links are established.
@@ -23,7 +23,7 @@ Not all database tables synchronize in the same direction:
 
 | Synchronization Direction | Tables Affected | Architectural Rationale |
 | --- | --- | --- |
-| **Downstream Only** (Cloud to Unit) | `units`, `rental_profiles`, `users` (including bcrypt password hashes for offline login), `profile_members`, `profile_units`. | Security boundary: identity and rental tenancy originate strictly on the cloud server. A local unit cannot mint new global accounts or reassign its own fleet tenancy. |
+| **Downstream Only** (Cloud to Unit) | `units`, `rental_profiles`, `users` (including bcrypt password hashes for offline login), `profile_members`, `profile_units`. | Security boundary: identity and rental tenancy originate strictly on the cloud server. A local unit cannot mint new global accounts or reassign its own unit tenancy. |
 | **Bidirectional** (Last-Write-Wins per row) | `maps_data`, `routes_data`, `areas_data`, `playlists_data`. | Operational data is authored on both sides: SLAM maps recorded on the robot, and waypoint routes or playlists created in web dashboards. |
 
 Binary assets (such as `.pgm` occupancy grids, `.yaml` metadata, and map thumbnails) synchronize via dedicated endpoints (`/sync/file/:mapId/:kind`) and are verified by exact file size.
@@ -87,7 +87,7 @@ See `classifyFailure()` in `sync_agent.js` for the exact precedence rules.
 
 ## Related Documentation
 
-- [API Reference](/development/api-reference): REST sync endpoints and payloads.
+- [HTTP API](/development/message-contracts/http-api): REST sync endpoints and payloads.
 - [State and Behavior](/development/state-and-behavior): Map saving and storage replication flows.
 - [Architecture](/development/architecture): Hardware and cloud trust domain models.
 - [Database Schema](/development/database-schema): Schema definitions for `sync_state` and `sync_tombstones`.

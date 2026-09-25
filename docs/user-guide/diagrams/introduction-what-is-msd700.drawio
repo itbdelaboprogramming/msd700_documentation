@@ -32,7 +32,7 @@
             <mxPoint x="0" y="-1" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="n3" value="Cloud Dashboard &amp;amp; Fleet Hub" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n3" value="Cloud Dashboard &amp;amp; Unit Hub" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="0" y="0" width="176" height="24" as="geometry" />
         </mxCell>
         <mxCell id="n4" value="MSD700 Robot" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;align=left;verticalAlign=middle;spacingLeft=7;spacingRight=1;spacingTop=0;spacingBottom=0;connectable=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">

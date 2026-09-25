@@ -21,7 +21,7 @@ REST エンドポイントについては [ROS連携](/ja/development/webui/data
 プレイリストは、それ自体の行を持つのではなく、マップに付随する属性である。マップの
 `modified_by_username` は「マップ自体、そのルート、保存済みエリア、またはプレイリスト」への変更を
 1つの値としてカバーしており、これら3つはマップとともにカスケード削除される
-（[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)
+（[名前変更 & 削除 § カスケード削除](/ja/development/webui/database/rename-and-delete#カスケード削除)
 を参照）が、この画面ではいずれも独自の一覧、検索ボックス、名前変更コントロールを持たない。レンタル
 プロファイルもここでは扱わない。
 
@@ -41,7 +41,10 @@ REST エンドポイントについては [ROS連携](/ja/development/webui/data
 ロボットがそれぞれ同名で異なる `id` のマップを持つことがある。テーブルは `unit_id` でスコープし、常に
 `id` ですべてをキー付けする必要があり、名前で行を重複排除してはならない。この背後にあるスキーマ制約に
 ついては
-[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#テーブル) を参照。
+[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#テーブル) を参照。
+
+**メッセージ仕様:** 一覧は [`GET /api/maps_data?unit_id=<unit>`](/ja/development/message-contracts/http-api#maps-list)(常にユニットで絞る)。
+サムネイルは [`GET /api/media/images/<マップ ULID>.png`](/ja/development/message-contracts/http-api#media-server) で、トークン不要。
 
 ## 検索、並べ替え、ページネーション
 
@@ -62,8 +65,11 @@ REST エンドポイントについては [ROS連携](/ja/development/webui/data
 マップを開くと `/unit/navigation?index=<id>` にルーティングされる。マッピングセッションがユニット上で
 現在実行中または一時停止中で、オペレーターが記録中のものとは*別の*マップを開いた場合、この画面は
 進行中のマップを黙って破棄しない。詳細は
-[名前変更 & 削除 § セッション競合ガード](/ja/development/webui/database/rename-and-delete#セッション競合ガード)
+[名前変更 & 削除 § セッション競合ガード](/ja/development/webui/database/rename-and-delete#セッション競合ガード)
 を参照。
+
+**メッセージ仕様:** ナビゲーションページは [`POST /api/navigation/init`](/ja/development/message-contracts/http-api#navigation-init) →
+[`navigation.init`](/ja/development/message-contracts/mqtt-commands#navigation) でマップを開く。
 
 ## 空状態とロード状態
 
@@ -72,6 +78,7 @@ REST エンドポイントについては [ROS連携](/ja/development/webui/data
 
 ## 関連
 
+- [メッセージ仕様 § データベースページ](/ja/development/message-contracts/#trace-database): 本ページのすべての呼び出し。
 - [名前変更 & 削除](/ja/development/webui/database/rename-and-delete): この画面上の2つの変更アクションの詳細
 - [ROS連携](/ja/development/webui/database/ros-integration): この機能を支えるスキーマと REST エンドポイント
 - [メディアサーバーリファレンス](/ja/development/webui/database/media-server-reference): マップアセット API(アップロード、サムネイル、レガシーIDマッパー)

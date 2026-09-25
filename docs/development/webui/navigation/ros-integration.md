@@ -7,14 +7,10 @@ search: false
 
 <RoleBadge role="developer" />
 
-The wire contract behind the entire Navigation page: every MQTT command envelope, REST endpoint,
-and rosbridge subscription that the Mode List's features (Map Sync, Coverage Area, pinpoint
-driving, manual/autopilot) actually use. This page pulls only the Navigation-relevant subset out of
-three larger, shared reference documents:
-[Message Contracts](/development/message-contracts), [API Reference](/development/api-reference),
-and [WebSocket and rosbridge Protocol](/development/rosbridge-protocol), and organizes it by
-concern. Those three documents remain the exhaustive, authoritative reference for anything not
-Navigation-specific; this page links back to them rather than duplicating their content wholesale.
+What the Navigation page sends and receives, grouped by transport. Every payload is specified once, in
+[Message Contracts](/development/message-contracts/); this page says which of those contracts the
+Navigation page uses and why, and links to the exact section. For one row per button, see
+[Message Contracts § Navigation page](/development/message-contracts/#trace-navigation).
 
 For the feature-level behavior these wire calls implement, see
 [Overview](/development/webui/navigation/overview),
@@ -23,174 +19,133 @@ For the feature-level behavior these wire calls implement, see
 [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes), and
 [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot).
 
-::: info Scope
-This page covers the Navigation and Boustrophedon MQTT subsystems, the heartbeat/lease contract,
-operation supervisor sync, the telemetry topics the Navigation canvas renders, the Navigation and
-Auto Align REST endpoints, and the rosbridge subscriptions feeding the live canvas. It does not
-cover Mapping (SLAM), hardware/enrolment, or WebRTC signalling: those belong to other feature
-areas and are covered in full in the shared reference documents linked above.
+## Two paths to the robot {#two-paths}
+
+The page uses both control paths described in
+[Message Contracts § Two control paths](/development/message-contracts/#two-control-paths):
+
+- **Command channel (HTTP → MQTT `system_command`)** for everything that changes mode or needs a
+  yes/no answer: opening a map, starting, pausing and stopping coverage, Auto Align, Manual Override,
+  Autopilot, emergency stop.
+- **Streaming channel (rosbridge → MQTT `string/*`)** for pinpoint and route goals, WASD teleop, the
+  operation supervisor mirror, the ACKs, and every overlay drawn on the canvas.
+
+## MQTT commands: Navigation subsystem {#mqtt-commands-navigation-subsystem}
+
+| Command | Sent by | What it does on the robot | Contract |
+| --- | --- | --- | --- |
+| `navigation.init` | Opening a map from the Database page, or the page's own auto-resume | `/map/retire`, `/switch_mode(navigation)`, then the stored home base on `/initialpose` | [`navigation`](/development/message-contracts/mqtt-commands#navigation) |
+| `navigation.deactivate` | Leaving navigation (idle, switching maps) | `/switch_mode(idle)`, `/map/reset` | same |
+| `navigation.pointstamped` | nothing in the current dashboard | publishes `/clicked_point` | same |
+
+`map_id` in the HTTP body and `map_name` in the MQTT payload are the same map ULID; the field is only
+renamed at the HTTP boundary.
+
+::: warning Pinpoints are not `pointstamped`
+Single and multiple pinpoints, routes and home-base drives are `move_base` goals over rosbridge (see
+[below](#move-base-goals)). `POST /api/navigation/pointstamped` still exists but the dashboard does not
+call it.
 :::
 
-## MQTT commands: Navigation subsystem
+## MQTT commands: Boustrophedon subsystem {#mqtt-commands-boustrophedon-subsystem}
 
-Full envelope shape, retry/timeout parameters, and the `hardware`/`mapping` subsystems are in
-[Message Contracts § Command Reference Catalogue](/development/message-contracts#command-reference-catalogue).
-The Navigation-relevant commands (`header: "navigation"`) are:
-
-| Command | Payload | Purpose |
-| --- | --- | --- |
-| `init` | `config.resource`: `map_name` (map ULID), `default_save_path`, `homebase_x/y/z`, `homebase_ox/oy/oz/ow`. Top-level `ensure_unpaused: true`. | Launches the navigation stack with a specific map. `ensure_unpaused` clears any standing `/emergency_pause` lock so navigation doesn't come up paused. |
-| `pointstamped` | `config.resource`: `X`, `Y`, `Z`. | Dispatches a single waypoint goal to `move_base`. |
-| `deactivate` | none | Terminates the active navigation stack. |
-
-`map_name` in the command payload and `map_id` in the REST body below refer to the same map ULID:
-the field is renamed at the HTTP boundary but not on the wire to the robot.
-
-## MQTT commands: Boustrophedon subsystem
-
-`header: "boustrophedon"` commands drive [Coverage Cleaning](/development/webui/navigation/coverage-cleaning):
-
-| Command | Payload | Purpose |
-| --- | --- | --- |
-| `init` | `config`: `use_autocover` (bool), `polygon` (single custom-range boundary), `areas` (ordered array of polygons: Auto Coverage's whole-map case, Custom Range's one polygon, or a Playlist's cover entries), `exclusions` (keep-out polygons, a Playlist's `no_cover` entries), `ensure_unpaused: true`. | Starts a sweep. Which of `polygon`/`areas`/`exclusions` are populated depends on which Coverage Cleaning entry point dispatched it (Auto Coverage sends none, Custom Range sends `polygon`, Playlist sends both `areas` and `exclusions`). |
-| `pause` | `{ "pause": true }` or `{ "pause": false }` | Pauses or resumes an in-progress sweep without discarding the plan. |
-| `deactivate` | none | Stops coverage planning entirely. |
-
-The algorithm that turns these polygons into an actual sweep path (cellular decomposition, lane
-pitch, obstacle handling) is documented in
-[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment)
-and is out of scope here.
-
-## Heartbeat/lease
-
-Every Navigation page load and mode switch rides on the same heartbeat contract documented in full
-in
-[Message Contracts § Heartbeat Ping and Lease Contract](/development/message-contracts#heartbeat-ping-and-lease-contract).
-The fields most relevant to this page:
-
-- **Request**: `page: "navigation"` and `claim: true` are what an operational Navigation session
-  sends on every ping, as opposed to the read-only fleet list (`claim: false`).
-- **Response**: `robot_activity` (e.g. `navigating`, `stuck`) and `active_page` drive routing and
-  the stuck-detector; `manual_override` and `autopilot` reflect the two modes covered in
-  [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot); `in_use` and
-  `origin_conflict` gate whether this tab is even allowed to issue the commands above.
-
-The REST-facing shape of the same ping is `POST /api/hardware/ping`, documented in
-[API Reference § Robot Heartbeat Ping](/development/api-reference#_2-robot-heartbeat-ping); the
-`data` block matches the MQTT contract field-for-field.
-
-## Operation Supervisor Synchronization
-
-`operation_supervisor.py` mirrors whatever the browser dispatches on `/string/operation_sync` so a
-Navigation mission, whether multi-pinpoint or coverage, keeps running if the browser tab closes;
-the full protocol and sequence diagram are in
-[Message Contracts § Operation Supervisor Synchronization](/development/message-contracts#operation-supervisor-synchronization).
-For Navigation specifically:
-
-- Starting Auto Coverage, Custom Range Coverage, or a Playlist run each send a `batch` sync
-  recording the operation (`operation: "coverage" | "custom_coverage" | "playlist"` and the
-  relevant `coverage` payload). This is a record-only mirror, since coverage execution already
-  runs robot-side once dispatched; the supervisor does not additionally drive it.
-- `takeover` and `release` are what [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot)'s
-  Autopilot toggle sends to hand waypoint sequencing to the supervisor and back.
-- `progress` is sent as the browser advances through a multi-pinpoint route under its own control
-  (see [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes)).
-
-## Streaming Telemetry
-
-The Navigation canvas is built entirely from topics serialized on the unit via `topic2string`,
-carried over MQTT, and rehydrated to typed ROS messages on the cloud server for `rosbridge`. Full
-hop-by-hop detail is in
-[Message Contracts § Telemetry and Overlay Topics](/development/message-contracts#telemetry-and-overlay-topics);
-the topics that feed the Navigation canvas specifically:
-
-| Robot Topic | Cloud Server Topic | Rate | Canvas role |
+| Command | Sent by | Payload | Contract |
 | --- | --- | --- | --- |
-| `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Robot icon position/heading, and the source pose stream for [Show/Hide Trace](/development/webui/navigation/coverage-cleaning#show-hide-trace). |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | On change, plus a heartbeat | The rendered floorplan bitmap. The canvas asks for it on mount rather than waiting for the next send, and shows "Loading map from robot..." until one is drawn. See [Message Contracts § Map delivery](/development/message-contracts#map-delivery). |
-| `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Red laser-scan points around the robot. |
-| `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | On plan | Blue global-plan line for pinpoint/route navigation. |
-| `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Continuous | Local trajectory line. |
-| `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | On plan | The orange [coverage-path overlay](/development/webui/navigation/coverage-cleaning#the-coverage-path-overlay). |
-| `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Full mission snapshot used to recover Navigation state on reconnect/reload. |
+| `boustrophedon.init` | Auto Coverage | `use_autocover: true` | [`boustrophedon`](/development/message-contracts/mqtt-commands#boustrophedon) |
+| `boustrophedon.init` | Custom Range Coverage | `use_autocover: false`, `polygon` | same |
+| `boustrophedon.init` | Operation Playlist | `use_autocover: false`, `areas` (cover entries, in order), `exclusions` (keep-out entries) | same |
+| `boustrophedon.pause` | Pause / resume | `pause: true` or `false` | same |
+| `boustrophedon.deactivate` | Cancel / Finish | `use_autocover` matching the run | same |
 
-## REST endpoints
+The algorithm that turns these polygons into a sweep path is in
+[Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment).
 
-From
-[API Reference § Navigation and Mission Dispatch](/development/api-reference#navigation-and-mission-dispatch):
+## REST endpoints {#rest-endpoints}
 
-### Initialize Navigation Mode: `POST /api/navigation/init`
+| Endpoint | Used for | Contract |
+| --- | --- | --- |
+| `POST /api/navigation/init` | Opening a map; refused with `404` when the map was recorded by a different unit | [HTTP API](/development/message-contracts/http-api#navigation-init) |
+| `POST /api/navigation/deactivate` | Leaving navigation | [HTTP API](/development/message-contracts/http-api#navigation-deactivate) |
+| `POST /api/boustrophedon/init`, `/pause`, `/deactivate` | Coverage (`coverageApi.ts`) | [HTTP API](/development/message-contracts/http-api#coverage) |
+| `POST /api/autoalign/start`, `/status`, `/reset` | Map Sync's Auto Align (`autoAlignApi.ts`) | [HTTP API](/development/message-contracts/http-api#autoalign) |
+| `POST /api/manual`, `POST /api/autopilot` | The two toggles in `ManualAutopilotPanel` | [HTTP API](/development/message-contracts/http-api#manual) |
+| `POST /api/emergency_stop` | The emergency button | [HTTP API](/development/message-contracts/http-api#emergency-stop) |
+| `POST /api/routes`, `GET /api/routes/:map_id`, `PUT`/`DELETE /api/routes/:id` | Save, Load, rename, delete a route (`route_name`, `map_id`, `route_points`) | [HTTP API](/development/message-contracts/http-api#routes) |
+| `/api/areas`, `/api/playlists` | Coverage areas and playlists | [HTTP API](/development/message-contracts/http-api#areas) |
+| `PUT /api/maps_data/homebase/:mapId` | Set Home Base | [HTTP API](/development/message-contracts/http-api#map-homebase) |
 
-Launches the navigation stack with a `map_id`. The map must belong to the requesting unit within a
-rental the caller is on; a map visible to the caller but recorded by a **different** robot on the
-same rental is refused with `404` rather than forwarded. Forwarding it used to let the request
-through while the robot silently failed to find map files it never recorded (see
-[API Reference § Initialize Navigation Mode](/development/api-reference#_1-initialize-navigation-mode)
-for the incident this fixed).
+## `move_base` goals {#move-base-goals}
 
-### Dispatch Waypoint Goal: `POST /api/navigation/pointstamped`
+Pinpoints, routes, Return to Home Base and the drive to a new home base all go through the roslibjs
+`ActionClient` on `<root>/server/move_base`, built in `public/script/Nav2D.js`. The cloud relay turns
+each goal and cancel into JSON on `string/move_base/goal` and `/cancel`, and the robot's
+`action_client.py` turns them back into `/move_base/goal` and `/move_base/cancel`.
 
-Sends a single `{ unit_id, X, Y, Z }` destination. This is the REST wrapper around the
-`navigation`/`pointstamped` MQTT command above; see
-[Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes) for how single vs. multi
-pinpoint driving uses it.
+- Delivery: the same goal is resent every second until any status or result for it arrives.
+- Completion: the first terminal code from `/status` or `/result` decides Arrived, Failed or Cancelled.
+- Every result is ACKed on `string/move_base/result_ack`; the robot resends results until then.
 
-### Start Boustrophedon Area Coverage: `POST /api/boustrophedon/init`
+Full contract: [rosbridge § move_base action client](/development/message-contracts/rosbridge#move-base-action),
+[Bridge Topics § Goal](/development/message-contracts/bridge-topics#json-goal).
 
-The REST wrapper around the `boustrophedon`/`init` MQTT command above (`unit_id`, `areas`,
-`exclusions`). The frontend transport for this and the sibling `deactivate`/`pause` calls lives in
-`src/components/navigationMap/coverageApi.ts`; see
-[Coverage Cleaning](/development/webui/navigation/coverage-cleaning) for which UI action populates
-which field.
+## Heartbeat and lease {#heartbeat-lease}
 
-### Save Custom Waypoint Route: `POST /api/routes`
+The page pings `POST /api/hardware/ping` every second with `page: "navigation"` and `claim: true`, as
+opposed to the unit list's read-only `claim: false`, and sends `release: true` on the way out. The
+answer drives the page:
 
-Persists a named waypoint sequence (`profile_id`, `map_id`, `route_name`, `route_type`,
-`waypoints`). Covered in depth in
-[Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes); listed here only because it
-lives in the same API Reference section.
+- `robot_activity` and `active_page` route the operator and feed the stuck detector;
+- `manual_override` and `autopilot` set the two toggles in
+  [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot);
+- `in_use` and `origin_conflict` decide whether this tab may issue commands at all;
+- `motion_locked` shows that `/emergency_pause` is holding the robot;
+- `intended_mode` and `needs_recovery` (added by the backend) trigger the auto-resume.
 
-### Auto Align System: `POST /api/autoalign/start`
+Full contract: [Heartbeat & Lease](/development/message-contracts/heartbeat-and-lease).
 
-From
-[API Reference § Auto Align System](/development/api-reference#auto-align-system): initiates the
-particle-filter/scan-match convergence check. `api-reference.md` documents only `start`; the
-`status` and `reset` counterparts the frontend also calls
-(`src/components/navigationMap/autoAlignApi.ts`) are documented from source in
-[Map Sync & Auto Align](/development/webui/navigation/map-sync-and-alignment#api-autoalign-status),
-since they are not currently written up in the REST reference itself.
+## Operation supervisor sync {#operation-sync}
 
-## rosbridge subscriptions
+Every run the page starts is mirrored to `operation_supervisor.py` on `string/operation_sync`:
 
-The Navigation canvas talks to `rosbridge_suite` over the WebSocket protocol documented in full in
-[WebSocket and rosbridge Protocol](/development/rosbridge-protocol): connection endpoints per
-environment, the `subscribe`/`publish`/`call_service` operation shapes, and frontend
-resilience/self-healing (the EaselJS `createjs.Stage` prototype patch and the three-strikes
-reconnect debounce) all apply to Navigation unchanged and are not repeated here.
+| Page action | Sync messages |
+| --- | --- |
+| Play, single or multiple pinpoints | `batch` (`single_pinpoint` / `multi_pinpoint`, `route_mode`, `waypoints`), `progress` per waypoint, `complete` at the end |
+| Pause, Stop | `pause`, `stop` |
+| Autopilot on / off | `batch` + `takeover`, confirmed by a snapshot; `release` |
+| Set Home Base drive | `batch` with `homebase` (record only) |
+| Auto Coverage, Custom Range, Playlist | `batch` with `coverage`, `custom_coverage`, `playlist` (record only: coverage already runs on the robot) |
+| Page load, reconnect | `resync`, answered by `operation_snapshot` |
 
-The subset of
-[Primary Web Canvas Subscriptions](/development/rosbridge-protocol#primary-web-canvas-subscriptions)
-Navigation actually renders is the same set of topics listed in
-[Streaming Telemetry](#streaming-telemetry) above, addressed at their rosbridge-side names (e.g.
-`/server/robot_pose`, `/server/boustrophedon_path`) rather than the MQTT-side
-`/unit_<ULID>/server/...` form: rosbridge subscribes per-unit-relay, so the ULID segment is
-implicit in which relay the browser is connected to rather than repeated in every topic name at
-that layer.
+Full contract: [Operation Sync](/development/message-contracts/operation-sync).
+
+## Streaming telemetry {#streaming-telemetry}
+
+Everything the canvas draws arrives through rosbridge. Topic names include the unit prefix
+(`<root>` = `/unit_<ULID>`); one rosbridge connection serves every unit, so the prefix is what selects
+the robot.
+
+| rosbridge topic | Type | Canvas role |
+| --- | --- | --- |
+| `<root>/server/robot_pose` | `geometry_msgs/Pose` | Robot icon, and the pose stream behind [Show/Hide Trace](/development/webui/navigation/coverage-cleaning#show-hide-trace) |
+| `<root>/server/slam/map` | `nav_msgs/OccupancyGrid` | The map. Requested on mount over `string/map_request` instead of waiting for the next send; "Loading map from robot..." until one is drawn. See [Bridge Topics § Map delivery](/development/message-contracts/bridge-topics#map-delivery). |
+| `<root>/server/scan`, `<root>/server/scan_holes` | `sensor_msgs/LaserScan` | Lidar points, live holes |
+| `<root>/server/hazard_cells` | `nav_msgs/Path` | Hole trail of the run |
+| `<root>/server/move_base/NavfnROS/plan`, `.../TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Global and local plan lines |
+| `<root>/server/boustrophedon_path` | `nav_msgs/Path` | The [coverage-path overlay](/development/webui/navigation/coverage-cleaning#the-coverage-path-overlay), ACKed per revision |
+| `<root>/server/skipped_waypoints`, `<root>/string/uncovered_regions` | `nav_msgs/Path`, `std_msgs/String` | Coverage leftovers |
+| `<root>/string/operation_snapshot`, `<root>/string/operation_progress` | `std_msgs/String` | Run recovery and supervisor progress |
+
+Rates depend on the unit's egress profile (idle, watching, driving); see
+[Bridge Topics § Presence and egress profiles](/development/message-contracts/bridge-topics#egress-profiles).
+Subscription details: [rosbridge § Subscriptions](/development/message-contracts/rosbridge#subscriptions).
 
 ## Related
 
+- [Message Contracts § Navigation page](/development/message-contracts/#trace-navigation): every message, one row per button.
 - [Overview](/development/webui/navigation/overview): the Navigation page and its full Mode List.
-- [Map Sync & Auto Align](/development/webui/navigation/map-sync-and-alignment): pose correction and
-  the Auto Align REST calls in their feature context.
-- [Coverage Cleaning](/development/webui/navigation/coverage-cleaning): the boustrophedon feature in
-  its feature context.
-- [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes): single/multi pinpoint
-  driving and saved routes.
-- [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot): teleop and the
-  autopilot sequencer, and the Operation Supervisor takeover/release calls.
+- [Map Sync & Auto Align](/development/webui/navigation/map-sync-and-alignment): pose correction and Auto Align.
+- [Coverage Cleaning](/development/webui/navigation/coverage-cleaning): the boustrophedon feature.
+- [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes): pinpoint driving and saved routes.
+- [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot): teleop, autopilot, recovery.
 - [Boustrophedon Coverage & Zero-Spin Alignment Architecture](/development/ros/boustrophedon-and-alignment):
   the sweep algorithm and the in-place rotation guard.
-- [Message Contracts](/development/message-contracts): the full MQTT command/feedback reference.
-- [API Reference](/development/api-reference): the full REST API reference.
-- [WebSocket and rosbridge Protocol](/development/rosbridge-protocol): the full rosbridge wire
-  protocol.

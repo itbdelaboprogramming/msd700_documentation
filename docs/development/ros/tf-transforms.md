@@ -73,4 +73,4 @@ When telemetry (such as robot pose and laser scans) is bridged from the physical
 
 - [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control): Kinematic state estimation and EKF.
 - [Costmaps and Planners](/development/ros/costmaps-and-planners): Navigation costmap coordinate frames.
-- [rosbridge Protocol](/development/rosbridge-protocol): WebSocket topic serialization.
+- [rosbridge (WebSocket)](/development/message-contracts/rosbridge): WebSocket topic serialization.

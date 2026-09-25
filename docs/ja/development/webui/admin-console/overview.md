@@ -8,16 +8,16 @@ search: false
 <RoleBadge role="developer" />
 
 MSD700 のバックオフィス側であり、Accounts & Access で説明されている別の
-[管理者ログイン](/ja/development/webui/accounts/overview#管理者ログイン-admin) からアクセスする。
+[管理者ログイン](/ja/development/webui/accounts/overview#管理者ログイン-admin) からアクセスする。
 5つのタブを持つシェル（`admin/dashboard.tsx`、`src/components/admin/` 以下にタブごとの
-`*Panel.tsx` コンポーネント）で、1台のロボットを操縦するのではなくフリート全体を運用するスタッフ
+`*Panel.tsx` コンポーネント）で、1台のロボットを操縦するのではなくユニットを管理するスタッフ
 向けである。このページでは、シェル自体、そこにサービスされる2つの管理者ロール、すべてのタブで
 共有されるアカウントメニューを紹介する。各タブにはそれぞれ独自のページがある:
 [オペレーター](/ja/development/webui/admin-console/operators)、
-[ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet)、
+[ユニット](/ja/development/webui/admin-console/units)、
 [レンタル](/ja/development/webui/admin-console/rentals)、
 [バックアップ](/ja/development/webui/admin-console/backups)。コンソールのアクションを、その下に
-あるロボットとコンテナフリートに結び付けているのが
+あるロボットとユニットリレーコンテナに結び付けているのが
 [ROS連携](/ja/development/webui/admin-console/ros-integration) である。
 
 ## 5つのタブ
@@ -25,12 +25,12 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 | タブ | コンポーネント | 表示対象 | 管理対象 |
 | --- | --- | --- | --- |
 | オペレーター | `UsersPanel.tsx` | admin, superadmin | `users`: ログインしてロボットを操縦するアカウント |
-| ユニット | `UnitsPanel.tsx` | admin, superadmin | `units`: 存在する物理ロボット、フリートと保留中 |
+| ユニット | `UnitsPanel.tsx` | admin, superadmin | `units`: 存在する物理ロボット、登録済みと保留中 |
 | レンタル | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: ユニットが誰にレンタルされているか |
 | バックアップ | `BackupsPanel.tsx` | admin, superadmin | レンタルプロファイル全体のアーカイブ |
 | 管理者 | `AdminsPanel.tsx` | superadmin のみ | `admin_accounts`: バックオフィススタッフ自身 |
 
-最初の4つのタブは*オペレーター向け*のフリート、すなわち操縦する人、操縦されるロボット、両者を
+最初の4つのタブは*オペレーター向け*の側面、すなわち操縦する人、操縦されるロボット、両者を
 つなぐレンタル関係を管理する。5番目のタブはコンソール自身のオペレーターを管理する。この非対称性
 は意図的なものであり見落としではない。管理者は、他のバックオフィスアカウントを作成したり削除
 したりすることは一切できないまま、テナントとロボットを日常的に運用するために必要なことをすべて
@@ -48,7 +48,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 を止めているものではない。superadmin 専用ルールを実際に強制しているのはサーバー側のチェックであり、
 それは `admin_accounts` が1つの共有テーブル上のロールフラグではなく `users` から完全に分離された
 テーブルとして保たれているのと同じ理由による（
-[Accounts & Access § オペレーターアカウントと管理者アカウントは別々のシステムである](/ja/development/webui/accounts/overview#オペレーターアカウントと管理者アカウントは別系統のシステム)
+[Accounts & Access § オペレーターアカウントと管理者アカウントは別々のシステムである](/ja/development/webui/accounts/overview#オペレーターアカウントと管理者アカウントは別系統のシステム)
 を参照）。UI を迂回して一般の管理者が管理者タブのアクションに直接アクセスした場合、ボタンが見え
 ないだけでなく、バックエンドによって拒否されることが期待される。
 :::
@@ -61,14 +61,14 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 - **そもそも誰が操縦できるか**：オペレーターアカウント。
   [オペレーター](/ja/development/webui/admin-console/operators) で管理される。
 - **どのロボットが存在するか**：ユニットの行。
-  [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet) で管理される。
+  [ユニット](/ja/development/webui/admin-console/units) で管理される。
 - **誰がどのロボットをレンタルしているか**：レンタルプロファイルとその割り当て。
   [レンタル](/ja/development/webui/admin-console/rentals) で管理される。
 
 オペレーターアカウントを作成しただけでは何のアクセスも付与されず、ユニットを登録しただけでも
 誰もそれを操縦できるようにはならない。両者は、オペレーターをメンバーとして、ユニットを割り当て
 として持つレンタルプロファイルがそれらを接続して初めて意味を持つ。この接続のそれぞれの側の仕組み
-については [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet) と
+については [ユニット](/ja/development/webui/admin-console/units) と
 [レンタル](/ja/development/webui/admin-console/rentals) を参照。
 
 ## 管理者タブ（superadmin のみ）
@@ -98,7 +98,7 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 - ログイン中の管理者自身のアイデンティティ(ユーザー名、ロール)を確認する。
 - その管理者自身のプロファイル(ユーザー名、フルネーム)を編集する。
 - 自分自身のパスワード変更画面へ移動する。これは
-  [Accounts & Access § 管理者のパスワード変更](/ja/development/webui/accounts/overview#管理者パスワード変更-admin-change-password)
+  [Accounts & Access § 管理者のパスワード変更](/ja/development/webui/accounts/overview#管理者パスワード変更-admin-change-password)
   で説明されているのと同じ任意のモードである。
 
 *他の*アカウントのパスワードをリセットするのは、タブ固有の別のアクションである。同じバックオフィス
@@ -108,12 +108,13 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 
 ## 関連
 
+- [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): 各タブは `POST /admin/api/login` で得た `admin` トークンで `/admin/api/*` を呼ぶ。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
-- [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet): ロボット一覧の Fleet と Pending のサブビュー。
+- [ユニット](/ja/development/webui/admin-console/units): ロボット一覧の 登録済みユニット と Pending のサブビュー。
 - [レンタル](/ja/development/webui/admin-console/rentals): レンタルプロファイルの CRUD、メンバーシップ、ユニット割り当て。
 - [バックアップ](/ja/development/webui/admin-console/backups): レンタルプロファイル全体のアーカイブと復元。
-- [ROS連携](/ja/development/webui/admin-console/ros-integration): これらのアクションがロボットとコンテナフリートに到達する仕組み。
+- [ROS連携](/ja/development/webui/admin-console/ros-integration): これらのアクションがロボットとユニットリレーコンテナに到達する仕組み。
 - [アーキテクチャ](/ja/development/architecture): システム全体の構造と2マシンモデル。
 - [データベーススキーマ](/ja/development/database-schema): すべてのタブの背後にある完全なスキーマリファレンス。
-- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とフリートリレーの単独リファレンス。
+- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とユニットリレーの単独リファレンス。
 - [バックアップ、リストア、データ移行](/ja/development/backup-and-restore): アーカイブ形式と REST 操作の単独リファレンス。

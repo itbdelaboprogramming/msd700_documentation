@@ -23,6 +23,10 @@ search: false
 たないため、そこで登録すべきものが何もないからだ。その一つのリンクを除けば、このページは純粋にオペレー
 ターとしてログインするためのものである。
 
+**メッセージ仕様:** [`POST /user/login`](/ja/development/message-contracts/http-api#user-login)、続いてユニット選択用の
+[`GET /unit/all`](/ja/development/message-contracts/http-api#unit-list) と、各ユニットの状態を得る読み取り専用(`claim: false`)の
+[`POST /api/hardware/ping`](/ja/development/message-contracts/http-api#hardware-ping)。トークンは [`POST /user/refresh`](/ja/development/message-contracts/http-api#user-refresh) で更新する。
+
 ## オペレーターサインアップ (`/signup`)
 
 新規オペレーターアカウントのセルフ登録フォームである。ユーザー名とメールアドレスの一意性チェック、パス
@@ -35,12 +39,17 @@ search: false
 ロボットを見たり操作したりできるようになる。サインアップはID作成であって、認可ではない。
 :::
 
+**メッセージ仕様:** [`POST /user/check-username`、`/user/check-email`、`/user/register`](/ja/development/message-contracts/http-api#user-register)。
+
 ## 管理者ログイン (`/admin`)
 
 `/admin` に直接アクセスすることでのみ到達できる、リストには載らない第二のログイン画面であり、ルートペ
 ージで使われるオペレーター用の `/user/login` ではなく、独立した `adminLogin()` を呼び出す。これは、オペ
-レーターが目にするものとは切り離された、フリート管理およびテナント管理スタッフ向けのバックオフィスの入
+レーターが目にするものとは切り離された、ユニットとテナントを管理するスタッフ向けのバックオフィスの入
 り口である。
+
+**メッセージ仕様:** `POST /admin/api/login`。発行される `admin` トークンは
+[`/admin/api/*`](/ja/development/message-contracts/http-api#admin-api) でのみ受け付けられる。
 
 ## 管理者パスワード変更 (`/admin/change-password`)
 
@@ -64,6 +73,7 @@ search: false
 
 ## 関連項目
 
+- [メッセージ仕様 § セッションとユニット一覧](/ja/development/message-contracts/#trace-session): ログイン、ping、ログアウトのメッセージ。
 - [セキュリティ & トークン](/ja/development/webui/accounts/security-and-tokens): JWTキーリング、信頼ド
   メイン、TLS終端。
 - [ハードウェア登録](/ja/development/webui/accounts/enrolment): ロボットが自身を登録する際に使うnonceプ

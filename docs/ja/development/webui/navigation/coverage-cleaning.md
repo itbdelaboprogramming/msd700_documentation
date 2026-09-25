@@ -32,6 +32,9 @@ Coverageは、オペレーターが描いた境界なしでロードされたマ
 true`を伴う`POST
 /api/boustrophedon/init`)、残っていたピンポイントを消去し、前回のrunの[ロボット軌跡オーバーレイ](#show-hide-trace)を消して新しいrunがきれいな線を描けるようにし、以前のCancelでサブスクリプションが破棄されていた場合は[カバレッジパスオーバーレイ](#カバレッジパスオーバーレイ)のサブスクリプションを再開する。境界となるポリゴンが存在しないため、描画済みエリアのオーバーレイ自体は生成されるのではなく消去される。掃引の境界はオペレーターが描くのではなく、ロボットが発見するものだからである。
 
+**メッセージ仕様:** [`POST /api/boustrophedon/init`](/ja/development/message-contracts/http-api#boustrophedon-init) `{ use_autocover: true }` →
+[`boustrophedon.init`](/ja/development/message-contracts/mqtt-commands#boustrophedon)。操作 `coverage` の [`batch`](/ja/development/message-contracts/operation-sync#batch) で記録。
+
 ## Custom Range Coverage
 
 Custom Range
@@ -43,6 +46,11 @@ false`と描かれた`polygon`を伴う`POST /api/boustrophedon/init`)。
 - **`manual`**: オペレーターが境界の頂点を順番に1つずつクリックし、辺はクリック順どおりに続く。形状を自動補完する仕組みがないため、これは凹形の輪郭(L字型の部屋、柱を回り込むエリア)を表現できる唯一のモードである。すでに描かれた辺と交差するようなクリックは完全に拒否される。自己交差する境界は内側が明確に定義できず、ロボット側で拒否されるか壊れた形になってしまうためである。最初の頂点付近(設定可能なスナップ許容範囲内)へのクリックでループが閉じる。
 - **`hull`(レガシー)**: すべてのクリックは緩やかなヒント点であり、ポリゴンはこれまでに配置されたすべての点の凸包(convex
   hull)として継続的に自動補完される。ループは常に閉じているが、凹形のエリアを正確に描くことは決してできない。凹みはすべてhullに飲み込まれてしまう。
+
+**メッセージ仕様:** `polygon` 付きの [`POST /api/boustrophedon/init`](/ja/development/message-contracts/http-api#boustrophedon-init) →
+[`boustrophedon.init`](/ja/development/message-contracts/mqtt-commands#boustrophedon)。ロボットは `/msd700/coverage_polygon` に `geometry_msgs/Polygon`
+として再 publish する。操作 `custom_coverage` の [`batch`](/ja/development/message-contracts/operation-sync#batch) で記録。一時停止と停止:
+[`/api/boustrophedon/pause`](/ja/development/message-contracts/http-api#boustrophedon-pause)、[`/api/boustrophedon/deactivate`](/ja/development/message-contracts/http-api#boustrophedon-deactivate)。
 
 ### Close LoopとClear Area
 
@@ -63,6 +71,9 @@ Area(`src/components/save-area/SaveAreaModal.tsx`)は、描いた境界をすぐ
 [Database § ROS連携](/ja/development/webui/database/ros-integration)で説明されているDatabase機能のマップ単位・ユニット単位のスコープと一致する。ここで保存されたエリアが、以下のOperation
 Playlistが参照する元になる。
 
+**メッセージ仕様:** [`/api/areas`](/ja/development/message-contracts/http-api#areas)(`POST`、`GET /:map_id`、`PUT /:id`、`DELETE /:id`)、`area_type` は
+`cover` または `no_cover`、`polygon_points` はメートル。バックエンドのみで、ロボットは関与しない。
+
 ## Operation Playlist
 
 Operation
@@ -70,9 +81,14 @@ Playlist(`src/components/area-playlist/AreaPlaylistModal.tsx`)は、保存済み
 /api/playlists`で永続化され、`GET /api/playlists/:mapId`(`areaApi.ts`)で一覧取得される。
 
 プレイリストの実行は、送信前に項目をタイプ別に分割する。各`cover`項目のポリゴンはcoverage-init呼び出しの`areas`の1つになり、各`no_cover`項目は`exclusions`の1つになる。これは
-[ROS連携 § MQTTコマンド: Boustrophedonサブシステム](/ja/development/webui/navigation/ros-integration#mqttコマンド-boustrophedonサブシステム)で文書化されているのと同じ`areas`/`exclusions`形式である。少なくとも1つのcoverエリアが必要であり、keep-outゾーンのみで構成されたプレイリストはロボットに届く前にクライアント側で拒否される。送信後、プレイリストのrunは、その後のpause/deactivate呼び出しに関してCustom
+[ROS連携 § MQTTコマンド: Boustrophedonサブシステム](/ja/development/webui/navigation/ros-integration#mqtt-commands-boustrophedon-subsystem)で文書化されているのと同じ`areas`/`exclusions`形式である。少なくとも1つのcoverエリアが必要であり、keep-outゾーンのみで構成されたプレイリストはロボットに届く前にクライアント側で拒否される。送信後、プレイリストのrunは、その後のpause/deactivate呼び出しに関してCustom
 Range
 Coverageと同じcustom-coverage(`use_autocover: false`)経路にルーティングされる。ロボットの視点からは、これは一連の個別の掃引ではなく1つの境界付きマルチポリゴン掃引だからである。
+
+**メッセージ仕様:** 保存は [`/api/playlists`](/ja/development/message-contracts/http-api#playlists)(アイテムはポリゴンのスナップショットを持つ)。
+実行は `areas` と `exclusions` を付けた [`POST /api/boustrophedon/init`](/ja/development/message-contracts/http-api#boustrophedon-init) →
+[`boustrophedon.init`](/ja/development/message-contracts/mqtt-commands#boustrophedon) で、ロボットはそれを `/msd700/coverage_plan` の JSON として
+カバレッジノードに渡す。操作 `playlist` の [`batch`](/ja/development/message-contracts/operation-sync#batch) で記録。
 
 ## Show/Hide Trace
 
@@ -80,16 +96,25 @@ Show/Hide
 Traceは、カバレッジrun中にロボットが移動した経路を示す視覚オーバーレイを切り替える。赤いポリライン(`src/components/navigationMap/robotTrace.ts`)がロボットのライブポーズトピックを購読し、新しいポーズが来るたびに軌跡の形に追加することでcanvas上に描かれる。これは下記の[カバレッジパスオーバーレイ](#カバレッジパスオーバーレイ)とは独立している。この軌跡はそのオーバーレイとは異なる問いに答える。軌跡はロボットが実際にどこにいたかを示すものであり、プランナーが掃引しようとしている計画を示すものではない。軌跡は新しいカバレッジrun(Auto、Custom
 Range、Playlistのいずれか)の開始時に毎回リセット(消去して再開)されるが、pause/resumeをまたいでは意図的に保持される。そのため、一時停止して再開されたrunは、線を最初から引き直すのではなく、進捗を表示し続ける。
 
+**メッセージ仕様:** クライアントのみ。軌跡はキャンバスが既に持つ
+[`server/robot_pose`](/ja/development/message-contracts/rosbridge#subscriptions) の subscribe から描かれる。
+
 ## カバレッジパスオーバーレイ
 
 軌跡とは別に、オレンジ色のオーバーレイがboustrophedonプランナー自身の意図した掃引経路をレンダーする(`/server/boustrophedon_path`上の`nav_msgs/Path`、
 [ROS連携 §
-ストリーミングテレメトリ](/ja/development/webui/navigation/ros-integration#ストリーミングテレメトリ)で説明)。このオーバーレイのサブスクリプションはCancel/Finish時に破棄され、次のrunの開始時に再開される(Auto
+ストリーミングテレメトリ](/ja/development/webui/navigation/ros-integration#streaming-telemetry)で説明)。このオーバーレイのサブスクリプションはCancel/Finish時に破棄され、次のrunの開始時に再開される(Auto
 Coverage、Custom Range
 Coverage、Playlistはいずれも同じ「必要なら初期化してから表示する」というシーケンスを呼び出す)。またrun終了時には破棄ではなく意図的に非表示にされ、新しいrunが始まるまで完了した掃引線が見え続けるようにしている。
 
+**メッセージ仕様:** [`server/boustrophedon_path`](/ja/development/message-contracts/rosbridge#subscriptions)(`nav_msgs/Path`、
+[圧縮パス](/ja/development/message-contracts/bridge-topics#compressed-formats) として運ばれる)。描画した各リビジョンは
+[`string/boustrophedon_path_ack`](/ja/development/message-contracts/bridge-topics#acks) で ACK される。飛ばしたウェイポイントと未清掃領域は
+`server/skipped_waypoints` と `string/uncovered_regions` で届く。
+
 ## 関連
 
+- [メッセージ仕様 § カバレッジ清掃](/ja/development/message-contracts/#trace-coverage): カバレッジ走行が送る全メッセージ。
 - [概要](/ja/development/webui/navigation/overview): ナビゲーションページとその完全なMode
   List。
 - [マップ同期 & Auto Align](/ja/development/webui/navigation/map-sync-and-alignment):
@@ -101,6 +126,6 @@ Coverage、Playlistはいずれも同じ「必要なら初期化してから表�
 - [ROS連携](/ja/development/webui/navigation/ros-integration): 上記で参照したboustrophedonコマンドエンベロープを含む、ナビゲーションの完全なワイヤー契約。
 - [Boustrophedonカバレッジ & Zero-Spinアラインメントアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment):
   掃引アルゴリズム自体、ジオメトリモデル、セル分解、障害物管理。
-- [メッセージ契約](/ja/development/message-contracts): 完全なMQTTコマンド/フィードバックリファレンス。
-- [APIリファレンス](/ja/development/api-reference): 完全なREST APIリファレンス。
-- [WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol): 完全なrosbridgeワイヤープロトコル。
+- [メッセージ仕様](/ja/development/message-contracts/): 完全なMQTTコマンド/フィードバックリファレンス。
+- [HTTP API](/ja/development/message-contracts/http-api): 完全なREST APIリファレンス。
+- [rosbridge (WebSocket)](/ja/development/message-contracts/rosbridge): 完全なrosbridgeワイヤープロトコル。

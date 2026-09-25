@@ -313,7 +313,7 @@ nmcli's stderr passes through verbatim. Read it directly: it distinguishes wrong
 Neither hostapd config exists yet, or `network_local` can't read them (check the `/etc/hostapd` bind mount: `docker compose exec network_local ls -l /etc/hostapd`). `--provision-network` never ran.
 
 **Dashboard hotspot change times out / never confirms**
-`setHotspot()` touches the sentinel file and waits up to 15 s for the new SSID on air ([above](#changing-the-units-hotspot)). Check `systemctl status msd700-hotspot-restart.path msd700-hotspot-restart.service`, the `/run/msd700-hotspot-restart` read-write mount into `network_local`, and `journalctl -u msd700-hotspot-restart.service`.
+`setHotspot()` touches the sentinel file and waits up to 15 s for the new SSID on air ([above](#changing-the-unit-s-hotspot)). Check `systemctl status msd700-hotspot-restart.path msd700-hotspot-restart.service`, the `/run/msd700-hotspot-restart` read-write mount into `network_local`, and `journalctl -u msd700-hotspot-restart.service`.
 
 ## Related
 

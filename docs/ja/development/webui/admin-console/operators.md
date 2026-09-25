@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 オペレータータブ（`UsersPanel.tsx`）は、管理者が `users` を管理する場所である。`users` とは、
-[オペレーターログイン](/ja/development/webui/accounts/overview#オペレーターログイン) でログインし
+[オペレーターログイン](/ja/development/webui/accounts/overview#オペレーターログイン) でログインし
 ロボットを操縦するアカウントのことだ。タブのシェルとそこにアクセスできるロールについては
 [概要](/ja/development/webui/admin-console/overview) を、アカウント作成後にオペレーターが実際の
 ロボットへのアクセスをどう得るかについては
@@ -62,12 +62,13 @@ search: false
 
 ## 関連
 
+- [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`、`PATCH /admin/api/users/:id/status`、`PATCH /admin/api/users/:id/password`。
 - [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
-- [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet): ロボット一覧の Fleet と Pending のサブビュー。
+- [ユニット](/ja/development/webui/admin-console/units): ロボット一覧の 登録済みユニット と Pending のサブビュー。
 - [レンタル](/ja/development/webui/admin-console/rentals): オペレーターアカウントが実際にロボットへのアクセスを得る場所。
 - [バックアップ](/ja/development/webui/admin-console/backups): レンタルプロファイル全体のアーカイブと復元。
-- [ROS連携](/ja/development/webui/admin-console/ros-integration): 管理者のアクションがロボットとコンテナフリートに到達する仕組み。
+- [ROS連携](/ja/development/webui/admin-console/ros-integration): 管理者のアクションがロボットとユニットリレーコンテナに到達する仕組み。
 - [アーキテクチャ](/ja/development/architecture): システム全体の構造と2マシンモデル。
 - [データベーススキーマ](/ja/development/database-schema): `users.status` の注意点を含む完全なスキーマリファレンス。
-- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とフリートリレーの単独リファレンス。
+- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とユニットリレーの単独リファレンス。
 - [バックアップ、リストア、データ移行](/ja/development/backup-and-restore): アーカイブ形式と REST 操作の単独リファレンス。

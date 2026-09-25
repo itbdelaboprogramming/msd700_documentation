@@ -116,7 +116,7 @@ Two ports, both mandatory from env (the process exits if either is unset): `PORT
 `camera_client.py`'s connection loop never gives up permanently. An earlier version stopped after a
 fixed attempt budget and left the camera dead until someone manually restarted `run_msd.sh`. Retry
 delay is exponential backoff with jitter: a 2-second base, doubled per failed attempt, capped at 60
-seconds, and randomised so that a fleet of units sharing one cloud signalling server does not retry
+seconds, and randomised so that many units sharing one cloud signalling server does not retry
 in lockstep after a shared outage.
 
 A transport-level ICE failure (`iceConnectionState` reaching `failed`) triggers `restart_ice()`

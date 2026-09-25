@@ -24,12 +24,9 @@ skema (lihat [Integrasi ROS § Tabel](/id/development/webui/database/ros-integra
 sehingga duplikat yang ditolak di sini lebih mungkin merupakan kesalahan penamaan sungguhan
 ketimbang tabrakan alami.
 
-::: info Belum terdokumentasi di Referensi API
-[Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#manajemen-data-peta-dan-rute)
-saat ini mencakup pendaftaran peta tetapi bukan endpoint ganti nama itu sendiri. Perilaku di atas
-dikonfirmasi terhadap komponen frontend (`updateMapName` di `services.ts`); metode HTTP dan path
-yang persis tidak tercakup dalam Referensi API saat ini dan tidak ditebak-tebak di sini.
-:::
+**Kontrak:** [`PUT /api/maps_data/rename/:mapId`](/id/development/message-contracts/http-api#map-rename) dengan
+`{ new_map_name }`; nama yang sudah dipakai menghasilkan `409`. Hanya backend; unit menerima nama baru lewat
+[sinkronisasi data](/id/development/data-sync).
 
 ## Cascade delete
 
@@ -44,6 +41,10 @@ Tidak ada undo. Karena rute, area, dan playlist tidak didaftar secara terpisah d
 sebuah peta tidak diperlihatkan daftar terperinci hal-hal yang akan ikut terbawa selain prompt
 konfirmasi itu sendiri.
 
+**Kontrak:** [`DELETE /api/maps_data`](/id/development/message-contracts/http-api#map-delete) dengan `{ map_id }` di body. Jawabannya
+mendaftar file mana yang dihapus (`data.files`), dan tombstone penghapusan dikirim ke unit lewat
+[sinkronisasi data](/id/development/data-sync).
+
 ## Pengaman konflik sesi
 
 Membuka sebuah peta (lihat
@@ -56,17 +57,19 @@ mana yang dibuka:
   pilihan alih-alih diam-diam membuang peta yang sedang berjalan itu:
   - **Simpan**: peta yang sedang berjalan disimpan sebelum peta baru dimuat. Ini mengikuti jalur
     stop-and-save yang sama seperti yang terdokumentasi di
-    [Referensi API § Kontrol Mapping](/id/development/api-reference#_1-kontrol-mapping)
-    (`POST /api/mapping/stop`).
+    [HTTP API § `POST /api/mapping`](/id/development/message-contracts/http-api#mapping-control)
+    (`POST /api/mapping` dengan `stop: true`).
   - **Buang**: peta yang sedang berjalan dibuang tanpa disimpan.
   - **Batal**: operator tetap berada di peta saat ini dan sesi pemetaan berlanjut tanpa perubahan.
 
-Referensi API saat ini mendokumentasikan jalur simpan (`POST /api/mapping/stop`) tetapi bukan
-endpoint terpisah untuk buang; detail itu tidak tercakup dalam materi sumber dan tidak ditebak-tebak
-di sini.
+**Kontrak:** Simpan adalah [`POST /api/mapping`](/id/development/message-contracts/http-api#mapping-control) `{ stop: true, map_name }`
+diikuti [stream progres](/id/development/message-contracts/http-api#mapping-progress); Buang adalah
+[`POST /api/mapping/discard`](/id/development/message-contracts/http-api#mapping-discard) → [`mapping.discard`](/id/development/message-contracts/mqtt-commands#mapping).
+Membuka peta baru lalu memakai [`POST /api/navigation/init`](/id/development/message-contracts/http-api#navigation-init).
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Database](/id/development/message-contracts/#trace-database): semua panggilan aksi-aksi ini
 - [Ikhtisar](/id/development/webui/database/overview): daftar peta, pencarian/urutan/paginasi, dan keadaan yang menjadi dasar fitur ini
 - [Integrasi ROS](/id/development/webui/database/ros-integration): skema dan endpoint REST di balik aksi-aksi ini
 - [Arsitektur](/id/development/architecture)

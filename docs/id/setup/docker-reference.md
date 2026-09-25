@@ -42,7 +42,7 @@ Compose menjalankan service bila **salah satu** profile-nya aktif. Tanpa profile
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend menunggu |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Di dalam container keduanya `8883` |
 | `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master | Satu ROS graph bersama per environment |
-| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | tidak ada (relay) | Satu data plane bersama per fleet (default) |
+| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | tidak ada (relay) | Satu data plane yang dipakai bersama semua unit (default) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Catch-all Apache menunjuk `3000` |
@@ -190,7 +190,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` memasukkan user container ke grup `docker` host agar `backend_node` bisa memakai `/var/run/docker.sock` yang di-mount: mode fleet menjaga relay bersama selaras roster; mode legacy mengelola container per-unit. Cari nilainya dengan `getent group docker | cut -d: -f3` di host.
+`group_add` memasukkan user container ke grup `docker` host agar `backend_node` bisa memakai `/var/run/docker.sock` yang di-mount: mode multi-unit menjaga relay bersama selaras roster; mode legacy mengelola container per-unit. Cari nilainya dengan `getent group docker | cut -d: -f3` di host.
 
 HiveMQ memakai `user: "1001:0"`, dan keduanya penting: uid `1001` memiliki keystore `0600` (container harus *menjadi* user itu untuk membaca key-nya); gid `0` memenuhi cek writability image atas `/opt/hivemq` tanpa chown.
 
@@ -251,8 +251,8 @@ Di file **server** hanya `coturn` menyetel batas ini (config-nya log alokasi ver
 
 | Tag | Dipakai |
 | --- | --- |
-| `ros-noetic-webui-app-v2:latest` | service prod (termasuk fleet relay) + container per-unit prod legacy |
-| `ros-noetic-webui-app-v2:dev` | service dev (termasuk fleet relay dev) + container per-unit dev legacy |
+| `ros-noetic-webui-app-v2:latest` | service prod (termasuk unit relay) + container per-unit prod legacy |
+| `ros-noetic-webui-app-v2:dev` | service dev (termasuk unit relay dev) + container per-unit dev legacy |
 | `ros-dashboard-next-v2:prod` / `:dev` | dua build dashboard |
 | `ros-noetic-webui-app-local:latest` | backend, media, signalling, network agent milik unit |
 | `ros-dashboard-next-local:latest` | dashboard milik unit |
@@ -383,7 +383,7 @@ Ia error dengan penjelasan. Robot tanpa identitas cached enrol mandiri dan mence
 | `ENROLL_CODE` | unset | Voucher registrasi sekali pakai, melewati pending pool |
 | `DEV_SERVER_HOST` | `118.22.31.252` | Tujuan `--dev` (`localhost` bila jalan di host itu) |
 | `DEV_BACKEND_PORT` | `5001` | Port backend untuk `--dev` |
-| `CLOUD_BASE_URL` | diturunkan | Arahkan se-fleet ke cloud lain tanpa ubah kode |
+| `CLOUD_BASE_URL` | diturunkan | Arahkan semua unit ke cloud lain tanpa ubah kode |
 | `ROS_MASTER_PORT` | `11322` dengan `--dev`, bila tidak `11321` | Diberikan ke container **dan** `backend_local`. Tidak pernah `11311`/`11312` cloud |
 | `BACKEND_PORT_LOCAL` | `5002` | Port backend dashboard lokal; `camera_client` mengambil token unit-lokal di sini |
 
@@ -407,7 +407,7 @@ Tiga langkah ada karena failure diam-diam:
 
 ### `manage-unit.sh` (sisi-server, hanya manual/debug)
 
-Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu: backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai di unit mode fleet.
+Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu: backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai dalam mode multi-unit.
 
 ## Unit: `run_msd.sh`
 
@@ -512,25 +512,25 @@ Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.exampl
 JS dashboard mengambil **host**-nya dari alamat yang dipakai browser membuka halaman; hanya **port** yang masih dari build. IP, hostname, mDNS (`msd700.local`), atau tunnel SSH `localhost` semua bekerja. `LOCAL_IP` tersisa hanya sebagai hint URL cetakan dan fallback tanpa-DHCP.
 :::
 
-## Fleet relay (default) vs container per-unit (legacy)
+## Unit relay (default) vs container per-unit (legacy)
 
-Data plane cloud tiap robot jalan di SATU container bersama: `ros_web_ui_v2_unit_relays` (prod) atau `..._dev` (dev). Berbagi ROS master dan rosbridge backend: satu ROS graph per environment. Memegang satu koneksi `mqtt_client` nodelet/TLS untuk fleet plus relay topik multi-unit. Perintah start-nya membangun peta bridge dari roster database (atau override `MULTI_UNIT_LIST`). Roster kosong atau database tak terjangkau: menunggu dan retry. Menambah robot tidak membuat container per-unit.
+Data plane cloud tiap robot jalan di SATU container bersama: `ros_web_ui_v2_unit_relays` (prod) atau `..._dev` (dev). Berbagi ROS master dan rosbridge backend: satu ROS graph per environment. Memegang satu koneksi `mqtt_client` nodelet/TLS untuk semua unit plus relay topik multi-unit. Perintah start-nya membangun peta bridge dari roster database (atau override `MULTI_UNIT_LIST`). Roster kosong atau database tak terjangkau: menunggu dan retry. Menambah robot tidak membuat container per-unit.
 
-Default karena `UNIT_CONTAINERS_ENABLED` default `false`: `unit_manager.js` jalan mode **FLEET**, melacak pemakaian unit dan menjaga satu relay selaras roster, tidak pernah spawn per-unit.
+Default karena `UNIT_CONTAINERS_ENABLED` default `false`: `unit_manager.js` jalan mode **Multi-unit**, melacak pemakaian unit dan menjaga satu relay selaras roster, tidak pernah spawn per-unit.
 
 ```bash
-docker ps --filter "name=unit_relays"       # relay fleet bersama
-docker logs -f ros_web_ui_v2_unit_relays    # bridge MQTT/ROS se-fleet
+docker ps --filter "name=unit_relays"       # unit relay bersama
+docker logs -f ros_web_ui_v2_unit_relays    # bridge MQTT/ROS semua unit
 docker restart ros_web_ui_v2_unit_relays    # ambil perubahan roster
 ```
 
-::: warning Jangan jalankan fleet relay dan container per-unit bersamaan
-Dua bridge di topik MQTT yang sama mengantar tiap goal dan result dua kali, memajukan ganda loop ACK waypoint (terlihat seperti waypoint dilewati). Relay menolak start saat node `cloud_mqtt_client` per-unit terdaftar, dan `unit_manager.js` me-log (bukan kill) container `rosweb_unit_*` nyasar di mode fleet.
+::: warning Jangan jalankan unit relay dan container per-unit bersamaan
+Dua bridge di topik MQTT yang sama mengantar tiap goal dan result dua kali, memajukan ganda loop ACK waypoint (terlihat seperti waypoint dilewati). Relay menolak start saat node `cloud_mqtt_client` per-unit terdaftar, dan `unit_manager.js` me-log (bukan kill) container `rosweb_unit_*` nyasar di mode multi-unit.
 :::
 
 ### Legacy: container per-unit
 
-`UNIT_CONTAINERS_ENABLED=true` **di environment proses backend** mengembalikan satu container relay per robot: `rosweb_unit_<ULID>_nakayama` (prod) atau `..._nakayama_dev` (dev), dibuat on demand, direap setelah 30 mnt idle (Autopilot mem-pin). File Compose checked-in tidak meneruskan variable ini, sehingga edit `.env` saja tidak mengaktifkan. Config deployment harus meneruskannya eksplisit dan mengecualikan fleet relay environment itu, atau `up` profile berikutnya menyalakan relay lagi. Tidak ada service Compose menjelaskan container dinamis ini.
+`UNIT_CONTAINERS_ENABLED=true` **di environment proses backend** mengembalikan satu container relay per robot: `rosweb_unit_<ULID>_nakayama` (prod) atau `..._nakayama_dev` (dev), dibuat on demand, direap setelah 30 mnt idle (Autopilot mem-pin). File Compose checked-in tidak meneruskan variable ini, sehingga edit `.env` saja tidak mengaktifkan. Config deployment harus meneruskannya eksplisit dan mengecualikan unit relay environment itu, atau `up` profile berikutnya menyalakan relay lagi. Tidak ada service Compose menjelaskan container dinamis ini.
 
 ```bash
 docker ps --filter "name=rosweb_unit_"           # bridge per-unit (hanya legacy)
@@ -538,7 +538,7 @@ docker logs -f rosweb_unit_<ULID>_nakayama       # relay satu unit
 docker stop rosweb_unit_<ULID>_nakayama          # stop; backend restart saat dipakai lagi
 ```
 
-Mode fleet: `unit_manager.init()` me-restart relay bersama yang ada saat startup backend agar node-nya terdaftar ke master baru; poll roster 60-detik juga me-restart saat list unit berubah. Relay hilang tidak pernah dibuat manager; Compose yang membuatnya. Tiap restart relay sempat memutus data plane cloud semua unit.
+Mode multi-unit: `unit_manager.init()` me-restart relay bersama yang ada saat startup backend agar node-nya terdaftar ke master baru; poll roster 60-detik juga me-restart saat list unit berubah. Relay hilang tidak pernah dibuat manager; Compose yang membuatnya. Tiap restart relay sempat memutus data plane cloud semua unit.
 
 Mode legacy: `adoptExisting()` mengadopsi container jalan untuk lifecycle management tapi tidak me-restart node ROS-nya. Bila master diganti, cek registrasi dan pulihkan hanya container terdampak di environment itu. Jangan bulk-restart list `rosweb_unit_*` tanpa scope lintas dev dan produksi.
 

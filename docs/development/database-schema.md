@@ -12,7 +12,7 @@ canonical source is `ROS-dashboard-backend/sql/init.sql`, which only runs agains
 data directory. An existing deployment picks up schema changes through the migration scripts in
 `ROS-dashboard-backend/scripts/` instead (`migrate_unit_id_refactor.js`, `migrate_enrolment.js`,
 `migrate_sync.js`, `migrate_backup_scope.js`). For the shape of a row as the API actually returns it,
-see [API Reference](/development/api-reference); this page covers columns and relationships,
+see [HTTP API](/development/message-contracts/http-api); this page covers columns and relationships,
 not response JSON.
 
 ## Identity and access
@@ -22,7 +22,7 @@ not response JSON.
 | `users` | Operator accounts | `id` (ULID, PK), `username`, `email`, `password` (bcrypt), `status` (`active`/`suspended`) |
 | `admin_accounts` | Back-office accounts, deliberately separate from `users` | `id` (ULID, PK), `role` (`superadmin`/`admin`), `must_change_password` |
 | `rental_profiles` | One row per rental. Suspending it hides both the unit and its data from members, without touching either | `id` (ULID, PK), `profile_name` (unique), `tenant_name`, `status` |
-| `units` | One row per physical robot, fleet-wide. `unit_name` is a renameable display label, not an identity | `id` (ULID, PK): this is the robot's address, `/unit_<id>/...` |
+| `units` | One row per physical robot. `unit_name` is a renameable display label, not an identity | `id` (ULID, PK): this is the robot's address, `/unit_<id>/...` |
 | `profile_members` | Which accounts belong to which profile | `UNIQUE(profile_id, user_id)`, both `ON DELETE CASCADE` |
 | `profile_units` | Which units a profile can access | `UNIQUE(unit_id)`, **not** `(profile_id, unit_id)`, so a unit can never be double-assigned |
 
@@ -68,7 +68,7 @@ the rental scope: both are required, neither replaces the other.
 | `unit_enrollment_codes` | Single-use vouchers to claim a specific unit before its robot exists | `unit_id`, `code_hash`, `expires_at`, `used_at` |
 | `unit_connection_log` | Append-only connection history | The only table with a plain `AUTO_INCREMENT` PK rather than a ULID; purged past 180 days |
 
-See [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake) for the full exchange
+See [Firmware & Enrolment § Enrolment](/development/message-contracts/firmware-and-enrolment#enrolment) for the full exchange
 these tables support.
 
 ## Backup and sync
@@ -132,7 +132,7 @@ for how these ports fit into the rest of the compose profile.
 
 ## Related
 
-- [API Reference](/development/api-reference): the HTTP surface built on this schema
+- [HTTP API](/development/message-contracts/http-api): the HTTP surface built on this schema
 - [Data Sync](/development/data-sync): how `sync_tombstones` and `sync_state` get used
-- [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake)
+- [Firmware & Enrolment § Enrolment](/development/message-contracts/firmware-and-enrolment#enrolment)
 - [Architecture](/development/architecture)

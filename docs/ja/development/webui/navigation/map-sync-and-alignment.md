@@ -25,6 +25,10 @@ AMCLは事前に記録されたマップに対してロボットを自己位置�
 Map Syncモードがその手段である。Mode Listで`Map Sync`を選択する(アクティブ中は`Finish Map
 Sync`とラベルが変わる)と、基盤となるマップcanvasがインタラクティブなポーズ補正状態に切り替わる。抜けると通常のナビゲーションcanvasに戻る。
 
+**メッセージ仕様:** オペレーターが手動で設定する姿勢は、[`<root>/initialpose`](/ja/development/message-contracts/rosbridge#publications) 上の
+`geometry_msgs/PoseWithCovarianceStamped` で、[`string/initialpose`](/ja/development/message-contracts/bridge-topics#json-initialpose) としてロボットの
+`/initialpose` に運ばれる。
+
 ## Auto Align
 
 Auto AlignはMap Syncモードがアクティブなときのみ表示されるボタンである。「オペレーターがロボットアイコンを手動で正しい位置と向きへドラッグする」という操作をワンクリックで置き換える。ロボットのライブLiDARスキャンが、静止スキャンマッチャーによってロード済みのマップと照合され、得られたポーズが回転もなく並進もなくAMCLへ直接書き込まれる。これは
@@ -34,7 +38,7 @@ truth)である。本ページではボタン自体とバックエンドとの�
 
 ### `/api/autoalign/start`
 
-`POST /api/autoalign/start`([APIリファレンス § Auto Alignシステム](/ja/development/api-reference#auto-align-システム)で完全に文書化)はスキャンマッチングを開始する。フロントエンド(`autoAlignApi.ts`、`postAutoAlign('start',
+`POST /api/autoalign/start`([HTTP API § Auto Align](/ja/development/message-contracts/http-api#autoalign)で完全に文書化)はスキャンマッチングを開始する。フロントエンド(`autoAlignApi.ts`、`postAutoAlign('start',
 { unit_id })`)はこの呼び出しの応答で収束を報告するのを待つのではなく、即座にボタンを無効化してステータスをポーリングする。収束はロボット側で非同期に起こるためである。
 
 ### `/api/autoalign/status`
@@ -46,9 +50,10 @@ runが進行中の間、固定間隔でポーリングされ、スキャンマ�
 ロボット側のアラインメントrunをクリアする。alignerの内部アクティブフラグをリセットし、ロボットが報告するアクティビティをidleに戻す。フロントエンドは収束したrunとタイムアウトしたrunの**両方**の終了経路でこれを呼び出す。そうしないとロボット側のアラインメントstateは明示的にクリアされるまで「active」/「auto_aligning」としてラッチされたままになり、他の箇所でスタックしたロボットと誤読されかねないからである。これはまた、オペレーターがrun途中でMap
 Syncモードを離れた場合にも呼び出され、ロボットに停止するよう伝える。
 
-::: info ソースに文書化されていない
-`api-reference.md`は`/api/autoalign/start`のみを文書化している。`status`と`reset`エンドポイントは、RESTリファレンスからではなく、フロントエンドのトランスポート層(`autoAlignApi.ts`)とその呼び出し箇所から確認したものである。フロントエンドが読み取るフィールド(`details`/`error_details`配下の収束を表すbooleanと、`success`/`msg`のエンベロープ)を超える正確なレスポンス形状は、現時点で入手可能なソース資料では扱われておらず、ここでも推測はしていない。
-:::
+**メッセージ仕様:** 3 つのエンドポイントはいずれも `{ unit_id }` を受け取り、MQTT コマンド
+[`autoalign.start`、`status`、`reset`](/ja/development/message-contracts/mqtt-commands#autoalign)(ロボットのサービス `/alignment/start`、
+`/check_alignment`、`/alignment/reset`)に 1 対 1 で対応する。応答は標準の [コマンド応答](/ja/development/message-contracts/http-api#envelopes) で、
+成功時はロボットのフィードバックエンベロープが `details` に、拒否時は `error_details` に入る。
 
 ## 同意: Auto Alignはその場回転ガードの信頼元である
 
@@ -65,6 +70,7 @@ Syncモードでオペレーターが押すボタンは、このガードによ�
 
 ## 関連
 
+- [メッセージ仕様 § ナビゲーションページ](/ja/development/message-contracts/#trace-navigation): Auto Align と姿勢メッセージの全体像。
 - [概要](/ja/development/webui/navigation/overview): ナビゲーションページとその完全なMode
   List。
 - [カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning): 本ページのもう一つの静止開始・自律run機能。
@@ -75,6 +81,6 @@ Syncモードでオペレーターが押すボタンは、このガードによ�
   Align REST呼び出しを含む、ナビゲーションの完全なワイヤー契約。
 - [Boustrophedonカバレッジ & Zero-Spinアラインメントアーキテクチャ](/ja/development/ros/boustrophedon-and-alignment):
   CSMアルゴリズムとその場回転ガード。
-- [メッセージ契約](/ja/development/message-contracts): 完全なMQTTコマンド/フィードバックリファレンス。
-- [APIリファレンス](/ja/development/api-reference): 完全なREST APIリファレンス。
-- [WebSocketとrosbridgeプロトコル](/ja/development/rosbridge-protocol): 完全なrosbridgeワイヤープロトコル。
+- [メッセージ仕様](/ja/development/message-contracts/): 完全なMQTTコマンド/フィードバックリファレンス。
+- [HTTP API](/ja/development/message-contracts/http-api): 完全なREST APIリファレンス。
+- [rosbridge (WebSocket)](/ja/development/message-contracts/rosbridge): 完全なrosbridgeワイヤープロトコル。

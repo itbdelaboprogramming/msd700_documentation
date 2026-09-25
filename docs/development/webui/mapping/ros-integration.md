@@ -13,131 +13,88 @@ that start and stop a SLAM session, the MQTT command/feedback envelope carrying 
 saved. For the page's own behavior, see [Overview](/development/webui/mapping/overview) and
 [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous).
 
-## Starting and stopping a mapping session
+## Starting and stopping a mapping session {#starting-and-stopping-a-mapping-session}
 
-From [API Reference § Mapping (SLAM) Operations](/development/api-reference#mapping-slam-operations):
+One endpoint, [`POST /api/mapping`](/development/message-contracts/http-api#mapping-control), drives the whole session; exactly
+one of `start`, `pause`, `stop` is `true` per call. Discard has its own endpoint.
 
-### Start
+| Button | HTTP | MQTT to the robot | Robot side |
+| --- | --- | --- | --- |
+| Play | `POST /api/mapping` `{ unit_id, start: true }` | [`mapping.start`](/development/message-contracts/mqtt-commands#mapping) | `/switch_mode(explore)`; activity `mapping_active` |
+| Pause | `POST /api/mapping` `{ unit_id, pause: true }` | [`mapping.pause`](/development/message-contracts/mqtt-commands#mapping) | `operator_pause` motion lock; activity `mapping_paused` |
+| Stop, then Save | `POST /api/mapping` `{ unit_id, stop: true, map_name, homebase_* }` | [`mapping.stop`](/development/message-contracts/mqtt-commands#mapping) | save and upload, below |
+| Stop, then Discard | [`POST /api/mapping/discard`](/development/message-contracts/http-api#mapping-discard) `{ unit_id }` | [`mapping.discard`](/development/message-contracts/mqtt-commands#mapping) | `/switch_mode(idle)`, `/map/reset` |
 
-`POST /api/mapping/start` initiates SLAM (gmapping) mode on the target unit.
-
-```json
-{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }
-```
-
-### Stop and save
-
-`POST /api/mapping/stop` saves the active occupancy grid, generates thumbnail metadata, and uploads
-assets. This is the request the `ConfirmSaving` dialog sends once the operator names the map:
+The save request the `ConfirmSaving` dialog sends once the operator names the map:
 
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
-  "homebase_x": 0.0,
-  "homebase_y": 0.0
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
+  "homebase_x": 0.0, "homebase_y": 0.0, "homebase_z": 0.0,
+  "homebase_ox": 0.0, "homebase_oy": 0.0, "homebase_oz": 0.0, "homebase_ow": 1.0
 }
 ```
 
-`homebase_x` / `homebase_y` here are the pose captured automatically when mapping started (see
-[Overview § Saving the map](/development/webui/mapping/overview#saving-the-map-stop-flow)), not a
-value the operator enters.
+The `homebase_*` pose is the one captured automatically when mapping started (see
+[Overview § Saving the map](/development/webui/mapping/overview#saving-the-map-stop-flow)), not a value
+the operator enters. The backend mints the map ULID, keeps `map_name` as the display name, and passes
+the pose through to the robot so it is stored in the same upload that creates the map row.
 
 ::: info Save is asynchronous
-Saving a SLAM map takes longer than the standard 30-second HTTP timeout budget used elsewhere on
-this platform (see [Message Contracts § Command Correlation and Retry Architecture](/development/message-contracts#command-correlation-and-retry-architecture)).
-`POST /api/mapping/stop` therefore returns `200 OK` immediately with a `request_id` and `map_ulid`:
+Saving takes longer than the 30-second HTTP budget used for other commands (see
+[MQTT Commands § Correlation and retry](/development/message-contracts/mqtt-commands#correlation-and-retry)). The stop call
+therefore answers at once:
 
 ```json
 {
   "success": true,
   "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
+  "map_ulid": "01JZ8QK2H0000000000000MAP",
+  "msg": "Map save initiated. Track progress via /api/mapping/progress/:request_id"
 }
 ```
 
-The frontend then connects to an SSE stream on `GET /api/mapping/progress/:request_id` to follow the
-save through to completion. This is presumably what backs the `MapSaving` progress overlay described
-in [Overview](/development/webui/mapping/overview#saving-the-map-stop-flow); the exact client-side
-subscription code is not covered in the source material available for this page. See
-[Message Contracts § Mapping Subsystem](/development/message-contracts#_3-mapping-subsystem-header-mapping).
+The `MapSaving` overlay then opens
+[`GET /api/mapping/progress/:request_id?token=<jwt>`](/development/message-contracts/http-api#mapping-progress) (Server-Sent
+Events) and follows it to the terminal event.
 :::
 
 ## MQTT command envelope (`header: "mapping"`)
 
-The HTTP stop request above is relayed to the robot as a `mapping` / `stop` command on
-`/unit_<ULID>/system_command`, using the shared
-[command envelope](/development/message-contracts#command-payload-envelope):
-
-```json
-{
-  "header": "mapping",
-  "command": "stop",
-  "config": {
-    "resource": {
-      "map_name": "01JZ8QK2H0000000000000MAP",
-      "display_map_name": "Production Hall Level 1",
-      "map_ulid": "01JZ8QK2H0000000000000MAP",
-      "created_by": "01JZ7YV5CQUSER00000000000",
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
-      "homebase_x": 1.2,
-      "homebase_y": 0.5,
-      "homebase_z": 0.0,
-      "homebase_ox": 0.0,
-      "homebase_oy": 0.0,
-      "homebase_oz": 0.0,
-      "homebase_ow": 1.0
-    }
-  }
-}
-```
-
-Note that the full homebase pose here carries an orientation quaternion (`homebase_o{x,y,z,w}`) in
-addition to the `x`/`y` position the REST body and the `maps_data` table carry. This is the same
-shape `navigation` / `init` later reads back out when the map is loaded (see
-[Message Contracts § Navigation Subsystem](/development/message-contracts#_2-navigation-subsystem-header-navigation)),
-which is out of scope for this page.
-
-::: warning Only `stop` is documented in the command catalogue
-[State & Behavior](/development/state-and-behavior)'s activity state machine implies `pause`,
-`resume`, and `discard` transitions exist for a mapping session (`mapping_active` ↔
-`mapping_paused`, and `mapping_active` → `idle` on discard). The Mapping Subsystem entry in the
-Command Reference Catalogue only documents `stop` in this level of detail; the exact command verbs
-and payloads for pause/resume/discard are not spelled out there and are not guessed at here.
-:::
+The stop request reaches the robot as `mapping.stop` on `/unit_<ULID>/system_command`, in the shared
+[command envelope](/development/message-contracts/mqtt-commands#command-envelope). `config.resource` carries `map_name` and
+`map_ulid` (both the new ULID, which is the file name on disk), `display_map_name` (what the operator
+typed), `created_by`, `unit_id` and the seven `homebase_*` fields. The full payload is in
+[MQTT Commands § `mapping`](/development/message-contracts/mqtt-commands#mapping); `navigation.init` later reads the same home
+base back out.
 
 ### Mapping progress feedback (`header: "mapping_progress"`)
 
-Progress on a save streams back as `mapping_progress` feedback, matching the `request_id` from the
-stop command:
+The robot reports the save on `system_feedback` with `header: "mapping_progress"` and the stop
+command's `request_id`; the backend forwards each `data` block to the SSE stream:
 
-```json
-{
-  "header": "mapping_progress",
-  "command": "stop",
-  "data": {
-    "status": true,
-    "progress": 100,
-    "stage": "completed",
-    "message": "Saved on the robot and the server.",
-    "terminal": true,
-    "outcome": "completed"
-  },
-  "metadata": {
-    "timestamp": 1734000000.0,
-    "request_id": "..."
-  }
-}
-```
-
-| Outcome Value | Description |
+| `progress` | `stage` |
 | --- | --- |
-| `completed` | Successfully written to both the local Unit media-server and the cloud server. |
-| `cloud_pending` | Written to local Unit media-server only. Cloud replication completes on the next sync interval. |
-| `failed` | Mapping save failed. Session remains open for retry (robot activity reports `mapping_stop_failed`). |
+| 15 | `saving_map` |
+| 30 | `map_saved` |
+| 50 | `uploading` |
+| 85 | `upload_complete` or `cloud_pending` |
+| 95 | `switching_mode` |
+| 100 | `completed` (terminal) |
+| -1 | `save_failed` (terminal) |
 
-See [Message Contracts § Mapping Progress Feedback](/development/message-contracts#mapping-progress-feedback-header-mapping-progress)
-for the source of this table.
+The last event carries `terminal: true` and an `outcome`:
+
+| Outcome | Description |
+| --- | --- |
+| `completed` | Written to both the unit's media server and the cloud's. |
+| `cloud_pending` | Written to the unit's media server only; the cloud copy follows through sync. |
+| `failed` | Nothing stored. The session stays open for a retry (activity `mapping_stop_failed`). |
+
+If the robot goes silent for 90 s the backend ends the stream itself with `stage: "no_response"`. Full
+contract: [MQTT Commands § `mapping_progress`](/development/message-contracts/mqtt-commands#mapping-progress).
 
 ## Robot-side save: `map_saver` and preflight checks
 
@@ -161,7 +118,7 @@ occupancy grid assets: a `.pgm` image, a `.yaml` metadata file, and a thumbnail.
 
 This dual-target design is why a map recorded in a warehouse with no internet is still immediately
 usable for navigation on the unit itself: only the mandatory local upload gates that. Cloud
-availability (needed for viewing the map from elsewhere, or for a fleet-wide backup) follows later
+availability (needed for viewing the map from elsewhere, or for a backup that spans units) follows later
 via `sync_agent` without blocking the operator.
 
 For the robot activity state machine and session-recovery behavior this save flow interacts with
@@ -170,6 +127,7 @@ and [Safety Watchdog](/development/ros/safety-watchdog).
 
 ## Related
 
+- [Message Contracts § Mapping page](/development/message-contracts/#trace-mapping): every message a mapping session sends.
 - [Overview](/development/webui/mapping/overview): Play/Pause/Stop, the live map view, and the
   save-on-stop UI flow
 - [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous):

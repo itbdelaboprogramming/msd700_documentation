@@ -29,6 +29,14 @@ Panel yang sama juga muncul di sidebar halaman Mapping, di mana kedua toggle men
 yang aktif alih-alih run navigasi; tulisan tersendiri untuk halaman itu membahas apa arti Manual
 Override dan Autopilot di sana.
 
+**Kontrak:** toggle Manual Override adalah
+[`POST /api/manual`](/id/development/message-contracts/http-api#manual) → [`manual.enable` / `disable`](/id/development/message-contracts/mqtt-commands#manual). Mengemudi
+WASD adalah `geometry_msgs/Twist` di [`server/key_vel`](/id/development/message-contracts/rosbridge#publications) 10 Hz, yang sampai ke robot
+sebagai [`string/key_vel`](/id/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel`. Toggle Autopilot adalah
+[`POST /api/autopilot`](/id/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/id/development/message-contracts/mqtt-commands#autopilot),
+berpasangan dengan [`batch` + `takeover`](/id/development/message-contracts/operation-sync#takeover) saat aktif dan
+[`release`](/id/development/message-contracts/operation-sync#release) saat mati.
+
 ## Menyerahkan sapuan coverage ke operator dan mengambilnya kembali
 
 Manual Override **menjeda** run boustrophedon, bukan mengakhirinya: melepas setir mengembalikan
@@ -74,6 +82,11 @@ Dengan alasan yang sama, run yang dibunuh cancel eksternal kini menerbitkan `abo
 `/msd700/coverage_status`: run yang dibatalkan tidak menerbitkan status terminal apa pun sendiri,
 jadi tanpa itu sapuan mati sementara semua lapisan di atasnya masih melaporkan run yang hidup.
 :::
+
+**Kontrak:** tombol Pause adalah
+[`POST /api/boustrophedon/pause`](/id/development/message-contracts/http-api#boustrophedon-pause) → [`boustrophedon.pause`](/id/development/message-contracts/mqtt-commands#boustrophedon);
+Cancel Coverage adalah [`POST /api/boustrophedon/deactivate`](/id/development/message-contracts/http-api#boustrophedon-deactivate). String siklus
+hidup kembali di [`string/coverage_status`](/id/development/message-contracts/bridge-topics#robot-to-cloud).
 
 ## Mesin state aktivitas: perutean ke tab dashboard
 
@@ -135,6 +148,11 @@ login dari workstation baru, bukan sekadar perilaku tingkat tinggi.
    robot melaporkan `idle` pada 4 sampel ping ~1 Hz berturut-turut (`PHANTOM_IDLE_SAMPLES = 4`), frontend secara otomatis
    mereset ke `idle` untuk mencegah tampilan eksekusi hantu (phantom).
 
+**Kontrak:** perutean membaca `active_page` dan `robot_activity` dari
+[respons ping](/id/development/message-contracts/heartbeat-and-lease#ping-response) dan `intended_mode`/`needs_recovery` dari
+[jawaban ping HTTP](/id/development/message-contracts/http-api#hardware-ping). Rekonstruksi membaca [`operation_snapshot`](/id/development/message-contracts/operation-sync#snapshot),
+dipicu oleh [`resync`](/id/development/message-contracts/operation-sync#resync).
+
 ### Logout mengakhiri sesi, kecuali autopilot menyala
 
 Dua kontrak logout sengaja berlawanan, dan keduanya bergantung pada flag `autopilot` robot seperti
@@ -169,6 +187,9 @@ lapis di atasnya: auto-resume di halaman Navigasi menganggap `intended_map_id` s
 sehingga map lama bisa terbuka lagi meski robot sudah melaporkan `idle`. Membersihkannya sama dengan
 yang sudah dilakukan jalur emergency stop dan deaktivasi navigasi, dan tidak menyentuh retensi
 autopilot, yang tidak pernah mencapai endpoint ini.
+
+**Kontrak:** [`POST /api/hardware/idle`](/id/development/message-contracts/http-api#hardware-commands) →
+[`hardware.idle`](/id/development/message-contracts/mqtt-commands#hardware), lalu [`POST /user/logout`](/id/development/message-contracts/http-api#user-logout).
 
 ### Apa yang memicu rekonstruksi snapshot
 
@@ -225,6 +246,7 @@ untuk dicoba ulang.
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Navigasi](/id/development/message-contracts/#trace-navigation): semua pesan di balik toggle-toggle ini.
 - [Ikhtisar](/id/development/webui/navigation/overview): pola Mode List/Action Bar dan pipeline
   canvas tempat panel ini dan logika pemulihan berdampingan.
 - [Pinpoint & Rute](/id/development/webui/navigation/pinpoint-and-routes): mode point-and-go yang

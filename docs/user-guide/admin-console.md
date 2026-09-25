@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="admin" />
 
-The Admin Console is only visible to accounts with **Administrator** access. It's used to manage operators, robots, and rental profiles across your fleet.
+The Admin Console is only visible to accounts with **Administrator** access. It's used to manage operators, robots, and rental profiles across all your units.
 
 ## Operators
 
@@ -14,12 +14,12 @@ The Admin Console is only visible to accounts with **Administrator** access. It'
 2. Here you can see every operator account, invite new ones, and adjust their role or which rentals they can access.
 3. To remove access, click **Remove** next to the operator's name.
 
-## Units & Fleet
+## Units
 
-The **Units** tab has two views: **Fleet** (every registered robot) and **Pending** (new robots waiting for approval).
+The **Units** tab has two views: **Registered Units** (every registered robot) and **Pending** (new robots waiting for approval).
 
-- A brand-new robot shows up under **Pending** first. An administrator reviews it there and clicks **Register** (or **Adopt**) to accept it into the fleet. Registering alone grants nobody access: who may drive it is decided by its rental assignment.
-- The **Fleet** view lists every registered robot: which rental it's rented to, its operator and map counts, when it was registered, and per-unit actions (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). It doesn't show live connection status: that's only in the operator's unit table.
+- A brand-new robot shows up under **Pending** first. An administrator reviews it there and clicks **Register** (or **Adopt**) to register it as a unit. Registering alone grants nobody access: who may drive it is decided by its rental assignment.
+- The **Registered Units** view lists every registered robot: which rental it's rented to, its operator and map counts, when it was registered, and per-unit actions (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). It doesn't show live connection status: that's only in the operator's unit table.
 - Operators see the same robots in the unit table right after logging in: select a **Ready** row and click **Start** to connect.
 
 ## Rentals

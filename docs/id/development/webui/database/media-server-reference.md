@@ -16,7 +16,7 @@ Semua memakai JWT Bearer kecuali dinyatakan lain. Error seragam `{ success: fals
 | Method + path | Auth | Tujuan |
 | --- | --- | --- |
 | `GET /health` | none | Liveness (`success/msg/timestamp/version`) |
-| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, user_id, robot_id` (ULID) + tepat 2 file (`.yaml/.yml` + `.pgm`), 50 MB/file, 100 MB total. Otomatis PGM→PNG, menulis baris DB |
+| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, created_by, unit_id` (ULID) + `homebase_*` opsional + tepat 2 file (`.yaml/.yml` + `.pgm`), 50 MB/file, 100 MB total. Otomatis PGM→PNG, menulis baris DB |
 | `PUT /api/media/updateMap/:id` | JWT | Timpa YAML+PGM+PNG, atomik dengan backup+rollback, hanya pemilik, nama unik per user |
 | `GET /api/media/maps` | JWT | List berpaginasi (query `user_id` atau JWT, `page=1`, `limit=10`) |
 | `GET /api/media/maps/:id/download` | JWT | Unduh bundle peta |
@@ -40,4 +40,4 @@ Di unit (`DEPLOYMENT_MODE=local`) server memercayai `Origin` browser begitu saja
 
 - [Database](/id/development/webui/database/overview): Halaman Map DB yang membaca API ini.
 - [Mapping: ROS Integration](/id/development/webui/mapping/ros-integration): Jalur simpan yang berakhir di upload.
-- [API Reference](/id/development/api-reference): REST API backend (service terpisah).
+- [HTTP API](/id/development/message-contracts/http-api): REST API backend (service terpisah).

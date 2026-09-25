@@ -22,7 +22,7 @@
         <mxCell id="n9" value="backend_node" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
           <mxGeometry x="170" y="62" width="135" height="43" as="geometry" />
         </mxCell>
-        <mxCell id="n10" value="unit_relays&lt;br&gt;(共有フリートリレー1台)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+        <mxCell id="n10" value="unit_relays&lt;br&gt;(共有ユニットリレー1台)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
           <mxGeometry x="170" y="136" width="191" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n11" value="rosbridge" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">

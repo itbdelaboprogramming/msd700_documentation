@@ -29,10 +29,10 @@ Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide
 
 ### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
 - **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
-- **Root Cause**: The fleet relay container (`ros_web_ui_v2_unit_relays`) is down: or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper: or Apache WebSocket proxying is blocked.
+- **Root Cause**: The unit relay container (`ros_web_ui_v2_unit_relays`) is down: or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper: or Apache WebSocket proxying is blocked.
 - **Diagnostic Steps**:
-  1. Check the fleet relay first: `docker ps | grep unit_relays`. On the legacy path, check the per-unit container instead: `docker ps | grep rosweb_unit`.
-  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In fleet mode the roster comes from the `units` table, so no touch event is needed: an enrolled robot is reachable.
+  1. Check the unit relay first: `docker ps | grep unit_relays`. On the legacy path, check the per-unit container instead: `docker ps | grep rosweb_unit`.
+  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In multi-unit mode the roster comes from the `units` table, so no touch event is needed: an enrolled robot is reachable.
   3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
 ### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
@@ -74,5 +74,5 @@ Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide
 ## Related Documentation
 
 - [Architecture](/development/architecture): Two-channel communication models.
-- [Message Contracts](/development/message-contracts): Expected topic formats and payloads.
+- [Message Contracts](/development/message-contracts/): Expected topic formats and payloads.
 - [Setup: Troubleshooting](/setup/troubleshooting): Technician and deployment troubleshooting steps.

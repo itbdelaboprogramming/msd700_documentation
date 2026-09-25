@@ -14,7 +14,7 @@ Perawatan rutin sistem MSD700 yang sudah deploy. Tiap tugas menyebut mesinnya. A
 | --- | --- | --- | --- |
 | Rotasi keyring JWT | Tiap beberapa bulan, atau segera setelah curiga bocor | Server | [Rotasi secrets](#rotasi-secrets) |
 | Perpanjang sertifikat TLS | Sebelum kedaluwarsa | Server | [Sertifikat](#sertifikat). `certbot renew` saja **tidak** mengupdate HiveMQ |
-| Cek relay armada jalan | Sesekali | Server | `docker ps --filter name=unit_relays`. Di mode fleet (default) satu relay mati menjatuhkan se-armada |
+| Cek unit relay jalan | Sesekali | Server | `docker ps --filter name=unit_relays`. Di mode multi-unit (default) satu relay mati menjatuhkan semua unit |
 | Prune key kedaluwarsa | Setelah grace window rotasi | Server | `./scripts/secrets.sh prune --dev` |
 | Cek disk Docker | Bulanan | Keduanya | `docker system df`, lalu prune image/build cache |
 | Cek relay TURN | Setelah tiap ubahan jaringan/router | Server | [Relay TURN](#relay-turn) |
@@ -150,7 +150,7 @@ docker compose --profile server_dev  build && docker compose --profile server_de
 docker compose --profile server_prod build && docker compose --profile server_prod up -d
 ```
 
-Recreate backend me-restart container `unit_relays` yang ada (default mode fleet). Tanpa langkah relay manual, tapi data plane tiap unit blip sebentar dan pulih sendiri. Relay yang hilang tidak pernah dibuat backend; hanya Compose yang membuatnya.
+Recreate backend me-restart container `unit_relays` yang ada (default mode multi-unit). Tanpa langkah relay manual, tapi data plane tiap unit blip sebentar dan pulih sendiri. Relay yang hilang tidak pernah dibuat backend; hanya Compose yang membuatnya.
 
 Mode legacy (`UNIT_CONTAINERS_ENABLED=true`): container `rosweb_unit_*` yang jalan diadopsi saat startup, tapi node ROS-nya tidak didaftarkan ulang ke master baru. List satu environment saja sebelum menyentuh apa pun (nama prod berakhir `_nakayama`, dev `_nakayama_dev`):
 

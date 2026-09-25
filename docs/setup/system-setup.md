@@ -17,7 +17,7 @@ The unit and the server talk over channels that fail **independently**. Telling 
 | 3 | signalling | WebRTC negotiation | No video, everything else fine |
 | 4 | WebRTC media | The camera image | Video works on LAN, never outside it: the TURN relay |
 
-One more failure looks like #2: unit online, rosbridge connected, but the shared fleet relay (`unit_relays`) is down, so the cloud topics rosbridge reads do not exist. Same blank map, different cause. Check `docker ps --filter name=unit_relays`. (Per-unit `rosweb_unit_*` containers exist only in legacy mode with `UNIT_CONTAINERS_ENABLED=true`.)
+One more failure looks like #2: unit online, rosbridge connected, but the shared unit relay (`unit_relays`) is down, so the cloud topics rosbridge reads do not exist. Same blank map, different cause. Check `docker ps --filter name=unit_relays`. (Per-unit `rosweb_unit_*` containers exist only in legacy mode with `UNIT_CONTAINERS_ENABLED=true`.)
 
 ## 1. Check the network path
 
@@ -41,7 +41,7 @@ Dashboard WebSocket connections just never open, and browsers show only a generi
 :::
 
 ::: info Production or dev?
-`./scripts/docker-manager.sh up --dev` on the unit points enrolment and MQTT at the server's `server_dev` stack instead of `server_prod`: different port, different database, different fleet. Use it while testing; drop the flag for real deployment. A unit enrolled on dev is **not** registered on prod, and vice versa.
+`./scripts/docker-manager.sh up --dev` on the unit points enrolment and MQTT at the server's `server_dev` stack instead of `server_prod`: different port, different database, different set of registered units. Use it while testing; drop the flag for real deployment. A unit enrolled on dev is **not** registered on prod, and vice versa.
 :::
 
 ## 2. Check the unit registered correctly
@@ -49,7 +49,7 @@ Dashboard WebSocket connections just never open, and browsers show only a generi
 In the admin console, under **Registered Units**, find the unit you approved in [Unit Setup](/setup/unit-setup). Note its ULID.
 
 ```bash
-# On the server. The shared fleet relay must be RUNNING for these topics to exist.
+# On the server. The shared unit relay must be RUNNING for these topics to exist.
 docker ps --filter "name=unit_relays"
 docker exec -it ros_web_ui_v2_nakayama_ros bash -lc \
   'source /home/itbdelabo/ros-web-ui-ws/devel/setup.bash && rostopic list | grep unit_<ULID>'
@@ -71,7 +71,7 @@ Go down this list. Each item clears one channel from the diagram above.
 - [ ] Server healthy: `docker compose --profile server_prod ps` shows every service `Up` or `healthy`
 - [ ] Unit ROS graph healthy: `rosnode list` inside the unit container shows the bringup nodes
 - [ ] Unit shows **online** in Registered Units (channel 1, MQTT)
-- [ ] Shared fleet relay running: `docker ps --filter name=unit_relays`
+- [ ] Shared unit relay running: `docker ps --filter name=unit_relays`
 - [ ] Opening the unit shows current position and a live map (channel 2, rosbridge)
 - [ ] Camera feed visible **from outside the unit's LAN** (channels 3 and 4)
 - [ ] W-A-S-D driving moves the robot, and the dashboard position follows

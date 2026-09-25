@@ -108,4 +108,4 @@ msd700_backup_01JZ8QK2H.tar.gz
 
 - [データベース設計](/ja/development/database-schema): MySQL テーブル定義と外部キーの全体。
 - [データ同期](/ja/development/data-sync): オフラインデータのレプリケーションと競合解決。
-- [API リファレンス](/ja/development/api-reference): フリート管理用の REST API エンドポイント。
+- [HTTP API](/ja/development/message-contracts/http-api): ユニット管理用の REST API エンドポイント。

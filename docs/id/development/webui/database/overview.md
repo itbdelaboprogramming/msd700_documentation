@@ -45,6 +45,9 @@ dedupe baris berdasarkan nama. Lihat
 [Integrasi ROS § Tabel](/id/development/webui/database/ros-integration#tabel) untuk batasan
 skema di balik ini.
 
+**Kontrak:** daftarnya adalah [`GET /api/maps_data?unit_id=<unit>`](/id/development/message-contracts/http-api#maps-list) (selalu dibatasi
+per unit); thumbnail adalah [`GET /api/media/images/<ULID peta>.png`](/id/development/message-contracts/http-api#media-server), tanpa token.
+
 ## Pencarian, urutan, dan paginasi
 
 `DatabaseSearch.tsx` menyaring baris yang tampil. Pengurutan berdasarkan nama atau tanggal,
@@ -66,6 +69,9 @@ berjalan atau dijeda pada unit dan operator membuka peta yang *berbeda* dari yan
 halaman ini tidak diam-diam membuang peta yang sedang berjalan itu. Lihat
 [Ganti Nama & Hapus § Pengaman konflik sesi](/id/development/webui/database/rename-and-delete#pengaman-konflik-sesi).
 
+**Kontrak:** halaman Navigasi membuka peta dengan
+[`POST /api/navigation/init`](/id/development/message-contracts/http-api#navigation-init) → [`navigation.init`](/id/development/message-contracts/mqtt-commands#navigation).
+
 ## Keadaan kosong dan memuat
 
 `LoadingOverlay` menutupi tabel selagi daftar peta sedang diambil. `NoDataOverlay` menggantikan
@@ -74,6 +80,7 @@ pencarian saat ini.
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Database](/id/development/message-contracts/#trace-database): semua panggilan halaman ini.
 - [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete): dua aksi pengubah pada halaman ini, secara rinci
 - [Integrasi ROS](/id/development/webui/database/ros-integration): skema dan endpoint REST di balik fitur ini
 - [Referensi Media Server](/id/development/webui/database/media-server-reference): API aset peta (upload, thumbnail, legacy-ID mapper)

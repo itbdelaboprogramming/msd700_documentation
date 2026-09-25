@@ -38,7 +38,7 @@ The system is composed of two primary layers:
 
 Access to robots is governed by **Rental Profiles**:
 
-- **Fleet Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and watch robot status.
+- **Operators**: Standard user accounts assigned to one or more rental profiles. You can drive assigned robots, record maps, create routes, and watch robot status.
 - **Lab Administrators**: Manage tenant rental profiles, provision operator accounts, and approve new hardware robot registrations.
 
 ## Next Steps

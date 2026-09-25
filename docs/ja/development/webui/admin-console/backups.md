@@ -12,13 +12,13 @@ search: false
 アーカイブ機構に対する管理コンソールのフロントエンドであり、**レンタルプロファイル全体**の
 アーカイブを扱う。ユニットタブには、同じアーキテクチャのユニットスコープ半分へのより狭い独自の
 入口がある(
-[ユニット & フリート § このユニットのレンタルスコープデータをバックアップする](/ja/development/webui/admin-console/units-and-fleet#このユニットのレンタルスコープデータをバックアップする)
+[ユニット § このユニットのレンタルスコープデータをバックアップする](/ja/development/webui/admin-console/units#このユニットのレンタルスコープデータをバックアップする)
 を参照)。しかしこのタブは、管理者がアーカイブを第一級オブジェクトとして管理する場所である。
 作成、削除、ダウンロード、アップロード、復元だ。
 
 ## 2つのスコープ、プロファイル側の1つのタブ
 
-[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#_2軸バックアップアーキテクチャ)
+[バックアップとリストア § デュアルスコープバックアップアーキテクチャ](/ja/development/backup-and-restore#_2軸バックアップアーキテクチャ)
 は、`scope: 'profile'` または `scope: 'unit'` でキー付けされた2つの独立したバックアップスコープを
 定義している。このタブはプロファイルスコープ側を扱う。テナント中心のアーカイブであり、「レンタル
 プロファイルが所有するすべてのマップ、ルート、エリア、プレイリスト」を、そのプロファイルが使用した
@@ -80,18 +80,19 @@ search: false
 
 
 バックアップが触れるテーブル(`profile_backups.scope`、同期テーブルなど)のスキーマ進化は、
-[バックアップとリストア § スキーマ移行スクリプト](/ja/development/backup-and-restore#スキーママイグレーションスクリプト)
+[バックアップとリストア § スキーマ移行スクリプト](/ja/development/backup-and-restore#スキーママイグレーションスクリプト)
 にある移行スクリプトによって処理され、このタブの何かによるものではない。それらはデータベースに
 対して直接実行され、`BackupsPanel.tsx` の対象外である。
 
 ## 関連
 
+- [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`、`POST /admin/api/profiles/:id/backups`、`GET /admin/api/backups/:id/download`、`POST /admin/api/backups/upload`、`POST /admin/api/backups/:id/plan`、`POST /admin/api/backups/:id/restore`、`DELETE /admin/api/backups/:id`。
 - [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
-- [ユニット & フリート](/ja/development/webui/admin-console/units-and-fleet): Fleet ビューから到達できるユニットスコープバックアップの入口。
+- [ユニット](/ja/development/webui/admin-console/units): 登録済みユニット ビューから到達できるユニットスコープバックアップの入口。
 - [レンタル](/ja/development/webui/admin-console/rentals): このタブへのワンクリックバックアップショートカット、そしてこのアーカイブが属するプロファイル。
-- [ROS連携](/ja/development/webui/admin-console/ros-integration): 管理者のアクションがロボットとコンテナフリートに到達する仕組み。
+- [ROS連携](/ja/development/webui/admin-console/ros-integration): 管理者のアクションがロボットとユニットリレーコンテナに到達する仕組み。
 - [アーキテクチャ](/ja/development/architecture): システム全体の構造と2マシンモデル。
 - [データベーススキーマ](/ja/development/database-schema): `profile_backups` を含む完全なスキーマリファレンス。
-- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とフリートリレーの単独リファレンス。
+- [ユニットコンテナライフサイクル](/ja/development/unit-container-lifecycle): `unit_manager.js` とユニットリレーの単独リファレンス。
 - [バックアップ、リストア、データ移行](/ja/development/backup-and-restore): このタブが基づく完全なリファレンス。

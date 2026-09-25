@@ -24,7 +24,7 @@ MSD700 プラットフォームに携わるソフトウェアエンジニア、�
   <LinkCard icon="🧭" title="ナビゲーション" details="手動操作、Autopilot、ピンポイント/ルート、マップ同期&アライメント、カバレッジクリーニング。" link="/ja/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="マッピング" details="新しいマップの構築: Play/Pause/Stop、手動 vs 自律探索、save-on-stop。" link="/ja/development/webui/mapping/overview" />
   <LinkCard icon="🗄️" title="データベース" details="マップDB画面: 記録済みマップの一覧表示、検索、リネーム、削除。" link="/ja/development/webui/database/overview" />
-  <LinkCard icon="🛠️" title="管理コンソール" details="Operators、Units & Fleet、Rentals、Backups、そしてスーパー管理者専用の Admins タブ。" link="/ja/development/webui/admin-console/overview" />
+  <LinkCard icon="🛠️" title="管理コンソール" details="Operators、Units、Rentals、Backups、そしてスーパー管理者専用の Admins タブ。" link="/ja/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="アカウント & アクセス" details="オペレーターのログイン/サインアップ、管理者ログイン、JWT キーリング、ハードウェア登録。" link="/ja/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="カメラ & ライブビュー" details="ダッシュボードのライブフィードを支える WebRTC 映像パイプライン。" link="/ja/development/webui/camera/overview" />
 </LinkCards>
@@ -36,7 +36,7 @@ MSD700 プラットフォームに携わるソフトウェアエンジニア、�
 <LinkCards>
   <LinkCard icon="🏗️" title="アーキテクチャ" details="2マシン・ピアモデル、システムトポロジー、トラストドメイン、状態の所有権。" link="/ja/development/architecture" />
   <LinkCard icon="🗂️" title="リポジトリ構成" details="msd700_robot、ros-web-ui、msd700_noetic 間のコードベース構成。" link="/ja/development/repository-structure" />
-  <LinkCard icon="📨" title="メッセージ仕様" details="MQTT ワイヤーフォーマット全体: コマンドエンベロープ、フィードバックスキーマ、ARQ ACK プロトコル。" link="/ja/development/message-contracts" />
+  <LinkCard icon="📨" title="メッセージ仕様" details="HTTP・MQTT・ROS・WebSocket の全ペイロードと、ダッシュボードの各ボタンから送信メッセージまでのトレース。" link="/ja/development/message-contracts/" />
   <LinkCard icon="🔧" title="診断 & トラブルシューティング" details="スタック全体の障害判断ツリーと根本原因のマッピング。" link="/ja/development/troubleshooting-guide" />
   <LinkCard icon="🤝" title="コントリビューションガイド" details="開発ワークフロー、コミット規約、プルリクエスト手順。" link="/ja/development/contributing" />
   <LinkCard icon="📝" title="変更履歴" details="プラットフォームの変更履歴とリリースノート。" link="/ja/development/changelog" />
@@ -50,6 +50,5 @@ MSD700 に新しく参加するエンジニアには、次の基礎的な進行�
 2. [アカウント & アクセス: セキュリティ & トークン](/ja/development/webui/accounts/security-and-tokens): 3つのトラストドメインと暗号学的デバイス登録を学ぶ。
 3. [ROS パッケージレジストリ](/ja/development/ros/ros-packages): ROS ノードとパッケージバインディングを探る。
 4. [座標変換 (TF)](/ja/development/ros/tf-transforms): 空間参照ツリーとクロックドメインの再スタンプを理解する。
-5. [メッセージ仕様](/ja/development/message-contracts): マシン境界を越える正確なワイヤーフォーマットを習得する。
+5. [メッセージ仕様](/ja/development/message-contracts/): ダッシュボードの任意の操作から、送信される HTTP・MQTT・ROS メッセージまでを追跡する。
 6. [ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot): ロボットのアクティビティステートマシンとセッション復旧を追跡する。
-7. [REST API リファレンス](/ja/development/api-reference): Web および外部クライアントコントローラーを統合する。

@@ -43,7 +43,7 @@
         <mxCell id="n16" value="coturn (:3478 / UDP Relay)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
           <mxGeometry x="722" y="31" width="200" height="43" as="geometry" />
         </mxCell>
-        <mxCell id="n17" value="rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama&lt;br&gt;MQTT-to-ROS Deserializer&lt;br&gt;(legacy per-unit; default is the fleet&lt;br&gt;relay)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+        <mxCell id="n17" value="rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama&lt;br&gt;MQTT-to-ROS Deserializer&lt;br&gt;(legacy per-unit; default is the unit&lt;br&gt;relay)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
           <mxGeometry x="312" y="372" width="250" height="91" as="geometry" />
         </mxCell>
         <mxCell id="n18" value="aws_mqtt Bridge&lt;br&gt;Cloud TLS + Local Loopback" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">

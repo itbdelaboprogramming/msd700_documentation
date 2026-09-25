@@ -106,7 +106,6 @@ const enSidebar = {
         { text: 'Overview', link: '/development/' },
         { text: 'System Architecture', link: '/development/architecture' },
         { text: 'Repository Structure', link: '/development/repository-structure' },
-        { text: 'Message Contracts', link: '/development/message-contracts' },
       ]
     },
     {
@@ -191,7 +190,7 @@ const enSidebar = {
           items: [
             { text: 'Overview', link: '/development/webui/admin-console/overview' },
             { text: 'Operators', link: '/development/webui/admin-console/operators' },
-            { text: 'Units & Fleet', link: '/development/webui/admin-console/units-and-fleet' },
+            { text: 'Units', link: '/development/webui/admin-console/units' },
             { text: 'Rentals', link: '/development/webui/admin-console/rentals' },
             { text: 'Backups', link: '/development/webui/admin-console/backups' },
             { text: 'ROS Integration', link: '/development/webui/admin-console/ros-integration' },
@@ -216,8 +215,6 @@ const enSidebar = {
         {
           text: 'Platform Reference',
           items: [
-            { text: 'REST API Reference', link: '/development/api-reference' },
-            { text: 'rosbridge Protocol (WS)', link: '/development/rosbridge-protocol' },
             { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
             { text: 'Database Schema', link: '/development/database-schema' },
             { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
@@ -225,6 +222,22 @@ const enSidebar = {
             { text: 'Unit Container Lifecycle', link: '/development/unit-container-lifecycle' },
           ]
         }
+      ]
+    },
+    {
+      text: 'Message Contracts',
+      link: '/development/message-contracts/',
+      collapsed: true,
+      items: [
+        { text: 'Overview & Action Trace', link: '/development/message-contracts/' },
+        { text: 'HTTP API (Web)', link: '/development/message-contracts/http-api' },
+        { text: 'MQTT Commands', link: '/development/message-contracts/mqtt-commands' },
+        { text: 'Heartbeat & Lease', link: '/development/message-contracts/heartbeat-and-lease' },
+        { text: 'Bridge Topics (MQTT ↔ ROS)', link: '/development/message-contracts/bridge-topics' },
+        { text: 'rosbridge (WebSocket)', link: '/development/message-contracts/rosbridge' },
+        { text: 'Operation Sync', link: '/development/message-contracts/operation-sync' },
+        { text: 'WebRTC Signalling', link: '/development/message-contracts/webrtc-signalling' },
+        { text: 'Firmware & Enrolment', link: '/development/message-contracts/firmware-and-enrolment' },
       ]
     },
     {
@@ -315,7 +328,6 @@ const idSidebar = {
         { text: 'Ikhtisar', link: '/id/development/' },
         { text: 'Arsitektur Sistem', link: '/id/development/architecture' },
         { text: 'Struktur Repositori', link: '/id/development/repository-structure' },
-        { text: 'Kontrak Pesan', link: '/id/development/message-contracts' },
       ]
     },
     {
@@ -400,7 +412,7 @@ const idSidebar = {
           items: [
             { text: 'Ikhtisar', link: '/id/development/webui/admin-console/overview' },
             { text: 'Operator', link: '/id/development/webui/admin-console/operators' },
-            { text: 'Unit & Armada', link: '/id/development/webui/admin-console/units-and-fleet' },
+            { text: 'Unit', link: '/id/development/webui/admin-console/units' },
             { text: 'Penyewaan', link: '/id/development/webui/admin-console/rentals' },
             { text: 'Cadangan', link: '/id/development/webui/admin-console/backups' },
             { text: 'Integrasi ROS', link: '/id/development/webui/admin-console/ros-integration' },
@@ -425,8 +437,6 @@ const idSidebar = {
         {
           text: 'Referensi Platform',
           items: [
-            { text: 'Referensi REST API', link: '/id/development/api-reference' },
-            { text: 'Protokol rosbridge (WS)', link: '/id/development/rosbridge-protocol' },
             { text: 'Canvas Frontend & Web UI', link: '/id/development/frontend-canvas' },
             { text: 'Skema Database', link: '/id/development/database-schema' },
             { text: 'Sinkronisasi Data (Offline First)', link: '/id/development/data-sync' },
@@ -434,6 +444,22 @@ const idSidebar = {
             { text: 'Siklus Hidup Kontainer Unit', link: '/id/development/unit-container-lifecycle' },
           ]
         }
+      ]
+    },
+    {
+      text: 'Kontrak Pesan',
+      link: '/id/development/message-contracts/',
+      collapsed: true,
+      items: [
+        { text: 'Ikhtisar & Jejak Aksi', link: '/id/development/message-contracts/' },
+        { text: 'HTTP API (Web)', link: '/id/development/message-contracts/http-api' },
+        { text: 'Perintah MQTT', link: '/id/development/message-contracts/mqtt-commands' },
+        { text: 'Heartbeat & Lease', link: '/id/development/message-contracts/heartbeat-and-lease' },
+        { text: 'Topik Bridge (MQTT ↔ ROS)', link: '/id/development/message-contracts/bridge-topics' },
+        { text: 'rosbridge (WebSocket)', link: '/id/development/message-contracts/rosbridge' },
+        { text: 'Operation Sync', link: '/id/development/message-contracts/operation-sync' },
+        { text: 'Signalling WebRTC', link: '/id/development/message-contracts/webrtc-signalling' },
+        { text: 'Firmware & Enrolment', link: '/id/development/message-contracts/firmware-and-enrolment' },
       ]
     },
     {
@@ -524,7 +550,6 @@ const jaSidebar = {
         { text: '開発概要', link: '/ja/development/' },
         { text: 'システムアーキテクチャ', link: '/ja/development/architecture' },
         { text: 'リポジトリ構成', link: '/ja/development/repository-structure' },
-        { text: 'メッセージ仕様', link: '/ja/development/message-contracts' },
       ]
     },
     {
@@ -609,7 +634,7 @@ const jaSidebar = {
           items: [
             { text: '概要', link: '/ja/development/webui/admin-console/overview' },
             { text: 'オペレーター', link: '/ja/development/webui/admin-console/operators' },
-            { text: 'ユニット & フリート', link: '/ja/development/webui/admin-console/units-and-fleet' },
+            { text: 'ユニット', link: '/ja/development/webui/admin-console/units' },
             { text: 'レンタル', link: '/ja/development/webui/admin-console/rentals' },
             { text: 'バックアップ', link: '/ja/development/webui/admin-console/backups' },
             { text: 'ROS連携', link: '/ja/development/webui/admin-console/ros-integration' },
@@ -634,8 +659,6 @@ const jaSidebar = {
         {
           text: 'プラットフォームリファレンス',
           items: [
-            { text: 'REST API リファレンス', link: '/ja/development/api-reference' },
-            { text: 'rosbridge プロトコル (WS)', link: '/ja/development/rosbridge-protocol' },
             { text: 'フロントエンド Canvas & Web UI', link: '/ja/development/frontend-canvas' },
             { text: 'データベース設計', link: '/ja/development/database-schema' },
             { text: 'データ同期 (オフラインファースト)', link: '/ja/development/data-sync' },
@@ -643,6 +666,22 @@ const jaSidebar = {
             { text: 'ユニットコンテナライフサイクル', link: '/ja/development/unit-container-lifecycle' },
           ]
         }
+      ]
+    },
+    {
+      text: 'メッセージ仕様',
+      link: '/ja/development/message-contracts/',
+      collapsed: true,
+      items: [
+        { text: '概要 & アクショントレース', link: '/ja/development/message-contracts/' },
+        { text: 'HTTP API (Web)', link: '/ja/development/message-contracts/http-api' },
+        { text: 'MQTT コマンド', link: '/ja/development/message-contracts/mqtt-commands' },
+        { text: 'ハートビート & リース', link: '/ja/development/message-contracts/heartbeat-and-lease' },
+        { text: 'ブリッジトピック (MQTT ↔ ROS)', link: '/ja/development/message-contracts/bridge-topics' },
+        { text: 'rosbridge (WebSocket)', link: '/ja/development/message-contracts/rosbridge' },
+        { text: 'オペレーション同期', link: '/ja/development/message-contracts/operation-sync' },
+        { text: 'WebRTC シグナリング', link: '/ja/development/message-contracts/webrtc-signalling' },
+        { text: 'ファームウェア & エンロール', link: '/ja/development/message-contracts/firmware-and-enrolment' },
       ]
     },
     {

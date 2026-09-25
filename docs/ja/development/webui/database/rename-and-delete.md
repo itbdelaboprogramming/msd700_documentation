@@ -21,15 +21,11 @@ search: false
 ルート、エリア、プレイリストで使われている名前変更の挙動とは異なり、それらは重複した名前を拒否する
 代わりに自動的にサフィックスを付加する。マップはスキーマ上 `(unit_id, profile_id)` にスコープされて
 いるため
-（[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#テーブル) を参照）、ここで拒否
+（[ROS連携 § テーブル](/ja/development/webui/database/ros-integration#テーブル) を参照）、ここで拒否
 される重複は、自然な衝突というより本物の命名ミスである可能性が高い。
 
-::: info API リファレンスには未記載
-現在の [API リファレンス § マップとルートデータ管理](/ja/development/api-reference#マップとルートのデータ管理)
-はマップの一覧取得はカバーしているが、名前変更エンドポイント自体はカバーしていない。上記の挙動は
-フロントエンドコンポーネント（`services.ts` の `updateMapName`）に基づいて確認されたものであり、
-正確な HTTP メソッドとパスは現在の API リファレンスではカバーされておらず、ここで推測することもしない。
-:::
+**メッセージ仕様:** `{ new_map_name }` を付けた [`PUT /api/maps_data/rename/:mapId`](/ja/development/message-contracts/http-api#map-rename)。
+使用済みの名前は `409`。バックエンドのみで、ユニットは [データ同期](/ja/development/data-sync) で新しい名前を受け取る。
 
 ## カスケード削除
 
@@ -40,13 +36,16 @@ null 化されるだけかについては
 [ROS連携 § 外部キー](/ja/development/webui/database/ros-integration#外部キー) を参照。
 
 元に戻す操作はない。ルート、エリア、プレイリストはこの画面で個別に一覧表示されないため
-（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、マップを削除する
+（[概要 § スコープ](/ja/development/webui/database/overview#スコープ) を参照）、マップを削除する
 オペレーターには、確認プロンプト自体を超えて、一緒に失われるものの詳細な一覧は示されない。
+
+**メッセージ仕様:** ボディに `{ map_id }` を付けた [`DELETE /api/maps_data`](/ja/development/message-contracts/http-api#map-delete)。応答は削除した
+ファイルを列挙し(`data.files`)、削除のトゥームストーンは [データ同期](/ja/development/data-sync) でユニットに届く。
 
 ## セッション競合ガード
 
 マップを開く操作（
-[概要 § マップをナビゲーションで開く](/ja/development/webui/database/overview#マップをナビゲーションで開く)
+[概要 § マップをナビゲーションで開く](/ja/development/webui/database/overview#マップをナビゲーションで開く)
 を参照）は、マッピングセッションがユニット上で現在実行中または一時停止中である間、開こうとしている
 マップによって扱いが異なる。
 
@@ -54,17 +53,19 @@ null 化されるだけかについては
 - *別の*マップを開くと `ConfirmSaving` と `MapSaving` が表示され、進行中のマップを黙って破棄する
   のではなく、オペレーターに選択肢を提示する。
   - **保存**: 新しいマップが読み込まれる前に、進行中のマップが保存される。これは
-    [API リファレンス § マッピング制御](/ja/development/api-reference#_1-マッピング制御)
-    （`POST /api/mapping/stop`）に記載されているものと同じ停止・保存パスをたどる。
+    [HTTP API § `POST /api/mapping`](/ja/development/message-contracts/http-api#mapping-control)
+    (`stop: true` の `POST /api/mapping`)に記載されているものと同じ停止・保存パスをたどる。
   - **破棄**: 進行中のマップは保存されずに破棄される。
   - **キャンセル**: オペレーターは現在のマップにとどまり、マッピングセッションは変更されずに続行
     される。
 
-現在の API リファレンスは保存パス（`POST /api/mapping/stop`）を記載しているが、破棄用の別エンドポイント
-は記載していない。その詳細はソース資料でカバーされておらず、ここで推測することもしない。
+**メッセージ仕様:** 保存は `{ stop: true, map_name }` の [`POST /api/mapping`](/ja/development/message-contracts/http-api#mapping-control) と、
+続く [進捗ストリーム](/ja/development/message-contracts/http-api#mapping-progress)。破棄は [`POST /api/mapping/discard`](/ja/development/message-contracts/http-api#mapping-discard) →
+[`mapping.discard`](/ja/development/message-contracts/mqtt-commands#mapping)。その後、新しいマップは [`POST /api/navigation/init`](/ja/development/message-contracts/http-api#navigation-init) で開く。
 
 ## 関連
 
+- [メッセージ仕様 § データベースページ](/ja/development/message-contracts/#trace-database): これらの操作のすべての呼び出し
 - [概要](/ja/development/webui/database/overview): この機能の土台となるマップ一覧、検索/並べ替え/ページネーション、各状態
 - [ROS連携](/ja/development/webui/database/ros-integration): これらのアクションを支えるスキーマと REST エンドポイント
 - [アーキテクチャ](/ja/development/architecture)

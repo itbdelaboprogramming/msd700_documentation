@@ -8,14 +8,14 @@ search: false
 <RoleBadge role="developer" />
 
 ::: warning Superseded Architecture Notice
-The 1-container-per-unit lifecycle orchestration managed by `unit_manager.js` is **superseded** by the fleet relay described in [Fleet Relay: One Container for Every Unit](#fleet-relay-one-container-for-every-unit) below, which is now the default. The per-unit path still ships and is one environment variable away; this document covers both.
+The 1-container-per-unit lifecycle orchestration managed by `unit_manager.js` is **superseded** by the unit relay described in [Unit relay: One Container for Every Unit](#unit-relay-one-container-for-every-unit) below, which is now the default. The per-unit path still ships and is one environment variable away; this document covers both.
 :::
 
-This document details the dynamic lifecycle management of per-unit relay containers (`rosweb_unit_<ULID>`) on the cloud server, managed by `unit_manager.js` over the Docker socket, and the fleet relay that replaces them.
+This document details the dynamic lifecycle management of per-unit relay containers (`rosweb_unit_<ULID>`) on the cloud server, managed by `unit_manager.js` over the Docker socket, and the unit relay that replaces them.
 
 ## Container Architecture Overview (Legacy)
 
-To scale across large robot fleets without wasting server CPU and RAM on idle machines, the server spins up a dedicated ROS relay container only when an operator opens that robot's dashboard.
+To scale across many robots without wasting server CPU and RAM on idle machines, the server spins up a dedicated ROS relay container only when an operator opens that robot's dashboard.
 
 ![Container Architecture Overview (Legacy)](./diagrams/unit-container-lifecycle-container-architecture-overview-legacy.drawio)
 
@@ -39,25 +39,25 @@ Per-unit containers run with the Docker restart policy `unless-stopped`. If the 
 | Environment Variable | Default Value | Description |
 | --- | --- | --- |
 | `UNIT_MANAGER_ENABLED` | `true` (server), `false` (unit) | Master switch. Off disables holder tracking as well, which breaks lease handback on logout. |
-| `UNIT_CONTAINERS_ENABLED` | `false` | Default is fleet mode. Set `true` to go back to one container per robot, and then stop the relay. |
+| `UNIT_CONTAINERS_ENABLED` | `false` | Default is multi-unit mode. Set `true` to go back to one container per robot, and then stop the relay. |
 | `FLEET_RELAY_CONTAINER` | derived from `UNIT_MODE` | Name of the single relay container the reconciler restarts. |
 | `FLEET_ROSTER_POLL_MS` | `60000` | How often the roster is re-read from `units`. A backstop against a missed change, not the mechanism. |
 | `MULTI_UNIT_LIST` | (unset) | Optional override. Comma- or space-separated ULIDs. Set it and the roster stops following enrolments. |
-| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Fleet relay only. MQTT client id for the one shared connection. Must be unique per broker: `clean_session` is true, so a duplicate id disconnects the other client and the two flap. |
-| `FLEET_MAX_INFLIGHT` | `200` | Fleet relay only. Bounds in-flight messages for the whole fleet, where the per-unit value of `20` bounded one robot. Left low, one robot's map burst stalls pose updates for every other robot. |
+| `FLEET_CLIENT_ID` | `fleet_nakayama_cloud` (prod), `fleet_dev_nakayama_cloud` (dev) | Unit relay only. MQTT client id for the one shared connection. Must be unique per broker: `clean_session` is true, so a duplicate id disconnects the other client and the two flap. |
+| `FLEET_MAX_INFLIGHT` | `200` | Unit relay only. Bounds in-flight messages for all units, where the per-unit value of `20` bounded one robot. Left low, one robot's map burst stalls pose updates for every other robot. |
 | `UNIT_IMAGE` | `ros-noetic-webui-app-v2:latest` | Target Docker image instantiated for the unit relay. |
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Inactivity threshold before an idle container is stopped. |
 | `UNIT_REAP_INTERVAL_MS` | `60000` (1 minute) | Execution period of the background reaper sweep. |
 | `UNIT_REMOVE_ON_REAP` | `false` | When true, deletes the container; when false, preserves stopped state. |
 | `UNIT_MODE` | `prod` (or `dev`) | Sets container naming suffix (`_nakayama` vs `_nakayama_dev`). |
 
-## Fleet Relay: One Container for Every Unit
+## Unit relay: One Container for Every Unit
 
-The per-unit design pays for each robot with a whole container: its own workspace build, its own set of ~10 Python relay nodes, and its own TLS connection to the broker. Nothing about ROS required that. Every topic is already fully qualified with `/unit_<ULID>/...`, and every MQTT bridge entry is a `primitive: true` `std_msgs/String` passthrough, so one process can serve the whole fleet by holding one subscriber/publisher pair per unit.
+The per-unit design pays for each robot with a whole container: its own workspace build, its own set of ~10 Python relay nodes, and its own TLS connection to the broker. Nothing about ROS required that. Every topic is already fully qualified with `/unit_<ULID>/...`, and every MQTT bridge entry is a `primitive: true` `std_msgs/String` passthrough, so one process can serve all units by holding one subscriber/publisher pair per unit.
 
-The fleet relay collapses **both halves** of the data plane into a single container, `ros_web_ui_v2_unit_relays` (`_dev` suffix on the dev stack):
+The unit relay collapses **both halves** of the data plane into a single container, `ros_web_ui_v2_unit_relays` (`_dev` suffix on the dev stack):
 
-| Half | Per-unit path | Fleet path |
+| Half | Per-unit path | Unit relay path |
 | --- | --- | --- |
 | ROS relays | `topic2string/launch/cloud.launch`, one node set per unit | `topic2string/launch/cloud_multi.launch`, one node set for all units |
 | MQTT bridge | `aws_mqtt/launch/nakayama_cloud.launch`, one nodelet per unit | `aws_mqtt/launch/nakayama_cloud_multi.launch`, one nodelet, one connection |
@@ -66,7 +66,7 @@ The fleet relay collapses **both halves** of the data plane into a single contai
 
 ### Where the topic map comes from
 
-roslaunch XML cannot loop, which is the only reason the bridge map was ever per-unit. `aws_mqtt/scripts/gen_bridge_params.py` does the loop: it expands the map over a roster of ULIDs and writes a YAML file that the fleet launch loads in one `<rosparam command="load">`. It must run **before** roslaunch, because the file is read while the XML is parsed.
+roslaunch XML cannot loop, which is the only reason the bridge map was ever per-unit. `aws_mqtt/scripts/gen_bridge_params.py` does the loop: it expands the map over a roster of ULIDs and writes a YAML file that the unit launch loads in one `<rosparam command="load">`. It must run **before** roslaunch, because the file is read while the XML is parsed.
 
 The generated config feeds the same stock `mqtt_client/MqttClient` nodelet with the same topic names and the same `primitive` flag, so the robot side cannot tell which path is running. `scripts/test/test_gen_bridge_params.py` asserts that a roster of one reproduces the inline map in `nakayama_cloud.launch` entry for entry, which is what stops the two from drifting while both exist.
 
@@ -100,15 +100,15 @@ What it saves is server-side: process count (N × 10 relay nodes becomes 10), RA
 
 ### Why not fold it into the backend container
 
-A backend redeploy would then take the entire fleet's data plane down with it. Keeping the relay in its own container means a code deploy is not a fleet-wide outage. This is the same reasoning that keeps `hivemq` out of the app image.
+A backend redeploy would then take all units' data plane down with it. Keeping the relay in its own container means a code deploy is not an outage for every unit. This is the same reasoning that keeps `hivemq` out of the app image.
 
 ### Blast radius changes shape
 
-Each relay type is still its own process, so a crash takes out one function rather than everything. But it now takes that function out **for every robot** instead of for one. Before: robot A dead, robot B untouched. After: all robots lose the lidar overlay while position, map and navigation keep working. The single MQTT connection is the one genuinely fleet-wide point: if it drops, every robot loses its bridge until reconnect (`reconnect_delay`, 5 s).
+Each relay type is still its own process, so a crash takes out one function rather than everything. But it now takes that function out **for every robot** instead of for one. Before: robot A dead, robot B untouched. After: all robots lose the lidar overlay while position, map and navigation keep working. The single MQTT connection is the one point that genuinely affects every unit: if it drops, every robot loses its bridge until reconnect (`reconnect_delay`, 5 s).
 
 ### Running it
 
-There is nothing to configure. The relay is part of the normal profiles and fleet mode is the default, so a plain bring-up gives you the merged architecture:
+There is nothing to configure. The relay is part of the normal profiles and multi-unit mode is the default, so a plain bring-up gives you the merged architecture:
 
 ```bash
 docker compose --profile server_prod up -d   # or --profile server_dev
@@ -133,7 +133,7 @@ Two bridges subscribed to the same MQTT topics deliver every message twice. Dupl
 Two guards make that mistake loud rather than silent:
 
 - The relay's start command refuses to launch if any `/unit_<ULID>/cloud_mqtt_client` is already registered on the master.
-- `unit_manager.init()` logs an error naming every per-unit container it finds still running while in fleet mode.
+- `unit_manager.init()` logs an error naming every per-unit container it finds still running while in multi-unit mode.
 
 ### `UNIT_CONTAINERS_ENABLED` is not `UNIT_MANAGER_ENABLED`
 

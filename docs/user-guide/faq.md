@@ -15,7 +15,7 @@ Answers to common operational questions regarding the MSD700 robotic platform.
 The MSD700 is a self-driving robot for indoor spaces like warehouses, office corridors, and plants. It builds floor plans as it drives, carries out point-to-point trips on its own, and systematically covers zones (e.g. for cleaning or inspection).
 :::
 
-::: details 2. I logged into the dashboard, but the fleet list is empty. Why?
+::: details 2. I logged into the dashboard, but the unit list is empty. Why?
 Your user account exists, but an administrator has not yet assigned it to a **Rental Profile** containing active robots. Contact your facility administrator or lab supervisor to grant your account access to your organization's rental profile.
 :::
 

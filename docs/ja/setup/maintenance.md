@@ -14,7 +14,7 @@ outline: deep
 | --- | --- | --- | --- |
 | JWTキーリングのローテーション | 数か月ごと、漏洩疑い時は即時 | サーバー | [シークレットのローテーション](#シークレットのローテーション) |
 | TLS証明書の更新 | 期限前 | サーバー | [証明書](#証明書)。`certbot renew`だけではHiveMQは更新され**ません** |
-| フリートリレーの稼働確認 | 時々 | サーバー | `docker ps --filter name=unit_relays`。フリートモード(デフォルト)では1台停止で全滅します |
+| ユニットリレーの稼働確認 | 時々 | サーバー | `docker ps --filter name=unit_relays`。マルチユニットモード(デフォルト)では1台停止で全滅します |
 | 期限切れ鍵の削除 | ローテーション猶予期間後 | サーバー | `./scripts/secrets.sh prune --dev` |
 | Dockerディスク使用量 | 月次 | 両方 | `docker system df`、その後イメージ/ビルドキャッシュ削除 |
 | TURNリレーの確認 | ネットワーク/ルーター変更後 | サーバー | [TURNリレー](#turnリレー) |
@@ -80,7 +80,7 @@ ROSログとは別のログがあと2系統あります:
 docker compose --profile server_dev up -d --no-deps --force-recreate nakayama_cloud_dev nakayama_media_dev nakayama_signalling_dev
 ```
 
-開発フリートリレーも再起動し、開発ユニットが一瞬切断されます。猶予期間中トークンは有効ですが、再作成中のソケットは切れます。
+開発ユニットリレーも再起動し、開発ユニットが一瞬切断されます。猶予期間中トークンは有効ですが、再作成中のソケットは切れます。
 
 ## 証明書
 
@@ -150,7 +150,7 @@ docker compose --profile server_dev  build && docker compose --profile server_de
 docker compose --profile server_prod build && docker compose --profile server_prod up -d
 ```
 
-バックエンド再作成は既存`unit_relays`コンテナを再起動します(デフォルトのフリートモード)。手動のリレーステップは不要ですが、全ユニットのデータプレーンが一瞬切れて自動復旧します。存在しないリレーをバックエンドが作ることはありません。作成はComposeのみです。
+バックエンド再作成は既存`unit_relays`コンテナを再起動します(デフォルトのマルチユニットモード)。手動のリレーステップは不要ですが、全ユニットのデータプレーンが一瞬切れて自動復旧します。存在しないリレーをバックエンドが作ることはありません。作成はComposeのみです。
 
 レガシーモード(`UNIT_CONTAINERS_ENABLED=true`):稼働中の`rosweb_unit_*`コンテナは起動時に引き継がれますが、ROSノードは新マスターに再登録されません。触る前に1環境だけ列挙します(本番名は`_nakayama`、開発は`_nakayama_dev`で終わります):
 

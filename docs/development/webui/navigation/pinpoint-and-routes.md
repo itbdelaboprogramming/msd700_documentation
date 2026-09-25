@@ -34,10 +34,26 @@ closing step required, because a pinpoint is a destination, not a boundary.
 A one-off point-and-go mode: the operator clicks a destination on the canvas, the click is
 converted to a metric goal, and the robot is dispatched to that single point.
 
+**Contracts:** placing the pin sends nothing. Play sends a
+[`move_base` goal over rosbridge](/development/message-contracts/rosbridge#move-base-action) (carried to the robot as
+[`string/move_base/goal`](/development/message-contracts/bridge-topics#json-goal)) and records the run with an
+[`operation_sync` `batch`](/development/message-contracts/operation-sync#batch) (`single_pinpoint`). Completion comes back on
+`server/move_base/status` and `/result`, each result ACKed on
+[`result_ack`](/development/message-contracts/bridge-topics#acks). Pause and Stop cancel the goal
+([`cancel`](/development/message-contracts/bridge-topics#json-cancel)) and send
+[`pause`](/development/message-contracts/operation-sync#pause) or [`stop`](/development/message-contracts/operation-sync#stop-complete).
+
 ## Multiple Pinpoint
 
 The same click-to-place mechanism repeated to build an ordered sequence of waypoints, which the
 robot then traverses in order.
+
+**Contracts:** the browser sends one [`move_base` goal](/development/message-contracts/rosbridge#move-base-action) per
+waypoint and advances on completion. The run is recorded with a
+[`batch`](/development/message-contracts/operation-sync#batch) (`multi_pinpoint`, with `route_mode` and all `waypoints`), each
+dispatched waypoint is mirrored with [`progress`](/development/message-contracts/operation-sync#progress), and the end of the
+route with [`complete`](/development/message-contracts/operation-sync#stop-complete). With Autopilot on, the robot's supervisor
+dispatches instead ([`takeover`](/development/message-contracts/operation-sync#takeover)).
 
 ### Save Route / Load Route
 
@@ -46,11 +62,22 @@ later through `LoadRouteModal.tsx`, which repopulates the canvas with the saved 
 Failures on either path surface through the `TopToast` component described in
 [Overview § Supporting UI](/development/webui/navigation/overview#supporting-ui).
 
+**Contracts:** Save Route is [`POST /api/routes`](/development/message-contracts/http-api#routes) with the pinpoints as
+`route_points` (one ROS pose each), then the canvas thumbnail to
+[`POST /api/media/uploadRouteImage`](/development/message-contracts/http-api#media-server). Load Route is
+[`GET /api/routes/:map_id`](/development/message-contracts/http-api#routes) plus `GET /api/media/images/<route id>.jpg` for the
+thumbnails; rename and delete are `PUT` and `DELETE /api/routes/:id`. None of these reach the robot.
+
 ### Round Trip / Loop Route
 
 `RouteControls.tsx` exposes two independent toggles, Round Trip and Loop Route, that change what
 happens once a Multiple Pinpoint route reaches its last waypoint, alongside the Save/Load Route
 controls above.
+
+**Contracts:** the mode is not sent to the robot on its own and is not stored with a saved route. It
+travels as `route_mode` (`basic`, `round-trip`, `loop`) plus the travel `direction` in the
+[`operation_sync` `batch`](/development/message-contracts/operation-sync#batch), so the supervisor can continue the pattern if
+it takes over.
 
 ## Set Home Base
 
@@ -61,10 +88,19 @@ database services layer. This is the same home base position surfaced on the Dat
 used by the Action Bar's Return to Home Base action
 (see [Overview § One page, many modes](/development/webui/navigation/overview#one-page-many-modes)).
 
+**Contracts:** [`PUT /api/maps_data/homebase/:mapId`](/development/message-contracts/http-api#map-homebase) with
+`{ x, y, z, ox, oy, oz, ow }`, then a drive to it as a
+[`move_base` goal](/development/message-contracts/rosbridge#move-base-action) recorded with a
+[`batch`](/development/message-contracts/operation-sync#batch) of operation `homebase`. On a freshly saved map the home base
+instead travels inside [`mapping.stop`](/development/message-contracts/mqtt-commands#mapping), and `navigation.init` hands it
+to the robot's `/initialpose` ([MQTT `navigation`](/development/message-contracts/mqtt-commands#navigation)).
+
 ## Delete All Pinpoints
 
 A permanent entry in the Mode List rather than something tied to a specific mode: it clears every
 placed pinpoint at once. It is greyed out when there is nothing to delete.
+
+**Contracts:** client only; nothing is sent to the robot or the backend.
 
 ## Related
 
@@ -75,5 +111,6 @@ placed pinpoint at once. It is greyed out when there is nothing to delete.
 - [Map Sync & Alignment](/development/webui/navigation/map-sync-and-alignment)
 - [Coverage Cleaning](/development/webui/navigation/coverage-cleaning)
 - [ROS Integration](/development/webui/navigation/ros-integration)
+- [Message Contracts § Navigation page](/development/message-contracts/#trace-navigation): every message these modes send, in one table.
 - [Architecture](/development/architecture)
 - [State & Behavior](/development/state-and-behavior)

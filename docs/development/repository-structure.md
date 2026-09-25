@@ -31,7 +31,7 @@ ros-web-ui/
 │   ├── msd700_webui_utils/
 │   ├── msd700_robot/              # msd700_robot, present here too (see below)
 │   └── dependencies/
-│       ├── ROS-dashboard-backend/  # backend_node, see API Reference
+│       ├── ROS-dashboard-backend/  # backend_node, see Message Contracts: HTTP API
 │       ├── ROS-dashboard-next-ts/  # frontend build context (own git repo, gitignored here)
 │       ├── media-server/
 │       ├── signalling_server/

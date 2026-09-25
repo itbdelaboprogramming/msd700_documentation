@@ -58,4 +58,4 @@ timeouts:
 
 - [Daftar Paket ROS](/id/development/ros/ros-packages): Struktur paket dan definisi launch file.
 - [State dan Perilaku](/id/development/state-and-behavior): Finite state machine detail dan tier watchdog.
-- [Kontrak Pesan](/id/development/message-contracts): Payload pesan MQTT dan operation sync.
+- [Kontrak Pesan](/id/development/message-contracts/): Payload pesan MQTT dan operation sync.

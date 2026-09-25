@@ -14,7 +14,7 @@ Akun operator dan profil penyewaan adalah tabel berbeda karena suatu alasan (lih
 tab](/id/development/webui/admin-console/overview#tiga-ruang-identitas-tiga-tab)) dan tab ini
 adalah tempat keduanya, ditambah sebuah unit, sungguhan dihubungkan. Untuk sisi akun-operator,
 lihat [Operator](/id/development/webui/admin-console/operators); untuk sisi unit, lihat
-[Unit & Armada](/id/development/webui/admin-console/units-and-fleet).
+[Unit](/id/development/webui/admin-console/units).
 
 ## Tabel di balik tab ini
 
@@ -85,12 +85,13 @@ operator yang menjadi anggotanya.
 
 ## Terkait
 
+- [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/profiles`, `GET/PATCH/DELETE /admin/api/profiles/:id`, `POST/DELETE /admin/api/profiles/:id/members`, `POST/DELETE /admin/api/profiles/:id/units`.
 - [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
-- [Unit & Armada](/id/development/webui/admin-console/units-and-fleet): mendaftarkan, mengganti nama, dan menghapus unit yang ditugaskan tab ini.
+- [Unit](/id/development/webui/admin-console/units): mendaftarkan, mengganti nama, dan menghapus unit yang ditugaskan tab ini.
 - [Cadangan](/id/development/webui/admin-console/backups): alur arsip dan restore lengkap yang dituju pintasan tab ini.
-- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan armada kontainer.
+- [Integrasi ROS](/id/development/webui/admin-console/ros-integration): cara aksi admin menjangkau robot dan kontainer unit.
 - [Arsitektur](/id/development/architecture): struktur sistem tingkat tinggi dan model dua-mesin.
 - [Skema Basis Data](/id/development/database-schema): referensi skema lengkap untuk `rental_profiles`, `profile_members`, dan `profile_units`.
-- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan relay armada.
+- [Siklus Hidup Kontainer Unit](/id/development/unit-container-lifecycle): referensi mandiri untuk `unit_manager.js` dan unit relay.
 - [Cadangan, Pemulihan, dan Migrasi Data](/id/development/backup-and-restore): referensi mandiri untuk format arsip dan operasi REST.

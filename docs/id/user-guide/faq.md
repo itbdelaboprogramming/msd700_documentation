@@ -15,7 +15,7 @@ Jawaban untuk pertanyaan operasional umum mengenai platform robotik MSD700.
 MSD700 adalah robot self-driving untuk ruang indoor seperti gudang, koridor kantor, dan pabrik. Robot ini membangun denah peta sambil berjalan, menjalankan perjalanan titik-ke-titik secara mandiri, dan mencakup area secara sistematis (misalnya untuk pembersihan atau inspeksi).
 :::
 
-::: details 2. Saya sudah masuk ke dashboard, tetapi daftar armada kosong. Mengapa?
+::: details 2. Saya sudah masuk ke dashboard, tetapi daftar unit kosong. Mengapa?
 Akun pengguna Anda ada, tetapi administrator belum menetapkannya ke **Profil Penyewaan (Rental Profile)** yang berisi robot aktif. Hubungi administrator fasilitas atau supervisor lab Anda untuk memberikan akses akun Anda ke profil penyewaan organisasi Anda.
 :::
 

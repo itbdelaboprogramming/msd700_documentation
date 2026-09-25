@@ -19,7 +19,7 @@ Pilih environment dan mesin dulu. Checkout V2 di cloud server bukan unit fisik; 
 1. **Stack server jalan?** Dari `ros-web-ui`: `docker compose --profile server_prod ps` (atau `server_dev` + nama `_dev` untuk dev). Service jangka panjang harus `Up`/`healthy`; `fix_perms_*` one-shot yang normalnya exit `0`.
 2. **Container unit jalan?** `./scripts/docker-manager.sh status` di unit.
 3. **Unit ter-enrol?** Cari ULID-nya di **Registered Units** admin console, tampil online.
-4. **Relay armada jalan?** `docker ps --filter name=unit_relays` di server.
+4. **Unit relay jalan?** `docker ps --filter name=unit_relays` di server.
 5. **Jalur jaringan terbuka?** Port di [Setup Sistem](/id/setup/system-setup#_1-cek-jalur-jaringan).
 6. **Log**: `docker compose logs -f <service>` di server; `docker exec -it msd700 tmux attach -t robot_services` di unit (window: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, `token_refresh`).
 
@@ -42,11 +42,11 @@ Log, output launch, `docker inspect`, dan output Compose bisa berisi kredensial.
 | Build simulator gagal `resource not found: gazebo_ros` | Image di-build tanpa `--simulator` | `docker-manager.sh build --simulator`, lalu `up --simulator` |
 | Simpan peta error permission, hanya laptop dev | `USER_UID`/`USER_GID` di `docker/.env` masih menunjuk default Jetson | Setel ke `id -u` / `id -g` sendiri (auto-detect hanya bila kosong) |
 | Container lama tak mau start bersih | Sisa state dari run sebelumnya | `down --remove-orphans` dari file Compose itu, lalu `up` lagi |
-| Peta kosong, unit online, perintah jalan | Relay armada hilang/belum terdaftar, atau masalah map/rosbridge hilir | Cek container `unit_relays[_dev]` dan log-nya. Relay hilang harus dibuat Compose; manager hanya me-restart yang ada. Jangan start prod untuk memperbaiki dev. Mode legacy: suffix `rosweb_unit_*` yang cocok |
+| Peta kosong, unit online, perintah jalan | Unit relay hilang/belum terdaftar, atau masalah map/rosbridge hilir | Cek container `unit_relays[_dev]` dan log-nya. Relay hilang harus dibuat Compose; manager hanya me-restart yang ada. Jangan start prod untuk memperbaiki dev. Mode legacy: suffix `rosweb_unit_*` yang cocok |
 | Handshake rosbridge gagal di console browser | Apache mem-proxy rosbridge tanpa rewrite header `Host` | Tambahkan blok `<Location /services/rosbridge>` dari [Setup Server](/id/setup/server-setup) |
 | Semua path WebSocket gagal, HTTP oke | `mod_proxy_wstunnel` mati | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
 | Kamera hanya di LAN, tidak pernah di luar | TURN mengiklankan alamat tak terjangkau, atau port tak di-forward | Cek `TURN_EXTERNAL_IP` + forward router ([Maintenance](/id/setup/maintenance#relay-turn)) |
-| Se-armada offline sekaligus, error TLS | HiveMQ menyajikan sertifikat kedaluwarsa (`certbot renew` saja tak pernah mengupdate-nya) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, restart broker di jam maintenance |
+| Semua unit offline sekaligus, error TLS | HiveMQ menyajikan sertifikat kedaluwarsa (`certbot renew` saja tak pernah mengupdate-nya) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, restart broker di jam maintenance |
 | `coturn` loop dan tak pernah bind | `coturn` apt/systemd masih memegang port 3478 | `sudo systemctl disable --now coturn`, start container |
 | Backend log `ECONNREFUSED 127.0.0.1:1883` | Launch lama atau override mengarahkan MQTT ke loopback; default server kini `nakayama` | Perbaiki config service itu, recreate scoped. (Di unit, `backend_local` sengaja loopback: cek `mosquitto_local`) |
 | Backend log `EACCES /var/run/docker.sock` | `DOCKER_GID` tidak cocok dengan grup docker host | `getent group docker \| cut -d: -f3`, perbaiki `.env`, recreate backend |

@@ -32,6 +32,9 @@ in them. Authentication only requires a valid, keyring-verified token carrying `
 unit-local token issuers put it in explicitly (see
 [Architecture § Trust domains](/development/architecture#multi-tier-trust-domains-and-security)).
 
+**Contracts:** the message types (`authenticate`, `offer`, `answer`, `candidate`, `client_ready`,
+`ping`) are specified in [WebRTC Signalling](/development/message-contracts/webrtc-signalling#messages).
+
 ## Browser-side stall detection
 
 Beyond the native `oniceconnectionstatechange` (which triggers the browser's own `restartIce()` on
@@ -54,6 +57,7 @@ different hostname, which a purely build-time URL cannot.
 
 ## Related
 
+- [Message Contracts: WebRTC Signalling](/development/message-contracts/webrtc-signalling): the signalling message contract.
 - [ROS Integration](/development/webui/camera/ros-integration): `camera_client.py`, ICE/STUN/TURN
   configuration, the mDNS candidate bug, and reconnect logic
 - [Architecture](/development/architecture): where `signalling_server` and `coturn` sit in the wider

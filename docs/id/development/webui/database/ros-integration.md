@@ -60,7 +60,7 @@ memblokir status operasi mana pun yang menunjuk ke situ.
 
 ## Endpoint REST
 
-Dari [Referensi API § Manajemen Data Peta dan Rute](/id/development/api-reference#manajemen-data-peta-dan-rute):
+Dari [HTTP API § Peta](/id/development/message-contracts/http-api#maps):
 
 ### Daftar Peta
 
@@ -81,18 +81,15 @@ memiliki peta dengan nama sama namun nilai `id` berbeda; membuang yang "duplikat
 yang sungguhan. Dedupe berdasarkan `id`, dan selalu cakup berdasarkan `unit_id`.
 :::
 
-### Ganti nama dan hapus: belum terdokumentasi di sini
+### Ganti nama dan hapus
 
-Bagian Manajemen Data Peta dan Rute pada Referensi API saat ini tidak mendokumentasikan endpoint
-ganti nama atau hapus untuk `maps_data`. Perilaku ganti nama dan hapus halaman Basis Data
-(dijelaskan di [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete)) dikonfirmasi
-terhadap frontend (`updateMapName` di `services.ts`, dan panggilan hapus yang dijaga
-`ConfirmDelete`), tetapi metode HTTP dan path yang persis tidak tercakup dalam materi sumber saat
-ini dan tidak ditebak-tebak di sini.
+Ganti nama adalah [`PUT /api/maps_data/rename/:mapId`](/id/development/message-contracts/http-api#map-rename) (`updateMapName` di `services.ts`) dan
+hapus adalah [`DELETE /api/maps_data`](/id/development/message-contracts/http-api#map-delete) dengan `{ map_id }` (panggilan yang dijaga
+`ConfirmDelete`). Perilakunya di halaman: [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete).
 
 ### Di luar cakupan: Simpan Rute Waypoint Kustom
 
-Bagian Referensi API yang sama juga mendokumentasikan `POST /api/routes` untuk menyimpan rute
+[HTTP API § Rute](/id/development/message-contracts/http-api#routes) juga mendokumentasikan `POST /api/routes` untuk menyimpan rute
 waypoint. Endpoint itu milik fitur Navigasi, bukan Basis Data: rute tidak didaftar atau dikelola
 dari halaman ini (lihat [Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), jadi
 tidak diulang di sini.

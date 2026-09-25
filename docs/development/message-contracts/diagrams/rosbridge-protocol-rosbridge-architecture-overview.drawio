@@ -19,7 +19,7 @@
         <mxCell id="n7" value="rosbridge_suite WebSocket Server&lt;br&gt;(Port: 9090)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="391" y="31" width="242" height="59" as="geometry" />
         </mxCell>
-        <mxCell id="n8" value="rosweb_unit_&amp;lt;ULID&amp;gt;&lt;br&gt;Deserialized Typed ROS Topics" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n8" value="unit relay (ros_web_ui_v2_unit_relays)&lt;br&gt;typed /unit_&amp;lt;ULID&amp;gt;/server/* topics" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="785" y="31" width="224" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n9" value="WSS (/services/rosbridge)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=block;startFill=1;startSize=6;endArrow=block;endFill=1;endSize=6;exitX=1;exitY=0.5085;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5085;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n5" target="n6">

@@ -38,7 +38,7 @@ Sistem ini terdiri dari dua lapisan utama:
 
 Akses ke robot diatur oleh **Profil Penyewaan (Rental Profiles)**:
 
-- **Operator Armada**: Akun pengguna standar yang ditetapkan ke satu atau lebih profil penyewaan. Anda dapat mengemudikan robot yang ditetapkan, merekam peta, membuat rute, dan memeriksa status robot.
+- **Operator Unit**: Akun pengguna standar yang ditetapkan ke satu atau lebih profil penyewaan. Anda dapat mengemudikan robot yang ditetapkan, merekam peta, membuat rute, dan memeriksa status robot.
 - **Administrator Lab**: Mengelola profil penyewaan penyewa, menyediakan akun operator, dan menyetujui pendaftaran perangkat keras robot baru.
 
 ## Langkah Selanjutnya

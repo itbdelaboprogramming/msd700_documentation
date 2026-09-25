@@ -29,6 +29,10 @@ adalah komponen dan toggle yang sama seperti di Navigasi; yang berbeda hanyalah 
 kendalinya diserahkan *dari* (eksplorasi otonom di sini, alih-alih goal yang dikirim atau sapuan
 cakupan di Navigasi), sehingga mekanismenya tidak diulang di halaman ini.
 
+**Kontrak:** sama seperti Navigasi: [`POST /api/manual`](/id/development/message-contracts/http-api#manual) →
+[`manual.enable` / `disable`](/id/development/message-contracts/mqtt-commands#manual), dan WASD sebagai `Twist` di
+[`<root>/server/key_vel`](/id/development/message-contracts/rosbridge#publications).
+
 ## Apa arti "Autopilot" di halaman ini
 
 Panel yang sama juga menampilkan toggle **Autopilot**. Khusus di Pemetaan, mengaktifkannya
@@ -46,8 +50,12 @@ laptop yang ditutup. Lihat [Safety Watchdog](/id/development/ros/safety-watchdog
 waktu lengkapnya; halaman itu tidak diduplikasi di sini.
 :::
 
+**Kontrak:** [`POST /api/autopilot`](/id/development/message-contracts/http-api#autopilot) →
+[`autopilot.enable` / `disable`](/id/development/message-contracts/mqtt-commands#autopilot). Tidak ada batch waypoint di halaman ini.
+
 ## Terkait
 
+- [Kontrak Pesan § Halaman Pemetaan](/id/development/message-contracts/#trace-mapping): semua pesan di balik toggle-toggle ini.
 - [Ikhtisar](/id/development/webui/mapping/overview): Play/Pause/Stop, tampilan peta live, dan
   alur simpan-saat-stop
 - [Integrasi ROS](/id/development/webui/mapping/ros-integration): kontrak jalur REST/MQTT di

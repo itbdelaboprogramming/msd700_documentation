@@ -29,10 +29,10 @@ search: false
 
 ### 2. ユニットはオンラインだが、マップキャンバスが空のまま(rosbridge / リレーコンテナ)
 - **症状**: コマンドは成功するが、Web キャンバス上にマップ、ロボットアイコン、レーザースキャンのいずれも表示されない。
-- **根本原因**: フリートリレーコンテナ(`ros_web_ui_v2_unit_relays`)がダウンしている。あるいはレガシーなユニット単位の経路では、オンデマンドコンテナ `rosweb_unit_<u>_<unit>_nakayama` がアイドルリーパーによって停止された。または Apache の WebSocket プロキシがブロックされている。
+- **根本原因**: ユニットリレーコンテナ(`ros_web_ui_v2_unit_relays`)がダウンしている。あるいはレガシーなユニット単位の経路では、オンデマンドコンテナ `rosweb_unit_<u>_<unit>_nakayama` がアイドルリーパーによって停止された。または Apache の WebSocket プロキシがブロックされている。
 - **診断手順**:
-  1. まずフリートリレーを確認する: `docker ps | grep unit_relays`。レガシー経路では代わりにユニット単位のコンテナを確認する: `docker ps | grep rosweb_unit`。
-  2. レガシー経路でのみ: ブラウザでユニットページをリロードし、`unit_manager.js` の `touch` イベントを発生させる。フリートモードではロスターは`units`テーブルから得られるため、touchイベントは不要であり、登録済みロボットは到達可能である。
+  1. まずユニットリレーを確認する: `docker ps | grep unit_relays`。レガシー経路では代わりにユニット単位のコンテナを確認する: `docker ps | grep rosweb_unit`。
+  2. レガシー経路でのみ: ブラウザでユニットページをリロードし、`unit_manager.js` の `touch` イベントを発生させる。マルチユニットモードではロスターは`units`テーブルから得られるため、touchイベントは不要であり、登録済みロボットは到達可能である。
   3. ブラウザの開発者ツールを使って `/services/rosbridge` への WebSocket 接続をテストする。
 
 ### 3. TF エラーでナビゲーションがフリーズする(`use_sim_time` の陳腐化)
@@ -74,5 +74,5 @@ search: false
 ## 関連ドキュメント
 
 - [アーキテクチャ](/ja/development/architecture): 2チャネル通信モデル。
-- [メッセージ仕様](/ja/development/message-contracts): 想定されるトピック形式とペイロード。
+- [メッセージ仕様](/ja/development/message-contracts/): 想定されるトピック形式とペイロード。
 - [セットアップ: トラブルシューティング](/ja/setup/troubleshooting): 技術者およびデプロイ担当者向けのトラブルシューティング手順。

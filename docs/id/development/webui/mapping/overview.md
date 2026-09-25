@@ -39,11 +39,19 @@ hidup agar operator bisa mencoba menyimpan lagi). Mesin state lengkap tempat kun
 berada di luar cakupan halaman ini; lihat [State & Perilaku](/id/development/state-and-behavior)
 untuk diagram dan tabel transisi lengkapnya.
 
+**Kontrak:** Play dan Pause adalah [`POST /api/mapping`](/id/development/message-contracts/http-api#mapping-control) dengan
+`{ start: true }` atau `{ pause: true }` → [`mapping.start` / `mapping.pause`](/id/development/message-contracts/mqtt-commands#mapping)
+(`/switch_mode(explore)`, lalu motion lock `operator_pause`). Stop menuju alur simpan di bawah.
+
 ## Tampilan peta live
 
 Selama sesi aktif, occupancy grid yang sedang dibangun di-render langsung di tempat, memakai
 ulang mesin canvas yang sama seperti halaman Navigasi: pan, zoom, rotate, dan focus-follow pada pose
 live robot. Tidak ada viewer atau halaman terpisah yang terlibat.
+
+**Kontrak:** grid yang tumbuh di [`<root>/server/slam/map`](/id/development/message-contracts/rosbridge#subscriptions) dan pose di
+`<root>/server/robot_pose`, keduanya lewat rosbridge; lihat [Topik Bridge](/id/development/message-contracts/bridge-topics#topic-map) untuk cara
+keduanya meninggalkan robot.
 
 ## Notifikasi Robot Stuck
 
@@ -57,7 +65,7 @@ Menekan Stop tidak langsung menyimpan. Ia membuka `ConfirmSaving`
 (`src/components/confirm-saving-mapping/confirmSaving.tsx`), sebuah dialog tempat operator
 memberi nama peta sebelum dipersist. Setelah dikonfirmasi, overlay progres `MapSaving` menutupi
 halaman selagi robot menulis peta dan mengunggahnya (lihat
-[Integrasi ROS § Memulai dan menghentikan sesi pemetaan](/id/development/webui/mapping/ros-integration#memulai-dan-menghentikan-sesi-pemetaan)
+[Integrasi ROS § Memulai dan menghentikan sesi pemetaan](/id/development/webui/mapping/ros-integration#starting-and-stopping-a-mapping-session)
 untuk apa yang terjadi di jalur selama jendela ini, termasuk mengapa penyimpanan tidak selesai
 dalam satu request/response HTTP tunggal).
 
@@ -68,10 +76,20 @@ dialog penyimpanan; pose tersebut hanya ikut serta bersama metadata peta lainnya
 dikonfirmasi.
 :::
 
+**Kontrak:** cek nama adalah [`GET /api/media/checkMapName`](/id/development/message-contracts/http-api#media-server). Menyimpan
+adalah [`POST /api/mapping`](/id/development/message-contracts/http-api#mapping-control) dengan `{ stop: true, map_name, homebase_* }`, yang langsung
+menjawab `{ request_id, map_ulid }`; overlay lalu mengikuti
+[`GET /api/mapping/progress/:request_id`](/id/development/message-contracts/http-api#mapping-progress), yang event-nya adalah pesan
+[`mapping_progress`](/id/development/message-contracts/mqtt-commands#mapping-progress) robot. Membuang adalah
+[`POST /api/mapping/discard`](/id/development/message-contracts/http-api#mapping-discard).
+
 ## Emergency stop
 
 `EmergencyButton` tersedia di seluruh halaman Pemetaan. Memicunya keluar ke `/emergency-mode`, alur
 emergency bersama yang sama yang dipakai di tempat lain pada dashboard.
+
+**Kontrak:** [`POST /api/emergency_stop`](/id/development/message-contracts/http-api#emergency-stop) `{ enable: true }` →
+[`emergency_stop.activate`](/id/development/message-contracts/mqtt-commands#emergency-stop).
 
 ## Chrome bersama
 
@@ -82,6 +100,7 @@ ditambah `Footer`, `ControlInstruction`, dan `TokenExpired`.
 
 ## Terkait
 
+- [Kontrak Pesan § Halaman Pemetaan](/id/development/message-contracts/#trace-mapping): semua pesan yang dikirim sesi mapping.
 - [Override Manual dan Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous):
   dua cara mengemudikan robot selama sesi pemetaan
 - [Integrasi ROS](/id/development/webui/mapping/ros-integration): kontrak jalur REST/MQTT dan

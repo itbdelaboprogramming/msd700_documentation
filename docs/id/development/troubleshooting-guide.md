@@ -29,10 +29,10 @@ Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-gui
 
 ### 2. Unit Online, Tetapi Map Canvas Tetap Kosong (rosbridge / Kontainer Relay)
 - **Gejala**: Perintah berhasil, tetapi tidak ada peta, ikon robot, atau laser scan yang muncul di canvas web.
-- **Akar Penyebab**: Kontainer fleet relay (`ros_web_ui_v2_unit_relays`) mati (atau, pada jalur per-unit legacy, kontainer on-demand `rosweb_unit_<u>_<unit>_nakayama` dihentikan oleh idle reaper) atau proxy WebSocket Apache terblokir.
+- **Akar Penyebab**: Kontainer unit relay (`ros_web_ui_v2_unit_relays`) mati (atau, pada jalur per-unit legacy, kontainer on-demand `rosweb_unit_<u>_<unit>_nakayama` dihentikan oleh idle reaper) atau proxy WebSocket Apache terblokir.
 - **Langkah Diagnostik**:
-  1. Periksa fleet relay lebih dulu: `docker ps | grep unit_relays`. Pada jalur legacy, periksa kontainer per-unit sebagai gantinya: `docker ps | grep rosweb_unit`.
-  2. Hanya pada jalur legacy: muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`. Pada mode fleet roster berasal dari tabel `units`, sehingga tidak perlu event touch: robot yang terdaftar dapat dijangkau.
+  1. Periksa unit relay lebih dulu: `docker ps | grep unit_relays`. Pada jalur legacy, periksa kontainer per-unit sebagai gantinya: `docker ps | grep rosweb_unit`.
+  2. Hanya pada jalur legacy: muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`. Pada mode roster unit berasal dari tabel `units`, sehingga tidak perlu event touch: robot yang terdaftar dapat dijangkau.
   3. Uji konektivitas WebSocket ke `/services/rosbridge` menggunakan developer tools browser.
 
 ### 3. Navigasi Membeku dengan Error TF (Basi-nya `use_sim_time`)
@@ -74,5 +74,5 @@ Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-gui
 ## Dokumentasi Terkait
 
 - [Arsitektur](/id/development/architecture): Model komunikasi dua kanal.
-- [Kontrak Pesan](/id/development/message-contracts): Format topik dan payload yang diharapkan.
+- [Kontrak Pesan](/id/development/message-contracts/): Format topik dan payload yang diharapkan.
 - [Setup: Troubleshooting](/id/setup/troubleshooting): Langkah troubleshooting untuk teknisi dan deployment.

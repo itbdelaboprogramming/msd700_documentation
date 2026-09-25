@@ -33,6 +33,9 @@ tidak memiliki `userId` ditolak di sini secara langsung, itulah sebabnya baik pe
 maupun unit-local secara eksplisit menyertakannya (lihat
 [Arsitektur § Domain kepercayaan](/id/development/architecture#trust-domain-dan-keamanan-multi-tingkat)).
 
+**Kontrak:** tipe pesannya (`authenticate`, `offer`, `answer`, `candidate`, `client_ready`, `ping`)
+dispesifikasikan di [Signalling WebRTC](/id/development/message-contracts/webrtc-signalling#messages).
+
 ## Deteksi stall di sisi browser
 
 Selain `oniceconnectionstatechange` bawaan (yang memicu `restartIce()` bawaan browser saat statusnya
@@ -56,6 +59,7 @@ yang tidak bisa dilakukan oleh URL yang murni ditentukan saat build.
 
 ## Terkait
 
+- [Kontrak Pesan: Signalling WebRTC](/id/development/message-contracts/webrtc-signalling): kontrak pesan signalling.
 - [Integrasi ROS](/id/development/webui/camera/ros-integration): `camera_client.py`, konfigurasi
   ICE/STUN/TURN, bug kandidat mDNS, dan logika reconnect
 - [Arsitektur](/id/development/architecture): di mana `signalling_server` dan `coturn` berada dalam

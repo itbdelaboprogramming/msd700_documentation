@@ -11,7 +11,7 @@ search: false
 
 繰り返される整合ループ(`sync_agent.js`、`sync_engine.js`、`sync_tables.js`)、競合解決アルゴリズム、ウォーターマーク追跡、Local Mode のオペレーターステータスバッジについて扱います。
 
-HTTP 同期コントラクトについては [API リファレンス](/ja/development/api-reference) を参照してください。リアルタイムのマップ保存アップロードについては [State and Behavior](/ja/development/state-and-behavior) を参照してください。
+HTTP 同期コントラクトについては [HTTP API](/ja/development/message-contracts/http-api) を参照してください。リアルタイムのマップ保存アップロードについては [State and Behavior](/ja/development/state-and-behavior) を参照してください。
 
 ::: info 基本原則: ローカルはキャッシュである
 ユニットは登録された後、無期限にオフラインで機能します。ユーザーアカウント、権限、レンタルプロファイルはクラウドを起点としますが、ロボット上で記録されたマップ、ルート、プレイリストは、ネットワーク接続が確立されるとクラウドへ同期し返されます。
@@ -23,7 +23,7 @@ HTTP 同期コントラクトについては [API リファレンス](/ja/develo
 
 | 同期方向 | 対象テーブル | アーキテクチャ上の理由 |
 | --- | --- | --- |
-| **ダウンストリームのみ**(クラウドからユニットへ) | `units`、`rental_profiles`、`users`(オフラインログイン用の bcrypt パスワードハッシュを含む)、`profile_members`、`profile_units`。 | セキュリティ境界: アイデンティティとレンタルのテナンシーは厳密にクラウドサーバーを起点とします。ローカルユニットは新しいグローバルアカウントを発行したり、自身のフリートのテナンシーを再割り当てしたりすることはできません。 |
+| **ダウンストリームのみ**(クラウドからユニットへ) | `units`、`rental_profiles`、`users`(オフラインログイン用の bcrypt パスワードハッシュを含む)、`profile_members`、`profile_units`。 | セキュリティ境界: アイデンティティとレンタルのテナンシーは厳密にクラウドサーバーを起点とします。ローカルユニットは新しいグローバルアカウントを発行したり、自身の全ユニットのテナンシーを再割り当てしたりすることはできません。 |
 | **双方向**(行単位の Last-Write-Wins) | `maps_data`、`routes_data`、`areas_data`、`playlists_data`。 | 運用データは両側で作成されます。SLAM マップはロボット上で記録され、ウェイポイントルートやプレイリストは Web ダッシュボード上で作成されます。 |
 
 バイナリアセット(`.pgm` の占有グリッド、`.yaml` メタデータ、マップサムネイルなど)は専用のエンドポイント(`/sync/file/:mapId/:kind`)経由で同期され、正確なファイルサイズによって検証されます。
@@ -87,7 +87,7 @@ HTTP 同期コントラクトについては [API リファレンス](/ja/develo
 
 ## 関連ドキュメント
 
-- [API リファレンス](/ja/development/api-reference): REST 同期エンドポイントとペイロード。
+- [HTTP API](/ja/development/message-contracts/http-api): REST 同期エンドポイントとペイロード。
 - [State and Behavior](/ja/development/state-and-behavior): マップ保存とストレージレプリケーションのフロー。
 - [アーキテクチャ](/ja/development/architecture): ハードウェアとクラウドのトラストドメインモデル。
 - [データベース設計](/ja/development/database-schema): `sync_state` と `sync_tombstones` のスキーマ定義。

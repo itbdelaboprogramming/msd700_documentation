@@ -43,6 +43,10 @@ rental can each hold a map with the same name and different `id`. The table must
 [ROS Integration § Tables](/development/webui/database/ros-integration#tables) for the schema
 constraint behind this.
 
+**Contracts:** the list is [`GET /api/maps_data?unit_id=<unit>`](/development/message-contracts/http-api#maps-list) (always scoped by
+unit); thumbnails are [`GET /api/media/images/<map ULID>.png`](/development/message-contracts/http-api#media-server), which needs no
+token.
+
 ## Search, sort, and pagination
 
 `DatabaseSearch.tsx` filters the visible rows. Sorting is by name or by date, ascending or
@@ -64,6 +68,9 @@ or paused on the unit and the operator opens a *different* map than the one bein
 page does not silently drop the in-progress map. See
 [Rename and Delete § Session-conflict guard](/development/webui/database/rename-and-delete#session-conflict-guard).
 
+**Contracts:** the Navigation page opens the map with
+[`POST /api/navigation/init`](/development/message-contracts/http-api#navigation-init) → [`navigation.init`](/development/message-contracts/mqtt-commands#navigation).
+
 ## Empty and loading states
 
 `LoadingOverlay` covers the table while the map list is being fetched. `NoDataOverlay` replaces
@@ -72,6 +79,7 @@ filter.
 
 ## Related
 
+- [Message Contracts § Database page](/development/message-contracts/#trace-database): every call this page makes.
 - [Rename and Delete](/development/webui/database/rename-and-delete): the two mutating actions on this page, in detail
 - [ROS Integration](/development/webui/database/ros-integration): the schema and REST endpoints behind this feature
 - [Media Server Reference](/development/webui/database/media-server-reference): the map-asset API (upload, thumbnails, legacy-ID mapper)

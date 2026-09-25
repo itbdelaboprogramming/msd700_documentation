@@ -18,8 +18,8 @@ Halaman ini men-deploy **produksi**. Mode dev dan tambahan ada di [Advanced Conf
 
 ![Topologi sistem](./diagrams/server-setup-system-topology.drawio)
 
-::: warning Mode fleet adalah default
-Satu container `unit_relays` melayani seluruh armada. Container per-unit `rosweb_unit_*` hanya ada di mode legacy (`UNIT_CONTAINERS_ENABLED=true`). Jangan jalankan `server_prod` dan `server_dev` bersamaan di satu host. `coturn` hanya produksi. MySQL (`3307`) dan backend listen di semua interface, jadi tahan di balik firewall (lihat [Prasyarat](/id/setup/prerequisites)).
+::: warning Mode multi-unit adalah default
+Satu container `unit_relays` melayani semua unit. Container per-unit `rosweb_unit_*` hanya ada di mode legacy (`UNIT_CONTAINERS_ENABLED=true`). Jangan jalankan `server_prod` dan `server_dev` bersamaan di satu host. `coturn` hanya produksi. MySQL (`3307`) dan backend listen di semua interface, jadi tahan di balik firewall (lihat [Prasyarat](/id/setup/prerequisites)).
 :::
 
 ## Struktur folder
@@ -41,7 +41,7 @@ Satu container `unit_relays` melayani seluruh armada. Container per-unit `rosweb
             ├── ROS-dashboard-next-ts/  # Frontend (clone nested, branch v2, gitignored)
             ├── media-server/
             ├── signalling_server/
-            ├── aws_mqtt/               # Bridge MQTT + helper relay armada
+            ├── aws_mqtt/               # Bridge MQTT + helper unit relay
             ├── topic2string/
             ├── network-agent/
             ├── shared/
@@ -102,7 +102,7 @@ Ini menjalankan `certbot renew`, lalu menulis `/srv/msd/secrets/hivemq/keystore.
 
 - Script terkunci ke domain `msd.nglobal.jp` dan path itu. Password export harus cocok dengan `Docker/hivemq/config.xml`.
 - Satu file keystore melayani broker **prod dan dev**.
-- HiveMQ membacanya sekali saat startup, jadi **restart broker** setelahnya, di jam maintenance. Restart memutus MQTT se-armada dan bisa memicu jeda watchdog 2 detik (`/emergency_pause`).
+- HiveMQ membacanya sekali saat startup, jadi **restart broker** setelahnya, di jam maintenance. Restart memutus MQTT semua unit dan bisa memicu jeda watchdog 2 detik (`/emergency_pause`).
 - `certbot renew` saja **tidak** mengupdate HiveMQ. Lihat [Maintenance](/id/setup/maintenance#sertifikat).
 
 ---
@@ -295,7 +295,7 @@ Setelah server jalan, robot bisa didaftarkan:
 1. Login di `https://msd.nglobal.jp/admin`.
 2. Di bawah **Pending Units**, cari kode 8 karakter dari robot.
 3. Pilih **Rental Profile** aktif, beri nama unit, klik **Approve**.
-4. Robot menyelesaikan enrolment dan muncul di dashboard armada.
+4. Robot menyelesaikan enrolment dan muncul di dashboard unit.
 
 ---
 
@@ -466,7 +466,7 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 # 4. Broker MQTT listen?
 sudo ss -lptn 'sport = :8883'
 
-# 5. Relay armada jalan?
+# 5. Unit relay jalan?
 docker ps --filter name=unit_relays
 ```
 

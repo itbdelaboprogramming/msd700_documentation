@@ -19,7 +19,7 @@ Pick the environment and machine first. The V2 checkout on the cloud server is n
 1. **Server stack running?** From `ros-web-ui`: `docker compose --profile server_prod ps` (or `server_dev` + `_dev` names for dev). Long-running services should be `Up`/`healthy`; `fix_perms_*` is a one-shot that normally exits `0`.
 2. **Unit container running?** `./scripts/docker-manager.sh status` on the unit.
 3. **Unit enrolled?** Find its ULID under **Registered Units** in the admin console, showing online.
-4. **Fleet relay running?** `docker ps --filter name=unit_relays` on the server.
+4. **Unit relay running?** `docker ps --filter name=unit_relays` on the server.
 5. **Network path open?** Ports in [System Setup](/setup/system-setup#_1-check-the-network-path).
 6. **Logs**: `docker compose logs -f <service>` on the server; `docker exec -it msd700 tmux attach -t robot_services` on the unit (windows: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, `token_refresh`).
 
@@ -42,11 +42,11 @@ Logs, launch output, `docker inspect`, and resolved Compose output can contain c
 | Simulator build fails with `resource not found: gazebo_ros` | Image built without `--simulator` | `docker-manager.sh build --simulator`, then `up --simulator` |
 | Map save permission error, dev laptop only | `USER_UID`/`USER_GID` in `docker/.env` still point at the Jetson default | Set them to your own `id -u` / `id -g` (auto-detect only works when empty) |
 | Old container won't start cleanly | Leftover state from a previous run | `down --remove-orphans` from that Compose file, then `up` again |
-| Map blank, unit online, commands work | Fleet relay missing/unregistered, or downstream map/rosbridge issue | Check the `unit_relays[_dev]` container and its logs. Compose must create a missing relay; the manager only restarts existing ones. Do not start prod to fix dev. Legacy mode: matching `rosweb_unit_*` suffix instead |
+| Map blank, unit online, commands work | Unit relay missing/unregistered, or downstream map/rosbridge issue | Check the `unit_relays[_dev]` container and its logs. Compose must create a missing relay; the manager only restarts existing ones. Do not start prod to fix dev. Legacy mode: matching `rosweb_unit_*` suffix instead |
 | rosbridge handshake failure in browser console | Apache proxies rosbridge without the `Host` header rewrite | Add the `<Location /services/rosbridge>` block from [Server Setup](/setup/server-setup) |
 | All WebSocket paths fail, HTTP fine | `mod_proxy_wstunnel` off | `sudo a2enmod proxy_wstunnel && sudo systemctl restart apache2` |
 | Camera on LAN only, never outside | TURN advertises an unreachable address, or ports not forwarded | Check `TURN_EXTERNAL_IP` + router forward ([Maintenance](/setup/maintenance#the-turn-relay)) |
-| Whole fleet offline at once, TLS errors | HiveMQ serves an expired certificate (`certbot renew` alone never updates it) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, restart broker in a maintenance window |
+| All units offline at once, TLS errors | HiveMQ serves an expired certificate (`certbot renew` alone never updates it) | `sudo ./source/dependencies/ssl_update/update_ssl.sh`, restart broker in a maintenance window |
 | `coturn` loops and never binds | apt/systemd `coturn` still holds port 3478 | `sudo systemctl disable --now coturn`, start the container |
 | Backend logs `ECONNREFUSED 127.0.0.1:1883` | Old launch or override pointed MQTT at loopback; current server default is `nakayama` | Fix that service's config, recreate it scoped. (On a unit, `backend_local` intentionally uses loopback: check `mosquitto_local`) |
 | Backend logs `EACCES /var/run/docker.sock` | `DOCKER_GID` mismatches the host's docker group | `getent group docker \| cut -d: -f3`, fix `.env`, recreate backend |

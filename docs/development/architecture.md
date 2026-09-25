@@ -9,19 +9,19 @@ search: false
 
 This document details the architectural design of the MSD700 autonomous robotics platform, explaining how the components interact, the data boundaries between them, and the engineering rationale behind every subsystem.
 
-For repository locations, see [Repository Structure](/development/repository-structure). For exact data payloads, see [Message Contracts](/development/message-contracts). For finite state machines, see [State and Behavior](/development/state-and-behavior). For deployment topology, see [System Setup](/setup/system-setup).
+For repository locations, see [Repository Structure](/development/repository-structure). For exact data payloads, see [Message Contracts](/development/message-contracts/). For finite state machines, see [State and Behavior](/development/state-and-behavior). For deployment topology, see [System Setup](/setup/system-setup).
 
 ## The Two-Machine Model
 
-The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for the entire fleet. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
+The central architectural decision of MSD700 is that **a Unit (the physical robot) runs a complete local server stack**, while the **MSD700 Server (the cloud)** runs the central management stack for all units. They are peers sharing identical data structures, connected via an encrypted MQTT transport.
 
 ![MSD700 System Diagram](./diagrams/msd700-system-diagram.drawio)
 
 | Dimension | MSD700 Unit (Robot) | MSD700 Server (Cloud) |
 | --- | --- | --- |
 | **Execution** | ROS 1 Noetic bringup, move_base, gmapping, sensor drivers, plus `backend_local`, `db_local`, `mosquitto_local`, and `frontend_local`. | Central `backend_node`, `db` (MySQL), `hivemq` (MQTT broker), `rosbridge`, `signalling_server`, `media-server`, and `frontend_prod`. |
-| **Authority** | Owns the live physical robot, sensor readings, local operation lease, and raw map recordings. | Owns user accounts, authentication keyrings, rental profiles, robot enrolment registry, and fleet-wide synchronized maps/routes. |
-| **Fault Tolerance** | Operates autonomously offline during complete loss of internet or Wi-Fi connectivity. | Survives robot shutdowns, network disconnects, and restarts without losing fleet metadata. |
+| **Authority** | Owns the live physical robot, sensor readings, local operation lease, and raw map recordings. | Owns user accounts, authentication keyrings, rental profiles, robot enrolment registry, and the maps/routes synchronized across all units. |
+| **Fault Tolerance** | Operates autonomously offline during complete loss of internet or Wi-Fi connectivity. | Survives robot shutdowns, network disconnects, and restarts without losing unit metadata. |
 | **Constraint** | Cannot assign its own global identity (requires initial cloud enrolment). | Cannot move a physical robot without an active robot connection. |
 
 ::: tip Core Design Principle: Local as Offline Cache
@@ -34,8 +34,8 @@ The unit's local stack is an **offline-first cache of the cloud, not an isolated
 | --- | --- | --- | --- |
 | **Frontend Dashboard** | Next.js, React, TypeScript | Single-page operator interface with map canvas, telemetry widgets, manual teleop, and navigation controls. | `ROS-dashboard-next-ts` (built as `frontend_prod`/`frontend_dev` on cloud and `frontend_local` on unit) |
 | **backend_node** | Node.js, Express | Authentication middleware, CRUD for maps/routes/areas/playlists, robot command dispatch, and sync coordination. | Process inside the `nakayama_cloud` service (`ros-web-ui/source/dependencies/ROS-dashboard-backend`) |
-| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Multi-unit templated relay nodes serving all robots in a single unified ROS runtime via `/unit_<ULID>/...` namespaces. | Fleet relay container (`ros_web_ui_v2_unit_relays[_dev]`), deliberately separate from the backend so a code deploy is not a fleet-wide data-plane outage |
-| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python, ROS 1 Noetic | Expands the MQTT bridge topic map over a roster of units so one `mqtt_client` nodelet and one TLS connection serve the whole fleet. | Fleet relay container (`ros_web_ui_v2_unit_relays[_dev]`) |
+| **multi_unit.py / cloud_multi.launch** | Python, ROS 1 Noetic | Multi-unit templated relay nodes serving all robots in a single unified ROS runtime via `/unit_<ULID>/...` namespaces. | Unit relay container (`ros_web_ui_v2_unit_relays[_dev]`), deliberately separate from the backend so a code deploy is not a data-plane outage for every unit |
+| **gen_bridge_params.py / nakayama_cloud_multi.launch** | Python, ROS 1 Noetic | Expands the MQTT bridge topic map over a roster of units so one `mqtt_client` nodelet and one TLS connection serve all units. | Unit relay container (`ros_web_ui_v2_unit_relays[_dev]`) |
 | **unit_manager.js (Legacy)** | Node.js (Docker API) | (Deprecated) Legacy dynamic container manager that instantiated 1 container per robot; replaced by the single ROS runtime multi-unit relays. | Embedded inside `backend_node` |
 | **rosbridge** | `rosbridge_suite` (WebSocket) | Unified WebSocket bridge streaming live ROS topics for all units to browser canvases over port 9090 (9091 dev). | Inside the `nakayama_cloud` container and unit local stack |
 | **HiveMQ (MQTT)** | HiveMQ CE (Java) | Encrypted, high-throughput message broker connecting robots to the server over port 8883 (TLS). | Server container (`hivemq` / `hivemq_dev`) |
@@ -53,7 +53,7 @@ The unit's local stack is an **offline-first cache of the cloud, not an isolated
 ### Architectural Key Rules:
 1. **Apache as the Single Public Ingress**: All HTTP and WebSocket requests enter through Apache port 443. Backend services bind to internal ports or loopback addresses. The only external port directly reached by robots is HiveMQ on port 8883 (TLS).
 2. **Commands Flow over MQTT, Not ROS**: Commands dispatched by `backend_node` ride the `/unit_<ULID>/system_command` MQTT topic and are acknowledged over `/unit_<ULID>/system_feedback`. ROS topics in the cloud exist exclusively to feed the browser map canvas and telemetry displays.
-3. **Per-Unit Containers as Deserializers**: The container `rosweb_unit_<u>_<unit>_nakayama` (legacy per-unit path; the fleet default `ros_web_ui_v2_unit_relays` serves all units instead) runs on demand to convert JSON/string payloads from MQTT back into native ROS messages (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), allowing `rosbridge` to stream them to the dashboard.
+3. **Per-Unit Containers as Deserializers**: The container `rosweb_unit_<u>_<unit>_nakayama` (legacy per-unit path; by default the shared `ros_web_ui_v2_unit_relays` serves all units instead) runs on demand to convert JSON/string payloads from MQTT back into native ROS messages (`nav_msgs/OccupancyGrid`, `geometry_msgs/PoseStamped`, `sensor_msgs/LaserScan`), allowing `rosbridge` to stream them to the dashboard.
 
 ## Two Diagnostic Channels
 
@@ -65,7 +65,7 @@ The platform uses two separate communication channels that fail independently:
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS (8883) | Commands, acknowledgements, pose strings, status pings. | Robot appears **Offline** in the console. Commands fail immediately with HTTP 504. |
 | **rosbridge** | WebSocket (WSS) | Typed ROS messages (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot appears **Online** and accepts commands, but the map canvas remains blank. |
-| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because the fleet relay is down: or, on the legacy per-unit path, because `rosweb_unit_<u>_<unit>_nakayama` is stopped or reaped due to inactivity. |
+| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because the unit relay is down: or, on the legacy per-unit path, because `rosweb_unit_<u>_<unit>_nakayama` is stopped or reaped due to inactivity. |
 
 ## End-to-End Command Execution Flow
 
@@ -79,8 +79,8 @@ When an operator commands the robot (for example, clicking a waypoint on the map
 
 ## Per-Unit Container Lifecycle
 
-::: info The fleet relay is the default
-Multi-unit telemetry is processed by a single **fleet relay** container serving the whole fleet through namespaced topics (`/unit_<ULID>/...`) and templated relays (`multi_unit.py` / `cloud_multi.launch`, plus `nakayama_cloud_multi.launch` for the MQTT half). Its roster comes from the `units` table, so enrolling a robot is all it takes to make it reachable. The per-unit path below still ships and is one environment variable away, but the two must never run for the same unit. See [Unit Container Lifecycle](/development/unit-container-lifecycle#fleet-relay-one-container-for-every-unit).
+::: info The unit relay is the default
+Multi-unit telemetry is processed by a single **unit relay** container serving all units through namespaced topics (`/unit_<ULID>/...`) and templated relays (`multi_unit.py` / `cloud_multi.launch`, plus `nakayama_cloud_multi.launch` for the MQTT half). Its roster comes from the `units` table, so enrolling a robot is all it takes to make it reachable. The per-unit path below still ships and is one environment variable away, but the two must never run for the same unit. See [Unit Container Lifecycle](/development/unit-container-lifecycle#unit-relay-one-container-for-every-unit).
 :::
 
 In the per-unit path, `unit_manager.js` inside `backend_node` dynamically manages one container per active unit over `/var/run/docker.sock`:
@@ -142,7 +142,7 @@ The core architectural principle of MSD700: **the physical robot is the ultimate
 | **Active Mission Batch** | `operation_supervisor.py` | Persists across browser closures; stored in RAM. | Latched `/string/operation_snapshot` |
 | **Container Lifecycle** | `unit_manager.js` (Server RAM) | Server runtime only; reconstructed by `adoptExisting()` on boot. | Admin web console and reaper |
 | **UI Drafts & Selections** | Browser `sessionStorage` | Session lifetime; cleared on tab close. | Dashboard React components |
-| **Fleet Records & Maps** | Central MySQL (`db`) | Permanent storage. | Backend REST API |
+| **Unit records & Maps** | Central MySQL (`db`) | Permanent storage. | Backend REST API |
 
 ::: warning Browser Storage Limitation
 Closing a browser tab clears `sessionStorage`. To ensure seamless mission resumption, active waypoints and coverage boundaries are latched on `/string/operation_snapshot`. When an operator re-opens the dashboard in a new tab, the UI subscribes to this latched topic and fully reconstructs the active run. See [Navigation: Manual Override & Autopilot](/development/webui/navigation/manual-and-autopilot) for the full session-recovery mechanics, and [Safety Watchdog](/development/ros/safety-watchdog) for the robot-side timing tiers this table's "Operating Lease" and "Autopilot" rows depend on.
@@ -150,9 +150,9 @@ Closing a browser tab clears `sessionStorage`. To ensure seamless mission resump
 
 ## Related Documentation
 
-- [Message Contracts](/development/message-contracts): Full specification of MQTT, ROS, and WebSocket payloads.
+- [Message Contracts](/development/message-contracts/): Full specification of MQTT, ROS, and WebSocket payloads.
 - [State and Behavior](/development/state-and-behavior): Detailed state machines for navigation, boustrophedon sweep, and E-Stop.
-- [API Reference](/development/api-reference): REST API endpoints and authentication contracts.
+- [HTTP API](/development/message-contracts/http-api): REST API endpoints and authentication contracts.
 - [Database Schema](/development/database-schema): MySQL schema, tables, foreign keys, and migration scripts.
 - [Camera Streaming](/development/webui/camera/overview): WebRTC video pipeline and ICE candidate negotiation.
 - [Data Sync](/development/data-sync): Synchronization mechanics between unit cache and central server.

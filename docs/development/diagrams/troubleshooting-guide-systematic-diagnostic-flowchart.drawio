@@ -22,7 +22,7 @@
         <mxCell id="n6" value="Is the Map Canvas populated?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="552" y="743" width="206" height="207" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="Check rosbridge &amp;amp; Relay Container:&lt;br&gt;1. Is the fleet relay (legacy:&lt;br&gt;rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama)&lt;br&gt;running on server?&lt;br&gt;2. Is rosbridge WebSocket&lt;br&gt;connected?&lt;br&gt;3. Are deserializer nodes active?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n7" value="Check rosbridge &amp;amp; Relay Container:&lt;br&gt;1. Is the unit relay (legacy:&lt;br&gt;rosweb_unit_&amp;lt;u&amp;gt;_&amp;lt;unit&amp;gt;_nakayama)&lt;br&gt;running on server?&lt;br&gt;2. Is rosbridge WebSocket&lt;br&gt;connected?&lt;br&gt;3. Are deserializer nodes active?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="491" y="1046" width="257" height="137" as="geometry" />
         </mxCell>
         <mxCell id="n8" value="Is WebRTC Video Stream working?" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rhombus;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

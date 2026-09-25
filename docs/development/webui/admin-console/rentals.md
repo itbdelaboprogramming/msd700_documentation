@@ -14,7 +14,7 @@ rental profile are different tables for a reason (see
 tabs](/development/webui/admin-console/overview#three-identity-spaces-three-tabs)) and this tab is
 where the two, plus a unit, actually get connected. For the operator-account side, see
 [Operators](/development/webui/admin-console/operators); for the unit side, see
-[Units & Fleet](/development/webui/admin-console/units-and-fleet).
+[Units](/development/webui/admin-console/units).
 
 ## The tables underneath this tab
 
@@ -83,12 +83,13 @@ members of it.
 
 ## Related
 
+- [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/profiles`, `GET/PATCH/DELETE /admin/api/profiles/:id`, `POST/DELETE /admin/api/profiles/:id/members`, `POST/DELETE /admin/api/profiles/:id/units`.
 - [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
-- [Units & Fleet](/development/webui/admin-console/units-and-fleet): registering, renaming, and deleting the units this tab assigns.
+- [Units](/development/webui/admin-console/units): registering, renaming, and deleting the units this tab assigns.
 - [Backups](/development/webui/admin-console/backups): the full archive and restore flow this tab's shortcut leads into.
-- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the container fleet.
+- [ROS Integration](/development/webui/admin-console/ros-integration): how admin actions reach the robot and the unit relay container.
 - [Architecture](/development/architecture): high-level system structure and two-machine model.
 - [Database Schema](/development/database-schema): the full schema reference for `rental_profiles`, `profile_members`, and `profile_units`.
-- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the fleet relay.
+- [Unit Container Lifecycle](/development/unit-container-lifecycle): the standalone reference for `unit_manager.js` and the unit relay.
 - [Backup, Restore, and Data Migration](/development/backup-and-restore): the standalone reference for the archive format and REST operations.

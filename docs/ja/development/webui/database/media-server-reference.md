@@ -16,7 +16,7 @@ search: false
 | Method + path | Auth | Purpose |
 | --- | --- | --- |
 | `GET /health` | none | Liveness (`success/msg/timestamp/version`) |
-| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, user_id, robot_id` (ULIDs) + ちょうど2ファイル(`.yaml/.yml` + `.pgm`)、50 MB/ファイル、合計100 MB。PGM→PNG自動変換、DB行を書込 |
+| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, created_by, unit_id` (ULID) + 任意の `homebase_*` + ちょうど2ファイル(`.yaml/.yml` + `.pgm`)、50 MB/ファイル、合計100 MB。PGM→PNG自動変換、DB行を書込 |
 | `PUT /api/media/updateMap/:id` | JWT | YAML+PGM+PNGを上書き、バックアップ+ロールバック付き原子性、所有者のみ、名前はユーザー毎一意 |
 | `GET /api/media/maps` | JWT | ページ付き一覧(`user_id` クエリまたはJWT、`page=1`、`limit=10`) |
 | `GET /api/media/maps/:id/download` | JWT | マップバンドルのダウンロード |
@@ -40,4 +40,4 @@ search: false
 
 - [データベース](/ja/development/webui/database/overview):このAPIを読むMap DB画面。
 - [マッピング: ROS連携](/ja/development/webui/mapping/ros-integration):アップロードで終わる保存経路。
-- [APIリファレンス](/ja/development/api-reference):バックエンドREST API(別サービス)。
+- [HTTP API](/ja/development/message-contracts/http-api):バックエンドREST API(別サービス)。

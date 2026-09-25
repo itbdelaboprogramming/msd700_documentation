@@ -16,7 +16,7 @@ All take JWT Bearer unless noted. Errors are uniform `{ success: false, msg }`. 
 | Method + path | Auth | Purpose |
 | --- | --- | --- |
 | `GET /health` | none | Liveness (`success/msg/timestamp/version`) |
-| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, user_id, robot_id` (ULIDs) + exactly 2 files (`.yaml/.yml` + `.pgm`), 50 MB/file, 100 MB total. Auto PGM→PNG, writes the DB row |
+| `POST /api/media/uploadMap` | JWT | Multipart: `id, map_name, created_by, unit_id` (ULIDs) + optional `homebase_*` + exactly 2 files (`.yaml/.yml` + `.pgm`), 50 MB/file, 100 MB total. Auto PGM→PNG, writes the DB row |
 | `PUT /api/media/updateMap/:id` | JWT | Overwrite YAML+PGM+PNG, atomic with backup+rollback, owner-only, name unique per user |
 | `GET /api/media/maps` | JWT | Paginated list (`user_id` query or JWT, `page=1`, `limit=10`) |
 | `GET /api/media/maps/:id/download` | JWT | Download the map bundle |
@@ -40,4 +40,4 @@ On the unit (`DEPLOYMENT_MODE=local`) the server trusts the browser `Origin` out
 
 - [Database](/development/webui/database/overview): The Map DB page that reads this API.
 - [Mapping: ROS Integration](/development/webui/mapping/ros-integration): Save paths that end in an upload.
-- [API Reference](/development/api-reference): The backend REST API (separate service).
+- [HTTP API](/development/message-contracts/http-api): The backend REST API (separate service).

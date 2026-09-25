@@ -58,4 +58,4 @@ timeouts:
 
 - [ROSパッケージ一覧](/ja/development/ros/ros-packages): パッケージ構造とLaunchファイルの定義。
 - [State and Behavior](/ja/development/state-and-behavior): 詳細な有限状態機械とウォッチドッグの段階。
-- [Message Contracts](/ja/development/message-contracts): MQTTとoperation syncのメッセージペイロード。
+- [メッセージ仕様](/ja/development/message-contracts/): MQTTとoperation syncのメッセージペイロード。

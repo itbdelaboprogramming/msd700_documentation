@@ -18,8 +18,8 @@ This page deploys **production**. Dev mode and extras are in [Advanced Configura
 
 ![System topology](./diagrams/server-setup-system-topology.drawio)
 
-::: warning Fleet mode is the default
-One shared `unit_relays` container serves the whole fleet. Per-unit `rosweb_unit_*` containers exist only in legacy mode (`UNIT_CONTAINERS_ENABLED=true`). Never run `server_prod` and `server_dev` together on one host. `coturn` is production-only. MySQL (`3307`) and the backend listen on all interfaces, so keep them behind the firewall (see [Prerequisites](/setup/prerequisites)).
+::: warning Multi-unit mode is the default
+One shared `unit_relays` container serves all units. Per-unit `rosweb_unit_*` containers exist only in legacy mode (`UNIT_CONTAINERS_ENABLED=true`). Never run `server_prod` and `server_dev` together on one host. `coturn` is production-only. MySQL (`3307`) and the backend listen on all interfaces, so keep them behind the firewall (see [Prerequisites](/setup/prerequisites)).
 :::
 
 ## Folder layout
@@ -41,7 +41,7 @@ One shared `unit_relays` container serves the whole fleet. Per-unit `rosweb_unit
             ├── ROS-dashboard-next-ts/  # Frontend (nested clone, branch v2, gitignored)
             ├── media-server/
             ├── signalling_server/
-            ├── aws_mqtt/               # MQTT bridge + fleet relay helpers
+            ├── aws_mqtt/               # MQTT bridge + unit relay helpers
             ├── topic2string/
             ├── network-agent/
             ├── shared/
@@ -102,7 +102,7 @@ This runs `certbot renew`, then writes `/srv/msd/secrets/hivemq/keystore.p12` (o
 
 - The script is fixed to domain `msd.nglobal.jp` and that path. The export password must match `Docker/hivemq/config.xml`.
 - One keystore file serves **both** prod and dev brokers.
-- HiveMQ reads it once at startup, so **restart the broker** afterward, in a maintenance window. Restarting drops MQTT fleet-wide and can trigger the 2-second watchdog pause (`/emergency_pause`).
+- HiveMQ reads it once at startup, so **restart the broker** afterward, in a maintenance window. Restarting drops MQTT for every unit and can trigger the 2-second watchdog pause (`/emergency_pause`).
 - Plain `certbot renew` alone does **not** update HiveMQ. See [Maintenance](/setup/maintenance#certificates).
 
 ---
@@ -295,7 +295,7 @@ Once the server runs, robots can register:
 1. Log in at `https://msd.nglobal.jp/admin`.
 2. Under **Pending Units**, find the 8-character code shown on the robot.
 3. Pick an active **Rental Profile**, name the unit, click **Approve**.
-4. The robot finishes enrolment and appears in the fleet dashboard.
+4. The robot finishes enrolment and appears in the unit dashboard.
 
 ---
 
@@ -464,7 +464,7 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 # 4. MQTT broker listening?
 sudo ss -lptn 'sport = :8883'
 
-# 5. Fleet relay running?
+# 5. Unit relay running?
 docker ps --filter name=unit_relays
 ```
 

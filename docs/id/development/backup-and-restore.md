@@ -108,4 +108,4 @@ Selalu uji script migrasi terhadap database pengembangan pada **port 3308** sebe
 
 - [Skema Database](/id/development/database-schema): Definisi tabel MySQL lengkap dan foreign key.
 - [Sinkronisasi Data](/id/development/data-sync): Replikasi data offline dan resolusi konflik.
-- [Referensi API](/id/development/api-reference): Endpoint REST API untuk manajemen fleet.
+- [HTTP API](/id/development/message-contracts/http-api): Endpoint REST API untuk manajemen unit.

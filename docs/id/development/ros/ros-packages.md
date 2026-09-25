@@ -141,7 +141,7 @@ Bridge transport terenkripsi yang menghubungkan topic ROS lokal ke broker HiveMQ
 File launch tingkat atas yang menyalakan satu sisi sistem secara utuh.
 
 - `bringup_msd.launch`: unit. Base yang selalu aktif (`twist_mux`, `bridger`, robot description, hardware monitor), `topic2string` (default C++), bridge MQTT, `system_command`, `switch_mode`, idle detector.
-- `bringup_cloud.launch`: server cloud. Relay per unit atau fleet (`use_unit_relays`, `use_multi_unit_bridge`), backend, rosbridge.
+- `bringup_cloud.launch`: server cloud. Relay per unit atau unit relay bersama (`use_unit_relays`, `use_multi_unit_bridge`), backend, rosbridge.
 - `bringup_local_server.launch`: separuh server lokal di unit (backend, rosbridge, `topic2string/local.launch`) di container terpisah yang memakai roscore yang sama.
 - `debug_local.launch`: cloud + unit di satu mesin untuk debugging.
 
@@ -156,7 +156,7 @@ Tipe message dan service untuk pergantian mode: `SwitchModeMsg.msg`, `SwitchMode
 Node C++ yang menerbitkan pose robot di frame `map` dari TF sebagai `/robot_pose`, yang kemudian di-serialize `topic2string` untuk dashboard.
 
 ### 8. `dependencies/ROS-dashboard-backend` (paket `ros_dashboard_backend`)
-REST API Node.js (`scripts/backend_node`, `admin_api.js`, `enroll_api.js`, `sync_*.js`), di-launch oleh `launch/ros_dashboard_backend.launch`. Lihat [Referensi API](/id/development/api-reference).
+REST API Node.js (`scripts/backend_node`, `admin_api.js`, `enroll_api.js`, `sync_*.js`), di-launch oleh `launch/ros_dashboard_backend.launch`. Lihat [HTTP API](/id/development/message-contracts/http-api).
 
 ## Dokumentasi Terkait
 

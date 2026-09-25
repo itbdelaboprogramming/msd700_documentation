@@ -12,7 +12,7 @@ kanonisnya adalah `ROS-dashboard-backend/sql/init.sql`, yang hanya berjalan terh
 MySQL yang kosong. Sebuah deployment yang sudah ada mengambil perubahan skema lewat script migrasi
 di `ROS-dashboard-backend/scripts/` (`migrate_unit_id_refactor.js`, `migrate_enrolment.js`,
 `migrate_sync.js`, `migrate_backup_scope.js`). Untuk bentuk sebuah baris sebagaimana yang
-sesungguhnya dikembalikan API, lihat [Referensi API](/id/development/api-reference); halaman ini
+sesungguhnya dikembalikan API, lihat [HTTP API](/id/development/message-contracts/http-api); halaman ini
 mencakup kolom dan relasi, bukan JSON respons.
 
 ## Identitas dan akses
@@ -22,7 +22,7 @@ mencakup kolom dan relasi, bukan JSON respons.
 | `users` | Akun operator | `id` (ULID, PK), `username`, `email`, `password` (bcrypt), `status` (`active`/`suspended`) |
 | `admin_accounts` | Akun back-office, sengaja dipisahkan dari `users` | `id` (ULID, PK), `role` (`superadmin`/`admin`), `must_change_password` |
 | `rental_profiles` | Satu baris per rental. Menangguhkannya menyembunyikan baik unit maupun datanya dari anggota, tanpa menyentuh keduanya | `id` (ULID, PK), `profile_name` (unik), `tenant_name`, `status` |
-| `units` | Satu baris per robot fisik, fleet-wide. `unit_name` adalah label tampilan yang bisa diganti nama, bukan identitas | `id` (ULID, PK): ini adalah alamat robot, `/unit_<id>/...` |
+| `units` | Satu baris per robot fisik. `unit_name` adalah label tampilan yang bisa diganti nama, bukan identitas | `id` (ULID, PK): ini adalah alamat robot, `/unit_<id>/...` |
 | `profile_members` | Akun mana yang termasuk dalam profil mana | `UNIQUE(profile_id, user_id)`, keduanya `ON DELETE CASCADE` |
 | `profile_units` | Unit mana yang dapat diakses oleh sebuah profil | `UNIQUE(unit_id)`, **bukan** `(profile_id, unit_id)`, sehingga sebuah unit tidak pernah bisa di-assign ganda |
 
@@ -71,7 +71,7 @@ menggantikan yang lain.
 | `unit_enrollment_codes` | Voucher sekali pakai untuk mengklaim sebuah unit spesifik sebelum robotnya ada | `unit_id`, `code_hash`, `expires_at`, `used_at` |
 | `unit_connection_log` | Riwayat koneksi append-only | Satu-satunya tabel dengan PK `AUTO_INCREMENT` biasa alih-alih ULID; dibersihkan setelah 180 hari |
 
-Lihat [Kontrak Pesan § Handshake Pendaftaran Robot](/id/development/message-contracts#handshake-pendaftaran-robot) untuk pertukaran
+Lihat [Firmware & Enrolment § Enrolment](/id/development/message-contracts/firmware-and-enrolment#enrolment) untuk pertukaran
 lengkap yang didukung tabel-tabel ini.
 
 ## Cadangan dan sinkronisasi
@@ -139,7 +139,7 @@ untuk bagaimana port-port ini cocok dengan sisa profil compose.
 
 ## Terkait
 
-- [Referensi API](/id/development/api-reference): permukaan HTTP yang dibangun di atas skema ini
+- [HTTP API](/id/development/message-contracts/http-api): permukaan HTTP yang dibangun di atas skema ini
 - [Sinkronisasi Data](/id/development/data-sync): bagaimana `sync_tombstones` dan `sync_state` digunakan
-- [Kontrak Pesan § Handshake Pendaftaran Robot](/id/development/message-contracts#handshake-pendaftaran-robot)
+- [Firmware & Enrolment § Enrolment](/id/development/message-contracts/firmware-and-enrolment#enrolment)
 - [Arsitektur](/id/development/architecture)

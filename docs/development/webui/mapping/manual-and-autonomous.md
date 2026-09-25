@@ -28,6 +28,10 @@ component and toggle as Navigation's; only what it hands control *away from* dif
 exploration here, rather than a dispatched goal or coverage sweep on Navigation), so its mechanics
 are not repeated on this page.
 
+**Contracts:** the same as Navigation: [`POST /api/manual`](/development/message-contracts/http-api#manual) →
+[`manual.enable` / `disable`](/development/message-contracts/mqtt-commands#manual), and WASD as a `Twist` on
+[`<root>/server/key_vel`](/development/message-contracts/rosbridge#publications).
+
 ## What "Autopilot" means on this page
 
 The same panel also exposes an **Autopilot** toggle. On Mapping specifically, enabling it keeps the
@@ -35,6 +39,9 @@ autonomous exploration session running headless: exploration continues even if t
 the browser tab. This is a different practical meaning from Autopilot on the Navigation page
 (which governs autonomous waypoint/coverage dispatch there); the toggle and component are shared, but
 each page defines what "keep going without the browser" means for its own operation.
+
+**Contracts:** [`POST /api/autopilot`](/development/message-contracts/http-api#autopilot) →
+[`autopilot.enable` / `disable`](/development/message-contracts/mqtt-commands#autopilot). No waypoint batch is involved on this page.
 
 ::: info Heartbeat exemption
 The safety watchdog's disconnect tiers (the 2-second motion pause, the 10-minute idle and the
@@ -46,6 +53,7 @@ duplicated here.
 
 ## Related
 
+- [Message Contracts § Mapping page](/development/message-contracts/#trace-mapping): every message behind these toggles.
 - [Overview](/development/webui/mapping/overview): Play/Pause/Stop, the live map view, and the
   save-on-stop flow
 - [ROS Integration](/development/webui/mapping/ros-integration): the REST/MQTT wire contract behind

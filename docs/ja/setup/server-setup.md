@@ -18,8 +18,8 @@ outline: deep
 
 ![システム構成](./diagrams/server-setup-system-topology.drawio)
 
-::: warning フリートモードがデフォルトです
-共有`unit_relays`コンテナ1台が全フリートを担当します。ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。`server_prod`と`server_dev`を1台のホストで同時に動かさないでください。`coturn`は本番専用です。MySQL (`3307`)とバックエンドは全インターフェースで待ち受けるため、ファイアウォールの内側に置きます([前提条件](/ja/setup/prerequisites)参照)。
+::: warning マルチユニットモードがデフォルトです
+共有`unit_relays`コンテナ1台が全ユニットを担当します。ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。`server_prod`と`server_dev`を1台のホストで同時に動かさないでください。`coturn`は本番専用です。MySQL (`3307`)とバックエンドは全インターフェースで待ち受けるため、ファイアウォールの内側に置きます([前提条件](/ja/setup/prerequisites)参照)。
 :::
 
 ## フォルダ構成
@@ -41,7 +41,7 @@ outline: deep
             ├── ROS-dashboard-next-ts/  # フロントエンド (ネストしたクローン、ブランチv2、gitignore)
             ├── media-server/
             ├── signalling_server/
-            ├── aws_mqtt/               # MQTTブリッジ+フリートリレーヘルパー
+            ├── aws_mqtt/               # MQTTブリッジ+ユニットリレーヘルパー
             ├── topic2string/
             ├── network-agent/
             ├── shared/
@@ -102,7 +102,7 @@ sudo ./source/dependencies/ssl_update/update_ssl.sh
 
 - スクリプトはドメイン`msd.nglobal.jp`とこのパスに固定です。エクスポートパスワードは`Docker/hivemq/config.xml`と一致させます。
 - 1つのキーストアファイルを**本番・開発**両ブローカーで使います。
-- HiveMQは起動時に一度だけ読むため、後は**ブローカーを再起動**します。メンテナンス時間帯に行います。再起動はフリート全体のMQTTを切断し、2秒のウォッチドッグ一時停止(`/emergency_pause`)が発動する場合があります。
+- HiveMQは起動時に一度だけ読むため、後は**ブローカーを再起動**します。メンテナンス時間帯に行います。再起動は全ユニットのMQTTを切断し、2秒のウォッチドッグ一時停止(`/emergency_pause`)が発動する場合があります。
 - `certbot renew`だけではHiveMQは更新され**ません**。[メンテナンス](/ja/setup/maintenance#証明書)参照。
 
 ---
@@ -295,7 +295,7 @@ sudo systemctl reload apache2
 1. `https://msd.nglobal.jp/admin`にログインします。
 2. **Pending Units**でロボット表示の8文字コードを探します。
 3. 有効な**レンタルプロファイル**を選び、ユニット名を付けて**承認**します。
-4. ロボットが登録を完了し、フリートダッシュボードに表示されます。
+4. ロボットが登録を完了し、ユニットダッシュボードに表示されます。
 
 ---
 
@@ -466,7 +466,7 @@ curl -s https://msd.nglobal.jp/services/rosbackend/
 # 4. MQTTブローカーは待受中?
 sudo ss -lptn 'sport = :8883'
 
-# 5. フリートリレー稼働中?
+# 5. ユニットリレー稼働中?
 docker ps --filter name=unit_relays
 ```
 

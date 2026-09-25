@@ -35,6 +35,12 @@ route change or a fresh mount of the map canvas. The action bar (`actionBar.tsx`
 the mode list and exposes actions available across modes rather than per mode: Play/Pause
 navigation, Stop, Return to Home Base, and Focus View (the camera follows the robot on the canvas).
 
+**Contracts:** Play, Pause and Stop act on `move_base` goals over
+[rosbridge](/development/message-contracts/rosbridge#move-base-action) and mirror the run with
+[operation sync](/development/message-contracts/operation-sync); Return to Home Base is a `move_base` goal to the stored home base;
+Focus View is client only. The per-button list is
+[Message Contracts § Navigation page](/development/message-contracts/#trace-navigation).
+
 Because the canvas itself never remounts when the operator switches modes, the rendering pipeline,
 the coordinate conversion helpers, and the supporting UI described below are shared infrastructure
 underneath every mode, not something each mode reimplements.
@@ -45,6 +51,10 @@ underneath every mode, not something each mode reimplements.
 by rosbridge WebSocket topics:
 
 ![Map Canvas Pipeline](./diagrams/msd700-draw-map-pipeline.drawio)
+
+**Contracts:** each layer is one rosbridge subscription, listed with its message type in
+[rosbridge § Subscriptions](/development/message-contracts/rosbridge#subscriptions); the map itself is requested on mount through
+[`string/map_request`](/development/message-contracts/bridge-topics#map-delivery).
 
 Layer 6, the interactive vertex overlay, is what Single Pinpoint, Multiple Pinpoint, and Set Home
 Base draw onto when the operator clicks the canvas; see
@@ -117,6 +127,7 @@ A handful of components appear across modes rather than belonging to any single 
 
 ## Related
 
+- [Message Contracts § Navigation page](/development/message-contracts/#trace-navigation): every message the page sends and receives.
 - [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes): Single/Multiple Pinpoint,
   Save/Load Route, Round Trip/Loop Route, Set Home Base, Delete All Pinpoints.
 - [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot): the shared

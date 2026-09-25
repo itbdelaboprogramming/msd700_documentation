@@ -108,4 +108,4 @@ Always test migration scripts against the development database on **port 3308** 
 
 - [Database Schema](/development/database-schema): Full MySQL table definitions and foreign keys.
 - [Data Sync](/development/data-sync): Offline data replication and conflict resolution.
-- [API Reference](/development/api-reference): REST API endpoints for fleet management.
+- [HTTP API](/development/message-contracts/http-api): REST API endpoints for unit management.

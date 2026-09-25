@@ -12,7 +12,7 @@ search: false
 実行されます。既存のデプロイでは、`ROS-dashboard-backend/scripts/` 内のマイグレーションスクリプト
 (`migrate_unit_id_refactor.js`、`migrate_enrolment.js`、`migrate_sync.js`、`migrate_backup_scope.js`)を
 通じてスキーマの変更を取り込みます。API が実際に返す行の形については
-[API リファレンス](/ja/development/api-reference) を参照してください。このページが扱うのはカラムと
+[HTTP API](/ja/development/message-contracts/http-api) を参照してください。このページが扱うのはカラムと
 関係性であり、レスポンス JSON ではありません。
 
 ## 識別とアクセス
@@ -22,7 +22,7 @@ search: false
 | `users` | オペレーターアカウント | `id`(ULID、PK)、`username`、`email`、`password`(bcrypt)、`status`(`active`/`suspended`) |
 | `admin_accounts` | バックオフィス用アカウント。`users` とは意図的に分離されている | `id`(ULID、PK)、`role`(`superadmin`/`admin`)、`must_change_password` |
 | `rental_profiles` | レンタルごとに1行。これをサスペンドすると、ユニットとそのデータの両方がメンバーから見えなくなるが、どちらにも手を加えない | `id`(ULID、PK)、`profile_name`(一意)、`tenant_name`、`status` |
-| `units` | 物理ロボットごとに1行、フリート全体で共通。`unit_name` はリネーム可能な表示ラベルであり、識別子ではない | `id`(ULID、PK): これがロボットのアドレスであり、`/unit_<id>/...` となる |
+| `units` | 物理ロボットごとに1行。`unit_name` はリネーム可能な表示ラベルであり、識別子ではない | `id`(ULID、PK): これがロボットのアドレスであり、`/unit_<id>/...` となる |
 | `profile_members` | どのアカウントがどのプロファイルに属するか | `UNIQUE(profile_id, user_id)`、両方とも `ON DELETE CASCADE` |
 | `profile_units` | プロファイルがアクセスできるユニット | `UNIQUE(unit_id)`。`(profile_id, unit_id)` では**ない**ため、ユニットが二重に割り当てられることは決してない |
 
@@ -70,7 +70,7 @@ search: false
 | `unit_connection_log` | 追記専用の接続履歴 | ULID ではなく普通の `AUTO_INCREMENT` PK を持つ唯一のテーブル。180日を過ぎたものはパージされる |
 
 これらのテーブルがサポートするやり取りの詳細については
-[メッセージ仕様 § ロボット登録ハンドシェイク](/ja/development/message-contracts#ロボット登録ハンドシェイク) を参照してください。
+[ファームウェア & エンロール § エンロール](/ja/development/message-contracts/firmware-and-enrolment#enrolment) を参照してください。
 
 ## バックアップと同期
 
@@ -134,7 +134,7 @@ search: false
 
 ## 関連
 
-- [API リファレンス](/ja/development/api-reference): このスキーマの上に構築された HTTP サーフェス
+- [HTTP API](/ja/development/message-contracts/http-api): このスキーマの上に構築された HTTP サーフェス
 - [データ同期](/ja/development/data-sync): `sync_tombstones` と `sync_state` がどう使われるか
-- [メッセージ仕様 § ロボット登録ハンドシェイク](/ja/development/message-contracts#ロボット登録ハンドシェイク)
+- [ファームウェア & エンロール § エンロール](/ja/development/message-contracts/firmware-and-enrolment#enrolment)
 - [アーキテクチャ](/ja/development/architecture)

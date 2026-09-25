@@ -106,5 +106,5 @@ Motion arbitration lives in `twist_mux` alone now: navigation on `/mux/nav_vel` 
 ## Related Documentation
 
 - [Simulation](/development/ros/simulation): Warehouse testing environment and scale models.
-- [Message Contracts](/development/message-contracts): Coverage command envelopes and ACK protocols.
+- [Message Contracts](/development/message-contracts/): Coverage command envelopes and ACK protocols.
 - [State and Behavior](/development/state-and-behavior): Navigation and coverage finite state machines.

@@ -42,7 +42,7 @@ Compose runs a service when **any** of its profiles is active. Nothing starts wi
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend waits on it |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Inside the container both use `8883` |
 | `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master | One shared ROS graph per environment |
-| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | none (relay) | One shared data plane per fleet (default) |
+| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | none (relay) | One data plane shared by all units (default) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache catch-all points at `3000` |
@@ -190,7 +190,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` puts the container user in the host's `docker` group so `backend_node` can use the mounted `/var/run/docker.sock`: fleet mode keeps the shared relay in step with the roster; legacy mode manages per-unit containers. Get the value with `getent group docker | cut -d: -f3` on the host.
+`group_add` puts the container user in the host's `docker` group so `backend_node` can use the mounted `/var/run/docker.sock`: multi-unit mode keeps the shared relay in step with the roster; legacy mode manages per-unit containers. Get the value with `getent group docker | cut -d: -f3` on the host.
 
 HiveMQ uses `user: "1001:0"` instead, and both halves matter: uid `1001` owns the `0600` keystore (the container must *be* that user to read its key); gid `0` satisfies the image's writability check on `/opt/hivemq` without chowning anything.
 
@@ -251,8 +251,8 @@ In the **server** file only `coturn` sets this cap (its config logs allocations 
 
 | Tag | Used by |
 | --- | --- |
-| `ros-noetic-webui-app-v2:latest` | prod services (incl. fleet relay) + legacy prod per-unit containers |
-| `ros-noetic-webui-app-v2:dev` | dev services (incl. dev fleet relay) + legacy dev per-unit containers |
+| `ros-noetic-webui-app-v2:latest` | prod services (incl. unit relay) + legacy prod per-unit containers |
+| `ros-noetic-webui-app-v2:dev` | dev services (incl. dev unit relay) + legacy dev per-unit containers |
 | `ros-dashboard-next-v2:prod` / `:dev` | the two dashboard builds |
 | `ros-noetic-webui-app-local:latest` | unit's own backend, media, signalling, network agent |
 | `ros-dashboard-next-local:latest` | unit's own dashboard |
@@ -383,7 +383,7 @@ It errors with an explanation. A robot with no cached identity self-enrols and p
 | `ENROLL_CODE` | unset | Single-use registration voucher, skips the pending pool |
 | `DEV_SERVER_HOST` | `118.22.31.252` | Where `--dev` points (`localhost` when running on that host) |
 | `DEV_BACKEND_PORT` | `5001` | Backend port for `--dev` |
-| `CLOUD_BASE_URL` | derived | Point a whole fleet at another cloud without code change |
+| `CLOUD_BASE_URL` | derived | Point every unit at another cloud without code change |
 | `ROS_MASTER_PORT` | `11322` with `--dev`, else `11321` | Given to **both** container and `backend_local`. Never the cloud's `11311`/`11312` |
 | `BACKEND_PORT_LOCAL` | `5002` | Local dashboard's backend port; `camera_client` fetches a unit-local token here |
 
@@ -407,7 +407,7 @@ Three steps exist because of silent failures:
 
 ### `manage-unit.sh` (server-side, manual/debug only)
 
-Drives **legacy per-unit** cloud containers by ULID only (names rejected): `start|stop|restart|status|logs|list|loop`. `loop` polls every 10 s for the 7 expected relay nodes and restarts on missing. Normally unneeded: the backend auto-starts/stops unit containers on dashboard open plus idle timeout. Never use it on a fleet-mode unit.
+Drives **legacy per-unit** cloud containers by ULID only (names rejected): `start|stop|restart|status|logs|list|loop`. `loop` polls every 10 s for the 7 expected relay nodes and restarts on missing. Normally unneeded: the backend auto-starts/stops unit containers on dashboard open plus idle timeout. Never use it on a unit in multi-unit mode.
 
 ## Unit: `run_msd.sh`
 
@@ -512,25 +512,25 @@ Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on
 The dashboard JS takes its **host** from whatever address the browser used to open the page; only the **port** still comes from the build. IP, hostname, mDNS (`msd700.local`), or `localhost` SSH tunnel all work. `LOCAL_IP` remains only as a hint for printed URLs and the DHCP-less fallback.
 :::
 
-## Fleet relay (default) vs per-unit containers (legacy)
+## Unit relay (default) vs per-unit containers (legacy)
 
-Every robot's cloud data plane runs in ONE shared container: `ros_web_ui_v2_unit_relays` (prod) or `..._dev` (dev). It shares the backend's ROS master and rosbridge: one ROS graph per environment. It holds one `mqtt_client` nodelet/TLS connection for the fleet plus the multi-unit topic relays. Its start command builds the bridge map from the database roster (or `MULTI_UNIT_LIST` override). Empty roster or unreachable database: it waits and retries. Adding a robot creates no per-unit container.
+Every robot's cloud data plane runs in ONE shared container: `ros_web_ui_v2_unit_relays` (prod) or `..._dev` (dev). It shares the backend's ROS master and rosbridge: one ROS graph per environment. It holds one `mqtt_client` nodelet/TLS connection for all units plus the multi-unit topic relays. Its start command builds the bridge map from the database roster (or `MULTI_UNIT_LIST` override). Empty roster or unreachable database: it waits and retries. Adding a robot creates no per-unit container.
 
-Default because `UNIT_CONTAINERS_ENABLED` defaults to `false`: `unit_manager.js` runs in **FLEET mode**, tracking unit usage and keeping the single relay in step with the roster, never spawning per-unit anything.
+Default because `UNIT_CONTAINERS_ENABLED` defaults to `false`: `unit_manager.js` runs in **Multi-unit mode**, tracking unit usage and keeping the single relay in step with the roster, never spawning per-unit anything.
 
 ```bash
-docker ps --filter "name=unit_relays"       # shared fleet relay
-docker logs -f ros_web_ui_v2_unit_relays    # whole fleet's MQTT/ROS bridge
+docker ps --filter "name=unit_relays"       # shared unit relay
+docker logs -f ros_web_ui_v2_unit_relays    # all units' MQTT/ROS bridge
 docker restart ros_web_ui_v2_unit_relays    # pick up a roster change
 ```
 
-::: warning Never run fleet relay and per-unit containers together
-Two bridges on the same MQTT topics deliver every goal and result twice, double-advancing the waypoint ACK loop (looks like skipped waypoints). The relay refuses to start while per-unit `cloud_mqtt_client` nodes are registered, and `unit_manager.js` logs (not kills) stray `rosweb_unit_*` containers in fleet mode.
+::: warning Never run unit relay and per-unit containers together
+Two bridges on the same MQTT topics deliver every goal and result twice, double-advancing the waypoint ACK loop (looks like skipped waypoints). The relay refuses to start while per-unit `cloud_mqtt_client` nodes are registered, and `unit_manager.js` logs (not kills) stray `rosweb_unit_*` containers in multi-unit mode.
 :::
 
 ### Legacy: per-unit containers
 
-`UNIT_CONTAINERS_ENABLED=true` **in the backend process environment** reverts to one relay container per robot: `rosweb_unit_<ULID>_nakayama` (prod) or `..._nakayama_dev` (dev), created on demand, reaped after 30 min idle (Autopilot pins it). The checked-in Compose file doesn't forward this variable, so `.env` edits alone don't enable it. Deployment config must pass it explicitly and exclude that environment's fleet relay, or the next profile `up` starts the relay again. No Compose service describes these dynamic containers.
+`UNIT_CONTAINERS_ENABLED=true` **in the backend process environment** reverts to one relay container per robot: `rosweb_unit_<ULID>_nakayama` (prod) or `..._nakayama_dev` (dev), created on demand, reaped after 30 min idle (Autopilot pins it). The checked-in Compose file doesn't forward this variable, so `.env` edits alone don't enable it. Deployment config must pass it explicitly and exclude that environment's unit relay, or the next profile `up` starts the relay again. No Compose service describes these dynamic containers.
 
 ```bash
 docker ps --filter "name=rosweb_unit_"           # per-unit bridges (legacy only)
@@ -538,7 +538,7 @@ docker logs -f rosweb_unit_<ULID>_nakayama       # one unit's relays
 docker stop rosweb_unit_<ULID>_nakayama          # stops it; backend restarts on next use
 ```
 
-Fleet mode: `unit_manager.init()` restarts the existing shared relay at backend startup so its nodes register with the new master; the 60-second roster poll also restarts it on unit-list changes. A missing relay is never created by the manager; Compose creates it. Every relay restart briefly interrupts all units' cloud data plane.
+Multi-unit mode: `unit_manager.init()` restarts the existing shared relay at backend startup so its nodes register with the new master; the 60-second roster poll also restarts it on unit-list changes. A missing relay is never created by the manager; Compose creates it. Every relay restart briefly interrupts all units' cloud data plane.
 
 Legacy mode: `adoptExisting()` adopts running containers for lifecycle management but doesn't restart their ROS nodes. If the master was replaced, check registration and recover only affected containers in that environment. Never bulk-restart an unscoped `rosweb_unit_*` list spanning dev and production.
 

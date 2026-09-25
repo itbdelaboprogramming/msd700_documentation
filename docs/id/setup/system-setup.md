@@ -41,7 +41,7 @@ Koneksi WebSocket dashboard tidak pernah terbuka, dan browser hanya menampilkan 
 :::
 
 ::: info Produksi atau dev?
-`./scripts/docker-manager.sh up --dev` di unit mengarahkan enrolment dan MQTT ke stack `server_dev`, bukan `server_prod`: port beda, database beda, armada beda. Pakai saat testing; lepas flag-nya untuk deployment sungguhan. Unit yang enrol di dev **tidak** terdaftar di prod, begitu pula sebaliknya.
+`./scripts/docker-manager.sh up --dev` di unit mengarahkan enrolment dan MQTT ke stack `server_dev`, bukan `server_prod`: port beda, database beda, daftar unit terdaftar beda. Pakai saat testing; lepas flag-nya untuk deployment sungguhan. Unit yang enrol di dev **tidak** terdaftar di prod, begitu pula sebaliknya.
 :::
 
 ## 2. Cek unit terdaftar dengan benar

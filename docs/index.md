@@ -19,7 +19,7 @@ hero:
 
 features:
   - title: User Guide
-    details: "For fleet operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
+    details: "For operators: learn how to control robots, record SLAM maps, execute area sweeps, and monitor live video."
     link: /user-guide/
     linkText: Read the operator guide
   - title: Setup & Deployment
