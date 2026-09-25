@@ -9,6 +9,10 @@ search: false
 
 This document provides structured diagnostic workflows, symptom-to-cause mappings, and recovery procedures for resolving common engineering issues across the MSD700 stack.
 
+::: info Ownership
+Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide/troubleshooting) owns operator fixes, [Setup Troubleshooting](/setup/troubleshooting) owns technician fixes, and this page owns root causes. Fix a symptom in the page of the role that fixes it; link, don't duplicate.
+:::
+
 ## Systematic Diagnostic Flowchart
 
 ```mermaid
@@ -21,7 +25,7 @@ flowchart TD
   Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
   Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
 
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is rosweb_unit_<ULID> running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
+  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
   Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
 
   Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]
@@ -40,10 +44,10 @@ flowchart TD
 
 ### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
 - **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
-- **Root Cause**: The on-demand relay container `rosweb_unit_<ULID>` was stopped by the idle reaper, or Apache WebSocket proxying is blocked.
+- **Root Cause**: The fleet relay container (`ros_web_ui_v2_unit_relays`) is down — or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper — or Apache WebSocket proxying is blocked.
 - **Diagnostic Steps**:
-  1. Verify if the per-unit container is running on the server: `docker ps | grep rosweb_unit`.
-  2. If absent, reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`.
+  1. Check the fleet relay first: `docker ps | grep unit_relays`. On the legacy path, check the per-unit container instead: `docker ps | grep rosweb_unit`.
+  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In fleet mode the roster comes from the `units` table, so no touch event is needed — an enrolled robot is reachable.
   3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
 ### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
@@ -62,8 +66,25 @@ flowchart TD
 
 ### 5. Keep-Out Costmap Deadlock
 - **Symptom**: Goals are accepted by `move_base`, but the robot never drives forward.
-- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
+- **Root Cause**: `keepout_layer` is enabled in `costmap_common_params_field.yaml` but waiting for `/msd700/keepout_grid`. If no keep-out grid is published, costmaps are never marked "current".
 - **Resolution**: Ensure `path_coverage_node` or `system_command.py` publishes an empty keepout grid on initialization.
+
+### 6. Local Sync Reports "Access Denied" (Local Database Credential Drift)
+- **Symptom**: The Local Mode sync log shows `Access denied for user '<MYSQL_USER>'@'127.0.0.1' (using password: YES)`, historically mislabeled as failing during the `handshake` phase even though the cloud is reachable.
+- **Root Cause**: `docker/.env` on the unit is git-tracked and per-host. If `MYSQL_USER`/`MYSQL_PASSWORD` changes there (a `git pull`, or a manual edit) after the unit's `mysql_data_local` volume has already been initialized, MySQL keeps the old password baked into the data directory — it does not retroactively adopt the new one. `sync_agent.js` then fails its own first local `sync_state` read with `ER_ACCESS_DENIED_ERROR`, not a cloud connectivity error. See [Data Sync: Failure Classification](/development/data-sync#failure-classification) for how this is now distinguished from a real cloud outage.
+- **Diagnostic Steps**:
+  1. On the unit: `cat docker/.env | grep MYSQL_` and check whether the values look recently changed (e.g. right after a `git pull`).
+  2. Confirm the mismatch directly: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — a manual `Access denied` confirms drift rather than a transient blip.
+- **Resolution**: Either revert `docker/.env` to the password the volume was initialized with, or, if the rotation was intentional, run `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` against the local MySQL as root so the database matches the new `.env` value. Do not wipe `mysql_data_local` to "fix" this — it is the unit's only local copy of maps/routes not yet synced to the cloud, and this failure mode means sync itself is not currently working.
+
+### 7. Cloud Dashboard Has No Live Topics (ROS Master Hijacked by a Forwarded Port)
+- **Symptom**: The cloud dashboard shows status, activity and saved maps normally, but nothing live: no map while mapping, no lidar, no robot pose. The unit's own local dashboard works perfectly. The backend container still reports `Up`.
+- **Root Cause**: A unit stack registered on the **cloud** ROS master instead of its own, and ROS shuts down the older node whenever a name is claimed twice, so the server lost its `/rosbridge_websocket` (and `/backend_node`). The usual route in is a VS Code Remote or `ssh -L` session forwarding the server's master port to a laptop, which makes a remote master answer on `localhost`. Units now use `11321`/`11322` and `run_msd.sh` refuses a master it does not own, but an override or a pre-fix checkout can still get there.
+- **Diagnostic Steps**:
+  1. Run `scripts/ros_doctor.sh` in the backend container. It names the master's owner, lists nodes registered from hosts this machine cannot reach, and says whether anything is listening on the rosbridge port.
+  2. The signature is a rosbridge node that IS registered but from a foreign hostname, next to nothing listening on 9090/9091.
+  3. `docker ps` shows the backend container `unhealthy` once its rosbridge healthcheck has had time to fail.
+- **Resolution**: Fix `ROS_MASTER_URI` on the machine that wandered in (close the port forward), then `rosnode cleanup` on the server and restart the backend container. Restarting first only starts a fight over the name.
 
 ## Related Documentation
 

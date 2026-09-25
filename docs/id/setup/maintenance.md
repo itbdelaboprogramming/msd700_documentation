@@ -2,147 +2,150 @@
 outline: deep
 ---
 
-
 # Maintenance
 
 <RoleBadge role="technician" />
 
-Routine maintenance tasks for a deployed MSD700 system, split by which machine they apply to. For
-what any of the Docker commands below are doing, see [Docker Reference](/id/setup/docker-reference).
+Perawatan rutin sistem MSD700 yang sudah deploy. Tiap tugas menyebut mesinnya. Arti perintah Docker: lihat [Referensi Docker](/id/setup/docker-reference).
 
-## Routine checklist
+## Checklist rutin
 
-| Task | Frequency | Where | Notes |
+| Tugas | Seberapa sering | Di mana | Catatan |
 | --- | --- | --- | --- |
-| Check `~/.ros/log` disk usage | Passive: a janitor does this automatically | Unit | See [Log housekeeping](#log-housekeeping); only worth checking by hand if a unit is offline for other reasons |
-| Rotate the JWT signing keyring | Every few months, or immediately after a suspected leak | Server | See [Rotating secrets](#rotating-secrets) |
-| Renew the TLS certificate | Before expiry | Server | See [Certificates](#certificates). A plain `certbot renew` does **not** update the HiveMQ keystore |
-| Check for idle per-unit containers that should have been reaped | Occasionally | Server | `docker ps --filter name=rosweb_unit_`: one still running long after its unit went idle is worth investigating, not restarting blindly |
-| Prune expired keys from the JWT keyring | After a rotation's grace window passes | Server | `./scripts/secrets.sh prune` |
-| Check Docker disk usage | Monthly | Both | `docker system df`, then `docker image prune -a` and `docker builder prune` |
-| Check the TURN relay is still relaying | After any network or router change | Server | See [The TURN relay](#the-turn-relay) |
-| Update the software stack | As releases land | Both | See [Updating](#updating) |
+| Rotasi keyring JWT | Tiap beberapa bulan, atau segera setelah curiga bocor | Server | [Rotasi secrets](#rotasi-secrets) |
+| Perpanjang sertifikat TLS | Sebelum kedaluwarsa | Server | [Sertifikat](#sertifikat). `certbot renew` saja **tidak** mengupdate HiveMQ |
+| Cek relay armada jalan | Sesekali | Server | `docker ps --filter name=unit_relays`. Di mode fleet (default) satu relay mati menjatuhkan se-armada |
+| Prune key kedaluwarsa | Setelah grace window rotasi | Server | `./scripts/secrets.sh prune --dev` |
+| Cek disk Docker | Bulanan | Keduanya | `docker system df`, lalu prune image/build cache |
+| Cek relay TURN | Setelah tiap ubahan jaringan/router | Server | [Relay TURN](#relay-turn) |
+| Update software | Tiap rilis tiba | Keduanya | [Updating](#updating) |
+| Cek ukuran log ROS | Manual hanya bila unit bermasalah | Unit | Janitor menanganinya otomatis ([bawah](#housekeeping-log)) |
 
-## Log housekeeping
+## Housekeeping log
 
-ROS 1 does not rotate its own logs (`~/.ros/log`), and left alone they grow without bound: one unit
-with an unreachable cloud broker measured about 860 MB/day, almost all of it in `rosout.log`, written
-straight onto the Jetson's root filesystem. Every unit runs a log janitor automatically as one of its
-tmux windows, capping that tree (512 MB by default, swept every 60 seconds) and clearing the previous
-session's logs at startup.
+Container robot menjalankan janitor yang membatasi log ROS di 512 MB, dicek tiap 60 detik. Di atas batas, file terbesar dipangkas dulu. Yang diawasi folder log **di dalam container** (`ROS_LOG_DIR`, lalu `$ROS_HOME/log`, lalu `$HOME/.ros/log`).
+
+Dari **host unit**, lihat sesi launcher aslinya (simulasi: `msd700-simulator`):
 
 ```bash
-# Watch what it's doing:
-tmux attach -t robot_services   # window: log_janitor
-tail -f ros-web-ui/logs/log_janitor.log
+docker exec -it msd700 tmux attach -t robot_services
+tail -F src/ros-web-ui/logs/log_janitor.log   # dari folder msd700_noetic
 ```
 
-You generally don't need to touch this. Raise `ROS_LOG_CAP_MB` only if you're deliberately chasing
-something in `rosout.log` and have the disk budget for it.
+Dua sistem log lain, terpisah dari log ROS:
 
-## Rotating secrets
+- Log launcher di `src/ros-web-ui/logs/`: lima file 10 MB per service bila `rotatelogs` ada, `tee` tanpa batas bila tidak.
+- Stdout/stderr Docker: tiap service unit dibatasi 20 MB x 3. Di server, hanya `coturn` menyetel batas itu; service lain memakai default daemon.
 
-```bash
-./scripts/secrets.sh status          # see what's active, without printing secret values
-./scripts/secrets.sh rotate          # mint a new active key; the old one stays valid for a grace window
-# after the grace window has passed:
-./scripts/secrets.sh prune
-```
+`ROS_LOG_CAP_MB` dan `ROS_LOG_SWEEP_SECONDS` hanya mengonfigurasi launcher dalam. Menyetelnya di host atau `docker/.env` tidak berpengaruh. Janitor memangkas terbesar-dulu berdasarkan pemakaian blok nyata (tidak pernah menghapus — ROS memegang fd-nya tetap terbuka) dan tidak pernah memercayai ukuran `stat` (jebakan sparse-file); ~96% tree biasanya adalah `rosout.log`.
 
-::: info Why rotate instead of just replacing the secret?
-A single shared secret makes rotation a blunt instrument: overwrite it, and every logged-in operator
-and every connected robot is rejected at once. The keyring format signs new tokens with one active
-key while still *accepting* the previous one for a configurable grace window (48 hours by default),
-so a rotation is invisible to anyone already connected.
+## `ros_doctor.sh`: membaca output-nya
+
+`scripts/ros_doctor.sh` bersifat read-only. Jalankan di dalam container backend saat dashboard punya status tapi tanpa topik live:
+
+- `OK master answers` — sebuah ROS master menjawab.
+- `stamped as '<role>' owned by <host>` — `/msd700/stack_role` + `/msd700/stack_host`; memberi tahu master milik siapa yang sebenarnya diajak bicara.
+- `none: every node advertises a host this machine can resolve` — tanpa node asing. Apa pun selain itu menyebut node yang terdaftar dari host yang tak bisa dijangkau mesin ini (pembajakan forwarded-port).
+- `listening on 9090` vs `nothing listening on 9090. Dashboards get no live topics at all.` — apakah rosbridge up.
+- `no rosbridge node on this master (evicted by a duplicate name, or never started)` — bridge kehilangan registrasi namanya.
+
+## `deploy_certs.sh`: copy aman, overwrite eksplisit
+
+Jalankan dari `ros-web-ui/`. Default menyalin `Certificates/mqtt` dan `Certificates/sql` ke tree source backend/mqtt dengan `cp -n` — **tidak pernah menimpa**. Hanya `--force` yang menimpa. Jangan tertukar dengan `update_ssl.sh` (memperpanjang Let's Encrypt + me-rebuild keystore HiveMQ).
+
+## Rotasi secrets
+
+::: info Kenapa rotasi, bukan ganti langsung?
+Satu secret bersama berarti menggantinya me-logout semua operator dan robot sekaligus. Keyring menandatangani token baru dengan key baru sambil tetap **menerima** key lama selama grace window (default 48 jam). Rotasi tak terasa bagi yang sudah tersambung.
 :::
 
-After rotating, restart the services that read the keyring so they pick up the new active key:
+Backend, media, dan signalling dev me-mount keyring **dev**. Dari `ros-web-ui`, memakai folder secrets yang sama dengan Compose:
 
 ```bash
-docker compose --profile server_dev  restart nakayama_cloud_dev nakayama_media_dev nakayama_signalling_dev
-docker compose --profile server_prod restart nakayama_cloud nakayama_media nakayama_signalling
+./scripts/secrets.sh status --dev
+./scripts/secrets.sh rotate --dev
 ```
 
-## Certificates
+Setelah grace window:
 
-Two different things consume the Let's Encrypt certificate, and only one of them renews itself.
+```bash
+./scripts/secrets.sh prune --dev
+```
+
+Tanpa `--dev` yang tersentuh `jwt_keyring.json`, yang tidak di-mount produksi. Produksi tidak punya mount keyring; membuat keyring prod saja tidak mengonfigurasi apa-apa. Service lokal unit memakai `JWT_SECRET` terpisah di `docker/.env` unit.
+
+File key dibaca sekali saat proses start. Setelah rotasi, recreate tiga consumer dev agar memuat file baru yang sama (restart biasa di dalam container tidak cukup):
+
+```bash
+docker compose --profile server_dev up -d --no-deps --force-recreate nakayama_cloud_dev nakayama_media_dev nakayama_signalling_dev
+```
+
+Ini juga me-restart relay dev, sempat memutus unit dev. Token tetap valid selama grace window, tapi socket tetap drop saat recreation.
+
+## Sertifikat
+
+Apache membaca file PEM Let's Encrypt langsung. HiveMQ membaca keystore PKCS#12 yang **dibuat terpisah**. Memperpanjang PEM tidak pernah mengupdate HiveMQ dengan sendirinya.
 
 ```mermaid
 flowchart TB
   CB["certbot renew"] --> PEM["/etc/letsencrypt/live/DOMAIN/<br/>fullchain.pem + privkey.pem"]
-  PEM --> AP["Apache2<br/>reads the PEMs directly"]
+  PEM --> AP["Apache2<br/>membaca PEM langsung"]
   PEM -->|"openssl pkcs12 -export<br/>update_ssl.sh"| KS["/srv/msd/secrets/hivemq/keystore.p12"]
-  KS --> MQ["HiveMQ<br/>reads the keystore ONCE, at startup"]
-  AP -.->|"systemctl reload apache2"| DONE1["new cert live"]
-  MQ -.->|"container restart"| DONE2["new cert live"]
+  KS --> MQ["HiveMQ<br/>membaca keystore SEKALI, saat startup"]
+  AP -.->|"systemctl reload apache2"| DONE1["sertifikat baru live"]
+  MQ -.->|"restart container"| DONE2["sertifikat baru live"]
 ```
 
-| Consumer | Picks up a renewal by | Automatic? |
+| Konsumen | Mendapat renewal dengan | Otomatis? |
 | --- | --- | --- |
-| Apache | reloading | Yes, certbot's own renewal hook |
-| HiveMQ | rebuilding the PKCS#12 keystore, then restarting the container | **No** |
+| Apache | reload setelah PEM diperpanjang | Tergantung setup certbot host |
+| HiveMQ | rebuild keystore, lalu restart broker | Tidak. `update_ssl.sh` tidak me-restart apa-apa |
 
 ```bash
-sudo ./source/dependencies/ssl_update/update_ssl.sh   # renew + rebuild the keystore
-docker compose --profile server_dev  restart hivemq_dev
-docker compose --profile server_prod restart hivemq   # maintenance window, see below
+sudo ./source/dependencies/ssl_update/update_ssl.sh   # renew + rebuild keystore
+docker compose --profile server_dev  up -d --no-deps --force-recreate hivemq_dev
+docker compose --profile server_prod up -d --no-deps --force-recreate hivemq   # jam maintenance!
 ```
 
-::: danger A prod broker restart trips the safety watchdog fleet-wide
-HiveMQ takes around 14 seconds to come back, which is longer than the 10 second ping watchdog. Every
-robot mid-operation raises `/emergency_pause` and stops. Do prod broker restarts in a maintenance
-window, not opportunistically. The dev broker has no such constraint.
+::: danger Restart broker memutus semua unit di broker itu
+Kehilangan ping operator lebih dari 10 detik bisa menaikkan `/emergency_pause`. Jadwalkan restart broker mana pun di sekitar operasi aktif, bukan cuma operasi produksi. Kedua profile memakai file keystore yang **sama**, jadi renewal tidak pernah terisolasi dev.
 :::
 
-::: warning The keystore has never renewed itself
-There is no certbot deploy hook wired to `update_ssl.sh`. Until there is, a certificate renewal
-leaves Apache correct and the MQTT broker serving an expired certificate, and the visible symptom is
-the whole fleet dropping offline at once with TLS errors in the robots' logs. Put the expiry date in
-a calendar.
-:::
+`update_ssl.sh` terkunci ke `msd.nglobal.jp` dan `/srv/msd/secrets/hivemq/keystore.p12`. Password export harus cocok dengan config broker. Jangan print di diagnostik. Cek expiry yang disajikan masing-masing untuk HTTPS dan MQTT sebelum dan sesudah.
 
-## The TURN relay
+## Relay TURN
 
-`coturn` is **production only**. See
-[Docker Reference](/id/setup/docker-reference#coturn-the-production-only-service) for the full
-reasoning.
+`coturn` **hanya produksi**. Alasan lengkap: [Referensi Docker](/id/setup/docker-reference#coturn-service-hanya-produksi).
 
 ```bash
-docker compose --profile turn up -d coturn      # start or restart just the relay
-docker compose logs -f coturn                   # watch allocations
-docker compose --profile turn stop coturn       # stop just the relay
+docker compose --profile turn up -d coturn      # start/restart hanya relay
+docker compose logs -f coturn                   # awasi alokasi
+docker compose --profile turn stop coturn       # stop hanya relay
 ```
 
-Its logs are capped at three 20 MB files, so an unauthenticated scanner hammering port 3478 cannot
-fill the disk. Nothing else in the stack has that cap yet.
+Setelah mengubah `.env`, terapkan dengan `up -d coturn` (`restart` biasa mempertahankan environment lama).
 
-| After this changes | Do this |
+| Yang berubah | Yang dilakukan |
 | --- | --- |
-| The host's LAN address | Update `TURN_LISTENING_IP` and `TURN_EXTERNAL_IP`, restart the relay, re-check the router forward |
-| The public IP | Update the public half of `TURN_EXTERNAL_IP`, restart the relay |
-| `TURN_USER` / `TURN_PASSWORD` | Restart the relay **and** rebuild both dashboard images, since the credential is baked into the bundle |
-| The router or firewall | Re-confirm UDP+TCP 3478 and the UDP relay range both reach `TURN_LISTENING_IP` |
+| Alamat LAN host | Update `TURN_LISTENING_IP` + `TURN_EXTERNAL_IP`, restart relay, cek forward router |
+| IP publik | Update separuh publik `TURN_EXTERNAL_IP`, restart relay |
+| `TURN_USER` / `TURN_PASSWORD` | Restart relay, update env `camera_client` unit (`TURN_USERNAME`/`TURN_CREDENTIAL`), rebuild image dashboard cloud (bundle memanggang kredensial yang sama) |
+| Router/firewall | Konfirmasi ulang UDP+TCP 3478 dan range relay UDP mencapai `TURN_LISTENING_IP` |
 
-::: info Symptom to recognise
-The camera feed works for operators on the same LAN and never appears for anyone outside it. That is
-the relay, not the camera: signalling succeeded (both peers found each other) and the media path did
-not.
+::: info Gejala yang dikenali
+Kamera jalan di LAN yang sama, tidak pernah di luar. Itu relay, bukan kamera: signalling sukses, jalur media gagal.
 :::
 
-## Backups
+## Backup
 
-What needs backing up, and where it already lives:
-
-| Data | Location | How |
+| Data | Di mana | Bagaimana |
 | --- | --- | --- |
-| Maps, routes, custom areas, playlists | MySQL (`db`/`db_dev` container) + map files under `/srv/msd/media/map` | Use the admin console's **profile backup** feature: it produces a single `.tar.gz` per profile, restore is additive |
-| Per-unit data (for a hardware swap or a unit-specific archive) | Same sources, scoped to one unit | The backup system supports a `scope` column for exactly this: archive one unit without pulling in the whole profile |
-| The JWT keyring / TLS keystore | `/srv/msd/secrets` | Not part of the app-level backup; back this directory up at the filesystem/infra level |
+| Peta, rute, area, playlist | MySQL + file peta di `/srv/msd/media/map` | **Profile backup** di admin console: satu `.tar.gz` per profile, restore aditif |
+| Data satu unit (ganti hardware, arsip per-unit) | Sumber sama, satu unit | Kolom `scope` backup mengarsipkan satu unit |
+| Keyring JWT / keystore TLS | `/srv/msd/secrets` | Tidak di backup aplikasi; backup di level filesystem |
 
 ::: warning
-Backup archives are written by the backend into `/srv/msd/media/backup` (`/srv/msd/media/backup_dev`
-for the dev stack). If that directory doesn't exist yet or isn't writable by the app's user, backups
-fail; see [Troubleshooting](/id/setup/troubleshooting).
+File backup masuk ke `/srv/msd/media/backup` (`/srv/msd/media/backup_dev` untuk dev). Bila folder belum ada atau tidak writable oleh user aplikasi, backup gagal (lihat [Troubleshooting](/id/setup/troubleshooting)).
 :::
 
 ## Updating
@@ -151,59 +154,50 @@ fail; see [Troubleshooting](/id/setup/troubleshooting).
 
 ```bash
 git pull
-docker compose --profile server_dev  build && docker compose --profile server_dev  up -d   # test first
+docker compose --profile server_dev  build && docker compose --profile server_dev  up -d   # tes dulu
 docker compose --profile server_prod build && docker compose --profile server_prod up -d
 ```
 
-::: danger Recreating the backend orphans every per-unit container
-The `rosweb_unit_*` containers were started by the previous `backend_node` process. After the
-backend is recreated, restart them too, or they run while the new backend does not consider them
-adopted:
+Recreate backend me-restart container `unit_relays` yang ada (default mode fleet). Tanpa langkah relay manual, tapi data plane tiap unit blip sebentar dan pulih sendiri. Relay yang hilang tidak pernah dibuat backend; hanya Compose yang membuatnya.
+
+Mode legacy (`UNIT_CONTAINERS_ENABLED=true`): container `rosweb_unit_*` yang jalan diadopsi saat startup, tapi node ROS-nya tidak didaftarkan ulang ke master baru. List satu environment saja sebelum menyentuh apa pun (nama prod berakhir `_nakayama`, dev `_nakayama_dev`):
 
 ```bash
-docker ps --filter "name=rosweb_unit_" --format '{{.Names}}' | xargs -r docker restart
+docker ps --filter "name=rosweb_unit_" --format '{{.Names}}' | grep '_nakayama_dev$'
 ```
-:::
 
 ### Unit
 
 ```bash
-git pull --recurse-submodules
-./scripts/docker-manager.sh build
-./scripts/docker-manager.sh up -d
+git pull
+# src/ berisi clone biasa, bukan submodule: pull masing-masing
+for d in src/*/; do git -C "$d" pull; done
+git -C src/msd700_robot submodule update --init --recursive
 ```
 
-::: info When a rebuild is actually needed
-`src/` is bind-mounted into the **robot** container, so day-to-day script edits need no rebuild at
-all: the container picks them up on the next launch. A full `build` is only needed when a dependency
-or the base image changed.
+Lalu rebuild/restart di jam maintenance, mempertahankan flag `--dev` / `--simulator` unit:
 
-The unit's own **server** stack is different. `Dockerfile.webui-local` copies the source into the
-image, so those services always need a rebuild. `docker-manager.sh` compares image timestamps
-against the source tree and rebuilds automatically, which is why an unexplained rebuild on `up`
-usually just means somebody edited the backend.
-:::
+- **Container robot** me-mount `src/`: edit Python dan launch berlaku di run launcher berikutnya, tanpa rebuild. Ubahan C++, message, dan paket baru butuh build catkin (`up --build`); `up` biasa melewati build bila `devel/setup.bash` ada.
+- **Stack server lokal** meng-copy source ke image: pakai `local-build` lalu `up` untuk edit itu.
+- Container robot yang jalan mempertahankan image lama setelah `build`. Rencanakan `down` + `up -d` yang cocok (flag sama) untuk menggantinya. Ini memutus robot dan service lokal; tambah `--no-autostart` bila tidak ingin mengubah perilaku boot.
 
-There is no separate firmware update path documented here for the Arduino-based motor controller;
-that is a manual re-flash, not part of this Docker-based stack.
+Tidak ada jalur firmware terpisah di sini untuk motor controller Arduino; itu re-flash manual.
 
-## Disk housekeeping
+## Housekeeping disk
 
 ```bash
-docker system df                 # what is using space
-docker image prune -a            # images no container references
+docker system df                 # apa memakai space
+docker image prune -a            # image tak dipakai container
 docker builder prune             # build cache
-docker volume ls                 # inspect BEFORE removing anything
+docker volume ls                 # lihat SEBELUM menghapus apa pun
 ```
 
-::: danger Never `docker compose down -v` on this project casually
-`-v` deletes named volumes, including `ros_webui_hivemq_data_prod`, which holds retained messages,
-client sessions and queued QoS>0 messages. If you want a clean broker, delete that one volume by
-name, deliberately.
+::: danger Jangan `docker compose down -v` sembarangan
+`-v` menghapus named volume, termasuk `ros_webui_hivemq_data_prod` (retained message, sesi client, antrean QoS>0). Untuk membersihkan broker, hapus volume itu by name, dengan sengaja.
 :::
 
-## Related
+## Terkait
 
-- [Docker Reference](/id/setup/docker-reference): what every command above is doing
-- [Troubleshooting](/id/setup/troubleshooting): if maintenance uncovers a problem
-- [System Setup](/id/setup/system-setup): system topology reference
+- [Referensi Docker](/id/setup/docker-reference): arti tiap perintah di atas
+- [Troubleshooting](/id/setup/troubleshooting): bila maintenance menemukan masalah
+- [Setup Sistem](/id/setup/system-setup): referensi topologi

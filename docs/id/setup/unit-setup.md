@@ -2,119 +2,114 @@
 outline: deep
 ---
 
-
-# Unit Setup
+# Setup Unit
 
 <RoleBadge role="technician" />
 
-This guide provides step-by-step instructions for installing and configuring an **MSD700 Unit** (the physical robot running on an NVIDIA Jetson single-board computer).
+Cara menginstal dan mengonfigurasi **Unit MSD700**: robot fisik di NVIDIA Jetson.
 
-Ensure that a running [MSD700 Server](/id/setup/server-setup) exists before proceeding.
+Server yang jalan wajib ada dulu ([Setup Server](/id/setup/server-setup)). Jalankan semua perintah di bawah **di unit**, bukan di cloud server.
 
-::: info Production-First Architecture
-This guide defaults to deploying a real hardware robot connecting to the **Production Cloud**. Simulation options (`--simulator`) and development cloud routing (`--dev`) are in the [Advanced Configurations](#advanced-configurations) section.
+::: info Produksi dulu
+Halaman ini menghubungkan robot asli ke cloud **produksi**. Simulator (`--simulator`) dan cloud dev (`--dev`) ada di [Advanced Configurations](#advanced-configurations).
 :::
 
-## System Topology
+## Topologi sistem
 
-![Arsitektur Sistem MSD700](/images/MSD700-System-Diagram.jpg)
+![Diagram Sistem MSD700](/images/MSD700-System-Diagram.jpg)
 
+## Struktur folder
 
-
-## Directory Structure Overview
-
-The Jetson workspace manages robot packages, web bridges, and onboard web UI as submodules:
+Workspace Jetson menyimpan paket robot, bridge web, dan web UI onboard sebagai clone biasa di bawah `src/` (bukan submodule):
 
 ```
-~/msd700_noetic/                              # Main Jetson Orchestration Workspace
-├── setup.sh                                  # Host Dependency Installer (Docker, xhost)
+~/msd700_noetic/
+├── setup.sh
 ├── scripts/
-│   └── docker-manager.sh                     # Core Lifecycle CLI (build, up, down, logs)
+│   └── docker-manager.sh
 ├── docker/
-│   ├── Dockerfile                            # ROS 1 Noetic Desktop Full Container
-│   ├── docker-compose.yml                    # Robot Container Definition
-│   └── .env                                  # Local Environment Variables
-└── src/                                      # Catkin Workspace Submodules
-    ├── msd700_robot/                         # Navigation, EKF Control, Hardware Drivers
-    ├── ros-web-ui/                           # Web Bridges, MQTT nodes, System Command
-    └── ROS-dashboard-next-ts/                # Local Operator Web Dashboard
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── .env
+└── src/
+    ├── msd700_robot/
+    ├── ros-web-ui/
+    └── ROS-dashboard-next-ts/
 ```
 
 ---
 
-## Core Step-by-Step Setup
+## Langkah setup
 
-Follow these 5 steps in sequence to set up the physical robot, plus an optional 6th step if this
-unit needs to broadcast its own WiFi hotspot.
+Kerjakan Step 1-4, lalu Step 6 (provisioning hotspot), lalu Step 5 (start). File hotspot harus ada sebelum start pertama.
 
-### Step 1: Clone Workspace and Source Repositories
-
-Clone the `msd700_noetic` orchestration workspace, then clone the three required repositories into the `src/` directory:
+### Step 1: Clone workspace dan source
 
 ```bash
-# 1. Clone orchestration workspace
+# 1. Workspace orkestrasi
 git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
 
-# 2. Clone source packages into src/ on branch v2
-git clone -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+# 2. Repo source ke src/, branch v2
+git clone --recurse-submodules -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
 git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
 git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
-::: tip Why Manual Clone into `src/`?
-`msd700_noetic` ignores `src/*/` in its `.gitignore` to avoid Git-in-Git conflicts and allow each sub-repository to be managed on its own independent branch.
+::: tip Kenapa clone manual ke `src/`?
+`msd700_noetic` meng-ignore `src/*/` agar tiap repo memegang branch sendiri tanpa konflik Git-in-Git.
 :::
 
 ---
 
-### Step 2: One-Time Host Setup
-
-Run the host setup script to configure Docker group permissions and graphics forwarding:
+### Step 2: Setup host sekali saja
 
 ```bash
 cd ~/msd700_noetic
 ./setup.sh
 ```
 
-::: warning Apply Group Permissions
-If the script added your user to the `docker` group, log out and back in, or run:
-```bash
-newgrp docker
-```
+Ini menginstal Docker bila belum ada, mengatur akses grup dan `xhost`, membuat script executable, mengonfigurasi link kabel Velodyne, memasang udev rules STM32/RealSense dan service recovery RealSense, serta mengunduh world simulator. Ini mengubah host; bukan cek read-only.
+
+::: warning Grup docker
+Bila script menambahkan user ke grup `docker`, logout dan login ulang, atau jalankan `newgrp docker` (hanya shell saat ini).
 :::
 
 ---
 
-### Step 3: Review Environment Configuration (`docker/.env`)
+### Step 3: Cek `docker/.env`
 
-On first launch, `./scripts/docker-manager.sh` automatically creates `docker/.env` from `docker/.env.example` and generates secure, loopback-only local MySQL passwords (`ensure_local_secrets`).
+Script startup membuat `docker/.env` dari `docker/.env.example` **hanya bila belum ada**. Password MySQL placeholder diganti hanya saat database lokal belum diinisialisasi; ini tidak merotasi password yang sudah ada.
 
-If you wish to pre-configure or review settings manually before launch:
+::: warning Kredensial di file ini
+`docker/.env` tracked di git. Cek nilai per-unit sendiri sebelum pemakaian pertama. Jangan print, commit, atau copy ke unit lain. Mengubah password database yang sudah ada butuh rotasi SQL yang cocok, bukan sekadar edit file.
+:::
+
+Untuk review manual sebelum launch:
 
 ```bash
 cd ~/msd700_noetic
-cp docker/.env.example docker/.env
+test -e docker/.env || cp docker/.env.example docker/.env
 nano docker/.env
 ```
 
-Key settings in `docker/.env`:
+Setting utama:
 
 ```ini
-# Storage path for map occupancy grids on the Jetson
+# Penyimpanan peta di Jetson
 MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
 
-# Local User UID/GID (leave blank to auto-detect from host `id -u` / `id -g`: Jetson=2002, dev=1000)
+# UID/GID user lokal (kosong = deteksi otomatis: Jetson 2002, laptop dev 1000)
 USER_UID=
 USER_GID=
 
-# Gazebo simulator support (set to true only for machines without MSD700 hardware)
+# Simulator Gazebo (true hanya di mesin tanpa hardware robot)
 WITH_SIMULATOR=false
 
-# Leave UNIT_ID empty; assigned and cached automatically during cloud enrolment
+# Biarkan kosong; terisi otomatis saat enrolment cloud
 UNIT_ID=
 
-# Local Ports (Default settings for on-board local stack)
+# Port lokal (default stack onboard)
 MYSQL_PORT_LOCAL=3306
 MOSQUITTO_PORT_LOCAL=1883
 BACKEND_PORT_LOCAL=5002
@@ -125,164 +120,178 @@ SIGNALLING_PORT_WS_LOCAL=3001
 SIGNALLING_PORT_HTTP_LOCAL=3002
 NETWORK_AGENT_PORT_LOCAL=5011
 
-# Optional: static IP hint (the dashboard dynamically adapts to operator browser address)
+# Optional: hint IP statis (dashboard mengikuti alamat browser)
 #LOCAL_IP=192.168.4.1
 ```
 
-::: info Cloud Connection Routing
-Cloud connection parameters (Production Cloud `https://msd.nglobal.jp/services` or Dev Cloud via `--dev`) are managed automatically by `docker-manager.sh` during launch and enrolment, and are not configured in `docker/.env`.
+::: info Terhubung ke cloud mana?
+Default `https://msd.nglobal.jp/services/rosbackend`, atau backend dev dengan `--dev`. `CLOUD_BASE_URL` meng-override default. Jaga enrolment dan sync menunjuk cloud yang sama; setting ini tidak memindahkan broker MQTT sendiri.
 :::
 
 ---
 
-### Step 4: Build Robot Docker Image
+### Step 4: Build image robot
 
-Build the ROS Noetic robot runtime container:
+Build selagi ada internet. Basis robot adalah `ros:noetic-robot`; Dockerfile meng-copy `src/` lalu menjalankan `catkin build`.
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh build
 ```
 
-This builds the `msd700:latest` image containing ROS Noetic, navigation stacks, sensor drivers, and web bridges.
+Ini mem-build `msd700:latest`, `ros-noetic-webui-app-local:latest`, dan `ros-dashboard-next-local:latest`, serta me-pull MySQL dan Mosquitto. Gagal pull hanya warning; pastikan image upstream terjangkau sebelum offline. `up` biasa memakai ulang image dan hanya warning soal image basi; rebuild dengan sengaja setelah ubah source.
+
+Buat folder peta dulu, milik UID/GID sendiri. Docker membuat folder bind yang hilang sebagai root:
+
+```bash
+sudo install -d -o "$(id -u)" -g "$(id -g)" /home/ubuntu/ros_maps
+```
+
+**Bila unit memakai hotspot, kerjakan Step 6 sebelum Step 5.** Stack me-mount `/run/msd700-hotspot-active`; start Docker sebelum file itu ada bisa membuat folder pengganti.
 
 ---
 
-### Step 5: Start Robot and Complete Enrolment
-
-Launch the robot stack in detached mode:
+### Step 5: Jalankan robot dan enrol
 
 ```bash
 cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
-#### Automated Enrolment Flow:
-1. On its very first launch, the robot contacts the cloud server and outputs a 6-character **Claim Code** (e.g. `K7M2QP`).
-2. An administrator opens `https://msd.nglobal.jp/admin` and logs in.
-3. Under **Pending Units**, locate the matching claim code, assign the unit to an active **Rental Profile**, and click **Approve**.
-4. The robot receives its cryptographically signed credentials (`Certificates/robot/device.json`), binds to HiveMQ over TLS port 8883, and appears live on the fleet map.
+Ini menyalakan container robot plus stack `local_dev` yang selalu on (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Namanya saja `local_dev`; jalan untuk cloud mana pun. `-d` kembali setelah startup dan enrolment selesai. `up` juga memasang `msd700.service` untuk autostart boot; tambah `--no-autostart` untuk melewatinya.
+
+**Enrolment, hanya di launch pertama:**
+
+1. Robot menghubungi cloud dan mencetak **kode klaim** 8 karakter (mis. `K7M2QP4R`). Ini label tampilan, bukan secret.
+2. Admin membuka admin console cloud (`https://msd.nglobal.jp/admin`, atau backend dev port 5001 dengan `--dev`) dan login.
+3. Di bawah **Pending Units**, cari kode itu, lalu daftarkan sebagai unit baru di **Rental Profile** aktif, atau **Adopt** ke ULID unit yang ada (jalur ganti hardware; peta di cloud tetap).
+4. Unit menyimpan identitas ke `src/ros-web-ui/Certificates/robot/device.json` plus token di `token.cred`. Perlakukan keduanya sebagai secret. Launch berikutnya memakai ulang.
+5. Bridge produksi menargetkan HiveMQ TLS port `8883`. Approval saja tidak membuktikan konektivitas; cek dashboard cloud dan lokal masing-masing.
 
 ---
 
-### Step 6 (Optional): Provision the WiFi Hotspot
+### Step 6: Provisioning hotspot WiFi
 
-If this unit needs to broadcast its own WiFi hotspot for an operator to connect to directly (instead
-of, or alongside, the onboard radio staying a normal WiFi client), plug in a validated USB WiFi
-dongle and run two commands:
+Unit yang di-provision menawarkan hotspot dan bisa mempertahankan koneksi client WiFi di radio onboard yang sama, bila driver mendukung keduanya sekaligus. Cek driver aslinya dulu, bukan sekadar nama chip. Lakukan provisioning ini **sebelum `up` pertama**, dari konsol lokal atau koneksi kabel: NetworkManager restart dan WiFi bisa putus.
 
 ```bash
 cd ~/msd700_noetic
 
-# 1. Install the dongle's driver (one-time, builds via DKMS so it survives kernel upgrades)
+# Optional: driver dongle cadangan (sekali saja, DKMS). Lewati bila radio onboard menangani hotspot sendiri.
 ./scripts/install-wifi-dongle-driver.sh
 
-# 2. Provision the hotspot, passing the password inline rather than writing it to docker/.env
-AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
+# Provision hotspot (udev rules, rule PolicyKit, service hostapd/dnsmasq)
+./setup.sh --provision-network
 ```
 
-Interface names are auto-detected, nothing else has to be looked up by hand. The hotspot comes up on
-its own on every boot afterward, independent of Docker or `docker-manager.sh`.
+`--provision-network` jalan di terminal dan menanyakan nama interface dan SSID (dengan default terdeteksi). Ketik password tersembunyi; password lama tampil sebagai `[keep current]`, tidak pernah ditampilkan. Password baru diketik dua kali. Password disimpan ke config hostapd di `/etc/hostapd/` (mode 0600), **bukan** kembali ke `docker/.env`. Jaringan client upstream masuk ke profile NetworkManager-nya. Setelah ini hotspot naik sendiri tiap boot, tanpa Docker.
 
-::: warning Don't write the password into `docker/.env`
-`docker/.env` is tracked by git in this repository, a password committed there is published to the
-repository. Pass `AP_PASSWORD_LOCAL` inline as shown above instead. See
-[WiFi Hotspot + Client](/id/setup/wifi-hotspot#provisioning-the-hotspot-once-per-unit) for the full
-provisioning walkthrough, the validated dongle hardware, and troubleshooting.
+::: info Provisioning scripted
+Tanpa TTY (atau dengan `MSD700_NONINTERACTIVE=1`), prompt dilewati. Password hostapd yang ada menang atas nilai env. Mengetik password inline bisa bocor ke shell history. Pilih prompt interaktif tersembunyi. Rotasi password unattended yang aman masih belum solved. Walkthrough lengkap: [WiFi Hotspot](/id/setup/wifi-hotspot#provisioning-hotspot-sekali-per-unit).
 :::
 
-Entirely optional, skip this step if the unit only ever needs the onboard radio as a normal WiFi
-client. See [WiFi Hotspot + Client](/id/setup/wifi-hotspot) for the full architecture and why a second
-radio is required at all.
+---
+
+## Operasi lokal (offline)
+
+Tanpa internet, gabung ke jaringan lokal robot atau [hotspot](/id/setup/wifi-hotspot)-nya dari Step 6:
+
+1. Buka `http://<jetson-ip>:3000`.
+2. Setelah enrolment cloud dan satu sync sukses (rental assignment + akun operator), dashboard lokal bisa menyetir, memetakan, dan menjalankan rute secara offline. Unit yang belum pernah enrol tidak bisa start offline.
+3. Saat internet kembali, sync mempertukarkan peta, rute, area, dan baris database dengan cloud yang dikonfigurasi, terbatas pada unit ini dan rental profile-nya. Cek status sync; jangan anggap semua ter-upload.
 
 ---
 
-## Operating the Unit Locally (Offline Mode)
-
-When the robot operates in locations without internet connectivity, connect your laptop or tablet directly to the robot's local network (or the [robot's WiFi hotspot](/id/setup/wifi-hotspot), if Step 6 above was run):
-
-1. Open your browser and navigate to: `http://<jetson-ip>:3000`.
-2. The local dashboard allows full teleoperation, SLAM mapping, route creation, and area coverage sweeps.
-3. When internet connectivity is restored, all locally recorded maps automatically synchronize back to the central cloud server.
-
----
-
-## Advanced Configurations
+## Advanced configurations
 
 <details>
-<summary><b>Simulation Mode (Gazebo Warehouse)</b></summary>
+<summary><b>Mode simulasi (Gazebo warehouse)</b></summary>
 
-To test algorithms on a laptop without physical robot hardware:
+Untuk testing di laptop tanpa hardware robot. `build --simulator` menyetel `WITH_SIMULATOR=true` dan memilih `msd700-simulator:latest`; `fetch_sim_worlds.sh` mengunduh world warehouse selagi online. Pakai pose spawn dari world yang dipilih.
 
-1. Build the simulator-enabled image:
-   ```bash
-   ./scripts/docker-manager.sh build --simulator
-   ```
+```bash
+./scripts/docker-manager.sh build --simulator
+./scripts/docker-manager.sh up --simulator -d
+```
 
-2. Start the simulation stack:
-   ```bash
-   ./scripts/docker-manager.sh up --simulator -d
-   ```
+Dengan `MSD700_SIM_HEADLESS=true` di `docker/.env`, Gazebo jalan tanpa window.
 
 </details>
 
 <details>
-<summary><b>Development Cloud Routing (`--dev`)</b></summary>
+<summary><b>Cloud dev (`--dev`)</b></summary>
 
-To point the unit at a development cloud server instead of production:
+Arahkan unit ke cloud dev, bukan produksi:
 
 ```bash
 ./scripts/docker-manager.sh up --dev -d
 ```
 
-This connects MQTT to dev port `8884` and synchronizes with the development database.
+Ini memindahkan bridge cloud ke backend dev (port 5001), MQTT ke `8884`, dan roscore robot ini ke `11322`.
+
+**Hostname broker tetap `msd.nglobal.jp` di dev juga.** Dev dan produksi satu mesin yang sama, dipisah hanya oleh port, dan sertifikat TLS bernama host itu. IP polos akan gagal verifikasi. Baca port-nya, bukan hostname:
+
+| Peer | Broker | Backend | ROS master |
+| --- | --- | --- | --- |
+| Produksi (tanpa flag) | `msd.nglobal.jp:8883` | `https://msd.nglobal.jp/services/rosbackend` | `11321` |
+| Dev (`--dev`) | `msd.nglobal.jp:8884` | `http://118.22.31.252:5001` | `11322` |
+
+::: danger Jauhkan unit ini dari ROS master cloud
+Roscore robot ini `11321`/`11322`, sengaja beda dari cloud `11311`/`11312`. Jangan forward port ROS server ke unit (tanpa `ssh -L`, tanpa port forward VS Code 11311/11312): stack unit akan terdaftar di master **cloud** dan menendang node milik server. Gejala: dashboard cloud kosong (peta mapping duluan) padahal dashboard lokal normal.
+
+```bash
+ss -ltnp | grep :11322
+docker exec -e ROS_MASTER_URI=http://localhost:11322 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
+```
+
+Tutup forward (VS Code: panel PORTS), atau pindahkan robot ini dengan `ROS_MASTER_PORT=11323 ./scripts/docker-manager.sh up --dev -d`.
+:::
+
+**Mode menempel lintas reboot.** `up` menulis flag `--dev` / `--simulator` ke `msd700.service`, sehingga unit reboot ke mode yang sama. Cek yang terpasang:
+
+```bash
+./scripts/docker-manager.sh print-autostart-unit --simulator --dev   # yang akan ditulis
+grep ExecStart /etc/systemd/system/msd700.service                    # yang terpasang sekarang
+```
+
+Menjalankan `up` ulang dengan flag beda menulis ulang unit; `down` menghapus autostart.
 
 </details>
 
 <details>
-<summary><b>Host Networking Fixes for Non-Ubuntu/Arch Laptops</b></summary>
+<summary><b>Laptop non-Ubuntu (hanya sim/dev)</b></summary>
 
-If running on Arch Linux or non-standard distributions:
-
-1. **Hostname Resolution**:
-   ```bash
-   grep "$(hostname)" /etc/hosts || echo "127.0.0.1 $(hostname)" | sudo tee -a /etc/hosts
-   ```
-
-2. **Disable IPv6 Loopback Mapping**:
-   ```bash
-   sudo sed -i 's/^::1[[:space:]].*/::1 ip6-localhost ip6-loopback/' /etc/hosts
-   ```
-
-3. **Create Shared Maps Directory**:
-   ```bash
-   sudo mkdir -p /home/ubuntu/ros_maps
-   sudo chown -R $(id -u):$(id -g) /home/ubuntu/ros_maps
-   ```
+Setel `MAPS_FOLDER_LOCAL` di `docker/.env` ke folder writable yang nyata, bukan path gaya Jetson `/home/ubuntu`. Samakan UID/GID image. Lihat `msd700_noetic/docker/docker-compose.yml:219` dan `ros-web-ui/run_msd.sh:606-613`.
 
 </details>
 
 ---
 
-## Verification & Diagnostics
-
-Use these diagnostic commands to verify robot health:
+## Cek kesehatan robot
 
 ```bash
-# 1. View overall container and service status
+# 1. Status robot + stack lokal
 ./scripts/docker-manager.sh status
 
-# 2. Attach to the ROS tmux session inside the container
+# 2. Sesi ROS di dalam container
 ./scripts/docker-manager.sh shell
 tmux attach -t robot_services
 
-# 3. View real-time container logs
+# 3. Log robot (follow); stack lokal: local-logs
 ./scripts/docker-manager.sh logs -f
+
+# 4. Kesehatan stack (master, foreign nodes, rosbridge)
+docker exec -e ROS_MASTER_URI=http://localhost:11321 msd700 bash -lc 'source /opt/ros/noetic/setup.bash; bash /workspace/src/ros-web-ui/scripts/ros_doctor.sh'
+
+# 5. Status sync di unit
+curl -s http://localhost:5002/local/status
 ```
 
-## Related Documentation
+## Terkait
 
-- [Server Setup](/id/setup/server-setup): Cloud backend installation.
-- [System Setup](/id/setup/system-setup): Sensor calibration and verification.
-- [Docker Reference](/id/setup/docker-reference): Comprehensive CLI syntax reference.
-- [WiFi Hotspot + Client](/id/setup/wifi-hotspot): Full hotspot architecture, dongle hardware, and troubleshooting.
+- [Setup Server](/id/setup/server-setup): backend cloud.
+- [Setup Sistem](/id/setup/system-setup): cek server + unit bersama.
+- [Referensi Docker](/id/setup/docker-reference): referensi CLI lengkap.
+- [WiFi Hotspot](/id/setup/wifi-hotspot): setup dan troubleshooting hotspot.
+- [Wi-Fi MT7922](/id/setup/wifi-mt7922): fix firmware radio onboard.
+- [Troubleshooting](/id/setup/troubleshooting): diagnostik lebih luas.

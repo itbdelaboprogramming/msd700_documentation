@@ -3,35 +3,34 @@ outline: deep
 search: false
 ---
 
-
-# API Reference
+# Referensi API
 
 <RoleBadge role="developer" />
 
-This document is the complete REST API reference for `backend_node` (Express API server), detailing all endpoints, authentication mechanisms, request parameters, response structures, and HTTP status codes.
+Dokumen ini adalah referensi REST API lengkap untuk `backend_node` (server API Express), merinci semua endpoint, mekanisme autentikasi, parameter permintaan, struktur respons, dan kode status HTTP.
 
-For MQTT payloads wrapped by these endpoints, see [Message Contracts](/id/development/message-contracts). For finite state machines, see [State and Behavior](/id/development/state-and-behavior). For system architecture, see [Architecture](/id/development/architecture).
+Untuk payload MQTT yang dibungkus endpoint ini, lihat [Kontrak Pesan](/id/development/message-contracts). Untuk finite state machine, lihat [State and Behavior](/id/development/state-and-behavior). Untuk arsitektur sistem, lihat [Arsitektur](/id/development/architecture).
 
-## API Conventions
+## Konvensi API
 
-### Base URLs
+### Base URL
 
-| Environment | Base URL | Routing Description |
+| Lingkungan | Base URL | Deskripsi Routing |
 | --- | --- | --- |
-| **Production Server** | `https://msd.nglobal.jp/services/rosbackend` | Reverse-proxied via Apache2 to `localhost:5000` |
-| **Development Server** | `http://<server-ip>:5001` | Direct HTTP access to development backend container |
-| **Unit Local Server** | `http://<unit-ip>:5002` | Direct HTTP access to Jetson SBC onboard `backend_local` |
+| **Server Produksi** | `https://msd.nglobal.jp/services/rosbackend` | Di-reverse-proxy lewat Apache2 ke `localhost:5000` |
+| **Server Pengembangan** | `http://<server-ip>:5001` | Akses HTTP langsung ke kontainer backend pengembangan |
+| **Server Lokal Unit** | `http://<unit-ip>:5002` | Akses HTTP langsung ke `backend_local` onboard Jetson SBC |
 
-### Authentication and Authorization
+### Autentikasi dan Otorisasi
 
-All protected routes require an HTTP `Authorization` header carrying a JSON Web Token (JWT):
+Semua rute terproteksi membutuhkan header HTTP `Authorization` yang membawa sebuah JSON Web Token (JWT):
 
 ```http
 Authorization: Bearer <access_token>
 Content-Type: application/json
 ```
 
-Tokens are cryptographically signed using HS256 and validated against a shared keyring (`/srv/msd/secrets/jwt_keyring`). The active secret key signs new tokens, while recently rotated keys remain valid during a transition grace period.
+Token ditandatangani secara kriptografis menggunakan HS256 dan divalidasi terhadap sebuah keyring bersama. Di dalam container file keyring adalah `/run/secrets/jwt_keyring` (di-mount dari `${SECRETS_DIR:-/srv/msd/secrets}/jwt_keyring.dev.json` pada service `*_dev`; produksi fallback ke env var `JWT_SECRET_KEY`/`JWT_SECRET`). Secret key aktif menandatangani token baru, sementara key yang baru saja dirotasi tetap valid selama periode grace transisi.
 
 ```mermaid
 sequenceDiagram
@@ -43,7 +42,7 @@ sequenceDiagram
   Client->>Backend: POST /user/login { username, password }
   Backend->>DB: Query user credentials & rental profiles
   DB-->>Backend: User record verified
-  Backend-->>Client: 200 OK { token, refresh_token, user_id, profile_id }
+  Backend-->>Client: 200 OK { success, msg, username, full_name, user_id, token, refresh_token }
   Note over Client: Include token in Bearer header on subsequent calls
 
   Client->>Backend: POST /api/navigation/pointstamped (Bearer token)
@@ -53,15 +52,15 @@ sequenceDiagram
   Backend-->>Client: 200 OK { token, refresh_token } (fresh token pair)
 ```
 
-| Token Claim `typ` | Scope & Acceptance | Rejection Rules |
+| Klaim Token `typ` | Lingkup & Penerimaan | Aturan Penolakan |
 | --- | --- | --- |
-| **Standard Operator** (absent or `operator`) | Full access to assigned robot fleet operations and maps. | Rejected if expired or signed with invalid secret. |
-| `refresh` | Exclusively accepted on `/user/refresh`. | Rejected by standard API middleware with HTTP 401. |
-| `admin` | Accepted on administrative routes (`/admin/api/*`). | Rejected by standard robot operator routes because it lacks user context. |
+| `access` (token operator standar) | Akses penuh ke operasi dan peta fleet robot yang ditugaskan. | Ditolak jika kedaluwarsa atau ditandatangani dengan secret tidak valid. |
+| `refresh` | Hanya diterima secara eksklusif pada `/user/refresh`. | Ditolak oleh middleware API standar dengan HTTP 401. |
+| `admin` | Diterima pada rute administratif (`/admin/api/*`). | Ditolak oleh rute operator robot standar karena kekurangan konteks pengguna. |
 
-### Unit Authorization Middleware (`attachUnit`)
+### Middleware Otorisasi Unit (`attachUnit`)
 
-Whenever a request addresses a specific robot, the `unit_id` field in the request body (or query parameter) is processed through the `attachUnit` middleware:
+Setiap kali sebuah permintaan menuju robot spesifik, field `unit_id` di body permintaan (atau parameter query) diproses lewat middleware `attachUnit`:
 
 ```mermaid
 flowchart TB
@@ -74,9 +73,9 @@ flowchart TB
   ATTACH -->|Valid & Authorized| EXEC["Execute Target Handler"]
 ```
 
-## Standard Response Envelopes
+## Amplop Respons Standar
 
-### Success Response
+### Respons Sukses
 ```json
 {
   "success": true,
@@ -88,7 +87,7 @@ flowchart TB
 }
 ```
 
-### Error Response
+### Respons Error
 ```json
 {
   "success": false,
@@ -96,7 +95,7 @@ flowchart TB
 }
 ```
 
-### Array / List Response
+### Respons Array / List
 ```json
 {
   "success": true,
@@ -111,12 +110,12 @@ flowchart TB
 }
 ```
 
-## Authentication Endpoints
+## Endpoint Autentikasi
 
-### 1. User Login
+### 1. Login Pengguna
 `POST /user/login`
 
-Authenticates an operator account and issues access/refresh tokens.
+Mengautentikasi akun operator dan menerbitkan token akses/refresh.
 
 - **Request Body**:
 ```json
@@ -129,18 +128,22 @@ Authenticates an operator account and issues access/refresh tokens.
 ```json
 {
   "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "msg": "Login user success",
+  "username": "operator1",
+  "full_name": "Operator One",
   "user_id": "01JZ7YV5CQUSER00000000000",
-  "role": "operator",
-  "profile_id": 4
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
 }
 ```
 
-### 2. Token Refresh
+Tidak ada `role` atau `profile_id` dalam response. Unit mana yang boleh disentuh ditentukan per request dari rental profile (lihat `attachUnit` di bawah), bukan dari payload login.
+```
+
+### 2. Refresh Token
 `POST /user/refresh`
 
-Exchanges a valid refresh token for a fresh token pair.
+Menukar refresh token yang valid dengan pasangan token baru.
 
 - **Request Body**:
 ```json
@@ -157,12 +160,12 @@ Exchanges a valid refresh token for a fresh token pair.
 }
 ```
 
-## Unit Management and Fleet Operations
+## Manajemen Unit dan Operasi Fleet
 
-### 1. List Accessible Units
-`GET /api/units`
+### 1. Daftar Unit yang Dapat Diakses
+`GET /unit/all`
 
-Returns all enrolled robots assigned to the authenticated user's active rental profile.
+Mengembalikan semua robot terdaftar yang ditugaskan ke rental profile aktif pengguna terautentikasi. (Tidak ada `GET /api/units`; status live seperti baterai berasal dari heartbeat ping, bukan daftar ini.)
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Response (200 OK)**:
@@ -171,22 +174,20 @@ Returns all enrolled robots assigned to the authenticated user's active rental p
   "success": true,
   "data": [
     {
-      "unit_id": "01JZ8P9WZ0UNIT00000000000",
+      "id": "01JZ8P9WZ0UNIT00000000000",
       "unit_name": "Unit 01",
-      "model": "MSD700",
-      "status": "online",
-      "is_in_use": false,
-      "active_page": "navigation",
-      "battery": 94.2
+      "topic_root": "/unit_01JZ8P9WZ0UNIT00000000000",
+      "profile_name": "Nakayama",
+      "created_at": "2026-08-10T14:20:00Z"
     }
   ]
 }
 ```
 
-### 2. Robot Heartbeat Ping
-`POST /api/units/ping`
+### 2. Ping Heartbeat Robot
+`POST /api/hardware/ping`
 
-Transmits liveness heartbeat, updates operating lease, and returns current telemetry.
+Mengirim heartbeat liveness ke robot lewat MQTT (round-trip) dan menjaga operating lease pemanggil. Field `page` menentukan apa yang dijaga ping: daftar unit hanya membaca status, sedangkan halaman operasi menahan tier watchdog idle/shutdown.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
@@ -200,35 +201,20 @@ Transmits liveness heartbeat, updates operating lease, and returns current telem
   "force_takeover": false
 }
 ```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "data": {
-    "status": true,
-    "robot_activity": "navigation_point_published",
-    "battery": 91.0,
-    "uptime": 128.5,
-    "hw_status": "ready",
-    "manual_override": false,
-    "autopilot": false,
-    "in_use": false,
-    "origin_conflict": false
-  }
-}
-```
+
+Terkait tapi berbeda: `POST /api/unit/heartbeat` adalah keepalive container yang dipakai container relay per-unit. Ia tidak menerima field lease dan hanya mengembalikan `{ "success": true }`.
 
 ### 3. Emergency Stop / Pause
-`POST /api/hardware/emergency`
+`POST /api/emergency_stop`
 
-Toggles hardware emergency stop or motion pause.
+Mengalihkan emergency stop hardware atau pause pergerakan. Boolean dipetakan ke perintah robot: `true` mengirim `activate`, `false` mengirim `deactivate` lewat topik `system_command`/`system_feedback` yang sama seperti semuanya.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "action": "activate"
+  "enable": true
 }
 ```
 - **Response (200 OK)**:
@@ -239,26 +225,29 @@ Toggles hardware emergency stop or motion pause.
 }
 ```
 
-## Navigation and Mission Dispatch
+## Navigasi dan Dispatch Misi
 
-### 1. Initialize Navigation Mode
+### 1. Inisialisasi Mode Navigasi
 `POST /api/navigation/init`
 
-Launches the navigation stack on the robot with a specified map.
+Meluncurkan stack navigasi pada robot dengan sebuah peta yang ditentukan.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "map_name": "01JZ8QK2H0000000000000MAP"
+  "map_id": "01JZ8QK2H0000000000000MAP"
 }
 ```
 
-### 2. Dispatch Waypoint Goal
+Peta tersebut harus salah satu yang direkam oleh unit ini, di dalam sebuah rental yang diikuti oleh pemanggil. Sebuah peta yang terlihat oleh pemanggil tetapi milik robot yang **berbeda** ditolak di sini dengan `404` dan
+`"That map does not belong to this unit"`. Sebelum 2026-09-10 ini diteruskan begitu saja: robot kemudian mencoba mengambil file peta yang tidak pernah diunggahnya, navigasi tidak pernah menyala, dan kegagalannya hanya muncul di log unit sementara dashboard sudah menampilkan permulaan yang berhasil.
+
+### 2. Kirim Goal Waypoint
 `POST /api/navigation/pointstamped`
 
-Sends a single target destination coordinate to the robot's navigation stack.
+Mengirim satu koordinat tujuan target ke stack navigasi robot.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
@@ -271,10 +260,10 @@ Sends a single target destination coordinate to the robot's navigation stack.
 }
 ```
 
-### 3. Start Boustrophedon Area Coverage
+### 3. Mulai Coverage Area Boustrophedon
 `POST /api/boustrophedon/init`
 
-Launches autonomous boustrophedon sweep coverage over defined polygon boundaries.
+Meluncurkan coverage sweep boustrophedon otonom di atas batas poligon yang ditentukan.
 
 - **Headers**: `Authorization: Bearer <token>`
 - **Request Body**:
@@ -300,42 +289,47 @@ Launches autonomous boustrophedon sweep coverage over defined polygon boundaries
 }
 ```
 
-## Mapping (SLAM) Operations
+## Operasi Mapping (SLAM)
 
-### 1. Start Mapping Session
-`POST /api/mapping/start`
+### 1. Kontrol Mapping
+`POST /api/mapping`
 
-Initiates SLAM (gmapping) mode on the target unit.
+Satu endpoint mengendalikan seluruh sesi mapping. Tepat satu dari `start`, `pause`, `stop` bernilai true per panggilan. Stop menyimpan occupancy grid aktif, menghasilkan metadata thumbnail, dan mengunggah aset; field nama yang disimpan adalah `map_name`, bukan `display_map_name`.
 
-- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
-
-### 2. Stop Mapping and Save Map
-`POST /api/mapping/stop`
-
-Saves the active occupancy grid, generates thumbnail metadata, and uploads assets.
-
-- **Request Body**:
+- **Request Body** (contoh stop + simpan):
 ```json
 {
   "unit_id": "01JZ8P9WZ0UNIT00000000000",
-  "display_map_name": "Warehouse Sector 4",
+  "stop": true,
+  "map_name": "Warehouse Sector 4",
   "homebase_x": 0.0,
-  "homebase_y": 0.0
-}
-```
-- **Response (200 OK)**:
-```json
-{
-  "success": true,
-  "request_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "map_ulid": "01JZ8QK2H0000000000000MAP"
+  "homebase_y": 0.0,
+  "homebase_z": 0.0,
+  "homebase_ox": 0.0,
+  "homebase_oy": 0.0,
+  "homebase_oz": 0.0,
+  "homebase_ow": 1.0
 }
 ```
 
-## Map and Route Data Management
+### 2. Buang Sesi Mapping
+`POST /api/mapping/discard`
 
-### 1. List Maps
-`GET /api/maps?profile_id=4`
+Membatalkan sesi aktif tanpa menyimpan.
+
+- **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
+
+### 3. Progres Simpan Mapping (SSE)
+`GET /api/mapping/progress/:request_id?token=<jwt>`
+
+Stream Server-Sent Events untuk penyimpanan yang dipicu stop. JWT ditaruh di query string karena `EventSource` tidak bisa menyetel header.
+
+## Manajemen Data Peta dan Rute
+
+### 1. Daftar Peta
+`GET /api/maps_data?unit_id=<unit ULID>`
+
+`unit_id` opsional di wire dan wajib secara praktis untuk apa pun yang dilihat seorang operator. Tanpa itu, respons berisi setiap peta dalam lingkup rental pemanggil, yang merupakan apa yang diinginkan tampilan arsip dan admin. Dengan itu, daftarnya dipersempit menjadi peta yang direkam robot tersebut, yang merupakan apa yang dibutuhkan halaman Database: sebuah rental bisa memegang beberapa robot, dan peta yang direkam oleh sibling tidak bisa dinavigasi pada robot ini. Meneruskan sebuah unit yang tidak dimiliki pemanggil lewat rental aktif adalah sebuah `403`, bukan daftar kosong. `GET /api/maps/:mapId` menerima parameter yang sama dan menerapkan lingkup yang sama.
 
 - **Response (200 OK)**:
 ```json
@@ -343,18 +337,26 @@ Saves the active occupancy grid, generates thumbnail metadata, and uploads asset
   "success": true,
   "data": [
     {
-      "id": 12,
-      "ulid": "01JZ8QK2H0000000000000MAP",
-      "display_name": "Warehouse Ground Floor",
-      "thumbnail_url": "/services/media/thumbnails/01JZ8QK2H0000000000000MAP.png",
+      "id": "01JZ8QK2H0000000000000MAP",
+      "map_name": "Warehouse Ground Floor",
+      "unit_id": "01JZ7K3M9QA0B1C2D3E4F5G6H7",
+      "unit_name": "unit1",
+      "created_by_username": "operator1",
+      "modified_by_username": "operator1",
       "created_at": "2026-08-10T14:20:00Z",
-      "modified_at": "2026-08-10T14:20:00Z"
+      "modified_at": "2026-08-10T14:20:00Z",
+      "homebase_x": 0.0,
+      "homebase_y": 0.0
     }
   ]
 }
 ```
 
-### 2. Save Custom Waypoint Route
+::: warning Nama peta hanya unik per (unit, rental)
+Dua robot pada satu rental masing-masing bisa memiliki peta bernama `hazard test`, dan keduanya adalah peta berbeda dengan ULID berbeda. Jangan mendeduplikasi sebuah daftar peta berdasarkan nama: membuang entri kedua membuang sebuah peta nyata dan menyimpan milik robot tetangga, dan membuka nama tersebut kemudian me-resolve ke sebuah ULID yang tidak bisa dimuat robot itu. Deduplikasi berdasarkan `id`, dan batasi lingkup berdasarkan `unit_id`.
+:::
+
+### 2. Simpan Rute Waypoint Kustom
 `POST /api/routes`
 
 - **Request Body**:
@@ -371,11 +373,11 @@ Saves the active occupancy grid, generates thumbnail metadata, and uploads asset
 }
 ```
 
-## Auto Align System
+## Sistem Auto Align
 
 `POST /api/autoalign/start`
 
-Initiates particle filter convergence validation and automatic orientation alignment against reference geometry.
+Memulai validasi konvergensi particle filter dan penyelarasan orientasi otomatis terhadap geometri referensi.
 
 - **Request Body**: `{ "unit_id": "01JZ8P9WZ0UNIT00000000000" }`
 - **Response (200 OK)**:
@@ -386,8 +388,8 @@ Initiates particle filter convergence validation and automatic orientation align
 }
 ```
 
-## Related Documentation
+## Dokumentasi Terkait
 
-- [Message Contracts](/id/development/message-contracts): MQTT and ROS topic serialization formats.
-- [State and Behavior](/id/development/state-and-behavior): Detailed state machines and failure transitions.
-- [Database Schema](/id/development/database-schema): MySQL tables and entity relationship models.
+- [Kontrak Pesan](/id/development/message-contracts): Format serialisasi topik MQTT dan ROS.
+- [State and Behavior](/id/development/state-and-behavior): State machine terperinci dan transisi kegagalan.
+- [Skema Database](/id/development/database-schema): Tabel MySQL dan model relasi entitas.

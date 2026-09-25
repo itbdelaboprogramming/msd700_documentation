@@ -3,33 +3,32 @@ outline: deep
 search: false
 ---
 
-
-# Data Sync
+# データ同期
 
 <RoleBadge role="developer" />
 
-This document details how a Unit's local MySQL database (`ROS_DB`) and the central cloud database maintain bidirectional consistency across intermittent wireless connectivity.
+このドキュメントは、ユニットのローカル MySQL データベース(`ROS_DB`)と中央クラウドデータベースが、断続的な無線接続の中でどのように双方向の一貫性を維持するかを詳述します。
 
-It covers the recurring reconciliation loop (`sync_agent.js`, `sync_engine.js`, `sync_tables.js`), conflict resolution algorithms, watermark tracking, and the Local Mode operator status badge.
+繰り返される整合ループ(`sync_agent.js`、`sync_engine.js`、`sync_tables.js`)、競合解決アルゴリズム、ウォーターマーク追跡、Local Mode のオペレーターステータスバッジについて扱います。
 
-For the HTTP sync contract, see [API Reference](/ja/development/api-reference). For real-time map save uploads, see [State and Behavior](/ja/development/state-and-behavior).
+HTTP 同期コントラクトについては [API リファレンス](/ja/development/api-reference) を参照してください。リアルタイムのマップ保存アップロードについては [State and Behavior](/ja/development/state-and-behavior) を参照してください。
 
-::: info Core Principle: Local as Cache
-A Unit functions offline indefinitely once enrolled. User accounts, permissions, and rental profiles originate from the cloud, while maps, routes, and playlists recorded on the robot synchronize back to the cloud when network links are established.
+::: info 基本原則: ローカルはキャッシュである
+ユニットは登録された後、無期限にオフラインで機能します。ユーザーアカウント、権限、レンタルプロファイルはクラウドを起点としますが、ロボット上で記録されたマップ、ルート、プレイリストは、ネットワーク接続が確立されるとクラウドへ同期し返されます。
 :::
 
-## Table Synchronization Regimes
+## テーブル同期方式
 
-Not all database tables synchronize in the same direction:
+すべてのデータベーステーブルが同じ方向に同期するわけではありません。
 
-| Synchronization Direction | Tables Affected | Architectural Rationale |
+| 同期方向 | 対象テーブル | アーキテクチャ上の理由 |
 | --- | --- | --- |
-| **Downstream Only** (Cloud to Unit) | `units`, `rental_profiles`, `users` (including bcrypt password hashes for offline login), `profile_members`, `profile_units`. | Security boundary: identity and rental tenancy originate strictly on the cloud server. A local unit cannot mint new global accounts or reassign its own fleet tenancy. |
-| **Bidirectional** (Last-Write-Wins per row) | `maps_data`, `routes_data`, `areas_data`, `playlists_data`. | Operational data is authored on both sides: SLAM maps recorded on the robot, and waypoint routes or playlists created in web dashboards. |
+| **ダウンストリームのみ**(クラウドからユニットへ) | `units`、`rental_profiles`、`users`(オフラインログイン用の bcrypt パスワードハッシュを含む)、`profile_members`、`profile_units`。 | セキュリティ境界: アイデンティティとレンタルのテナンシーは厳密にクラウドサーバーを起点とします。ローカルユニットは新しいグローバルアカウントを発行したり、自身のフリートのテナンシーを再割り当てしたりすることはできません。 |
+| **双方向**(行単位の Last-Write-Wins) | `maps_data`、`routes_data`、`areas_data`、`playlists_data`。 | 運用データは両側で作成されます。SLAM マップはロボット上で記録され、ウェイポイントルートやプレイリストは Web ダッシュボード上で作成されます。 |
 
-Binary assets (such as `.pgm` occupancy grids, `.yaml` metadata, and map thumbnails) synchronize via dedicated endpoints (`/sync/file/:mapId/:kind`) and are verified by exact file size.
+バイナリアセット(`.pgm` の占有グリッド、`.yaml` メタデータ、マップサムネイルなど)は専用のエンドポイント(`/sync/file/:mapId/:kind`)経由で同期され、正確なファイルサイズによって検証されます。
 
-## Synchronization Mechanics
+## 同期の仕組み
 
 ```mermaid
 flowchart LR
@@ -55,45 +54,68 @@ flowchart LR
   EXEC <-->|"HTTP Sync Endpoints"| RESP
 ```
 
-### Key Components:
-- **`sync_agent.js`**: Runs exclusively on the Unit, managing polling timers, reachability probes, and outbound HTTP calls to cloud endpoints. (The cloud does not dial into robots behind NAT).
-- **`sync_engine.js`**: Shared library on both sides that queries changed rows based on watermarks, executes upserts, and manages delete tombstones.
-- **`sync_tables.js`**: Defines synchronization directions, primary keys, and conflict resolution rules for each table.
+### 主要コンポーネント:
+- **`sync_agent.js`**: ユニット上でのみ動作し、ポーリングタイマー、到達可能性のプローブ、クラウドエンドポイントへの送信 HTTP 呼び出しを管理します。(クラウドは NAT の背後にあるロボットへ能動的に発信することはありません)。
+- **`sync_engine.js`**: 両側で共有されるライブラリで、ウォーターマークに基づいて変更された行をクエリし、upsert を実行し、削除トゥームストーンを管理します。
+- **`sync_tables.js`**: 各テーブルについて、同期方向、主キー、競合解決ルールを定義します。
 
-## Conflict Resolution Rules
+## クラウド半分(`sync_api.js`)
 
-Conflict resolution follows a deterministic **Last-Write-Wins per row** strategy:
+駆動するのはユニット、応えるのはクラウド。`sync_api.js` はロボットトークンを認証し(`role: robot`、`typ: access`、`unit_id` はクレーム由来、ボディ由来決して不可)、`POST /handshake|/pull|/push|/ack` と `GET|PUT /file/:mapId/:kind` および `/route-file/:routeId/:kind` を提供する。pushは呼出者ユニット+プロファイルにスコープされ、強制される。identity系テーブルは拒否する。
 
-1. **Row-Level Granularity**: The newer row replaces the older record entirely.
-2. **Delete Tombstones**: Deleting a record generates an entry in `sync_tombstones` with a `deleted_at` timestamp. A recent delete supersedes an older edit.
-3. **Clock Skew Compensation**: During initial handshake, the unit calculates `clock_offset_ms` against cloud server time. All local timestamps are normalized to the cloud time reference frame before comparison.
-4. **Deterministic Tie-Breaking**: If timestamps match exactly, deletes take precedence over edits, and the cloud version takes precedence over the unit version.
-5. **Name Collision Handling**: If two operators create different routes or maps with the same name while offline, the later sync automatically appends an incremental suffix (e.g. `(1)`, `(2)`) rather than overwriting existing data.
+## 競合解決ルール
 
-## The Local Mode Status Badge
+競合解決は決定論的な**行単位の Last-Write-Wins** 戦略に従います。
 
-In local dashboard builds (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), the top-right header displays the Local Mode badge:
+1. **行レベルの粒度**: 新しい行が古いレコードを完全に置き換えます。
+2. **削除トゥームストーン**: レコードを削除すると、`deleted_at` タイムスタンプ付きのエントリが `sync_tombstones` に生成されます。最近の削除は、それより古い編集に優先します。
+3. **クロックスキュー補正**: 初回のハンドシェイク時に、ユニットはクラウドサーバー時刻に対する `clock_offset_ms` を計算します。すべてのローカルタイムスタンプは、比較の前にクラウドの時間参照系へ正規化されます。
+4. **決定論的なタイブレーク**: タイムスタンプが完全に一致する場合、削除は編集に優先し、クラウド側のバージョンはユニット側のバージョンに優先します。
+5. **名前衝突の処理**: 2人のオペレーターがオフライン中に同じ名前の異なるルートやマップを作成した場合、その後の同期は既存データを上書きするのではなく、自動的にインクリメンタルなサフィックス(例: `(1)`、`(2)`)を付加します。
+
+## Local Mode ステータスバッジ
+
+ローカルダッシュボードビルド(`NEXT_PUBLIC_DEPLOYMENT_MODE=local`)では、右上のヘッダーに Local Mode バッジが表示されます。
 
 ```mermaid
 flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 30 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (auth or network error)"]
+  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
+  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
   BADGE --> CLICK["Click Badge: Opens Modal Menu"]
   CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
 ```
 
-### Detailed Sync Phases:
-1. `token`: Authenticating with cloud server using robot credentials.
-2. `handshake`: Exchanging watermarks and calibrating clock offsets.
-3. `pull`: Downloading downstream account and profile updates.
-4. `apply`: Committing pulled records to local MySQL.
-5. `push`: Uploading locally recorded maps and routes to cloud.
-6. `files`: Transferring binary `.pgm` and `.yaml` map images.
-7. `finish`: Acknowledging committed watermarks.
+### 詳細な同期フェーズ:
+1. `token`: ロボットの資格情報を使ってクラウドサーバーで認証する。
+2. `handshake`: ウォーターマークを交換し、クロックオフセットを校正する。
+3. `pull`: ダウンストリームのアカウントおよびプロファイルの更新をダウンロードする。
+4. `apply`: 取得したレコードをローカル MySQL にコミットする。
+5. `push`: ローカルで記録されたマップとルートをクラウドへアップロードする。
+6. `files`: バイナリの `.pgm` と `.yaml` マップ画像を転送する。
+7. `finish`: コミットされたウォーターマークを確認応答する。
 
-## Related Documentation
+::: warning フェーズラベルと障害の発生箇所は別物
+進捗バーに表示されるフェーズ名は、ラウンドが*いつ*停止したかを反映するものであり、*どこで*停止したかを反映するものではありません。このユニット自身の `sync_state` 行を最初に読み取る `readState()` は、ハンドシェイクの HTTP 呼び出し直後、しかし `setPhase('pull')` の前に実行されます。そのため、そこで発生した障害はネットワークに一切触れていなくても `handshake` として表示され続けます。両者を区別するには、ログ行そのもの(下記参照)を読んでください。
+:::
 
-- [API Reference](/ja/development/api-reference): REST sync endpoints and payloads.
-- [State and Behavior](/ja/development/state-and-behavior): Map saving and storage replication flows.
-- [Architecture](/ja/development/architecture): Hardware and cloud trust domain models.
-- [Database Schema](/ja/development/database-schema): Schema definitions for `sync_state` and `sync_tombstones`.
+### 障害の分類
+
+クラウドへの接続拒否と、このユニット自身のローカル `ROS_DB` への接続拒否は、どちらも同一の `ECONNREFUSED` として表面化するため、`sync_agent.js` はエラーがログに到達する前に、失敗したすべての呼び出しにその出所のタグを付けます。このタグがなければ、以前はローカルデータベースの停止が「クラウドに到達できない」と報告されていました。
+
+| 出所タグ | 原因の例 | ログの文言 | ステータスバッジ |
+| --- | --- | --- | --- |
+| `local_db` — 資格情報が拒否された | このユニットの `docker/.env` にある `MYSQL_USER`/`MYSQL_PASSWORD` が、ローカルの `mysql_data_local` ボリュームが既に初期化された時点のパスワードと一致しない(mysql2 `ER_ACCESS_DENIED_ERROR`)。 | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db` — 到達不能 | ユニットのローカル MySQL コンテナが稼働していない(`ECONNREFUSED`、`PROTOCOL_CONNECTION_LOST`)。 | *"cannot reach this unit's own database..."* | `error` |
+| `local_db` — その他 | ローカルの読み書き中に発生するその他の MySQL エラー(スキーマ、ロックなど)。 | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud` — ネットワークエラー | クラウドエンドポイントへの DNS 失敗、タイムアウト、または接続拒否。ユニットにアップリンクがない間は想定内。 | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud` — HTTP エラー | 既知の `NOT_ENROLLED`/`NO_RENTAL`/reenroll のケース以外で、クラウドが非 2xx ステータスで応答した。 | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| *(なし)* | HTTP ステータスもネットワーク上の特徴もない、`sync_agent.js` 自体の内部での throw。接続や資格情報の問題ではなく、エージェント自体のバグ。 | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
+
+正確な優先順位ルールについては `sync_agent.js` の `classifyFailure()` を参照してください。
+
+## 関連ドキュメント
+
+- [API リファレンス](/ja/development/api-reference): REST 同期エンドポイントとペイロード。
+- [State and Behavior](/ja/development/state-and-behavior): マップ保存とストレージレプリケーションのフロー。
+- [アーキテクチャ](/ja/development/architecture): ハードウェアとクラウドのトラストドメインモデル。
+- [データベース設計](/ja/development/database-schema): `sync_state` と `sync_tombstones` のスキーマ定義。

@@ -2,29 +2,25 @@
 outline: deep
 ---
 
-
-# Docker Reference
+# Referensi Docker
 
 <RoleBadge role="technician" />
 
-Every Docker command, flag and compose construct used in MSD700, and what each one is actually
-doing. This page is the reference the setup pages link into: read
-[Server Setup](/id/setup/server-setup) and [Unit Setup](/id/setup/unit-setup) for the ordered procedure,
-and come here when you need to know why a flag is there or what happens if you drop it.
+Semua perintah Docker, flag, dan konstruksi compose di MSD700, plus artinya. Ini referensi yang ditaut halaman setup: ikuti [Setup Server](/id/setup/server-setup) dan [Setup Unit](/id/setup/unit-setup) untuk urutan langkah, ke sini bila flag atau konstruksi perlu dijelaskan.
 
-## Which compose file am I looking at?
+## File compose yang mana?
 
-There are three, and they are not variants of each other. They describe different machines.
+Tiga file, tiga pekerjaan beda. Tidak bisa dipertukarkan.
 
-| File | Runs on | Brings up |
+| File | Jalan di | Menyalakan |
 | --- | --- | --- |
-| `ros-web-ui/docker-compose.yml` | the **Server** | the whole cloud stack: MySQL, HiveMQ, backend + rosbridge, media, signalling, dashboard, coturn |
-| `msd700_noetic/docker/docker-compose.yml` | a **Unit** | the `msd700` robot container, plus the unit's own `local_dev` server stack |
-| `ros-web-ui/docker-compose.robot.yml` | a dev laptop | the robot half alone, standalone, no unit orchestration |
+| `ros-web-ui/docker-compose.yml` | **Server** | seluruh stack cloud: MySQL, HiveMQ, backend + rosbridge, media, signalling, dashboard, coturn |
+| `msd700_noetic/docker/docker-compose.yml` | **Unit** | container robot `msd700` + stack server `local_dev` milik unit |
+| `ros-web-ui/docker-compose.robot.yml` | laptop dev | separuh robot saja, standalone, tanpa orkestrasi unit |
 
 ```mermaid
 flowchart TB
-  subgraph S["Server host"]
+  subgraph S["Host server"]
     SC["ros-web-ui/docker-compose.yml"]
     SC --> P1["--profile server_prod"]
     SC --> P2["--profile server_dev"]
@@ -36,125 +32,119 @@ flowchart TB
     DM --> UC["docker/docker-compose.yml<br/>service: msd700"]
     DM --> UL["docker/docker-compose.yml<br/>--profile local_dev"]
   end
-  subgraph B["Backend, at runtime"]
-    UM["unit_manager.js<br/>docker API, no compose"]
-    UM --> RU["rosweb_unit_ULID_nakayama"]
+  subgraph B["Backend, saat runtime"]
+    UM["unit_manager.js<br/>restart/reconcile via Docker API, tidak pernah create"]
+    P1 --> RU["ros_web_ui_v2_unit_relays<br/>satu relay bersama, fleet prod"]
+    P2 --> RD["ros_web_ui_v2_unit_relays_dev<br/>satu relay bersama, fleet dev"]
+    UM --> RU
+    UM --> RD
   end
 ```
 
-## Server: compose profiles
+## Server: profile compose
 
-Compose runs a service when **any** of its declared profiles is active. Nothing starts without a
-profile, which is why a bare `docker compose up -d` in this repository does nothing useful.
+Compose menjalankan service bila **salah satu** profile-nya aktif. Tanpa profile tidak ada yang start: `docker compose up -d` polos di repo ini tidak berguna.
 
-| Profile | Services | Purpose |
+| Profile | Service | Tujuan |
 | --- | --- | --- |
-| `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | The live deployment |
-| `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | A full parallel stack on different ports and a different database |
-| `turn` | `coturn` only | Start or restart the relay on its own, without touching the rest of prod |
-| `manual` | `dev`, `aws`, `hive`, `hive_serverless`, `nakayama_msd`, `nakayama_msd_sim` | Legacy cloud-only robot-half services. Not part of any normal deployment |
+| `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `unit_relays`, `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | Deployment live |
+| `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `unit_relays_dev`, `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | Stack paralel: port beda, database beda |
+| `turn` | `coturn` saja | Relay saja, tanpa menyentuh sisa prod |
+| `manual` | `dev`, `aws`, `hive`, `hive_serverless`, `nakayama_msd`, `nakayama_msd_sim` | Shell interaktif + service legacy. Pilih satu eksplisit; jangan start seluruh profile |
 
-::: warning `coturn` is in two profiles on purpose
-`profiles: ["server_prod", "turn"]` means a normal prod `up` brings the relay with it, **and** you
-can start it alone with `--profile turn`. It is deliberately **not** in `server_dev`: there is one
-relay instance and it belongs to prod. Bringing up the dev stack must not start production
-infrastructure. Sharing is safe because a relay holds no state and pairs nobody: peers find each
-other through the signalling servers, and those **are** split (3001 prod, 4001 dev).
+::: warning `coturn` di dua profile itu sengaja
+`profiles: ["server_prod", "turn"]` berarti `up` prod membawa relay, **dan** bisa start sendiri dengan `--profile turn`. Relay **tidak** di `server_dev`: satu instance relay, milik prod. Sharing aman karena relay tidak menyimpan state; peer bertemu lewat server signalling yang **dipisah** (3001 prod, 4001 dev).
 :::
 
-### Service and port map
+### Peta service dan port
 
-| Service | Container | Network | Host port | Notes |
+| Service | Container | Network | Port host | Catatan |
 | --- | --- | --- | --- | --- |
-| `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; the backend waits on it |
-| `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Container-internal port is `8883` in both |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000` / `5001` API, `9090` / `9091` rosbridge | Also hosts `unit_manager` |
+| `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend menunggu |
+| `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Di dalam container keduanya `8883` |
+| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master | Satu ROS graph bersama per environment |
+| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | tidak ada (relay) | Satu data plane bersama per fleet (default) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
-| `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001` / `4001` WS, `3002` / `4002` HTTP | |
-| `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache's catch-all points at `3000` |
-| `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + relay range | Prod only |
+| `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |
+| `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Catch-all Apache menunjuk `3000` |
+| `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + range relay | Hanya prod |
 
-## Compose command reference
+## Referensi perintah compose
 
-### Bringing services up
+### Menyalakan service
 
 ```bash
-# The normal case: start (or restart into) an entire profile, detached.
+# Kasus normal: seluruh profile, detached
 docker compose --profile server_prod up -d
 
-# Rebuild the images first, then start. Needed after pulling code that changes a dependency.
+# Rebuild image dulu, lalu start (perlu setelah pull perubahan kode)
 docker compose --profile server_prod up -d --build
 
-# Start ONE service without starting the rest of its profile.
-docker compose up -d nakayama_cloud
+# Satu service dari profile
+docker compose --profile server_prod up -d nakayama_cloud
 
-# Start the relay alone, without touching anything else in prod.
+# Relay saja, sisa prod tak tersentuh
 docker compose --profile turn up -d coturn
 ```
 
-| Flag | Effect | When you actually need it |
+| Flag | Efek | Kapan dipakai |
 | --- | --- | --- |
-| `--profile <name>` | Activates a profile. Repeatable. | Always, in this repository |
-| `-d`, `--detach` | Return to the shell instead of streaming logs | Always, except when debugging a start-up failure |
-| `--build` | Rebuild images before starting | After a dependency or Dockerfile change |
-| `--force-recreate` | Recreate containers even if config and image are unchanged | Rarely; a stuck container is usually better handled with `down` then `up` |
-| `--no-deps` | Start the named service without its `depends_on` chain | Debugging a service whose dependency is deliberately down |
-| `--remove-orphans` | Delete containers from services no longer in the file | After a service is renamed or removed |
-| `--pull always` | Re-pull base images | Picking up a new upstream `mysql:8.0` or `hivemq4` patch |
+| `--profile <name>` | Mengaktifkan profile (bisa banyak) | Seluruh stack; menarget service juga mengaktifkannya |
+| `-d` | Kembali ke shell, bukan streaming log | Selalu, kecuali debug startup failure |
+| `--build` | Rebuild image sebelum start | Setelah ubahan source aplikasi, dependensi, atau Dockerfile (service server tidak bind-mount `source/`) |
+| `--force-recreate` | Recreate container walau tak berubah | Recovery tertarget; lebih baik dari teardown proyek |
+| `--no-deps` | Start service tanpa rantai `depends_on` | Debug dengan dependensi sengaja down |
+| `--remove-orphans` | Hapus container service yang dihapus | Setelah service di-rename/hapus |
+| `--pull always` | Pull image sebelum `up` | Refresh tag image (bukan versi pinned atau base Dockerfile; itu `build --pull`) |
 
 ### Building
 
 ```bash
-docker compose --profile server_prod build          # all services in the profile
-docker compose build nakayama_cloud                 # one service
-docker compose build --no-cache nakayama_cloud      # ignore every cached layer
-docker compose build --progress plain nakayama_cloud # full build output, not the collapsed view
+docker compose --profile server_prod build          # semua service di profile
+docker compose build nakayama_cloud                 # satu service
+docker compose build --no-cache nakayama_cloud      # abaikan cached layer
+docker compose build --progress plain nakayama_cloud # output penuh
 ```
 
-`--no-cache` is the answer when a build "succeeds" but produces stale content: Docker cached a
-`COPY` or a `RUN apt-get` layer whose inputs it cannot see changing. It is slow, so reach for it
-only when a normal build has already failed to pick something up.
+`--no-cache` untuk build yang "sukses" tapi menyajikan konten basi (layer `COPY` / `apt-get` tercache). Lambat; pakai hanya setelah build normal gagal mengangkat perubahan.
 
 ### Inspecting
 
 ```bash
-docker compose ps                        # services in this project and their health
-docker compose ps -a                     # including stopped ones
-docker compose logs -f nakayama_cloud    # follow one service
-docker compose logs --tail=200 hivemq    # last 200 lines, no follow
-docker compose logs --since=10m          # everything in the last 10 minutes
-docker compose exec nakayama_cloud bash  # shell inside a RUNNING container
-docker compose run --rm busybox sh       # one-off container, removed on exit
-docker compose config                    # the fully-resolved file, with all variables expanded
+docker compose ps                        # service proyek ini + health
+docker compose ps -a                     # termasuk yang berhenti
+docker compose logs -f nakayama_cloud    # follow satu service
+docker compose logs --tail=200 hivemq    # 200 baris terakhir
+docker compose logs --since=10m          # 10 menit terakhir
+docker compose exec nakayama_cloud bash  # shell di container yang JALAN
+docker compose --profile server_dev config --quiet    # validasi tanpa dump
+docker compose --profile server_dev config --services # list nama service
 ```
 
-::: tip `docker compose config` is the fastest `.env` debugging tool there is
-It prints the compose file with every `${VARIABLE}` substituted. If a port, a path or a password is
-not what you expected, this shows you what compose actually resolved, which is very often "empty
-string, because the key is misspelled in `.env`".
+`compose run` menerima **nama service**, bukan image. Tidak ada service bernama `busybox`.
+
+::: warning Jaga secret saat diagnostik
+`config` polos, `config --environment`, `inspect` penuh, dan log bisa berisi kredensial. Jangan paste ke tiket/chat. Cek hanya field yang perlu; redact password, token, dan auth header dulu.
 :::
 
-### Stopping and removing
+### Menghentikan dan menghapus
 
 ```bash
-docker compose --profile server_prod stop   # stop, keep the containers
-docker compose --profile server_prod down   # stop AND remove containers + networks
-docker compose down --remove-orphans        # also remove containers of deleted services
-docker compose down -v                      # ALSO DELETE NAMED VOLUMES
+docker compose --profile server_prod stop   # stop, container tetap
+docker compose --profile server_prod down   # stop DAN hapus container + network
+docker compose down --remove-orphans        # plus hapus container service terhapus
+docker compose down -v                      # PLUS HAPUS NAMED VOLUME
 ```
 
-::: danger `down -v` deletes HiveMQ's data and log volumes
-`ros_webui_hivemq_data_prod` holds retained messages, client sessions and queued QoS>0 messages.
-There is almost never a reason to run `-v` on this project. If you want a clean broker, delete that
-one volume by name, deliberately.
+::: danger `down -v` menghapus data HiveMQ
+`ros_webui_hivemq_data_prod` menyimpan retained message, sesi client, antrean QoS>0. Hampir tidak pernah pakai `-v` di sini. Untuk membersihkan broker, hapus volume itu by name, dengan sengaja.
 :::
 
-## Compose constructs used in this project
+## Konstruksi compose di proyek ini
 
-The server compose file uses several constructs that are load-bearing rather than stylistic. Each
-one is here because dropping it caused a real outage.
+Tiap konstruksi di bawah ada karena menghapusnya pernah merusak sesuatu.
 
-### YAML anchors (`x-common-env`, `<<: *`)
+### YAML anchor (`x-common-env`, `<<: *`)
 
 ```yaml
 x-common-env: &common-env
@@ -162,24 +152,22 @@ x-common-env: &common-env
   MAPS_FOLDER: "${MAPS_FOLDER:-/home/ubuntu/ros_maps}"
 
 x-common-env-prod: &common-env-prod
-  <<: *common-env          # inherit, then override
+  <<: *common-env          # warisi, lalu override
   PORT_SQL: "${MYSQL_PORT_PROD:-3307}"
 ```
 
-`&name` defines an anchor, `*name` references it, `<<:` merges it. `${VAR:-default}` is compose's
-own interpolation: use `VAR` if set and non-empty, otherwise the default.
+`&name` mendefinisikan anchor, `*name` memakai, `<<:` menggabung. `${VAR:-default}` artinya: pakai `VAR` bila set dan non-kosong, bila tidak pakai default.
 
 ### `network_mode: host`
 
-Used by every ROS-carrying service and by `coturn`. It means the container shares the host's network
-namespace: no port mapping, no NAT, `localhost` inside the container is the host.
+Dipakai semua service pembawa ROS dan `coturn`. Container berbagi network host: tanpa port mapping, tanpa NAT, `localhost` di dalam adalah host.
 
-| Service | Why host networking |
+| Service | Kenapa host networking |
 | --- | --- |
-| `nakayama_*` | ROS 1 nodes negotiate arbitrary ephemeral ports with each other. Bridged networking breaks the ROS master's returned URIs. |
-| `coturn` | A relay hands out one port per allocation from `min-port..max-port`. Publishing that range through the bridge means one `docker-proxy` process per port. At coturn's 16384-port default it takes the machine down. This host is also already behind NAT, and a bridge adds a second translation, which breaks the one thing a TURN server must get right: knowing and advertising its own external address. |
+| `nakayama_*` | Node ROS 1 menegosiasi port acak satu sama lain. Bridged networking merusak URI yang dikembalikan master. |
+| `coturn` | Relay membagikan satu port per alokasi. Mempublish range 16k-port lewat bridge melahirkan satu `docker-proxy` per port dan menjatuhkan mesin. Bridge juga menambah layer NAT kedua, merusak alamat yang harus diiklankan server TURN. |
 
-### `depends_on` with conditions
+### Kondisi `depends_on`
 
 ```yaml
 depends_on:
@@ -189,13 +177,13 @@ depends_on:
     condition: service_completed_successfully
 ```
 
-| Condition | Meaning |
+| Kondisi | Arti |
 | --- | --- |
-| `service_started` | The default. Only waits for the container to exist. Almost never enough. |
-| `service_healthy` | Waits for the `healthcheck` to pass. This is what stops the backend racing MySQL and failing with `Connection lost`. |
-| `service_completed_successfully` | Waits for a one-shot container to exit `0`. Used for the permissions fixer. |
+| `service_started` | Default. Hanya menunggu container ada. Jarang cukup. |
+| `service_healthy` | Menunggu `healthcheck` lolos. Mencegah backend balapan dengan MySQL (`Connection lost`). |
+| `service_completed_successfully` | Menunggu one-shot exit `0`. Untuk fixer permission. |
 
-### The one-shot permissions fixer
+### Fixer permission one-shot
 
 ```yaml
 fix_perms_prod:
@@ -209,22 +197,13 @@ fix_perms_prod:
     sh -c "mkdir -p ... && chown -R $$USER_UID:$$USER_GID ..."
 ```
 
-A bind-mounted host path that does not exist yet is auto-created **by the Docker daemon, as root**,
-not as the app user. The app containers run unprivileged, so their first write gets `EACCES`. This
-container runs first, as root, and fixes ownership so a fresh host self-corrects with no manual
-`chown`.
+Folder bind-mount yang hilang dibuat otomatis **oleh daemon Docker, sebagai root**. Container aplikasi jalan unprivileged, sehingga write pertamanya gagal. Container root ini jalan duluan dan memperbaiki ownership, sehingga host baru koreksi sendiri.
 
-::: warning `network_mode: "none"` on this service is not cosmetic
-Without a `networks:` key, compose puts a service on the project default network. A container
-records its network by **ID**. Once that default network is removed and recreated (any
-`docker compose down`, and two checkouts share the project name `ros-web-ui`, so either can do it),
-this container can never start again: `failed to set up container networking: network <old-id> not
-found`. Every app service depends on it with `service_completed_successfully`, so the whole profile
-then refuses to come up behind a stuck `chown` job. This happened twice before `network_mode: none`
-was added. It mkdirs and chowns; it has never needed networking.
+::: warning `network_mode: "none"` itu load-bearing
+Tanpanya, Compose menempelkan service ke network default proyek, tercatat by **ID**. Setelah `down` apa pun membuat ulang network itu (dua checkout berbagi nama proyek `ros-web-ui`, jadi keduanya bisa memicu), fixer tak bisa start lagi (`network <old-id> not found`), dan semua service di belakang `service_completed_successfully` menolak naik. Ia hanya mkdir dan chown; memang tidak butuh networking.
 :::
 
-### `user:` and `group_add:`
+### `user:` dan `group_add:`
 
 ```yaml
 user: "itbdelabo"
@@ -232,16 +211,11 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` puts the container's user in the host's `docker` group so `backend_node` can talk to the
-mounted `/var/run/docker.sock` and manage per-unit containers. Find the right value with
-`getent group docker | cut -d: -f3` on the host.
+`group_add` memasukkan user container ke grup `docker` host agar `backend_node` bisa memakai `/var/run/docker.sock` yang di-mount: mode fleet menjaga relay bersama selaras roster; mode legacy mengelola container per-unit. Cari nilainya dengan `getent group docker | cut -d: -f3` di host.
 
-HiveMQ uses `user: "1001:0"` instead, and both halves matter: uid `1001` owns the `0600` keystore,
-so the container has to *be* that user to read its own private key. Gid `0` is not a privilege grab:
-the image ships `/opt/hivemq` as `root:root 775` and `bin/run.sh` refuses to start unless
-`$HIVEMQ_HOME` is writable, which group root satisfies without chowning anything.
+HiveMQ memakai `user: "1001:0"`, dan keduanya penting: uid `1001` memiliki keystore `0600` (container harus *menjadi* user itu untuk membaca key-nya); gid `0` memenuhi cek writability image atas `/opt/hivemq` tanpa chown.
 
-### Long-syntax bind mounts
+### Bind mount sintaks panjang
 
 ```yaml
 - type: bind
@@ -252,29 +226,22 @@ the image ships `/opt/hivemq` as `root:root 775` and `bin/run.sh` refuses to sta
     create_host_path: false
 ```
 
-The long syntax is used here purely for `create_host_path: false`. Docker's default is to **create**
-a missing bind source, and for a single-file mount it creates a **directory** there. A missing
-keystore would then surface as an unreadable-key error deep in HiveMQ's startup rather than as "this
-file is not on the host". Failing at `up` is the honest outcome.
+Bentuk panjang di sini hanya untuk `create_host_path: false`. Default Docker **membuat** bind source yang hilang, dan untuk single file ia membuat **direktori**. Keystore hilang akan gagal jauh di startup HiveMQ sebagai error unreadable-key, bukan gagal di `up` dengan "file tidak ada di host". Gagal di `up` adalah hasil yang jujur.
 
-### Named volumes vs bind mounts
+### Named volume vs bind mount
 
-| Path | Kind | Why |
+| Path | Jenis | Kenapa |
 | --- | --- | --- |
-| `./mysql_data/prod` | bind | Lives inside the repo and is backed up with it |
-| `hivemq_data_prod`, `hivemq_log_prod` | named volume | Docker owns them, seeds them from the image on first use, and they survive an `rm -rf` of anything under `$HOME` |
-| `./Docker/hivemq/config.xml` | bind, `:ro` | Configuration belongs in git |
-| `/srv/msd/secrets/...` | bind, `:ro` | Secrets never enter an image |
+| `./mysql_data/prod` | bind | Di dalam repo, ikut ter-backup |
+| `hivemq_data_prod`, `hivemq_log_prod` | named volume | Milik Docker, di-seed dari image saat pertama pakai, selamat dari `rm -rf` di `$HOME` |
+| `./Docker/hivemq/config.xml` | bind, `:ro` | Config milik git |
+| `/srv/msd/secrets/...` | bind, `:ro` | Secret tidak pernah masuk image |
 
-::: danger A bind mount MASKS the image's own directory
-HiveMQ used to bind-mount `conf/ data/ log/` from a hand-extracted tarball in a home directory. A
-`sudo rm -rf` of those "leftover" directories took the configuration with it, and an empty host
-directory is not a degraded broker: it is a broker that cannot start at all
-(`The configuration file /opt/hivemq/conf/config.xml does not exist`). Nothing in the repo recorded
-what the listener block had been. That is why the host now holds nothing a broker needs to boot.
+::: danger Bind mount menyembunyikan folder milik image
+Folder host kosong yang di-mount di atas folder config bukan service degraded: ia service yang tak bisa start (`config.xml does not exist`). Itu sebabnya host tidak menyimpan apa pun yang dibutuhkan broker untuk boot.
 :::
 
-### Healthchecks
+### Healthcheck
 
 ```yaml
 healthcheck:
@@ -285,16 +252,11 @@ healthcheck:
   start_period: 60s
 ```
 
-Two details worth copying. It probes HiveMQ's **Control Center** port (8080), not the MQTT listener:
-a bare TCP probe against the MQTT port closes before sending `CONNECT`, and HiveMQ records every one
-of those in `log/event.log` as `Client ID: UNKNOWN ... disconnected ungracefully`, which is about
-2880 junk lines a day in the exact file used to audit which robots connected. Both listeners belong
-to the same JVM, so 8080 answering is an adequate liveness signal.
+Dua detail layak ditiru. Probe ke port **Control Center** HiveMQ (8080), bukan MQTT: probe TCP polos di port MQTT menutup sebelum `CONNECT`, dan HiveMQ mencatat tiap satunya sebagai `disconnected ungracefully` (~2880 baris sampah/hari di log audit). JVM yang sama, jadi 8080 sinyal liveness yang cukup.
 
-And it says `bash` explicitly, because `/bin/sh` in that image is `dash`, which has no `/dev/tcp` and
-fails every probe with `Directory nonexistent`.
+Tertulis `bash` eksplisit karena `/bin/sh` di sana adalah `dash`, yang tidak punya `/dev/tcp` dan menggagalkan tiap probe.
 
-### Log rotation
+### Rotasi log
 
 ```yaml
 logging:
@@ -304,347 +266,325 @@ logging:
     max-file: "3"
 ```
 
-Only `coturn` currently caps its logs, because its config logs allocations at `verbose` and an
-unauthenticated scanner hammering 3478 could otherwise fill the disk with 401s. Every other service
-still logs unbounded. Fixing that is worth doing on purpose rather than incidentally, because
-changing a logging driver forces a container recreate on every service it touches.
+Di file **server** hanya `coturn` menyetel batas ini (config-nya log alokasi verbose). Service server lain memakai default daemon; mengubahnya berarti recreate tiap service tersentuh, jadi lakukan dengan sengaja, bukan insidental. File **unit** beda: tiap service dibatasi 20 MB x 3 via anchor `x-local-logging`.
 
-### Image tags
+### Tag image
 
-| Tag | Used by |
+| Tag | Dipakai |
 | --- | --- |
-| `ros-noetic-webui-app-v2:latest` | prod services and prod per-unit containers |
-| `ros-noetic-webui-app-v2:dev` | dev services and dev per-unit containers |
-| `ros-dashboard-next-v2:prod` / `:dev` | the two dashboard builds |
-| `ros-noetic-webui-app-local:latest` | a unit's own backend, media and signalling |
-| `ros-dashboard-next-local:latest` | a unit's own dashboard |
-| `msd700:latest` / `msd700-simulator:latest` | the robot container |
+| `ros-noetic-webui-app-v2:latest` | service prod (termasuk fleet relay) + container per-unit prod legacy |
+| `ros-noetic-webui-app-v2:dev` | service dev (termasuk fleet relay dev) + container per-unit dev legacy |
+| `ros-dashboard-next-v2:prod` / `:dev` | dua build dashboard |
+| `ros-noetic-webui-app-local:latest` | backend, media, signalling, network agent milik unit |
+| `ros-dashboard-next-local:latest` | dashboard milik unit |
+| `msd700:latest` / `msd700-simulator:latest` | container robot |
 
-::: warning Prod and dev must never share a tag
-Both server profiles used to build `ros-noetic-webui-app-v2:latest`. A build done for dev silently
-changed what production would run on its next recreate, with no deploy and no announcement. The tags
-are split now, and `UNIT_IMAGE` is set per profile so dev unit containers run dev code.
+::: warning Prod dan dev tidak boleh berbagi tag
+Kedua profile pernah mem-build `:latest`. Build untuk dev diam-diam mengubah apa yang dijalankan produksi di recreate berikutnya. Tag kini dipisah, dan `UNIT_IMAGE` diset per profile agar container dev legacy menjalankan kode dev.
 :::
 
-## coturn: the production-only service
+## coturn: service hanya-produksi
 
-The relay is the one piece of the stack that exists in prod and nowhere else.
+### Konfigurasi
 
-### Configuration
-
-Per-host values are passed as **flags**, not in the config file, because coturn expands no
-environment variables in its config. Flags win over the file, so shared policy stays in git and
-addresses stay in `.env`.
+Nilai per-host masuk sebagai **flag**, bukan di file config: coturn tidak mengekspansi environment variable di config-nya. Flag menang atas file, sehingga policy bersama tetap di git dan address tetap di `.env`.
 
 ```bash
 # ros-web-ui/.env
-TURN_LISTENING_IP=192.168.100.10     # the host's own LAN address
-TURN_EXTERNAL_IP=118.22.31.252       # the PUBLIC address, seen from the internet
+TURN_LISTENING_IP=192.168.100.10     # alamat LAN host ini sendiri
+TURN_EXTERNAL_IP=118.22.31.252       # alamat PUBLIK, terlihat dari internet
 TURN_USER=msd700
-TURN_PASSWORD=<a long random string>
-TURN_MIN_PORT=49152                  # optional, coturn's own default
+TURN_PASSWORD=<string acak panjang>
+TURN_MIN_PORT=49152                  # optional, default coturn
 TURN_MAX_PORT=65535                  # optional
 ```
 
-All four of the first values are checked at **container start**, not by compose's `${VAR:?}`
-required-variable syntax. Compose interpolates every service in the file regardless of which profile
-is being brought up, so a required variable here would make `--profile server_dev up` fail on a
-relay nobody asked to start.
+Keempat nilai pertama dicek saat **container start**, bukan oleh sintaks `${VAR:?}` Compose. Compose menginterpolasi tiap service apa pun profile-nya, sehingga required variable di sini akan merusak `--profile server_dev up` untuk relay yang tak diminta.
 
-::: warning `TURN_EXTERNAL_IP` is the one that breaks video silently
-Without it, coturn advertises its private address as the relay candidate. Every browser outside the
-LAN then tries to reach an address that does not route, and the camera feed simply never appears,
-with no error in the dashboard.
+::: warning `TURN_EXTERNAL_IP` merusak video diam-diam
+Tanpanya, coturn mengiklankan alamat privatnya. Tiap browser di luar LAN mencoba alamat tak routable, dan feed kamera tak pernah muncul, tanpa error dashboard.
 :::
 
-### Running it
+### Menjalankannya
 
 ```bash
-# Prod: comes up with the rest of the stack.
+# Prod: ikut naik dengan stack
 docker compose --profile server_prod up -d
 
-# Just the relay: restart it, or start it before joining it to the stack.
+# Relay saja (restart, atau start sebelum gabung stack)
 docker compose --profile turn up -d coturn
 
-# Watch allocations (the config logs at `verbose` to stdout).
+# Awasi alokasi (verbose logging ke stdout)
 docker compose logs -f coturn
 
-# Stop just the relay.
+# Stop hanya relay
 docker compose --profile turn stop coturn
 ```
 
-### Dev stacks and the relay
+### Stack dev dan relay
 
-`server_dev` does not include `coturn`, and that is correct. If you are testing WebRTC against the
-dev stack, the dev signalling server (`4001`) will hand peers the **prod** relay's address, which is
-what you want: one relay, shared, stateless.
+`server_dev` mengecualikan `coturn`, benar begitu. Testing WebRTC terhadap dev? Server signalling dev (`4001`) menyerahkan alamat relay **prod** ke peer. Satu relay, bersama, stateless: persis yang diinginkan.
 
-If you genuinely need a relay and prod's is not running, start it explicitly:
+Butuh relay padahal prod mati? Start eksplisit:
 
 ```bash
 docker compose --profile turn up -d coturn
 ```
 
-### Migrating off the apt/systemd coturn
+### Pindah dari coturn apt/systemd
 
-If this host still runs coturn under systemd, the order matters exactly once. Port 3478 is a single
-well-known port and the two cannot both hold it.
+Bila host masih menjalankan coturn di bawah systemd, urutan penting sekali. Port 3478 hanya muat satu pemegang.
 
 ```bash
-sudo systemctl disable --now coturn                 # 1. free the port
-docker compose --profile turn up -d coturn          # 2. prove the container works
-docker compose logs -f coturn                       # 3. confirm it bound and is listening
-docker compose --profile server_prod up -d          # 4. now it is just another prod service
+sudo systemctl disable --now coturn                 # 1. bebaskan port
+docker compose --profile turn up -d coturn          # 2. buktikan container bekerja
+docker compose logs -f coturn                       # 3. konfirmasi listen
+docker compose --profile server_prod up -d          # 4. kini ia service prod biasa
 ```
 
-Run a prod `up` while the systemd unit is still listening and the container fails to bind, then
-`restart: always` retries it forever: noisy, harmless, and a long way from its cause.
+`up` prod saat systemd masih memegang port gagal bind, lalu `restart: always` retry selamanya: berisik, harmless, jauh dari penyebabnya.
 
 ## Unit: `docker-manager.sh`
 
-The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wraps it, because
-several things have to be decided **once** and handed to both halves (the robot container and the
-unit's own server stack) so they cannot disagree.
+Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.sh` membungkusnya, memutuskan nilai bersama **sekali** dan menyerahkannya ke kedua belah (container robot + stack server unit) agar tak bisa beda.
 
-### Commands
+### Perintah
 
-| Command | What it does |
-| --- | --- |
-| `up` | Start the robot container **and** the unit's `local_dev` server stack, then run `run_msd.sh` inside the container |
-| `down` / `stop` | Stop and remove the robot container and the local stack |
-| `build` | Build the robot image |
-| `build-clean` | Build the robot image with `--no-cache` |
-| `shell` | `docker exec -it` a bash login shell in the running container |
-| `logs` | Follow the robot container's logs |
-| `status` | `docker compose ps` for the robot container |
-| `local-up` | Start **only** the local server stack, no robot bringup |
-| `local-down` | Stop only the local server stack |
-| `local-build` | Rebuild the local stack images |
-| `local-logs` | Tail the local stack logs |
-| `local-status` | `docker compose ps` for the local stack |
-| `help` | Full flag and environment help |
-
-### Flags
-
-| Flag | Applies to | Effect |
+| Perintah | Artinya |
 | --- | --- | --- |
-| `--simulator`, `-s` | `build`, `up` | Use the Gazebo image (`msd700-simulator:latest`) and container. Forwarded to `run_msd.sh` too, because that is what actually sets `use_simulator_val:=true` |
-| `--dev` | `up` | Which **cloud** is this unit's peer: the dev stack instead of production. Changes MQTT to 8884, the ROS master to 11312, and enrolment to the dev backend |
-| `--build` | `up` | Rebuild the image before starting |
-| `-d`, `--detach` | `up` only | Hand the terminal back once everything is running |
-| `--debug` | forwarded | `run_msd.sh` verbose mode. **Type it in full**: `-d` is this script's detach flag |
-| `--dry-run` | forwarded | Print what would run without running it |
-| `--kill` | forwarded | Kill the tmux session inside the container |
-| `--local` | accepted, ignored | Deprecated. The local stack starts either way |
-| `--unit_id` | **rejected** | Removed on purpose. Identity comes from the cloud admin console |
+| `up` | Start container robot **dan** stack `local_dev`, jalankan `run_msd.sh` di dalam. Pasang/aktifkan `msd700.service` untuk reboot |
+| `down` / `stop` | Stop dan hapus container robot + stack lokal, nonaktifkan `msd700.service` |
+| `build` | Build image robot + image stack lokal, pull MySQL/Mosquitto, agar `up` berikutnya tak butuh internet |
+| `build-clean` | Sama, tanpa cache layer Docker |
+| `shell` | Shell login bash di container jalan (nyalakan bila perlu) |
+| `logs` | Follow log container robot |
+| `status` | `docker compose ps` untuk container robot |
+| `local-up` | Stack server lokal saja, tanpa bringup robot |
+| `local-down` | Stop stack server lokal saja |
+| `local-build` | Rebuild image stack lokal |
+| `local-logs` | Tail log stack lokal |
+| `local-status` | `docker compose ps` untuk stack lokal |
+| `reenroll` | Backup data unit, hapus identitas cached; `up` berikutnya mencetak kode klaim. Pilih **Unbind** admin bila unit masih ada di console |
+| `print-autostart-unit` | Cetak render `msd700.service`, untuk instal di mana `up` tak bisa sudo |
+| `help` | Bantuan flag + environment lengkap |
 
-::: info What `-d` actually changes, and what it does not
-Start-up still runs in the **foreground**: the image build, the enrolment claim code and any failure
-are all things you want to see, and a Ctrl-C before the services are up still aborts and tears the
-half-started stack down. What changes is the end. Once every service is running, the command returns
-to the shell, and closing that terminal no longer stops the robot. This is the form that belongs in
-a systemd unit or an `ssh unit './scripts/docker-manager.sh up -d'` one-liner.
-:::
+### Flag
 
-::: danger `--unit_id` is rejected, not ignored
-Typing it produces an error explaining the replacement. A robot with no cached identity self-enrols
-and prints a claim code, and an admin either **registers** it (brand new unit) or **adopts** it onto
-an existing unit's ULID (hardware swap, lost cache) from the cloud admin console. Both need the unit
-to have internet access at that moment. After that, `Certificates/robot/device.json` is read
-automatically on every later run.
-:::
-
-### Environment variables `docker-manager.sh` forwards
-
-| Variable | Default | Purpose |
+| Flag | Berlaku untuk | Efek |
 | --- | --- | --- |
-| `DEVICE_FINGERPRINT` | derived from the **host** | sha256 of the Jetson serial (or machine-id, or first real MAC) plus the model. Read on the host so a rebuilt container does not reappear as a new pending unit |
-| `ENROLL_SERVER_URL` | derived | Overrides the enrolment endpoint outright |
-| `ENROLL_BOOTSTRAP_KEY` | unset | Shared image key. A trust marker in the console, never a gate |
-| `ENROLL_CODE` | unset | Single-use registration voucher, skips the pending pool |
-| `DEV_SERVER_HOST` | `118.22.31.252` | Where `--dev` points. Set to `localhost` when running on that host |
-| `DEV_BACKEND_PORT` | `5001` | Backend port for `--dev` |
-| `CLOUD_BASE_URL` | derived | Points a whole fleet at a different cloud without a code change |
-| `ROS_MASTER_PORT` | `11312` with `--dev`, else `11311` | Handed to **both** the container and `backend_local`, so they cannot disagree |
-| `BACKEND_PORT_LOCAL` | `5002` | What the local dashboard's browser talks to, and where `camera_client` fetches a unit-local token |
+| `--simulator`, `-s` | `build`, `up` | Image Gazebo (`msd700-simulator:latest`) + container. Diteruskan juga ke `run_msd.sh`, yang menyetel `use_simulator_val:=true` |
+| `--dev` | `up` | Cloud peer: stack dev, bukan produksi. MQTT 8884, ROS master robot ini 11322, enrolment backend dev |
+| `--build` | `up` | Rebuild image robot/lokal + workspace catkin dalam container. Robot jalan mempertahankan image lama sampai recreated |
+| `--no-autostart` | `up`, `down` | Biarkan `msd700.service` (`up` mengaktifkan autostart boot, `down` menonaktifkan) |
+| `-d` | hanya `up` | Kembalikan terminal setelah semua jalan |
+| `--debug` | diteruskan | Verbose `run_msd.sh`. **Ketik penuh**: `-d` di sini artinya detach |
+| `--dry-run` | diteruskan | Bukan preview aman: tetap start container, ubah host state, bisa kill sesi dan hubungi enrolment |
+| `--kill` | diteruskan | Kill sesi tmux di container |
+| `--local` | diterima, diabaikan | Deprecated. Stack lokal tetap start |
+| `--unit_id` | **ditolak** | Sengaja dihapus. Identitas dari admin console cloud |
 
-::: warning One decision, handed to both halves
-`CLOUD_BASE_URL` and `ROS_MASTER_PORT` are resolved once in `docker-manager.sh` and passed to the
-container **and** to compose. They used to be derived independently on both sides, which is exactly
-how `--dev` broke on a unit: `run_msd.sh` moved the master to 11312 while `backend_local` kept
-asking 11311, so the master existed and nothing could find it.
+::: info Apa yang diubah `-d` (dan tidak)
+Startup tetap jalan di **foreground**: build image, kode klaim, failure semua tampil, dan Ctrl-C sebelum service naik membatalkan dan merobohkan stack setengah jalan. Yang berubah hanya akhir: setelah semua jalan, perintah kembali, dan menutup terminal tak lagi menghentikan robot. Ini bentuk untuk unit systemd dan one-liner `ssh`.
 :::
 
-### What `up` does, in order
+::: danger `--unit_id` ditolak, bukan diabaikan
+Ia error dengan penjelasan. Robot tanpa identitas cached enrol mandiri dan mencetak kode klaim; admin **mendaftarkan** (unit baru) atau **mengadopsi** ke ULID yang ada (ganti hardware, cache hilang) di console cloud. Keduanya butuh internet saat itu. Setelahnya `Certificates/robot/device.json` termuat otomatis tiap run.
+:::
+
+### Environment variable yang diteruskan
+
+| Variable | Default | Tujuan |
+| --- | --- | --- |
+| `DEVICE_FINGERPRINT` | diturunkan dari **host** | sha256 serial Jetson (atau machine-id / MAC real pertama) + model. Dibaca di host agar container rebuilt tak muncul sebagai pending unit baru |
+| `ENROLL_SERVER_URL` | diturunkan | Override endpoint enrolment mentah |
+| `ENROLL_BOOTSTRAP_KEY` | unset | Key image bersama. Penanda trust di console, bukan gate |
+| `ENROLL_CODE` | unset | Voucher registrasi sekali pakai, melewati pending pool |
+| `DEV_SERVER_HOST` | `118.22.31.252` | Tujuan `--dev` (`localhost` bila jalan di host itu) |
+| `DEV_BACKEND_PORT` | `5001` | Port backend untuk `--dev` |
+| `CLOUD_BASE_URL` | diturunkan | Arahkan se-fleet ke cloud lain tanpa ubah kode |
+| `ROS_MASTER_PORT` | `11322` dengan `--dev`, bila tidak `11321` | Diberikan ke container **dan** `backend_local`. Tidak pernah `11311`/`11312` cloud |
+| `BACKEND_PORT_LOCAL` | `5002` | Port backend dashboard lokal; `camera_client` mengambil token unit-lokal di sini |
+
+`CLOUD_BASE_URL` dan `ROS_MASTER_PORT` di-resolve sekali dan diteruskan ke kedua belah. Dulu diturunkan sendiri-sendiri di tiap sisi, begitulah `--dev` rusak: `run_msd.sh` memindah master sementara `backend_local` menanyakan port lama. Aturan sama di dalam `run_msd.sh` untuk enrolment: satu `ENROLL_BASE_URL` melayani resolusi identitas boot-time dan refresher token 6-jam (keduanya pernah beda dan tiap refresh gagal `401 reenroll`).
+
+### Apa yang dilakukan `up`, berurutan
 
 ```mermaid
 flowchart TB
-  A["ensure_local_secrets<br/>generate this unit's MySQL password on first run"] --> B["ensure_media_dir<br/>create + test-write media_data_local"]
-  B --> C["resolve_repo_paths<br/>src/ or sibling checkout"]
-  C --> D["resolve_local_ip<br/>a hint for humans only, see below"]
-  D --> E{"image missing entirely?"}
-  E -->|yes| F["build it now<br/>(the ONLY case up ever builds)"]
-  E -->|no| G{"image looks stale?<br/>port or deployment-mode label changed"}
-  G -->|yes| W["print [WARN] ... OUT OF DATE<br/>and continue with the old image anyway"]
-  G -->|no| I
-  F --> I
-  W --> I
-  I["compose --profile local_dev up -d"]
-  I --> J["ensure_robot_token_file<br/>token.cred must exist as a FILE"]
-  J --> K["compose up -d msd700"]
-  K --> L["docker exec run_msd.sh"]
+  A["Bila --build: build image robot<br/>Bila simulator: pastikan world asset"] --> B["Resolve endpoint cloud, port ROS,<br/>identitas cached, fingerprint host"]
+  B --> C["Pastikan file token,<br/>start container robot bila berhenti"]
+  C --> D["Rekonsiliasi duplikat robot_pose_publisher<br/>marker CATKIN_IGNORE"]
+  D --> E["local_up: secret, direktori media,<br/>path repo, IP lokal"]
+  E --> F["Build image lokal bila hilang atau --build;<br/>bila tidak warning bila basi"]
+  F --> G["compose --profile local_dev up -d --no-build"]
+  G --> H["Aktifkan autostart kecuali opt-out"]
+  H --> I["docker exec run_msd.sh:<br/>build workspace bila perlu,<br/>ganti sesi tmux, launch service"]
 ```
 
-::: warning `up` builds only when an image does not exist at all
-Before 2026-08-13, a stale image (source edited, or a port changed in `docker/.env`) triggered an
-automatic rebuild on the next `up`. That meant bringing a unit online could suddenly need internet,
-which is exactly backwards for hardware whose entire point is running without it. Now a stale image
-only prints `[WARN] ... is OUT OF DATE` and starts anyway with what is already built. Rebuild
-deliberately: `./scripts/docker-manager.sh build` (or `local-build` for just the web half), or
-`up --build` to do both in one command. `build-clean` forces a rebuild with no layer cache at all.
-:::
+Tanpa `--build`, image lokal yang ada dipakai ulang dan yang basi hanya warning (`[WARN] ... is OUT OF DATE`). Image hilang, asset simulator, dan enrolment pertama tetap bisa butuh internet. Rebuild dengan sengaja (`build`, `local-build`, atau `up --build`); `build-clean` membuang cache. Robot yang jalan tidak pernah recreated oleh `up`, bahkan setelah build: recreate saat stop terencana dengan flag `--dev`/`--simulator` yang sama.
 
-Two more of those steps exist because of failures that looked like nothing at all:
+Tiga langkah ada karena failure diam-diam:
 
-- **`ensure_robot_token_file`.** Four services bind-mount `Certificates/robot/token.cred`. Bring any
-  of them up on a robot that has never enrolled and Docker, finding no such host file, creates a
-  root-owned empty **directory** there. `enroll.py` then cannot write the token it just earned, and
-  the robot re-enrols from scratch on every boot.
-- **The staleness check itself.** `Dockerfile.webui-local` **COPY**s the source into the image; there
-  is no bind mount for those services. Without comparing source-file mtimes against the image build
-  time (plus the port and deployment-mode labels), a unit would have no way to notice it is serving
-  last week's backend at all. That is how a new endpoint ends up returning 404 on a unit whose source
-  tree plainly contains it, see [Troubleshooting](/id/setup/troubleshooting).
+- **File token dulu.** Empat service me-mount `Certificates/robot/token.cred`. Di robot yang belum pernah enrol Docker membuat **direktori** kosong milik root di sana, `enroll.py` tak bisa menulis token yang baru didapat, dan robot re-enrol tiap boot.
+- **Refresher tak pernah menghapus identitas.** Saat `401 reenroll` ia log dan berhenti, mempertahankan `device.json`. Hanya boot nyata boleh menghapusnya. Menghapusnya saat refresh gagal pernah memaksa re-approval admin penuh hampir tiap restart.
+- **Cek image basi.** Image web lokal meng-**COPY** source masuk (tanpa bind mount). Mtime source dibandingkan waktu build image, sehingga unit bisa sadar ia menyajikan backend minggu lalu (klasik "endpoint baru 404 padahal source punya").
+
+### Boot autostart (`msd700.service`)
+
+`up` memasang dan mengaktifkan unit systemd (di-render dari `msd700.service.tmpl`); `down` menonaktifkannya. `ExecStart` hasil render menjalankan `docker-manager.sh up -d --no-autostart` **dengan flag `up` yang mempersenjatainya** (`--dev`/`--simulator` terpanggang), sehingga reboot tidak pernah diam-diam membalik robot dev/simulator ke prod/hardware. `Type=oneshot`, `RemainAfterExit=yes`, setelah `docker.service`, timeout start 15 menit. Inspeksi dengan `print-autostart-unit` (atau `grep ExecStart`); `--no-autostart` memilih keluar; dilewati otomatis bila tanpa systemctl atau di dalam container.
+
+### `manage-unit.sh` (sisi-server, hanya manual/debug)
+
+Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu — backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai di unit mode fleet.
 
 ## Unit: `run_msd.sh`
 
-Runs **inside** the robot container and launches every ROS service in a tmux session
-(`robot_services`). `docker-manager.sh` normally drives it, but you can call it directly from
-`docker-manager.sh shell`.
+Jalan **di dalam** container robot, meluncurkan tiap service ROS di sesi tmux (`robot_services`). Normalnya dikemudikan `docker-manager.sh`; bisa dipanggil langsung dari `docker-manager.sh shell`.
 
-| Flag | Effect |
+| Flag | Efek |
 | --- | --- |
-| `-s`, `--simulator` | Data source is Gazebo instead of the robot's hardware |
-| `--dev` | Everything dev: MQTT 8884, ROS master 11312, dev signalling, dev enrolment. The unit's **own** service ports do not shift |
-| `-d`, `--debug` | Verbose output |
-| `-n`, `--dry-run` | Print the commands without running them |
-| `-k`, `--kill` | Kill the tmux session and exit |
-| `--detach` | Start everything, print status, exit. Long form only |
-| `--unit_id <ULID>` | Pin the identity explicitly. Optional recovery override |
-| `--camera_device <path>` | Override the camera device path or index |
+| `-s`, `--simulator` | Gazebo, bukan hardware |
+| `--dev` | Semua dev: MQTT 8884, ROS master robot ini 11322, signalling + enrolment dev. Port service milik unit **sendiri** tak bergerak |
+| `-d`, `--debug` | Output verbose |
+| `-n`, `--dry-run` | Tidak read-only: melewati sebagian launch/build tapi tetap jalan setup, kill sesi tmux, bisa hubungi enrolment |
+| `-k`, `--kill` | Kill sesi tmux, exit |
+| `--detach` | Start semua, cetak status, exit. Hanya bentuk panjang |
+| `--unit_id <ULID>` | Pin identitas eksplisit. Override recovery |
+| `--camera_device <path>` | Override path/index device kamera |
+| `--build` / `--no-build` | Paksa/lewati build catkin; default build hanya bila `devel/setup.bash` tidak ada |
 
-| Environment | Default | Purpose |
+| Environment | Default | Tujuan |
 | --- | --- | --- |
-| `SERVICE_HOST` | `localhost` | Where this robot's server-side services live |
-| `ROS_LOG_CAP_MB` | `512` | Ceiling for `~/.ros/log`, which ROS 1 never rotates |
-| `ROS_LOG_SWEEP_SECONDS` | `60` | How often the janitor checks |
+| `SERVICE_HOST` | `localhost` | Tempat service sisi-server robot ini tinggal |
+| `ROS_LOG_CAP_MB` | `512` | Batas `~/.ros/log`, yang tak pernah dirotasi ROS 1 |
+| `ROS_LOG_SWEEP_SECONDS` | `60` | Interval cek janitor |
 
-tmux windows in the `robot_services` session: `roscore`, `ros_webui`, `camera_client`,
-`switch_mode`, `log_janitor`.
+Ini setting **inner-launcher**. Wrapper tidak meneruskannya lewat `docker exec`; export host atau entri `docker/.env` tak sampai ke inner launcher. Tree dan batas log: [Maintenance](/id/setup/maintenance#housekeeping-log).
+
+Window tmux di `robot_services` (sesi `robot_services`, urutan startup `roscore → log_janitor → token_refresh → launch mode → sisanya`):
+
+| Window | Log | Tujuan |
+| --- | --- | --- |
+| `roscore` | `logs/roscore.log` | roscore privat unit (11321 / 11322 `--dev`), distart sebelum enrolment |
+| `ros_webui` | `logs/ros_webui.log` | `bringup_msd.launch` hardware atau simulator + `unit_id:=` |
+| `camera_client` | Python `RotatingFileHandler` ke `$LOGDIR` (bukan piped) | `camera_client.py`, target signalling cloud + lokal |
+| `switch_mode` | `logs/switch_mode.log` | `switch_mode.launch` |
+| `log_janitor` | `logs/log_janitor.log` | Membatasi `~/.ros/log` ke `ROS_LOG_CAP_MB` (512) tiap `ROS_LOG_SWEEP_SECONDS` (60) |
+| `token_refresh` | `logs/token_refresh.log` | `enroll.py --refresh` tiap 6 jam (separuh token 12 jam); harus menarget backend enrolment |
+| `enrol_collect` | `logs/enrol_collect.log` | Hanya kondisional: saat re-enrolment menunggu approval admin |
+
+Log piped dibatasi ~50 MB tiapnya (5×10 MB rotatelogs). Gejala → window: bridge MQTT diam → `ros_webui`; tanpa video → `camera_client`; loop token/enrol → `token_refresh`/`enrol_collect`; disk penuh → `log_janitor`.
 
 ```bash
 docker exec -it msd700 tmux attach -t robot_services   # attach
-# Ctrl-b then d to detach without stopping anything
+# Ctrl-b lalu d untuk detach tanpa menghentikan apa-apa
 docker exec -it msd700 tmux list-windows -t robot_services
 ```
 
-::: danger `--detach` is wrong for `docker-compose.robot.yml`
-On that path `run_msd.sh` **is** the container's main command, so returning stops the container and
-takes the tmux server with it. That path is already detached at the compose level; the foreground
-loop is what keeps the container alive.
+::: danger `--detach` salah untuk `docker-compose.robot.yml`
+Di sana `run_msd.sh` **adalah** perintah utama container, sehingga return menghentikan container dan server tmux-nya. Path itu sudah detached di level compose; foreground loop yang membuatnya hidup.
 :::
 
-## The unit's own stack (`local_dev` profile)
+## Stack milik unit (`local_dev` profile)
 
-| Service | Container | Port | Bound to |
+| Service | Container | Port | Bound ke |
 | --- | --- | --- | --- |
 | `db_local` | `msd700_db_local` | `3306` | `127.0.0.1` |
-| `mosquitto_local` | `msd700_mosquitto_local` | `1883` | `127.0.0.1` |
-| `backend_local` | `msd700_backend_local` | `5002` API, `9090` rosbridge | all interfaces |
-| `media_local` | `msd700_media_local` | `3003` | all interfaces |
-| `signalling_local` | `msd700_signalling_local` | `3001` WS, `3002` HTTP | all interfaces |
-| `frontend_local` | `msd700_frontend_local` | `3000` | all interfaces |
+| `mosquitto_local` | `msd700_mosquitto_local` | `1883` MQTT; `9001` WebSocket | MQTT: `127.0.0.1`; WebSocket: semua interface |
+| `backend_local` | `msd700_backend_local` | `5002` API, `9090` rosbridge | semua interface |
+| `media_local` | `msd700_media_local` | `3003` | semua interface |
+| `signalling_local` | `msd700_signalling_local` | `3001` WS, `3002` HTTP | semua interface |
+| `frontend_local` | `msd700_frontend_local` | `3000` | semua interface |
+| `network_local` | `msd700_network_local` | `5011` network API | loopback; di-proxy backend |
 
-Every one of them uses `network_mode: host`, so **Docker publishes nothing** and the unit's own
-firewall is what matters. Allow the five browser-facing ports; MySQL and Mosquitto are deliberately
-bound to loopback and need no rule.
+Default, bukan hasil ukur host-mu. Tiap service memakai `network_mode: host`, sehingga **Docker mem-publish nothing**; firewall unit mengontrol akses. Default menghadap browser: `3000`, `5002`, `9090`, `3003`, `3001`, `3002`, `9001`. MySQL `3306`, MQTT polos `1883`, dan network agent `5011` internal unit. Listener MQTT WebSocket mengizinkan client anonymous di config checked-in: simpan di jaringan operator tepercaya, jangan internet publik.
 
-Configuration lives in `msd700_noetic/docker/.env` (created from `.env.example` automatically on
-first run). The keys most worth reviewing:
+Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.example` saat pertama run). File live per-host; template adalah referensi yang ter-track. `docker/.env` ter-track di git di unit — `git pull` yang mengubah `MYSQL_*` setelah volume data diinisialisasi menyebabkan credential drift (lihat [Setup Troubleshooting](/id/setup/troubleshooting)).
 
-```bash
-MAPS_FOLDER_LOCAL=/home/ubuntu/ros_maps
-#LOCAL_IP=192.168.4.1     # leave commented to auto-detect each run
-WITH_SIMULATOR=false      # adds the Gazebo stack to the image; costs over a GB
-USER_UID=                 # empty = detect from `id -u` (Jetson 2002, laptop 1000)
-USER_GID=
-```
+## Referensi `.env` unit
 
-::: info `LOCAL_IP` stopped being part of the bundle on 2026-08-13
-It used to be: `NEXT_PUBLIC_*` URLs were compiled into the JS with the unit's IP baked in, so moving
-a unit to a new network meant a mandatory rebuild. The bundle now takes its **host** from whatever
-address the operator's browser actually used to open the page
-(`src/config/apiConfig.ts` in `ROS-dashboard-next-ts`), which by construction is the same machine , 
-only the **port** still comes from the build. A unit reached by IP, hostname, mDNS
-(`msd700.local`), or an SSH tunnel on `localhost` all work correctly now, none of which was possible
-before. `LOCAL_IP` in `docker/.env` is left as a hint for the script's own printed URLs and the
-DHCP-less fallback baked in before a browser ever exists, getting it wrong is no longer fatal to
-the dashboard, only to what the script prints.
+| Grup | Key | Default live | Catatan |
+| --- | --- | --- | --- |
+| Secret | `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD` | `change_me_*` | Rotasi saat boot pertama; harus cocok dengan volume yang diinisialisasi |
+| Secret | `MYSQL_DATABASE`, `MYSQL_USER` | `ROS_DB`, `itbdelabo` | |
+| Secret | `JWT_SECRET` | `roswebui` | Harus cocok dengan `JWT_SECRET_KEY` backend |
+| Identitas | `USER_UID`, `USER_GID` | kosong = autodetect | Jetson 2002, laptop 1000 |
+| Identitas | `UNIT_ID` | kosong = cloud enrol | Di-pin hanya untuk recovery |
+| Identitas | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
+| Persepsi | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Butuh Velodyne terpasang; lihat [Persepsi](/id/development/ros/perception-and-hazard-scan) |
+| Simulasi | `MSD700_SIM_WORLD` | `mine` (template `warehouse`) | `warehouse`, `hazard`, `mine` |
+| Simulasi | `MSD700_SIM_HEADLESS` | `true` (template: tidak ada) | |
+| Simulasi | `WITH_SIMULATOR` | `false` | Menambah stack Gazebo ke image; makan 1+ GB |
+| Port unit | `MYSQL_PORT_LOCAL` | `3306` | |
+| Port unit | `MOSQUITTO_PORT_LOCAL`, `MOSQUITTO_WS_PORT_LOCAL` | `1883`, `9001` (WS hanya live) | |
+| Port unit | `BACKEND_PORT_LOCAL` | `5002` | |
+| Port unit | `ROSBRIDGE_PORT_LOCAL` | `9090` | |
+| Port unit | `FRONTEND_PORT_LOCAL` | `3000` | |
+| Port unit | `MEDIA_SERVER_PORT_LOCAL` | `3003` | |
+| Port unit | `SIGNALLING_PORT_WS_LOCAL`, `SIGNALLING_PORT_HTTP_LOCAL` | `3001`, `3002` | |
+| Port unit | `NETWORK_AGENT_PORT_LOCAL` | `5011` | Hanya loopback |
+| Jaringan | `LOCAL_IP` | `192.168.4.1` (template: di-comment) | Di-comment = autodetect tiap run |
+| Jaringan | `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL` | nama NIC live (template: kosong) | Nama hardware per-host |
+| Jaringan | `AP_CONNECTION_NAME_LOCAL` | `msd700-hotspot` | |
+| Jaringan | `AP_SSID_LOCAL` | `MSD700-Unit01` (template: kosong = `MSD700-<hostname>`) | |
+| Jaringan | `AP_PASSWORD_LOCAL` | fallback (template: kosong, wajib 8+ karakter) | Password asli tinggal di `/etc/hostapd/*.conf` (0600), bukan di sini |
+| Jaringan | `STA_SSID_LOCAL`, `STA_PASSWORD_LOCAL` | kosong | Uplink client, opsional |
+| Jaringan | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
+| Velodyne | `VELODYNE_IFACE` | `end0` (template: kosong = autodetect) | Dibaca `setup.sh` saja, di luar Docker |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Jaga tetap sinkron dengan `velodyne_scanner.launch device_ip` |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Camera ICE | `LOCAL_STUN_URLS`, `LOCAL_TURN_URL`, `LOCAL_TURN_USERNAME`, `LOCAL_TURN_CREDENTIAL` | absen di live; template punya contoh ter-comment | Literal `none` = tanpa server; default kode berlaku bila unset |
+| Path | `WEBUI_PATH`, `DASHBOARD_PATH` | di-comment (autoresolve `src/<repo>` atau `../<repo>`) | |
+
+::: info `LOCAL_IP` tak lagi membentuk bundle
+JS dashboard mengambil **host**-nya dari alamat yang dipakai browser membuka halaman; hanya **port** yang masih dari build. IP, hostname, mDNS (`msd700.local`), atau tunnel SSH `localhost` semua bekerja. `LOCAL_IP` tersisa hanya sebagai hint URL cetakan dan fallback tanpa-DHCP.
 :::
 
-## Per-unit containers (created by the backend, not by compose)
+## Fleet relay (default) vs container per-unit (legacy)
 
-`unit_manager.js` creates these through the Docker API. There is no compose file for them. The
-equivalent `docker run` is:
+Data plane cloud tiap robot jalan di SATU container bersama: `ros_web_ui_v2_unit_relays` (prod) atau `..._dev` (dev). Berbagi ROS master dan rosbridge backend: satu ROS graph per environment. Memegang satu koneksi `mqtt_client` nodelet/TLS untuk fleet plus relay topik multi-unit. Perintah start-nya membangun peta bridge dari roster database (atau override `MULTI_UNIT_LIST`). Roster kosong atau database tak terjangkau: menunggu dan retry. Menambah robot tidak membuat container per-unit.
 
-```bash
-docker run -d \
-  --name rosweb_unit_01JZ8P9WZ0UNIT00000000000_nakayama \
-  --network host \
-  --user itbdelabo \
-  --restart unless-stopped \
-  --log-driver json-file --log-opt max-size=50m --log-opt max-file=3 \
-  -v /home/ubuntu/ros_maps:/home/ubuntu/ros_maps \
-  -e UNIT_ID=01JZ8P9WZ0UNIT00000000000 \
-  -e ROS_DISTRO=noetic -e ROS_PYTHON_VERSION=3 \
-  -e MAPS_FOLDER=/home/ubuntu/ros_maps \
-  -e NAKAYAMA_PORT=8883 \
-  -e ROS_MASTER_URI=http://localhost:11311 \
-  ros-noetic-webui-app-v2:latest \
-  bash -c "cd /home/itbdelabo/ros-web-ui-ws && catkin_make && source devel/setup.bash && \
-    roslaunch msd700_webui_bringup bringup_cloud.launch use_cloud:=true use_nakayama:=true \
-    use_backend_web:=false use_unit_relays:=true unit_id:=01JZ8P9WZ0UNIT00000000000"
-```
-
-Useful commands against them:
+Default karena `UNIT_CONTAINERS_ENABLED` default `false`: `unit_manager.js` jalan mode **FLEET**, melacak pemakaian unit dan menjaga satu relay selaras roster, tidak pernah spawn per-unit.
 
 ```bash
-docker ps --filter "name=rosweb_unit_"           # every running unit bridge
-docker logs -f rosweb_unit_<ULID>_nakayama       # one unit's relays
-docker stop rosweb_unit_<ULID>_nakayama          # the backend will restart it on next use
+docker ps --filter "name=unit_relays"       # relay fleet bersama
+docker logs -f ros_web_ui_v2_unit_relays    # bridge MQTT/ROS se-fleet
+docker restart ros_web_ui_v2_unit_relays    # ambil perubahan roster
 ```
 
-::: warning Recreating the backend orphans every unit container
-The unit containers were started by a specific `backend_node` process. After
-`docker compose up -d nakayama_cloud` recreates the backend, restart every `rosweb_unit_*`
-container too, or they will be running while the new backend does not consider them adopted.
+::: warning Jangan jalankan fleet relay dan container per-unit bersamaan
+Dua bridge di topik MQTT yang sama mengantar tiap goal dan result dua kali, memajukan ganda loop ACK waypoint (terlihat seperti waypoint dilewati). Relay menolak start saat node `cloud_mqtt_client` per-unit terdaftar, dan `unit_manager.js` me-log (bukan kill) container `rosweb_unit_*` nyasar di mode fleet.
 :::
 
-## Troubleshooting Docker itself
+### Legacy: container per-unit
 
-| Symptom | Cause | Fix |
+`UNIT_CONTAINERS_ENABLED=true` **di environment proses backend** mengembalikan satu container relay per robot: `rosweb_unit_<ULID>_nakayama` (prod) atau `..._nakayama_dev` (dev), dibuat on demand, direap setelah 30 mnt idle (Autopilot mem-pin). File Compose checked-in tidak meneruskan variable ini, sehingga edit `.env` saja tidak mengaktifkan. Config deployment harus meneruskannya eksplisit dan mengecualikan fleet relay environment itu, atau `up` profile berikutnya menyalakan relay lagi. Tidak ada service Compose menjelaskan container dinamis ini.
+
+```bash
+docker ps --filter "name=rosweb_unit_"           # bridge per-unit (hanya legacy)
+docker logs -f rosweb_unit_<ULID>_nakayama       # relay satu unit
+docker stop rosweb_unit_<ULID>_nakayama          # stop; backend restart saat dipakai lagi
+```
+
+Mode fleet: `unit_manager.init()` me-restart relay bersama yang ada saat startup backend agar node-nya terdaftar ke master baru; poll roster 60-detik juga me-restart saat list unit berubah. Relay hilang tidak pernah dibuat manager; Compose yang membuatnya. Tiap restart relay sempat memutus data plane cloud semua unit.
+
+Mode legacy: `adoptExisting()` mengadopsi container jalan untuk lifecycle management tapi tidak me-restart node ROS-nya. Bila master diganti, cek registrasi dan pulihkan hanya container terdampak di environment itu. Jangan bulk-restart list `rosweb_unit_*` tanpa scope lintas dev dan produksi.
+
+## Troubleshooting Docker sendiri
+
+| Gejala | Penyebab | Perbaikan |
 | --- | --- | --- |
-| `permission denied ... /var/run/docker.sock` | Your user is not in the `docker` group, or the membership has not applied to this shell | `sudo usermod -aG docker $USER`, then log out and back in (or `newgrp docker`) |
-| `network <id> not found` on start | A container recorded a network that was recreated | `docker compose down --remove-orphans` then `up` |
-| `port is already allocated` | Another process (often a systemd service, or the other profile) holds it | `sudo ss -lptn 'sport = :3478'` to find it |
-| Backend logs `Connection lost` right after `up` | It started before MySQL passed its healthcheck | It retries; if not, `docker compose up -d <backend>` once `ps` shows the DB `healthy` |
-| Build succeeds but the change is not there | A cached layer | `docker compose build --no-cache <service>` |
-| Disk filling up | Old images and build cache | `docker system df`, then `docker image prune -a` and `docker builder prune` |
-| `the input device is not a TTY` | `docker exec -t` in a non-interactive context | Expected in scripts; `docker-manager.sh` already drops `-t` when stdin is not a TTY |
+| `permission denied ... /var/run/docker.sock` | User belum di grup `docker` | `sudo usermod -aG docker $USER`, logout/in (atau `newgrp docker`) |
+| `network <id> not found` saat start | Container mencatat network yang direcreate | `docker compose down --remove-orphans`, lalu `up` |
+| `port is already allocated` | Proses lain memegangnya (service systemd, atau profile lain) | `sudo ss -lptn 'sport = :3478'` untuk menemukan |
+| Backend `Connection lost` setelah `up` | Start sebelum healthcheck MySQL | Retry; bila tidak `docker compose up -d <backend>` setelah DB `healthy` |
+| Build sukses tapi perubahan hilang | Cached layer | `docker compose build --no-cache <service>` |
+| Disk penuh | Image lama + build cache | `docker system df`, `docker image prune -a`, `docker builder prune` |
+| `the input device is not a TTY` | `docker exec -t` tanpa TTY | Wajar di script; `docker-manager.sh` sudah melepas `-t` tanpa stdin TTY |
 
-## Related
+## Terkait
 
-- [Server Setup](/id/setup/server-setup)
-- [Unit Setup](/id/setup/unit-setup)
+- [Setup Server](/id/setup/server-setup)
+- [Setup Unit](/id/setup/unit-setup)
 - [Maintenance](/id/setup/maintenance)
 - [Troubleshooting](/id/setup/troubleshooting)

@@ -2,201 +2,226 @@
 outline: deep
 ---
 
-
-# Server Setup
+# サーバー構築
 
 <RoleBadge role="technician" />
 
-This guide provides step-by-step instructions for deploying the **MSD700 Cloud Server and Web Dashboard**.
+**MSD700クラウドサーバーとWebダッシュボード**のデプロイ方法です。
 
-Complete [Prerequisites](/ja/setup/prerequisites) before proceeding.
+先に[前提条件](/ja/setup/prerequisites)を済ませてください。
 
-::: info Production-First Architecture
-This guide defaults to a standard **Production Deployment**. Development mode instructions and advanced custom parameters are located in the [Advanced Configurations](#advanced-configurations) section at the bottom.
+::: info 本番優先
+このページは**本番**をデプロイします。開発モードと追加設定は下の[高度な設定](#高度な設定)にあります。
 :::
 
-## System Topology
+## システム構成
 
 ```mermaid
 flowchart TB
-  NET["Public Internet"] -->|":443 HTTPS / WSS"| AP["Apache2 Reverse Proxy<br/>TLS Termination & Ingress Routing"]
-  NET -->|":8883 MQTTS"| MQ["HiveMQ CE (:8883)<br/>Encrypted Fleet Broker"]
-  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>WebRTC TURN Relay"]
+  NET["公共インターネット"] -->|":443 HTTPS / WSS"| AP["Apache2リバースプロキシ<br/>TLS + ルーティング"]
+  NET -->|":8883 MQTTS"| MQ["HiveMQ (:8883)<br/>フリートブローカー"]
+  NET -.->|":3478 UDP/TCP"| TURN["coturn (:3478)<br/>WebRTCリレー"]
 
-  subgraph DockerServices["Docker Compose Production Stack"]
-    AP --> FE["frontend_prod (:3000)<br/>Next.js Web Dashboard"]
-    AP --> BE["backend_node (:5000)<br/>REST API & Container Manager"]
-    AP --> RB["rosbridge_suite (:9090)<br/>WebSocket Telemetry"]
-    AP --> MED["media-server (:3003)<br/>Map & Binary Asset Store"]
-    AP --> SIG["signalling_server (:3001)<br/>WebRTC Signalling"]
-    BE --> DB[("MySQL Central DB (:3307)<br/>Database: ROS_DB")]
-    SEC["/srv/msd/secrets<br/>JWT Keyring & TLS Keystore"]
+  subgraph DockerServices["Docker Compose本番スタック"]
+    AP --> FE["frontend_prod (:3000)<br/>Webダッシュボード"]
+    AP --> BE["backend_node (:5000)<br/>REST API"]
+    AP --> RB["rosbridge_suite (:9090)<br/>テレメトリWebSocket"]
+    AP --> MED["media-server (:3003)<br/>地図+ファイル"]
+    AP --> SIG["signalling_server (:3001)<br/>WebRTCシグナリング"]
+    MQ --> FR["unit_relays<br/>共有フリートリレー"]
+    FR --> RB
+    BE --> DB[("MySQL (:3307)<br/>データベース: ROS_DB")]
+    SEC["/srv/msd/secrets<br/>JWTキーリング + TLSキーストア"]
     SEC -.-> BE
     SEC -.-> MQ
+    FP["fix_perms_prod (ワンショット)<br/>ホストフォルダの所有者修正"]
+    FP -.-> BE
+    FP -.-> MED
   end
 ```
 
-## Directory Structure Overview
+::: warning フリートモードがデフォルトです
+共有`unit_relays`コンテナ1台が全フリートを担当します。ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。`server_prod`と`server_dev`を1台のホストで同時に動かさないでください。`coturn`は本番専用です。MySQL (`3307`)とバックエンドは全インターフェースで待ち受けるため、ファイアウォールの内側に置きます([前提条件](/ja/setup/prerequisites)参照)。
+:::
 
-Before running any commands, understand how the repositories are structured on the host filesystem:
+## フォルダ構成
 
 ```
-~/ (e.g. /home/ubuntu)
-└── ros-web-ui/                               # Main Server Repository (branch: v2)
-    ├── docker-compose.yml                    # Docker Compose Multi-Service Definition
-    ├── .env                                  # Environment & Port Configuration
+~/ (例 /home/ubuntu)
+└── ros-web-ui/                      # サーバーリポジトリ (ブランチ: v2)
+    ├── docker-compose.yml
+    ├── .env                         # ホスト別設定、git管理下 (Step 4参照)
+    ├── Docker/
+    │   ├── Dockerfile               # サーバーイメージ (./sourceを取り込み、バインドマウントなし)
+    │   ├── hivemq/config.xml        # ブローカー設定、本番+開発で1ファイル
+    │   └── coturn/turnserver.conf   # 共有TURNポリシー (アドレスは.envに)
     ├── scripts/
-    │   └── secrets.sh                        # JWT Keyring Management Utility
+    │   └── secrets.sh               # JWTキーリングツール
     └── source/
         └── dependencies/
-            ├── ROS-dashboard-backend/        # Express REST API (backend_node)
-            ├── ROS-dashboard-next-ts/        # Frontend Dashboard (CLONED HERE, branch: v2)
-            ├── media-server/                 # Static Map Media Server
-            ├── signalling_server/            # WebRTC Camera Signalling
+            ├── ROS-dashboard-backend/
+            ├── ROS-dashboard-next-ts/  # フロントエンド (ネストしたクローン、ブランチv2、gitignore)
+            ├── media-server/
+            ├── signalling_server/
+            ├── aws_mqtt/               # MQTTブリッジ+フリートリレーヘルパー
+            ├── topic2string/
+            ├── network-agent/
+            ├── shared/
             └── ssl_update/
-                └── update_ssl.sh             # Certbot to HiveMQ Keystore Converter
+                └── update_ssl.sh       # Certbot更新+HiveMQキーストア生成
 ```
+
+フロントエンドは`source/dependencies/ROS-dashboard-next-ts`内の独立したgitチェックアウトです(独自`.git`を持ち、親リポジトリでは無視されます)。Dockerイメージは`./source`を`COPY`で取り込むため、アプリコード編集後は**リビルド**が必要です。再起動だけでは反映されません。
 
 ---
 
-## Core Step-by-Step Setup
+## 構築手順
 
-Follow these 6 steps in sequence to stand up a complete production server.
+次の6ステップを順番に実行します。
 
-### Step 1: Clone Repositories
-
-Clone `ros-web-ui` on branch `v2`, then clone the `ROS-dashboard-next-ts` frontend repository directly into `source/dependencies/`:
+### Step 1: リポジトリのクローン
 
 ```bash
-# 1. Clone main server repository on branch v2
+# 1. メインサーバーリポジトリ、ブランチv2
 git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
 
-# 2. Clone the frontend dashboard repository directly into dependencies on branch v2
+# 2. フロントエンドリポジトリをdependenciesへ、ブランチv2
 git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
-::: tip Why is the frontend cloned inside dependencies?
-The Dockerfile builds the Next.js frontend directly within the Docker build context of `ros-web-ui`. The `source/dependencies/ROS-dashboard-next-ts` path is gitignored by the parent repository.
+::: tip なぜdependenciesの中か?
+Dockerfileが`ros-web-ui`のビルドコンテキスト内からフロントエンドをビルドするためです。このパスは親リポジトリでgitignoreされています。
 :::
 
 ---
 
-### Step 2: Initialize Security Secrets
+### Step 2: シークレットの作成
 
-Secrets live outside Docker containers in `/srv/msd/secrets/` to persist across image rebuilds.
+シークレットはコンテナ外の`/srv/msd/secrets/`に置き、リビルドしても残るようにします。
 
 ```bash
-# 1. Navigate to the ros-web-ui repository
 cd ~/ros-web-ui
-
-# 2. Initialize the production JWT Keyring
 sudo mkdir -p /srv/msd/secrets
-./scripts/secrets.sh init
-
-# 3. Verify that the keyring was created
-./scripts/secrets.sh status
+./scripts/secrets.sh init     # jwt_keyring.jsonを作成、上書きしません
+./scripts/secrets.sh status   # 確認 (シークレット値は表示されません)
 ```
+
+`--dev`は開発スタック用の別ファイル`jwt_keyring.dev.json`を使います。旧`JWT_SECRET`からの移行は`init --seed-legacy <old-secret>`を使います。
 
 ---
 
-### Step 3: Generate HiveMQ TLS Keystore
+### Step 3: HiveMQキーストアの生成
 
-The HiveMQ MQTT broker requires a PKCS#12 keystore generated from your domain's Let's Encrypt SSL certificate.
+HiveMQにはLet's Encrypt証明書から作るPKCS#12キーストアが必要です。
 
 ```bash
-# 1. Obtain Let's Encrypt certificate for your server domain
-sudo certbot certonly --standalone -d msd.nglobal.jp
-
-# 2. Run the automated keystore generator script in ros-web-ui
 cd ~/ros-web-ui
 sudo ./source/dependencies/ssl_update/update_ssl.sh
 ```
 
-This script creates `/srv/msd/secrets/hivemq/keystore.p12` with UID `1001` ownership and `0600` permissions.
+`certbot renew`を実行し、`/srv/msd/secrets/hivemq/keystore.p12`を書き込みます(所有者`1001`、モード`600`)。注意点:
+
+- スクリプトはドメイン`msd.nglobal.jp`とこのパスに固定です。エクスポートパスワードは`Docker/hivemq/config.xml`と一致させます。
+- 1つのキーストアファイルを**本番・開発**両ブローカーで使います。
+- HiveMQは起動時に一度だけ読むため、後は**ブローカーを再起動**します。メンテナンス時間帯に行います。再起動はフリート全体のMQTTを切断し、10秒ウォッチドッグ(`/emergency_pause`)が発動する場合があります。
+- `certbot renew`だけではHiveMQは更新され**ません**。[メンテナンス](/ja/setup/maintenance#証明書)参照。
 
 ---
 
-### Step 4: Configure Environment (`.env`)
-
-Create `.env` at `~/ros-web-ui/.env`:
+### Step 4: `.env`の記入
 
 ```bash
 cd ~/ros-web-ui
 nano .env
 ```
 
-Paste the following production configuration:
-
 ```ini
-# Storage path for recorded map files on the host
+# このホストの地図保存先
 MAPS_FOLDER=/home/ubuntu/ros_maps
 
-# Host User and Docker Group IDs (run: id -u, id -g, getent group docker | cut -d: -f3)
+# ホストユーザー+dockerグループID (確認: id -u; id -g; getent group docker | cut -d: -f3)
 USER_UID=1001
 USER_GID=1001
 DOCKER_GID=998
 
-# Idle timeout before stopping inactive unit containers (1800000 ms = 30 min)
+# アイドル状態のオペレーターのユニット占有を30分で解放
 UNIT_IDLE_TIMEOUT_MS=1800000
 
-# Central Database Credentials
+# データベース (初回起動前に強いパスワードを設定)
 MYSQL_ROOT_PASSWORD=SetYourStrongRootPasswordHere
 MYSQL_DATABASE=ROS_DB
 MYSQL_USER=itbdelabo
 MYSQL_PASSWORD=SetYourStrongUserPasswordHere
 
-# MQTT Broker Settings
+# MQTTブローカー
 MQTT_BROKER_TYPE=nakayama
 NAKAYAMA_HOST=msd.nglobal.jp
 HIVEMQ_KEYSTORE=/srv/msd/secrets/hivemq/keystore.p12
 HIVEMQ_UID=1001
 
-# Production Port Map
+# 本番ポート
 MYSQL_PORT_PROD=3307
 BACKEND_PORT_PROD=5000
+ROSBRIDGE_PORT_PROD=9090
 MEDIA_SERVER_PORT_PROD=3003
 SIGNALLING_PORT_WS_PROD=3001
 SIGNALLING_PORT_HTTP_PROD=3002
 HIVE_MQTT_TLS_PORT_PROD=8883
 FRONTEND_PORT_PROD=3000
 
-# WebRTC TURN Relay (coturn)
+# 開発ポート (別スタック、同ホスト)
+MYSQL_PORT_DEV=3308
+BACKEND_PORT_DEV=5001
+ROSBRIDGE_PORT_DEV=9091
+MEDIA_SERVER_PORT_DEV=4003
+SIGNALLING_PORT_WS_DEV=4001
+SIGNALLING_PORT_HTTP_DEV=4002
+HIVE_MQTT_TLS_PORT_DEV=8884
+FRONTEND_PORT_DEV=3100
+
+# ビルド時にダッシュボードへ焼き込む公開アドレス
+SERVER_PUBLIC_IP=118.22.31.252
+
+# TURNリレー (本番専用、コンテナ起動時に4つ全て必須)
 TURN_LISTENING_IP=192.168.100.14
 TURN_EXTERNAL_IP=118.22.31.252/192.168.100.14
 TURN_USER=msd700
 TURN_PASSWORD=SetYourStrongTurnPasswordHere
 ```
 
+::: warning `.env`はgit管理下でホスト別です
+`DOCKER_GID`、`MAPS_FOLDER`、`TURN_*`、`SERVER_PUBLIC_IP`、パスワードはプロジェクトではなく**このマシン**の値です。`git pull`で上書きされ、コミットで漏洩します。ホストごとに確認し、他ホストのファイルをコピーしないでください。`FRONTEND_PORT_PROD`変更時はApacheのキャッチオールも編集します。TURN認証情報のローテーションはリレー再起動+リビルドが必要です([メンテナンス](/ja/setup/maintenance#turnリレー)参照)。
+:::
+
 ---
 
-### Step 5: Start Production Docker Containers
-
-Launch the production compose stack:
+### Step 5: 本番コンテナの起動
 
 ```bash
 cd ~/ros-web-ui
 
-# Start production containers in detached mode
+# fix_perms_prodが自動で先に実行されます。プロファイルなしでは何も起動しません
 docker compose --profile server_prod up -d
 
-# Verify all containers are Up or Healthy
+# 全てUpまたはhealthyか確認 (fix_perms_*は通常exit 0)
 docker compose --profile server_prod ps
 ```
 
+アプリソースやDockerfileを変えるコードをpullした後はリビルドします:`up -d --build`(イメージは`source/`をバインドマウントしません)。本番`up`は`coturn`も起動します。フラグ一覧は[Dockerリファレンス](/ja/setup/docker-reference)。
+
 ---
 
-### Step 6: Configure Apache Reverse Proxy
+### Step 6: Apacheの設定
 
-Apache terminates SSL on port 443 and routes incoming traffic to internal container ports.
+Apacheはポート443でTLSを終端し、コンテナへ振り分けます。
 
 ```bash
-# 1. Enable required Apache modules
 sudo a2enmod ssl proxy proxy_http proxy_wstunnel headers rewrite alias
 sudo systemctl restart apache2
 ```
 
-Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
+`/etc/apache2/sites-available/000-default-le-ssl.conf`を編集:
 
 ```apache
 <IfModule mod_ssl.c>
@@ -210,30 +235,30 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 
     ProxyAddHeaders On
 
-    # 1. WebRTC Signalling Server (WebSocket)
+    # 1. WebRTCシグナリング (WebSocket)
     ProxyPass /services/signalling ws://localhost:3001
     ProxyPassReverse /services/signalling ws://localhost:3001
 
-    # 2. Media Server (Map files and images)
+    # 2. メディアサーバー (地図、画像)
     ProxyPass /services/media http://localhost:3003
     ProxyPassReverse /services/media http://localhost:3003
 
-    # 3. Express REST API Backend
+    # 3. バックエンドREST API
     ProxyPass /services/rosbackend http://localhost:5000
     ProxyPassReverse /services/rosbackend http://localhost:5000
 
-    # 4. rosbridge WebSocket Server
+    # 4. rosbridge WebSocket
     <Location /services/rosbridge>
         ProxyPass ws://localhost:9090 timeout=86400 keepalive=On flushpackets=on
         ProxyPassReverse ws://localhost:9090
         RequestHeader set Host "localhost:9090"
     </Location>
 
-    # 5. Documentation Site Static Files
+    # 5. ドキュメントサイト (除外はキャッチオールより上に)
     ProxyPass /itbdelabo/docs !
-    Alias /itbdelabo/docs /home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation/docs/.vitepress/dist
+    Alias /itbdelabo/docs /home/itbdelabo/ITBdeLabo/V2/msd700_documentation/docs/.vitepress/dist
 
-    <Directory /home/itbdelabo/ITBdeLabo/Documentation/msd700_documentation/docs/.vitepress/dist>
+    <Directory /home/itbdelabo/ITBdeLabo/V2/msd700_documentation/docs/.vitepress/dist>
         Options -Indexes -MultiViews +FollowSymLinks
         AllowOverride None
         Require all granted
@@ -248,11 +273,10 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
         ErrorDocument 404 /itbdelabo/docs/404.html
     </Directory>
 
-    # 6. Web Dashboard Frontend (Catch-All, MUST BE LAST)
+    # 6. ダッシュボードフロントエンド (キャッチオール、必ず最後)
     ProxyPass / http://localhost:3000/
     ProxyPassReverse / http://localhost:3000/
 
-    # SSL Certificate Paths
     SSLCertificateFile /etc/letsencrypt/live/msd.nglobal.jp/fullchain.pem
     SSLCertificateKeyFile /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem
     Include /etc/letsencrypt/options-ssl-apache.conf
@@ -260,7 +284,22 @@ Edit `/etc/apache2/sites-available/000-default-le-ssl.conf`:
 </IfModule>
 ```
 
-Reload Apache:
+実ホストには追加ブロックがあります(MQTT WebSocket、webhook、旧ドキュメント、`/development/`のBasic認証)。原則:`ProxyPass /`は最後に、`ProxyPass ... !`の除外はその上に置きます。
+
+| パス | 転送先 | 備考 |
+| --- | --- | --- |
+| `/services/signalling` | `ws://localhost:3001` | WebRTCシグナリングWS |
+| `/services/media` | `http://localhost:3003` | マップアセット |
+| `/services/rosbackend` | `http://localhost:5000` | REST API |
+| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`、`Host: localhost:9090` |
+| `/services/msd700-webhook` | `localhost:4701/webhook` | ドキュメント配備フック(主ブロックでなく `apache-snippet.conf` 内) |
+| `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | ros-web-ui 自動デプロイフック。[自動デプロイ](#auto-deploy-on-push)参照 |
+| `/itbdelabo/docs` | 除外 + `dist/` への `Alias` | キャッチオールより上に維持必須 |
+| `/` | `http://localhost:3000/` | ダッシュボードフロントエンド、**必ず最後** |
+
+HiveMQメモ:1つの `config.xml` で本番と開発を賄う。平文 `1883` はコンテナ内部専用。TLS `8883` は両方ともコンテナ内で、ホストマップは本番8883/開発8884(XML内の開発ポートを「修正」しないこと)。クライアント認証NONE——TLSは転送路/サーバーidentityのみ。`/opt/hivemq/conf/keystore.p12` のキーストアは `update_ssl.sh` が再生成し、ブローカー再起動が必要。Control Center HTTP `8080` はヘルスチェック用に存在する。
+
+coturnメモ:`realm=msd.nglobal.jp`、`lt-cred-mech`(旧無認証設定は認証なしAllocateを許可していた——閉鎖済み)。認証情報・ポート・`external-ip` はconfファイルでなくcompose由来のコンテナ**フラグ**で渡す(coturnはenv展開しない)。TURN-over-TLS/5349なしは設計通り。`no-cli`、TCPリレーなし、LAN/ループバック/マルチキャストのpeer拒否。開発は本番リレーを共有する。
 
 ```bash
 sudo apache2ctl configtest
@@ -269,91 +308,179 @@ sudo systemctl reload apache2
 
 ---
 
-## Unit Registration & Enrolment Flow
+## ユニット登録 (エンロールメント)
 
-Once the server is running, physical robots can be registered:
+サーバー稼働後、ロボットを登録できます:
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant Tech as Field Technician
-  participant Unit as Robot Unit (Jetson)
-  participant Server as Cloud Backend
-  participant Admin as Admin Web Portal
+  participant Tech as 現場技術者
+  participant Unit as ロボット (Jetson)
+  participant Server as クラウドバックエンド
+  participant Admin as 管理ポータル
 
-  Tech->>Unit: Run enrollment script on Jetson
-  Unit->>Server: POST /enroll/claim (sends nonce_hash & serial)
-  Server-->>Unit: HTTP 202 (Returns Claim Code, e.g. "K7M2QP")
-  Unit-->>Tech: Displays Claim Code "K7M2QP" on screen
+  Tech->>Unit: Jetsonで登録スクリプトを実行
+  Unit->>Server: POST /enroll/claim (フィンガープリント、nonceハッシュ、ホスト名/MAC)
+  Server-->>Unit: 8文字のクレームコード、例 "K7M2QP4R"
+  Unit-->>Tech: "K7M2QP4R"を画面に表示
 
-  Tech->>Admin: Open https://msd.nglobal.jp/admin and login
-  Tech->>Admin: Navigate to "Pending Units" and match "K7M2QP"
-  Tech->>Admin: Assign Unit Name and Rental Profile -> Click "Approve"
+  Tech->>Admin: https://msd.nglobal.jp/adminを開きログイン
+  Tech->>Admin: Pending Unitsで"K7M2QP4R"を探す
+  Tech->>Admin: ユニット名+レンタルプロファイルを設定→承認
 
-  Server->>Server: Update status to "approved" in database
-  Unit->>Server: POST /enroll/status (presents plaintext nonce)
-  Server-->>Unit: HTTP 200 (Hands over Unit ULID & Device Secret)
-  Unit->>Unit: Saves Certificates/robot/device.json and connects to HiveMQ
+  Server->>Server: DBを"approved"に更新
+  Unit->>Server: POST /enroll/status (平文nonce)
+  Server-->>Unit: ユニットULID+デバイスシークレット
+  Unit->>Unit: Certificates/robot/device.jsonを保存、HiveMQに接続
 ```
 
-1. Log into the administration panel at `https://msd.nglobal.jp/admin`.
-2. Under **Pending Units**, locate the 6-character claim code displayed by the technician on the robot.
-3. Select an active **Rental Profile**, assign a unit display label, and click **Approve**.
-4. The robot completes enrolment and appears in the fleet dashboard immediately.
+1. `https://msd.nglobal.jp/admin`にログインします。
+2. **Pending Units**でロボット表示の8文字コードを探します。
+3. 有効な**レンタルプロファイル**を選び、ユニット名を付けて**承認**します。
+4. ロボットが登録を完了し、フリートダッシュボードに表示されます。
 
 ---
 
-## Advanced Configurations
+## 高度な設定
 
 <details>
-<summary><b>Development Mode Profile (`server_dev`)</b></summary>
+<summary><b>開発モード (`server_dev`)</b></summary>
 
-To run an isolated development stack alongside production:
+同ホスト上の分離された開発スタック:
 
-1. Initialize dev keyring:
-   ```bash
-   cd ~/ros-web-ui
-   ./scripts/secrets.sh init --dev
-   ```
+```bash
+cd ~/ros-web-ui
+./scripts/secrets.sh init --dev
+docker compose --profile server_dev up -d
+```
 
-2. Start the dev profile:
-   ```bash
-   docker compose --profile server_dev up -d
-   ```
+開発ポート: MySQL `3308`、バックエンド`5001`、HiveMQ `8884`、rosbridge `9091`、ROSマスター`11312`(本番`11311`)、フロントエンド`3100`、メディア`4003`、シグナリング`4001` WS / `4002` HTTP。
 
-3. Dev ports are offset to prevent collisions:
-   - Dev MySQL: `3308`
-   - Dev Backend: `5001`
-   - Dev HiveMQ: `8884`
-   - Dev rosbridge: `9091`
-   - Dev Frontend: `3100`
+開発は別ファイル`jwt_keyring.dev.json`を使いますが、キーストアファイルは本番と共通です。`coturn`は本番専用のままです。
+
+</details>
+
+<details id="auto-deploy-on-push">
+<summary><b>push時の自動デプロイ (GitHub webhook)</b></summary>
+
+push または PR のマージで、対応するスタックが自動的に再ビルド・再起動されます。
+
+| ブランチ | チェックアウト | プロファイル |
+| --- | --- | --- |
+| `main` | `~/ITBdeLabo/Production/ros-web-ui` | `server_prod` |
+| `develop` | `~/ITBdeLabo/Development/ros-web-ui` | `server_dev` |
+
+フロントエンドはリポジトリ内のダッシュボードのクローンからビルドされるため、`ros-web-ui` と `ROS-dashboard-next-ts` の **両方** の push でトリガーされます。その他のブランチは無視されます。
+
+```mermaid
+flowchart LR
+  GH[GitHub push] -->|HTTPS| AP[Apache<br>/services/rosweb-deploy-webhook]
+  AP --> L[webhook-listener.mjs<br>127.0.0.1:4702]
+  L -->|HMAC検証| D[deploy.sh]
+  D --> G[git ff-only pull<br>repo + dashboard]
+  G --> B[compose build]
+  B --> U[compose up -d]
+```
+
+リスナーは GitHub に即座に `202` を返し、`deploy.sh` をバックグラウンドで実行します。そのため catkin + Next.js の長いビルドでも GitHub の webhook タイムアウト(10秒)に掛かりません。
+
+ファイルはすべて `ros-web-ui/scripts/autodeploy/` にあります。
+
+| ファイル | 役割 |
+| --- | --- |
+| `webhook-listener.mjs` | webhook 受信(Node、依存なし) |
+| `deploy.sh` | git 同期 + build + up。手動実行も可 |
+| `rosweb-autodeploy-webhook.service` | systemd ユニット |
+| `apache-snippet.conf` | Apache 用 `ProxyPass` ブロック |
+| `webhook.env.example` | 設定テンプレート(secret、ポート、パス) |
+| `webhook.env` | 実際の設定。**gitignore 対象**、サーバー上で手動作成 |
+
+各チェックアウトは `logs/autodeploy/deploy.log`(gitignore 対象)にログを書きます。
+
+**初回セットアップ**(リスナーは Production チェックアウトから動くため、先に `main` にファイルが入っている必要があります):
+
+```bash
+cd ~/ITBdeLabo/Production/ros-web-ui
+
+# 1. シークレット(gitignore 対象)
+cp scripts/autodeploy/webhook.env.example scripts/autodeploy/webhook.env
+chmod 600 scripts/autodeploy/webhook.env
+openssl rand -hex 32   # WEBHOOK_SECRET= に貼り付け
+
+# 2. サービス
+sudo cp scripts/autodeploy/rosweb-autodeploy-webhook.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now rosweb-autodeploy-webhook
+curl http://127.0.0.1:4702/health   # ok
+
+# 3. Apache: scripts/autodeploy/apache-snippet.conf を `ProxyPass /` より上に追加
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+4. **両方** の GitHub リポジトリで Settings → Webhooks → Add webhook。Payload URL `https://msd.nglobal.jp/services/rosweb-deploy-webhook`、content type `application/json`、同じ secret、push イベントのみ。最初の配信が `200 pong` になれば OK です。
+
+**運用:**
+
+```bash
+tail -f ~/ITBdeLabo/Production/ros-web-ui/logs/autodeploy/deploy.log   # または Development/
+journalctl -u rosweb-autodeploy-webhook -f                            # 受信した webhook
+
+# 該当チェックアウトから手動デプロイ。FORCE=1 で新規コミットがなくても再ビルド
+FORCE=1 scripts/autodeploy/deploy.sh develop server_dev
+```
+
+失敗した webhook は GitHub → Settings → Webhooks → Recent Deliveries → **Redeliver** で再送できます。
+
+チェックアウトのブランチが違う、追跡ファイルにローカル変更がある、fast-forward できない場合、デプロイは **何も変更せずに中止** します。`build` が失敗すると `up` はスキップされ、旧コンテナが動き続けます。ビルドは同時に1つだけで、ビルド中に来た push は待機した後に最新コミットを取り込みます。
+
+::: warning `down` や `--remove-orphans` は絶対に追加しない
+両チェックアウトはどちらも `ros-web-ui` というディレクトリ名のため、compose プロジェクト名が同じです。互いのコンテナを orphan と見なすので、dev から `--remove-orphans` を実行すると本番コンテナが削除されます。
+:::
+
+注意点:
+
+- `source/` 以下の変更は、そのプロファイルのアプリコンテナをすべて再作成します(`nakayama_cloud*`、`unit_relays*`、`nakayama_media*`、`nakayama_signalling*` は同じイメージを共有)。接続中のロボットは一時的に切断されます。`db`、`hivemq`、`coturn` は compose 上の設定が変わった場合のみ再作成されます。ユニット別の `rosweb_unit_*` コンテナは触りません(`unit_manager.js` が管理)。
+- ロック `/tmp/rosweb-autodeploy.lock` は prod と dev で共有され、待機中の push は最大2時間待ちます。
+- `deploy.sh` の変更は *次回* のデプロイから有効です(マージは旧スクリプト実行中に行われるため)。各チェックアウトは自分のコピーを実行するので、変更はまず develop で試されます。
+- `webhook-listener.mjs` の変更後は `sudo systemctl restart rosweb-autodeploy-webhook` が必要です。`KillMode=process` により実行中のビルドは再起動で止まりません。
+- git は `itbdelabo` ユーザーの SSH 鍵(`~/.ssh`、agent なし)を使います。鍵の変更やパスフレーズ設定で `git fetch` が失敗します。
+- nvm の node パスはユニットの `ExecStart` にハードコードされています(`msd700-docs-webhook.service` と同様)。node を変えたら更新してください。
+- `.env` は git 管理下で pull により更新されます。ホスト固有の値は追跡されない `docker-compose.override.yml` に置いてください。
+
+| 症状 | 確認 |
+| --- | --- |
+| 配信 `401 bad signature` | GitHub の secret が `WEBHOOK_SECRET` と不一致。`webhook.env` 変更後はサービスを再起動 |
+| 配信 `502/503` | リスナー停止: `systemctl status rosweb-autodeploy-webhook` |
+| 配信 `404` | Apache ブロック未設定、または `ProxyPass /` より下にある |
+| 配信 `500 deploy script missing` | 対象チェックアウトに `scripts/autodeploy/deploy.sh` がまだない |
+| `200 ignored` | 他ブランチ、push 以外のイベント、`ALLOWED_REPOS` 外のリポジトリでは正常 |
+| ログ `ABORT: ... is on 'x', expected 'y'` | そのフォルダで `git checkout <branch>` |
+| ログ `ABORT: ... has local changes` | そのフォルダで `git status` を確認し手動で整理 |
+| ログ `Not possible to fast-forward` | ローカルコミットまたは force-push。手動で `origin/<branch>` に合わせる |
+| ログ `Permission denied (publickey)` | `itbdelabo` の SSH 鍵で GitHub にアクセスできない |
+| ビルド失敗 | `deploy FAILED` の上のログを確認。旧コンテナは動作継続 |
+
+デプロイせずにリスナーを試すには、`webhook.env` に `DRY_RUN=1` を設定してサービスを再起動し、GitHub から **Redeliver** します。`journalctl` に `DRY_RUN: would run ...` が表示されます。
 
 </details>
 
 <details>
-<summary><b>Keyring Rotation & Grace Periods</b></summary>
-
-Rotate the active JWT signing key without terminating active user sessions:
+<summary><b>全員をログアウトさせない鍵ローテーション</b></summary>
 
 ```bash
 cd ~/ros-web-ui
-
-# Rotate active key (old key remains valid for 48 hours)
-./scripts/secrets.sh rotate --grace-hours 48
-
-# Check status of keys in keyring
+./scripts/secrets.sh rotate --grace-hours 48  # 旧鍵は48時間有効
 ./scripts/secrets.sh status
-
-# Remove expired keys after grace window
-./scripts/secrets.sh prune
+./scripts/secrets.sh prune                    # 期間後に期限切れ鍵を削除
 ```
 
 </details>
 
 <details>
-<summary><b>Manual HiveMQ Keystore Creation</b></summary>
+<summary><b>HiveMQキーストアの手動作成</b></summary>
 
-If generating the keystore manually without `update_ssl.sh`:
+`update_ssl.sh`が使えない場合のみ:
 
 ```bash
 sudo mkdir -p /srv/msd/secrets/hivemq
@@ -362,37 +489,40 @@ sudo openssl pkcs12 -export \
   -inkey /etc/letsencrypt/live/msd.nglobal.jp/privkey.pem \
   -out  /srv/msd/secrets/hivemq/keystore.p12 \
   -name hivemq \
-  -passout "pass:SetKeystorePasswordHere"
+  -passout "pass:<must-match-Docker-hivemq-config.xml>"
 
 sudo chown -R 1001:1001 /srv/msd/secrets/hivemq
 sudo chmod 700 /srv/msd/secrets/hivemq
 sudo chmod 600 /srv/msd/secrets/hivemq/keystore.p12
 ```
 
+パスワードは`Docker/hivemq/config.xml`と一致させます。後はブローカーを再起動します。
+
 </details>
 
 ---
 
-## Verification & Health Checks
-
-Run these diagnostic commands to confirm all server subsystems are operational:
+## ヘルスチェック
 
 ```bash
-# 1. Confirm all Docker containers are running
+# 1. コンテナ稼働中?
 docker compose --profile server_prod ps
 
-# 2. Test Apache HTTPS ingress
+# 2. Apache HTTPSはOK?
 curl -sI https://msd.nglobal.jp/ | head -n 1
 
-# 3. Test Backend API health endpoint
+# 3. バックエンドAPIは応答?
 curl -s https://msd.nglobal.jp/services/rosbackend/
 
-# 4. Check MQTT broker listening socket
+# 4. MQTTブローカーは待受中?
 sudo ss -lptn 'sport = :8883'
+
+# 5. フリートリレー稼働中?
+docker ps --filter name=unit_relays
 ```
 
-## Related Documentation
+## 関連
 
-- [Unit Setup](/ja/setup/unit-setup): Configure the physical Jetson SBC.
-- [System Setup](/ja/setup/system-setup): End-to-end integration and calibration.
-- [Docker Reference](/ja/setup/docker-reference): Container options and lifecycle details.
+- [ユニット構築](/ja/setup/unit-setup): Jetsonロボットのセットアップ。
+- [システム構築](/ja/setup/system-setup): サーバーとユニットの連携確認。
+- [Dockerリファレンス](/ja/setup/docker-reference): コンテナの詳細。

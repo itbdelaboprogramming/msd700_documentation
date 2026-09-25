@@ -10,11 +10,20 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 
 ## Architectural Milestones
 
+### September 2026: Bandwidth Optimisation & Per-Unit Data Scope
+- **Presence-Gated Egress**: Robot-to-cloud telemetry now reads `/msd700/viewers` and sends at a rate matched to whether anyone is watching. Overlays and the occupancy grid are sent on change rather than on a timer, and the four overlay topics are latched on the cloud bridge so a reconnecting tab still gets its drawing.
+- **Map Delivery Guarantees**: Change-gating left the map as a single fire-and-forget message per heartbeat, which is the wrong guarantee for the one payload an operator cannot work without. The map topic is now latched on the cloud relay, the map after a reset is repeated as a short burst, and the dashboard can pull one on demand over `/string/map_request` instead of waiting out a heartbeat measured at ~52 s. Opening a map from the Database also no longer sits behind a fixed 5 s wait that was mislabelled as a readiness poll. See [Message Contracts § Map delivery](/development/message-contracts#map-delivery).
+- **Coverage Survives the Operator**: Manual Override now parks a boustrophedon run through the coverage node's own pause service instead of a bare `/move_base/cancel`, which that node read as a mission cancel and which therefore killed the sweep outright and without publishing any terminal status. A cancel arriving while a run is paused no longer ends it, the pause is given back only to whoever took it, and a run that truly dies now says so on `/msd700/coverage_status` instead of leaving the dashboard reporting a live run over a stationary robot. See [Manual & Autopilot § Handing a coverage sweep to the operator and back](/development/webui/navigation/manual-and-autopilot#handing-a-coverage-sweep-to-the-operator-and-back).
+- **Per-Unit Map Scope**: Map listings, single-map reads and `POST /api/navigation/init` are scoped to the unit being driven as well as the rental. A rental holding several robots no longer lists every robot's maps together, and a sibling's map is refused at the API instead of failing on the robot.
+- **Recovery Reach over Message Count**: Snapshot rebuild now also triggers on an `Idle` tab with no mode selected (the state left by re-opening a map from the Database page), and the resync prompt reaches 9.4 s instead of 3.4 s. Neither the Navigation page nor the map component overwrites its persisted status or mode on mount.
+- **Self-Join Prevention**: The unit's own hotspot is excluded from its WiFi scan and refused by `connect()`, so an operator reading the list through that hotspot cannot tell the unit to join itself.
+- **Mode-Preserving Boot Autostart**: `msd700.service` now carries the `--dev` and `--simulator` flags of the `up` that armed it. The boot unit previously re-ran a bare `up`, so a robot started against the dev cloud, or as a simulator, silently returned after a reboot as hardware against production.
+
 ### August 2026: Documentation Overhaul & Precision Kinematics
 - **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.
-- **True-Scale Gazebo Simulation**: Upgraded simulator model to `msd700_field` ($0.90 \times 0.70\text{ m}$ body footprint with 4 casters) operating in the AWS RoboMaker Small Warehouse.
-- **Correlative Scan Matching (Auto-Align)**: Implemented zero-spin initial pose alignment (< 50 ms) to eliminate 360-degree rotation in narrow corridors.
-- **32-Byte Nonce Cryptographic Enrolment**: Enforced CSPRNG nonce hashing protocol for robot device authentication.
+- **True-Scale Gazebo Simulation**: Upgraded simulator model to `msd700_field` ($0.90 \times 0.70\text{ m}$ body, 4 drive wheels, 150 kg) operating in the AWS RoboMaker Small Warehouse.
+- **Zero-Spin Auto-Align**: Implemented `particle_align_validator.py` coarse-to-fine initial pose alignment (< 50 ms) to eliminate 360-degree rotation in narrow corridors.
+- **Nonce Cryptographic Enrolment**: Enforced CSPRNG nonce hashing protocol for robot device authentication. Three different secrets, do not conflate them: the robot's 32-byte claim nonce, the 8-character admin claim code (`K7M2QP4R`), and the 32-byte device secret minted at handover.
 
 ### July 2026: Multi-Tenant Rental Security & ULID Migration
 - **Rental Profile Authorization**: Added `attachUnit` Express middleware to enforce strict tenant isolation across maps and units.
@@ -37,7 +46,7 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 For line-by-line commit logs, refer to the respective GitHub repositories:
 
 - [msd700_documentation Commits](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
-- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
-- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
-- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)
+- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
+- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
+- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
+- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)

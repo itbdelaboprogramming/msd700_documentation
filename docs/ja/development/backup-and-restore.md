@@ -3,16 +3,15 @@ outline: deep
 search: false
 ---
 
-
-# Backup, Restore, and Data Migration
+# バックアップ、リストア、データ移行
 
 <RoleBadge role="developer" />
 
-This document details the database backup architecture, export/import archive structures, rental profile transfer mechanics, and migration scripts in MSD700.
+このドキュメントは、MSD700 におけるデータベースバックアップアーキテクチャ、エクスポート/インポートのアーカイブ構造、レンタルプロファイル転送の仕組み、マイグレーションスクリプトについて詳述します。
 
-## Dual-Scope Backup Architecture
+## 2軸バックアップアーキテクチャ
 
-The platform supports two independent backup scopes:
+このプラットフォームは2つの独立したバックアップスコープをサポートします。
 
 ```mermaid
 flowchart TD
@@ -29,16 +28,16 @@ flowchart TD
   end
 ```
 
-| Dimension | Profile-Scoped Backup | Unit-Scoped Backup |
+| 軸 | プロファイルスコープのバックアップ | ユニットスコープのバックアップ |
 | --- | --- | --- |
-| **Primary Scope Key** | `profile_id` (Rental Profile) | `unit_id` (Physical Robot ULID) |
-| **Typical Use Case** | Migrating a customer's maps and routes to a replacement robot. | Archiving a robot before factory hardware servicing or refurbishment. |
-| **Data Included** | Maps, waypoints, playlists, and user metadata for that profile. | All maps and sensor records originating from that specific hardware unit. |
-| **Restore Strategy** | Additive (upsert without overwriting unrelated tenant data). | Direct restoration to the hardware unit. |
+| **主スコープキー** | `profile_id`(レンタルプロファイル) | `unit_id`(物理ロボットの ULID) |
+| **典型的なユースケース** | 顧客のマップとルートを代替ロボットへ移行する。 | 工場でのハードウェア整備やリファービッシュの前にロボットをアーカイブする。 |
+| **含まれるデータ** | そのプロファイルのマップ、ウェイポイント、プレイリスト、ユーザーメタデータ。 | その特定のハードウェアユニットを起点とするすべてのマップとセンサー記録。 |
+| **リストア戦略** | アディティブ(無関係なテナントデータを上書きしない upsert)。 | ハードウェアユニットへの直接リストア。 |
 
-## Archive Structure (`.tar.gz`)
+## アーカイブ構造(`.tar.gz`)
 
-Backups are exported as compressed `.tar.gz` archives containing structured metadata and binary map files:
+バックアップは、構造化されたメタデータとバイナリのマップファイルを含む圧縮 `.tar.gz` アーカイブとしてエクスポートされます。
 
 ```
 msd700_backup_01JZ8QK2H.tar.gz
@@ -50,7 +49,7 @@ msd700_backup_01JZ8QK2H.tar.gz
     └── 01JZ8QK2H0001_thumb.png
 ```
 
-### Manifest Format (`manifest.json`)
+### マニフェスト形式(`manifest.json`)
 
 ```json
 {
@@ -69,45 +68,57 @@ msd700_backup_01JZ8QK2H.tar.gz
 }
 ```
 
-## REST API Backup Operations
+## REST API のバックアップ操作
 
-### 1. Export Archive
-`POST /api/backup/export`
+すべてのバックアップルートは`/admin/api`配下にある(管理者トークンが必要)。`/api/backup/export`や`/api/backup/import`というエンドポイントは存在しない。
 
-Generates and downloads a `.tar.gz` archive.
+### 1. バックアップの作成
+`POST /admin/api/profiles/:id/backups`(プロファイルスコープ)または`POST /admin/api/units/:id/backups`(ユニットスコープ)
 
-- **Request Body**:
-```json
-{
-  "scope": "profile",
-  "profile_id": "01JZ7YV5CQPROF00000000000"
-}
-```
+プロファイルまたはユニットのバックアップレコードを作成する。
 
-### 2. Import and Restore Archive
-`POST /api/backup/import`
+### 2. アーカイブのダウンロード
+`GET /admin/api/backups/:id/download`
 
-Uploads an archive and applies it additively.
+`.tar.gz`アーカイブをダウンロードする。
 
-- **Request Payload**: Multipart form-data with `file: <archive.tar.gz>` and target `profile_id`.
+### 3. アーカイブのアップロード
+`POST /admin/api/backups/upload`
 
-## Schema Migration Scripts
+アーカイブをアップロードする(生ボディ)。事前に`POST /admin/api/backups/:id/plan`でプランをプレビューする。
 
-Database schema evolutions are managed by automated scripts in `ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/`:
+### 4. アーカイブのリストア
+`POST /admin/api/backups/:id/restore`
 
-| Script Name | Purpose | Execution Command |
+アップロードされたアーカイブをアディティブに適用する。
+
+### 5. バックアップの一覧
+`GET /admin/api/backups`
+
+## アーカイブ機構
+
+パッキングは2つのスクリプトが担うため、未検証アップロードへの `tar` シェルアウトは決して行わない:
+
+- `profile_archive.js` は1つのDBスライス+マップファイルを `.tar.gz`(`manifest.json` + `files/<mapId>.pgm|yaml|png`)に詰め/開く。プロファイルスコープ(1テナント)またはユニットスコープ(1ロボット、任意でレンタル跨ぎ)用。`users` は決して運ばず(既存アカウントへのメンバーシップ/著者紐付けのみ)、空きULID再利用、奪取済みは再マップ、上書きなし。主要関数:`buildArchive`、`readArchive`、`buildRestorePlan`、`restoreArchive`。
+- `tar_archive.js` はその下の最小インメモリustarリーダー/ライター:`packTar`/`unpackTar`、許可リスト(`^files/<ULID>.(pgm|yaml|png)$`)、チェックサム/切詰め検査、非通常ファイル skip——ステージングdirなし、CLI展開なし。
+
+## スキーママイグレーションスクリプト
+
+データベーススキーマの変更は、`ros-web-ui/source/dependencies/ROS-dashboard-backend/scripts/` 内の自動化されたスクリプトによって管理されます。
+
+| スクリプト名 | 用途 | 実行コマンド |
 | --- | --- | --- |
-| `migrate_unit_id_refactor.js` | Migrates legacy username/unitname paths to ULID addressing. | `node migrate_unit_id_refactor.js --apply` |
-| `migrate_enrolment.js` | Creates `pending_units` and `unit_devices` tables for 32-byte nonce auth. | `node migrate_enrolment.js --apply` |
-| `migrate_sync.js` | Installs `sync_state` and `sync_tombstones` tables for offline data sync. | `node migrate_sync.js --profile dev --apply` |
-| `migrate_backup_scope.js` | Upgrades `profile_backups` table with `scope` column. | `node migrate_backup_scope.js --profile dev --apply` |
+| `migrate_unit_id_refactor.js` | 従来の username/unitname パスを ULID アドレス指定へ移行する。 | `node migrate_unit_id_refactor.js --profile server_dev --apply` |
+| `migrate_enrolment.js` | nonce 認証のために `pending_units` と `unit_devices` テーブルを作成する。 | `node migrate_enrolment.js --profile server_dev --apply` |
+| `migrate_sync.js` | オフラインデータ同期のために `sync_state` と `sync_tombstones` テーブルをインストールする。 | `node migrate_sync.js --profile server_dev --apply` |
+| `migrate_backup_scope.js` | `profile_backups` テーブルに `scope` カラムを追加してアップグレードする。 | `node migrate_backup_scope.js --profile server_dev --apply` |
 
-::: danger Migration Testing Rule
-Always test migration scripts against the development database on **port 3308** before applying them to production on port 3307. Migration scripts require an explicit `--profile` argument to prevent accidental target mismatch.
+::: danger マイグレーションのテストルール
+マイグレーションスクリプトは、port 3307 の本番環境に適用する前に、必ず port 3308 の開発用データベースに対してテストしてください。マイグレーションスクリプトは、対象の取り違えを誤って起こさないよう、明示的な `--profile` 引数を必要とします。
 :::
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Database Schema](/ja/development/database-schema): Full MySQL table definitions and foreign keys.
-- [Data Sync](/ja/development/data-sync): Offline data replication and conflict resolution.
-- [API Reference](/ja/development/api-reference): REST API endpoints for fleet management.
+- [データベース設計](/ja/development/database-schema): MySQL テーブル定義と外部キーの全体。
+- [データ同期](/ja/development/data-sync): オフラインデータのレプリケーションと競合解決。
+- [API リファレンス](/ja/development/api-reference): フリート管理用の REST API エンドポイント。

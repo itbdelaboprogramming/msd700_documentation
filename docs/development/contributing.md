@@ -22,12 +22,15 @@ The development stack uses dedicated port offsets to allow concurrent operation 
 
 | Service | Production Port | Development Port | Protocol |
 | --- | --- | --- | --- |
-| **ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **Cloud ROS Master** | `11311` | `11312` | TCP (XML-RPC) |
+| **Unit ROS Master** | `11321` | `11322` | TCP (XML-RPC, `--dev` on the unit) |
 | **rosbridge** | `9090` | `9091` | WebSocket |
 | **HiveMQ MQTT** | `8883` | `8884` | TLS Encrypted MQTTS |
 | **MySQL Database** | `3307` | `3308` | TCP |
 | **Backend REST API** | `5000` | `5001` | HTTP |
 | **Next.js Dashboard**| `3000` | `3100` | HTTP |
+| **Signalling (WS / HTTP)** | `3001` / `3002` | `4001` / `4002` | WebSocket / HTTP |
+| **Media Server** | `3003` | `4003` | HTTP |
 
 A physical or simulated robot connects to the dev cloud peer by passing `--dev`:
 ```bash
@@ -55,8 +58,9 @@ npm run docs:preview   # Serves production build preview
 Before committing documentation changes, run:
 
 ```bash
-# 1. Validate all Mermaid diagrams syntax
-node scripts/check_parse.mjs
+# 1. Render new/changed diagrams, then validate syntax + that every diagram has an image
+npm run docs:diagrams
+npm run docs:check-diagrams
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build
@@ -69,7 +73,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 This documentation theme extends VitePress with custom global components:
 - `<RoleBadge role="user | technician | developer" />`: Displays target audience badge at the top of pages.
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Interactive card grid used on section landing pages.
-- `<Mermaid code="..." />`: Client-side SVG renderer for responsive architecture flowcharts and sequence diagrams.
+- `<Mermaid code="..." />`: In-browser fallback, used only for a ```` ```mermaid ```` fence that has no pre-rendered PNG yet (see [Repository Structure](/development/repository-structure#diagrams)).
 
 ### Commit and Pull Request Conventions:
 Commits follow standard conventional commit formats (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).

@@ -3,16 +3,15 @@ outline: deep
 search: false
 ---
 
-
-# WebSocket and rosbridge Protocol
+# WebSocket と rosbridge プロトコル
 
 <RoleBadge role="developer" />
 
-This document details the WebSocket interface provided by `rosbridge_suite`, explaining the JSON protocol specification, message subscription formats, service invocation schemas, compression techniques, and web canvas rendering integration.
+このドキュメントは `rosbridge_suite` が提供する WebSocket インターフェースについて詳述し、JSON プロトコル仕様、メッセージのサブスクリプション形式、サービス呼び出しスキーマ、圧縮技術、Web キャンバスのレンダリング統合を説明します。
 
-## rosbridge Architecture Overview
+## rosbridge アーキテクチャ概要
 
-The web dashboard interacts with live ROS topics and services through `rosbridge_server` over a persistent WebSocket connection.
+Web ダッシュボードは、永続的な WebSocket 接続を介して `rosbridge_server` 経由でライブの ROS トピックおよびサービスとやり取りします。
 
 ```mermaid
 flowchart LR
@@ -23,7 +22,7 @@ flowchart LR
   subgraph CloudServer["MSD700 Cloud Server"]
     APACHE["Apache2 Reverse Proxy (:443)<br/>Route: /services/rosbridge"]
     ROSBRIDGE["rosbridge_suite WebSocket Server<br/>(Port: 9090)"]
-    RELAY["rosweb_unit_<ULID><br/>Deserialized Typed ROS Topics"]
+    RELAY["rosweb_unit_#lt;ULID#gt;<br/>Deserialized Typed ROS Topics"]
   end
 
   JS_CLIENT <-->|"WSS (/services/rosbridge)"| APACHE
@@ -31,20 +30,20 @@ flowchart LR
   ROSBRIDGE <-->|"Native ROS Topics"| RELAY
 ```
 
-## Connection Endpoints
+## 接続エンドポイント
 
-| Environment | Protocol & Path | Destination Port |
+| 環境 | プロトコル & パス | 接続先ポート |
 | --- | --- | --- |
-| **Production Server** | `wss://msd.nglobal.jp/services/rosbridge` | Proxied to internal `localhost:9090` |
-| **Development Server** | `ws://<server-ip>:9091` | Direct WebSocket to dev rosbridge container |
-| **Unit Local Server** | `ws://<unit-ip>:9090` | Direct WebSocket to onboard `rosbridge_suite` |
+| **本番サーバー** | `wss://msd.nglobal.jp/services/rosbridge` | 内部の `localhost:9090` へプロキシされる |
+| **開発サーバー** | `ws://<server-ip>:9091` | 開発用 rosbridge コンテナへの直接 WebSocket |
+| **ユニットローカルサーバー** | `ws://<unit-ip>:9090` | オンボードの `rosbridge_suite` への直接 WebSocket |
 
-## rosbridge Protocol Operations
+## rosbridge プロトコルの操作
 
-The rosbridge v2 protocol uses standardized JSON operations (`op`):
+rosbridge v2 プロトコルは、標準化された JSON 操作(`op`)を使用します。
 
-### 1. Topic Subscription (`op: "subscribe"`)
-Initiates streaming of a ROS topic to the browser:
+### 1. トピックのサブスクリプション(`op: "subscribe"`)
+ブラウザへの ROS トピックのストリーミングを開始します。
 
 ```json
 {
@@ -58,12 +57,12 @@ Initiates streaming of a ROS topic to the browser:
 }
 ```
 
-- `topic`: Fully qualified ROS topic name including unit ULID namespace.
-- `throttle_rate`: Minimum time in milliseconds between messages (e.g. 40 ms = 25 Hz).
-- `compression`: Supports `none` or `png` (for high-bandwidth occupancy grids).
+- `topic`: ユニットの ULID 名前空間を含む、完全修飾された ROS トピック名。
+- `throttle_rate`: メッセージ間の最小時間(ミリ秒単位、例: 40 ms = 25 Hz)。
+- `compression`: `none` または `png`(高帯域幅の占有グリッド用)をサポート。
 
-### 2. Topic Publishing (`op: "publish"`)
-Publishes a typed ROS message from browser to ROS master:
+### 2. トピックのパブリッシュ(`op: "publish"`)
+ブラウザから ROS master へ型付きの ROS メッセージをパブリッシュします。
 
 ```json
 {
@@ -78,8 +77,8 @@ Publishes a typed ROS message from browser to ROS master:
 }
 ```
 
-### 3. Service Invocation (`op: "call_service"`)
-Calls a ROS service synchronously:
+### 3. サービス呼び出し(`op: "call_service"`)
+ROS サービスを同期的に呼び出します。
 
 ```json
 {
@@ -90,7 +89,7 @@ Calls a ROS service synchronously:
 }
 ```
 
-- **Service Response Envelope**:
+- **サービスレスポンスのエンベロープ**:
 ```json
 {
   "op": "service_response",
@@ -101,26 +100,26 @@ Calls a ROS service synchronously:
 }
 ```
 
-## Primary Web Canvas Subscriptions
+## 主要な Web キャンバスのサブスクリプション
 
-The web dashboard (`ROS-dashboard-next-ts`) subscribes to the following primary visual topics:
+Web ダッシュボード(`ROS-dashboard-next-ts`)は、以下の主要なビジュアルトピックをサブスクライブします。
 
-| Topic Identifier | ROS Message Type | Purpose on Canvas |
+| トピック識別子 | ROS メッセージ型 | キャンバス上の目的 |
 | --- | --- | --- |
-| `/server/robot_pose` | `geometry_msgs/PoseStamped` | Updates 2D robot icon position and heading arrow (25 Hz). |
-| `/server/slam/map` | `nav_msgs/OccupancyGrid` | Renders the live SLAM floorplan bitmap on EaselJS canvas. |
-| `/server/scan` | `sensor_msgs/LaserScan` | Renders red laser beam points around the robot. |
-| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` | Renders global blue planned navigation trajectory. |
-| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Renders dynamic local trajectory line. |
-| `/server/boustrophedon_path` | `nav_msgs/Path` | Renders orange boustrophedon area coverage sweep path. |
+| `/server/robot_pose` | `geometry_msgs/PoseStamped` | 2D ロボットアイコンの位置と向きの矢印を更新する(25 Hz)。 |
+| `/server/slam/map` | `nav_msgs/OccupancyGrid` | EaselJS キャンバス上にライブの SLAM フロアプランビットマップをレンダリングする。 |
+| `/server/scan` | `sensor_msgs/LaserScan` | ロボット周囲に赤いレーザービームの点をレンダリングする。 |
+| `/server/move_base/NavfnROS/plan` | `nav_msgs/Path` | 計画されたグローバルナビゲーション軌跡を青色でレンダリングする。 |
+| `/server/move_base/TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | 動的なローカル軌跡線をレンダリングする。 |
+| `/server/boustrophedon_path` | `nav_msgs/Path` | ボウストロフェドン・エリアカバレッジのスイープパスをオレンジ色でレンダリングする。 |
 
-## Frontend Resilience and Self-Healing
+## フロントエンドのレジリエンスとセルフヒーリング
 
-1. **`ROS2D.js` Stage Prototype Patch**: To prevent crashes where EaselJS stage objects lose ROS coordinate transform functions during rapid component remounting, the frontend dynamically injects `globalToRos` and `rosToGlobal` methods into `createjs.Stage.prototype` prior to viewer instantiation.
-2. **Reconnection Debounce**: If the WebSocket drops, the client waits for three consecutive reconnection attempts before surfacing a disconnect warning, preventing UI flickering during temporary network blips.
+1. **`ROS2D.js` Stage プロトタイプのパッチ**: 高速なコンポーネント再マウント時に EaselJS の stage オブジェクトが ROS 座標変換関数を失うことで発生するクラッシュを防ぐため、フロントエンドはビューアのインスタンス化前に `globalToRos` と `rosToGlobal` メソッドを `createjs.Stage.prototype` に動的に注入します。
+2. **再接続のデバウンス**: WebSocket が切断された場合、クライアントは切断警告を表示する前に3回連続の再接続試行を待ちます。これにより、一時的なネットワークの不具合の間の UI のちらつきを防ぎます。
 
-## Related Documentation
+## 関連ドキュメント
 
-- [Message Contracts](/ja/development/message-contracts): MQTT and serialized topic contracts.
-- [Architecture](/ja/development/architecture): Two-machine model and rosbridge routing.
-- [API Reference](/ja/development/api-reference): HTTP REST API endpoints.
+- [メッセージ仕様](/ja/development/message-contracts): MQTT とシリアライズされたトピックの仕様。
+- [アーキテクチャ](/ja/development/architecture): 2マシンモデルと rosbridge ルーティング。
+- [API リファレンス](/ja/development/api-reference): HTTP REST API エンドポイント。

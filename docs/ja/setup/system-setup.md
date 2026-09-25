@@ -1,144 +1,118 @@
-# System Setup
+# システム構築
 
 <RoleBadge role="technician" />
 
-How to confirm a configured [Server](/ja/setup/server-setup) and a configured [Unit](/ja/setup/unit-setup)
-are actually working together as one system. If you followed both of those pages in order and the
-unit enrolled successfully, most of this is verification rather than new configuration.
+完成した[サーバー](/ja/setup/server-setup)と完成した[ユニット](/ja/setup/unit-setup)が一つのシステムとして動作することの確認方法です。両ページの手順とユニット登録が済んでいれば、ここは新規設定ではなく確認が中心です。
 
-## Overview
+## 概要
 
-A Unit and the Server talk over channels that fail **independently**. Telling them apart is the
-whole skill here.
+ユニットとサーバーは**独立に故障する**経路で通信します。それらを切り分けることがここの要点です。
 
 ```mermaid
 flowchart LR
-  subgraph U["Unit"]
+  subgraph U["ユニット"]
     R["robot"]
   end
-  subgraph S["Server"]
+  subgraph S["サーバー"]
     MQ["HiveMQ"]
     BE["backend_node"]
-    UC["rosweb_unit_ULID"]
+    FR["unit_relays<br/>(共有フリートリレー1台)"]
     RB["rosbridge"]
-    SIG["signalling"]
+    SIG["シグナリング"]
   end
-  subgraph B["Operator browser"]
-    UI["dashboard"]
+  subgraph B["オペレーターブラウザ"]
+    UI["ダッシュボード"]
   end
 
   R ==>|"1. MQTT TLS 8883"| MQ
   MQ --> BE
-  MQ --> UC --> RB
+  MQ --> FR --> RB
   UI -->|"2. WSS /services/rosbridge"| RB
   UI -->|"3. WSS /services/signalling"| SIG
-  UI -.->|"4. WebRTC media, direct or via coturn"| R
+  UI -.->|"4. WebRTCメディア、直接またはcoturn経由"| R
 ```
 
-| # | Channel | Carries | Broken looks like |
+| # | 経路 | 運ぶもの | 故障時の様子 |
 | --- | --- | --- | --- |
-| 1 | MQTT | commands, feedback, and every stream, as strings | Unit shows **offline**. Nothing works |
-| 2 | rosbridge | the browser's subscription to cloud-side typed topics | Unit is **online**, commands work, map canvas blank |
-| 3 | signalling | WebRTC peer negotiation | No video, everything else fine |
-| 4 | WebRTC media | the camera image itself | Video works on the LAN, never off it. That is the TURN relay |
+| 1 | MQTT | コマンド、フィードバック、全ストリーム | ユニットが**オフライン**。全滅 |
+| 2 | rosbridge | ブラウザのクラウドトピック購読 | ユニットは**オンライン**、コマンド可、地図が空白 |
+| 3 | シグナリング | WebRTCネゴシエーション | 映像なし、それ以外は正常 |
+| 4 | WebRTCメディア | カメラ映像自体 | LAN内では映るが外部では映らない:TURNリレー |
 
-There is a fifth failure that looks like number 2: the unit is online and rosbridge is connected,
-but **nobody has opened that unit recently enough for its per-unit container to still be running**,
-so the cloud-side relays that rosbridge subscribes to do not exist. Same blank canvas, different
-cause. Check with `docker ps --filter name=rosweb_unit_`.
+#2に似たもう一つの故障:ユニットはオンライン、rosbridgeも接続済みだが、共有フリートリレー(`unit_relays`)が停止し、rosbridgeが読むクラウドトピックが存在しない。同じ空白地図、原因は別です。`docker ps --filter name=unit_relays`で確認してください。(ユニット単位の`rosweb_unit_*`コンテナはレガシーモード(`UNIT_CONTAINERS_ENABLED=true`)でのみ存在します。)
 
-## 1. Confirm the network path
+## 1. ネットワーク経路の確認
 
-| From | To | Port | Required for |
+| 送信元 | 宛先 | ポート | 用途 |
 | --- | --- | --- | --- |
-| Unit | Server | `8883` TCP (prod) or `8884` TCP (dev) | Everything. This is the only mandatory one |
-| Operator browser | Server | `443` TCP | Dashboard, API, rosbridge, signalling |
-| Operator browser | Server | `3478` UDP+TCP and the relay range | WebRTC video when there is no direct path |
+| ユニット | サーバー | `8883` TCP (本番)または`8884` (開発) | 全て。唯一の必須 |
+| ブラウザ | サーバー | `443` TCP | ダッシュボード、API、rosbridge、シグナリング |
+| ブラウザ | サーバー | `3478` UDP+TCP+リレー範囲 | 直接経路がない場合のWebRTC映像 |
 
 ```bash
-# From the Unit: can it reach the broker at all?
+# ユニットから:ブローカーに届くか?
 nc -zv msd.nglobal.jp 8883
 
-# And is the certificate the broker presents actually valid?
+# ブローカーの証明書は有効か?
 openssl s_client -connect msd.nglobal.jp:8883 -servername msd.nglobal.jp </dev/null 2>/dev/null \
   | openssl x509 -noout -subject -dates
 ```
 
-::: warning An expired certificate fails silently in the browser
-The dashboard's WebSocket connections just never open. Most browsers show nothing more useful than a
-generic network error in the console, so check the certificate before chasing anything else. Note
-that the MQTT broker's certificate is a **separate artifact** from Apache's, rebuilt from the same
-PEM files: see [Maintenance](/ja/setup/maintenance#certificates).
+::: warning 期限切れ証明書は黙って失敗します
+ダッシュボードのWebSocket接続が開かず、ブラウザには一般的なネットワークエラーしか出ません。他を調べる前に証明書を確認してください。MQTT証明書はApacheとは**別ファイル**で、同じPEMから作ります:[メンテナンス](/ja/setup/maintenance#証明書)参照。
 :::
 
-::: info Choosing production vs. dev
-`--dev` on the unit side (`./scripts/docker-manager.sh up --dev`) points enrolment and the MQTT
-bridge at the Server's `server_dev` profile instead of `server_prod`: different port, different
-database, different fleet. It's the right choice while you're testing a new unit or a server-side
-change; drop the flag once you're deploying for real. A unit's identity is *not* shared between the
-two: enrolling against dev does not register it in prod, and vice versa.
+::: info 本番か開発か?
+ユニット側の`./scripts/docker-manager.sh up --dev`は登録とMQTTを`server_prod`ではなく`server_dev`に向けます:ポート別、DB別、フリート別です。テスト中はこれを使い、本番ではフラグを外します。開発で登録したユニットは本番には**登録されません**。逆も同様です。
 :::
 
-## 2. Confirm the unit registered correctly
+## 2. ユニット登録の確認
 
-In the admin console, under **Registered Units**, find the unit you approved in
-[Unit Setup](/ja/setup/unit-setup). Note its ULID; you'll want it for the next check.
+管理コンソールの**Registered Units**で、[ユニット構築](/ja/setup/unit-setup)で承認したユニットを探します。ULIDをメモしてください。
 
 ```bash
-# On the Server. The per-unit container has to be RUNNING for these topics to exist,
-# so open the unit in the dashboard first, or start it by hand.
-docker ps --filter "name=rosweb_unit_"
+# サーバー上で。共有フリートリレーがRUNNINGでないとこれらのトピックは存在しません。
+docker ps --filter "name=unit_relays"
 docker exec -it ros_web_ui_v2_nakayama_ros bash -lc \
   'source /home/itbdelabo/ros-web-ui-ws/devel/setup.bash && rostopic list | grep unit_<ULID>'
 ```
 
-You should see topics like `/unit_<ULID>/system_command`, `/unit_<ULID>/system_feedback` and
-`/unit_<ULID>/server/robot_pose`. Seeing nothing here, with no error anywhere else, is the single
-most common "it looks broken but is not telling you why" symptom in this system.
+`/unit_<ULID>/system_command`、`/unit_<ULID>/system_feedback`、`/unit_<ULID>/server/robot_pose`のようなトピックが見えるはずです。他にエラーがないのに何も見えない場合、このシステムで最も多い「黙った故障」です。
 
-You can also watch the broker directly, which separates "the robot is not publishing" from "the
-cloud relays are not running":
+ブローカーを直接見る方法もあります。「ロボットが配信していない」のか「クラウドリレーが動いていない」のか切り分けられます:
 
 ```bash
 mosquitto_sub -h msd.nglobal.jp -p 8883 --capath /etc/ssl/certs \
   -t '/unit_<ULID>/#' -v | head -20
 ```
 
-## 3. End-to-end verification checklist
+## 3. エンドツーエンドのチェックリスト
 
-Work down this list. Each item rules out one of the channels in the overview diagram.
+上から順に進めます。各項目で上の図の経路を一つずつ除外します。
 
-- [ ] Server healthy: `docker compose --profile server_prod ps` shows every service `Up` or `healthy`
-- [ ] Unit's ROS graph healthy: `rosnode list` inside the unit's container shows the bringup nodes
-- [ ] Unit shows **online** in the admin console's Registered Units list (channel 1, MQTT)
-- [ ] Its per-unit container is running: `docker ps --filter name=rosweb_unit_`
-- [ ] Opening the unit shows an up-to-date robot position and a live map (channel 2, rosbridge)
-- [ ] The live camera feed appears **from outside the unit's LAN** (channels 3 and 4)
-- [ ] A small W-A-S-D movement actually moves the robot, and the dashboard position follows
-- [ ] A click-to-navigate goal is accepted and the robot drives to it
-- [ ] Emergency Stop, tested once, stops the robot immediately
-- [ ] Closing the browser mid-operation pauses the robot within about 10 seconds
+- [ ] サーバー正常: `docker compose --profile server_prod ps`ですべて`Up`または`healthy`
+- [ ] ユニットのROSグラフ正常: ユニットコンテナ内の`rosnode list`にbringupノードが見える
+- [ ] Registered Unitsでユニットが**オンライン**(経路1、MQTT)
+- [ ] 共有フリートリレー稼働中: `docker ps --filter name=unit_relays`
+- [ ] ユニットを開くと現在位置とライブ地図が見える(経路2、rosbridge)
+- [ ] カメラ映像がユニットLANの**外から**見える(経路3と4)
+- [ ] W-A-S-D操作でロボットが動き、ダッシュボード位置が追従する
+- [ ] クリックナビのゴールが受理され、ロボットが走行する
+- [ ] Emergency Stopを一度テストし、即停止する
+- [ ] 操作中にブラウザを閉じると約10秒以内にロボットが停止する
 
-::: warning Do not skip the last four
-A unit can look fully connected (online badge, video working) while the command path is broken in
-one direction, and that only shows up once something is asked to move. The disconnect test matters
-just as much: it is the safety behavior, and the only way to know it works is to trigger it
-deliberately once, on a robot with clear space around it.
+::: warning 最後の4つを飛ばさないでください
+片方向のコマンド経路が壊れていても、オンライン表示・映像正常に見える場合があります。動かす指示を出して初めて分かります。切断テストは安全動作です:周囲に空間を確保して一度わざと実行してください。
 :::
 
-## 4. Handover
+## 4. 引き渡し
 
-Once verification passes, the unit is ready for day-to-day use. Two things still need doing before
-handing it to an operator:
+全チェック通過後、オペレーターに渡す前に残り2つあります:
 
-1. **Grant dashboard access.** In the admin console, add the operator's account to the rental
-   profile that includes this unit. A unit existing and being enrolled does not, by itself, make it
-   visible to any user account: units are shared, fleet-wide resources, and access to them is
-   controlled entirely through profiles, not through the unit itself.
-2. **Point them at [Getting Started](/ja/getting-started/).** That section assumes exactly this state:
-   a unit that's already installed, connected, and access-granted.
+1. **ダッシュボード権限の付与。** 管理コンソールで、このユニットを含むレンタルプロファイルにオペレーターのアカウントを追加します。登録済みだけでは誰にも見えません:アクセスはユニットではなくプロファイルで管理されます。
+2. **[ユーザーガイド](/ja/user-guide/)の案内。** そこはこの状態(インストール済み、接続済み、権限付与済み)を前提にしています。
 
-## Next step
+## 次のステップ
 
-- Set up a [Maintenance](/ja/setup/maintenance) schedule for the new deployment.
-- Keep [Troubleshooting](/ja/setup/troubleshooting) handy for future issues.
+- 新デプロイの[メンテナンス](/ja/setup/maintenance)計画を立てます。
+- [トラブル対処](/ja/setup/troubleshooting)を手元に置きます。

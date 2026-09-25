@@ -2,3 +2,49 @@
  * Site-wide style overrides.
  * https://vitepress.dev/guide/extending-default-theme#style-customization
  */
+
+/* Justify text alignment for better readability */
+.VPDoc .content p,
+.VPDoc .content li,
+.VPDoc .content blockquote {
+  text-align: justify;
+  text-justify: inter-word;
+}
+
+/* Center images */
+.VPDoc .content img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ==================== DIAGRAMS ====================
+   Static PNGs from scripts/render-diagrams.mjs. They are drawn black-on-white like the draw.io
+   figures, so the frame stays white in dark mode too instead of inverting the picture. */
+.vp-doc .diagram-figure {
+  margin: 24px 0;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  text-align: center;
+}
+
+.vp-doc .diagram-figure a {
+  display: block;
+  cursor: zoom-in;
+}
+
+/* width comes from an inline style set in config.mts (fit the column, floor at 80%) */
+.vp-doc .diagram-figure img {
+  display: block;
+  max-width: none;
+  height: auto;
+  margin: 0 auto;
+}
+
+.dark .vp-doc .diagram-figure {
+  border-color: transparent;
+}

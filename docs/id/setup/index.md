@@ -2,40 +2,45 @@
 search: false
 ---
 
-
-# Setup and Deployment Guide
+# Panduan Setup dan Deployment
 
 <RoleBadge role="technician" />
 
-This section contains technical documentation for **technicians, system engineers, and field installers** configuring MSD700 hardware and software.
+Cara menginstal dan mengonfigurasi hardware dan software MSD700. Untuk teknisi, system engineer, dan installer lapangan.
 
-Every procedure includes step-by-step shell commands, expected outputs, configuration templates, and architectural explanations.
+Setiap halaman berisi perintah shell, contoh output, dan template konfigurasi yang dibutuhkan.
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/id/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/id/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/id/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/id/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/id/setup/docker-reference" />
-  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/id/setup/wifi-hotspot" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/id/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/id/setup/troubleshooting" />
+  <LinkCard icon="✅" title="Prasyarat" details="Hardware, versi OS, dan port firewall yang harus disiapkan dulu." link="/id/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="Setup Server" details="Deploy cloud produksi: Docker Compose, Apache reverse proxy, dan SSL." link="/id/setup/server-setup" />
+  <LinkCard icon="📡" title="Setup Unit" details="Instal robot fisik di NVIDIA Jetson, build, dan daftarkan (enrol)." link="/id/setup/unit-setup" />
+  <LinkCard icon="🔗" title="Setup Sistem" details="Pastikan server dan unit bekerja sama, lalu serahkan ke operator." link="/id/setup/system-setup" />
+  <LinkCard icon="📋" title="Checklist Commissioning" details="Lembar penerimaan satu unit baru: dari unboxing hingga sign-off." link="/id/setup/commissioning-checklist" />
+  <LinkCard icon="🐳" title="Referensi Docker" details="Semua profile Docker Compose, perintah, environment variable, dan volume." link="/id/setup/docker-reference" />
+  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Jalankan hotspot Wi-Fi milik unit plus koneksi client untuk internet." link="/id/setup/wifi-hotspot" />
+  <LinkCard icon="📡" title="Setup Wi-Fi MT7922" details="Perbaiki firmware MediaTek MT7922 onboard di kernel Tegra." link="/id/setup/wifi-mt7922" />
+  <LinkCard icon="🧰" title="Maintenance" details="Rotasi log, rotasi key, perpanjangan sertifikat, dan backup." link="/id/setup/maintenance" />
+  <LinkCard icon="🛠️" title="Troubleshooting Teknisi" details="Perbaiki masalah hardware, container, MQTT broker, dan sensor." link="/id/setup/troubleshooting" />
 </LinkCards>
 
-## Recommended Deployment Progression
+## Urutan instalasi
 
-The MSD700 platform uses a two-machine model (Server + Physical Units). Follow this sequence for new installations:
+MSD700 selalu terdiri dari dua mesin: satu Server plus satu atau lebih Unit. Instal dengan urutan ini:
 
 ```mermaid
 flowchart LR
-  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
-  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
-  U --> SYS["4. System Setup<br/>End-to-end communication test"]
+  S1["1. Prasyarat<br/>Cek hardware &amp; port firewall"]
+  S2["2. Setup Server<br/>Jalankan cloud backend &amp; Apache"]
+  S3["3. Setup Unit<br/>Build image robot &amp; enrol"]
+  S4["4. Setup Sistem<br/>Checklist end-to-end"]
+  S5["5. Commissioning<br/>Terima unit, box per box"]
+  S1 --> S2 --> S3 --> S4 --> S5
 ```
 
-1. [Prerequisites](/id/setup/prerequisites): Verify compute sizing, Jetson hardware peripherals, and network firewall rules.
-2. [Server Setup](/id/setup/server-setup): Bring up the cloud server stack first so physical units have a central endpoint to enrol against.
-3. [Unit Setup](/id/setup/unit-setup): Build the robot container on the Jetson SBC and complete the automated cryptographic enrolment handshake.
-4. [System Setup](/id/setup/system-setup): Execute the 10-point end-to-end operational verification checklist.
+1. [Prasyarat](/id/setup/prerequisites): cek hardware dan buka port firewall.
+2. [Setup Server](/id/setup/server-setup): jalankan cloud server lebih dulu, agar unit punya tempat untuk enrol.
+3. [Setup Unit](/id/setup/unit-setup): build container robot di Jetson dan enrol ke server.
+4. [Setup Sistem](/id/setup/system-setup): jalankan checklist end-to-end (10 item).
+5. [Checklist Commissioning](/id/setup/commissioning-checklist): terima satu unit baru, box per box.
 
-After initial installation, refer to [Maintenance](/id/setup/maintenance) and [Troubleshooting](/id/setup/troubleshooting) for ongoing fleet upkeep.
+Setelah itu, lihat [Maintenance](/id/setup/maintenance) dan [Troubleshooting](/id/setup/troubleshooting) untuk perawatan armada.

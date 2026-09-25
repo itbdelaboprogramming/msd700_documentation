@@ -2,40 +2,45 @@
 search: false
 ---
 
-
-# Setup and Deployment Guide
+# セットアップ・デプロイガイド
 
 <RoleBadge role="technician" />
 
-This section contains technical documentation for **technicians, system engineers, and field installers** configuring MSD700 hardware and software.
+MSD700のハードウェアとソフトウェアのインストール・設定方法です。技術者、システムエンジニア、現場インストーラー向けです。
 
-Every procedure includes step-by-step shell commands, expected outputs, configuration templates, and architectural explanations.
+各ページに、必要なシェルコマンド、実行結果の例、設定テンプレートを記載しています。
 
 <LinkCards>
-  <LinkCard icon="✅" title="Prerequisites" details="Hardware sizing, compute requirements, OS versions, and network port firewall rules." link="/ja/setup/prerequisites" />
-  <LinkCard icon="🖥️" title="Server Setup" details="Step-by-step production cloud deployment: Docker Compose, Apache reverse proxy, and SSL." link="/ja/setup/server-setup" />
-  <LinkCard icon="📡" title="Unit Setup" details="Install and configure the physical robot on NVIDIA Jetson SBCs, build runtime, and enrol." link="/ja/setup/unit-setup" />
-  <LinkCard icon="🔗" title="System Setup" details="End-to-end integration checklist, network verification, and operator handover." link="/ja/setup/system-setup" />
-  <LinkCard icon="🐳" title="Docker Reference" details="Exhaustive reference for Docker Compose profiles, environment variables, and volume mounts." link="/ja/setup/docker-reference" />
-  <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Configure onboard Wi-Fi hotspot, Access Point mode, and local network client bridge." link="/ja/setup/wifi-hotspot" />
-  <LinkCard icon="🧰" title="Maintenance" details="Routine log rotation, JWT keyring rotation, Certbot Let's Encrypt updates, and backups." link="/ja/setup/maintenance" />
-  <LinkCard icon="🛠️" title="Technician Troubleshooting" details="Diagnose and resolve hardware, container, MQTT broker, and sensor issues." link="/ja/setup/troubleshooting" />
+  <LinkCard icon="✅" title="前提条件" details="ハードウェア、OSバージョン、ファイアウォールポートを先に準備します。" link="/ja/setup/prerequisites" />
+  <LinkCard icon="🖥️" title="サーバー構築" details="本番クラウドのデプロイ:Docker Compose、Apacheリバースプロキシ、SSL。" link="/ja/setup/server-setup" />
+  <LinkCard icon="📡" title="ユニット構築" details="NVIDIA Jetson上で実機ロボットをインストールし、ビルドして登録します。" link="/ja/setup/unit-setup" />
+  <LinkCard icon="🔗" title="システム構築" details="サーバーとユニットの連携を確認し、オペレーターに引き渡します。" link="/ja/setup/system-setup" />
+  <LinkCard icon="📋" title="コミッショニングチェックリスト" details="新規ユニット1台の受け入れシート。開梱からサインオフまで。" link="/ja/setup/commissioning-checklist" />
+  <LinkCard icon="🐳" title="Dockerリファレンス" details="Docker Composeプロファイル、コマンド、環境変数、ボリュームの一覧。" link="/ja/setup/docker-reference" />
+  <LinkCard icon="📶" title="WiFiホットスポット+クライアント" details="ユニット独自のWi-Fiホットスポットと、インターネット用クライアント接続。" link="/ja/setup/wifi-hotspot" />
+  <LinkCard icon="📡" title="MT7922 Wi-Fi設定" details="Tegraカーネル上のオンボードMediaTek MT7922ファームウェア修正。" link="/ja/setup/wifi-mt7922" />
+  <LinkCard icon="🧰" title="メンテナンス" details="ログローテーション、鍵ローテーション、証明書更新、バックアップ。" link="/ja/setup/maintenance" />
+  <LinkCard icon="🛠️" title="技術者向けトラブル対処" details="ハードウェア、コンテナ、MQTTブローカー、センサーの問題対処。" link="/ja/setup/troubleshooting" />
 </LinkCards>
 
-## Recommended Deployment Progression
+## インストール順序
 
-The MSD700 platform uses a two-machine model (Server + Physical Units). Follow this sequence for new installations:
+MSD700は常に2種類のマシンで構成されます:サーバー1台とユニット1台以上です。次の順序でインストールしてください。
 
 ```mermaid
 flowchart LR
-  P["1. Prerequisites<br/>Check hardware & ports"] --> S["2. Server Setup<br/>Bring up cloud backend & Apache"]
-  S --> U["3. Unit Setup<br/>Build robot image & run enrolment"]
-  U --> SYS["4. System Setup<br/>End-to-end communication test"]
+  S1["1. 前提条件<br/>ハードウェアとポートを確認"]
+  S2["2. サーバー構築<br/>クラウドとApacheを起動"]
+  S3["3. ユニット構築<br/>ロボットイメージ作成と登録"]
+  S4["4. システム構築<br/>エンドツーエンド確認"]
+  S5["5. コミッショニング<br/>ユニットを1項目ずつ受入"]
+  S1 --> S2 --> S3 --> S4 --> S5
 ```
 
-1. [Prerequisites](/ja/setup/prerequisites): Verify compute sizing, Jetson hardware peripherals, and network firewall rules.
-2. [Server Setup](/ja/setup/server-setup): Bring up the cloud server stack first so physical units have a central endpoint to enrol against.
-3. [Unit Setup](/ja/setup/unit-setup): Build the robot container on the Jetson SBC and complete the automated cryptographic enrolment handshake.
-4. [System Setup](/ja/setup/system-setup): Execute the 10-point end-to-end operational verification checklist.
+1. [前提条件](/ja/setup/prerequisites):ハードウェアを確認し、ファイアウォールポートを開けます。
+2. [サーバー構築](/ja/setup/server-setup):先にクラウドサーバーを起動します。ユニットの登録先になります。
+3. [ユニット構築](/ja/setup/unit-setup):Jetson上でロボットコンテナをビルドし、サーバーに登録します。
+4. [システム構築](/ja/setup/system-setup):エンドツーエンドのチェックリスト(10項目)を実行します。
+5. [コミッショニングチェックリスト](/ja/setup/commissioning-checklist):新規ユニット1台を1項目ずつ受け入れます。
 
-After initial installation, refer to [Maintenance](/ja/setup/maintenance) and [Troubleshooting](/ja/setup/troubleshooting) for ongoing fleet upkeep.
+その後は、[メンテナンス](/ja/setup/maintenance)と[トラブル対処](/ja/setup/troubleshooting)を参照してください。

@@ -59,6 +59,10 @@ flowchart LR
 - **`sync_engine.js`**: Shared library on both sides that queries changed rows based on watermarks, executes upserts, and manages delete tombstones.
 - **`sync_tables.js`**: Defines synchronization directions, primary keys, and conflict resolution rules for each table.
 
+## The cloud half (`sync_api.js`)
+
+The unit drives; the cloud answers. `sync_api.js` authenticates the robot token (`role: robot`, `typ: access`, `unit_id` from claims, never the body) and serves `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` and `/route-file/:routeId/:kind`. Pushes are scoped — and forced — to the caller unit + profile; identity tables are refused.
+
 ## Conflict Resolution Rules
 
 Conflict resolution follows a deterministic **Last-Write-Wins per row** strategy:
@@ -75,8 +79,8 @@ In local dashboard builds (`NEXT_PUBLIC_DEPLOYMENT_MODE=local`), the top-right h
 
 ```mermaid
 flowchart TB
-  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 30 s)"]
-  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (auth or network error)"]
+  BADGE["Local Mode Header Badge"] --> STATUS["Polls GET /local/status (Every 15 s)"]
+  STATUS --> DISPLAY["Displays Current Synchronization State:<br/>- online / synced<br/>- first sync pending<br/>- offline, never synced<br/>- sync failing (cloud unreachable, cloud rejected the request, or this unit's own local database rejected the connection)"]
   BADGE --> CLICK["Click Badge: Opens Modal Menu"]
   CLICK --> ACTIONS["- View Detailed Phase Progress<br/>- Trigger Instant 'Sync Now'<br/>- Configure Local Wi-Fi Connection"]
 ```
@@ -89,6 +93,25 @@ flowchart TB
 5. `push`: Uploading locally recorded maps and routes to cloud.
 6. `files`: Transferring binary `.pgm` and `.yaml` map images.
 7. `finish`: Acknowledging committed watermarks.
+
+::: warning Phase Label vs. Failure Origin
+The phase name shown in the progress bar reflects *when* a round stopped, not *where*. `readState()`, the first read of this unit's own `sync_state` row, runs immediately after the handshake HTTP call but before `setPhase('pull')` — so a failure there still displays as `handshake`, even though it never touched the network. Read the log line itself (see below) to tell the two apart.
+:::
+
+### Failure Classification
+
+`sync_agent.js` tags every failing call with where it came from before the error reaches the log, because a refused connection to the cloud and a refused connection to this unit's own local `ROS_DB` both surface as an identical `ECONNREFUSED`. Without the tag, a dead local database used to be reported as "cloud not reachable."
+
+| Origin Tag | Example Cause | Log Wording | Status Badge |
+| --- | --- | --- | --- |
+| `local_db` — credentials rejected | `MYSQL_USER`/`MYSQL_PASSWORD` in this unit's `docker/.env` do not match the password the local `mysql_data_local` volume was already initialized with (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db` — unreachable | The unit's local MySQL container is not running (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
+| `local_db` — other | Any other MySQL error (schema, lock, etc.) during a local read/write. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud` — network error | DNS failure, timeout, or refused connection to the cloud endpoint. Expected while the unit has no uplink. | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud` — HTTP error | The cloud answered with a non-2xx status outside the known `NOT_ENROLLED`/`NO_RENTAL`/reenroll cases. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| *(none)* | A throw inside `sync_agent.js` itself with no HTTP status and no network signature — a bug in the agent, not a connectivity or credential problem. | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
+
+See `classifyFailure()` in `sync_agent.js` for the exact precedence rules.
 
 ## Related Documentation
 

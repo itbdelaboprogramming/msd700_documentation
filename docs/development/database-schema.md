@@ -32,7 +32,7 @@ suspended operator's existing session keeps working and they can still log back 
 deliberately kept separate so standing up the admin console could never lock a live deployment out
 of its own robots; enforcing it at the login boundary is a distinct piece of work. This is a
 different mechanism from a *suspended rental profile*, which does immediately remove a unit and its
-data from every member's view (see [API Reference § Rental profiles](/development/api-reference#rental-profiles)).
+data from every member's view (see [Admin Console § Rentals](/development/webui/admin-console/rentals)).
 :::
 
 ## Operational data (per map)
@@ -48,8 +48,16 @@ data from every member's view (see [API Reference § Rental profiles](/developme
 `maps_data` is deliberately locked to the rental that recorded it rather than to the unit: a unit
 re-rented to a different tenant does not hand over any previous tenant's maps, and a tenant whose
 rental ends keeps their maps even though they can no longer drive the unit that recorded them. See
-[API Reference § Rental profiles](/development/api-reference#rental-profiles) for how that plays out
+[Admin Console § Rentals](/development/webui/admin-console/rentals) for how that plays out
 at the access layer.
+
+That rule answers "may I see this row at all". It is not the same question as "which maps belong on
+screen while I am driving THIS robot", and the two were conflated until 2026-09-10. A rental holding
+several robots listed every robot's maps together in the Database page, with nothing on screen
+saying which was which; picking a sibling's map handed the robot a map ULID whose files it had never
+recorded, so navigation init went out, the unit could not resolve the map and the run died there
+while the dashboard reported a successful start. `unit_id` now narrows the operating views on top of
+the rental scope: both are required, neither replaces the other.
 
 ## Enrolment
 
@@ -60,7 +68,7 @@ at the access layer.
 | `unit_enrollment_codes` | Single-use vouchers to claim a specific unit before its robot exists | `unit_id`, `code_hash`, `expires_at`, `used_at` |
 | `unit_connection_log` | Append-only connection history | The only table with a plain `AUTO_INCREMENT` PK rather than a ULID; purged past 180 days |
 
-See [Message Contracts § Enrolment](/development/message-contracts#enrolment) for the full exchange
+See [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake) for the full exchange
 these tables support.
 
 ## Backup and sync
@@ -114,7 +122,7 @@ flowchart TB
 **user ULID**, never a name, and are used only to say who touched a row, never to decide who is
 allowed to see or change it. Both are safe to be `NULL`, and a creator whose account no longer exists
 renders as *unknown* rather than breaking the row. Access itself runs entirely through rental
-profiles (see [API Reference § Rental profiles](/development/api-reference#rental-profiles)).
+profiles (see [Admin Console § Rentals](/development/webui/admin-console/rentals)).
 :::
 
 ## `created_at` / `modified_at`
@@ -158,5 +166,5 @@ for how these ports fit into the rest of the compose profile.
 
 - [API Reference](/development/api-reference): the HTTP surface built on this schema
 - [Data Sync](/development/data-sync): how `sync_tombstones` and `sync_state` get used
-- [Message Contracts § Enrolment](/development/message-contracts#enrolment)
+- [Message Contracts § Robot Enrolment Handshake](/development/message-contracts#robot-enrolment-handshake)
 - [Architecture](/development/architecture)

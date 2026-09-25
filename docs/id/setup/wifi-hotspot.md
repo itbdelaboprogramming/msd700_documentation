@@ -6,523 +6,351 @@ outline: deep
 
 <RoleBadge role="technician" />
 
-An optional local-mode feature: the Unit runs its own WiFi hotspot for an operator to join, gets
-automatically captured into its dashboard the moment they open any HTTP page (a captive portal, the
-same mechanism airports and cafes use), and, if a second radio is available, stays connected as a
-WiFi **client** to another network for internet/cloud-sync fallback. Both radios' state is shown on
-the [Local Mode badge](/id/development/data-sync#the-local-mode-badge), the same badge, the same
-dropdown, and an operator can connect to a different network from there.
+Bagian dari setup lokal tiap unit ([Setup Unit](/id/setup/unit-setup) Step 6): unit menjalankan hotspot WiFi sendiri untuk operator (di `http://mymsd.jp`), dan bisa mempertahankan koneksi **client** WiFi normal ke jaringan lain untuk internet dan sync cloud, di radio yang sama bila hardware mengizinkan.
 
-Entirely optional. A unit that never runs the provisioning step below still works exactly as
-[Unit Setup](/id/setup/unit-setup) describes; the badge just reports "no hotspot radio" and nothing
-else is affected.
+Tiap start hotspot, script selector memilih satu dari dua jalur:
 
-## Why two radios, not one
+- **Primary**: virtual AP (`msd700-ap0`) di radio onboard. Cek dukungan AP+client driver aslinya dulu, termasuk [MT7922](/id/setup/wifi-mt7922).
+- **Backup**: dongle USB yang dikonfigurasi, dicoba hanya bila seleksi interface primary gagal. Bukan failover setelah hostapd gagal; lihat batasan di bawah.
 
-The Jetson's onboard WiFi (a Realtek RTL8822CE on this project's hardware) is **one physical
-radio**. It can join a network as a client (STA) *or* broadcast a hotspot (AP), never both at the
-same time, this is not a driver limitation, it is the hardware: `iw phy` shows exactly one `phy` for
-the onboard card, and one radio can only be tuned to one channel at a time.
+Provisioning sebelum start stack unit pertama. Bahkan tanpa hotspot, `network_local` me-mount `/run/msd700-hotspot-active`; start Docker sebelum file itu ada bisa membuat folder pengganti dan memblokir provisioning berikutnya.
 
-| Topology | Feasibility |
-| --- | --- |
-| A dongle runs the hotspot, the built-in radio stays a WiFi client | High confidence, no chipset risk. AP and client live on two physically separate radios, so there is no "concurrent mode" question at all: two independent processes (hostapd on the dongle, NetworkManager on the onboard radio), each bound to its own interface. |
-| One radio does both AP and client at once (no dongle) | Conditional on the chipset. Only works if the driver reports a valid `iw list` interface combination including `{ AP, managed } <= 2` on one wiphy. Not guaranteed, and not something this project can assert in general, check it on the actual hardware. |
+## Alur setup
 
-::: info Windows doing both at once is not proof Linux will
-A laptop running Microsoft's Mobile Hotspot feature alongside a normal WiFi connection uses a
-completely different driver stack (a virtual WiFi adapter Windows manages itself) from Linux's
-`mac80211`/`nl80211` concurrent-AP-and-managed combination. It is a reasonable hint the *hardware*
-is not fundamentally incapable of it, but it says nothing about whether the Linux driver for that
-same chip reports a supporting interface combination. Verify with `iw list` on the actual host.
+Di unit baru, dengan urutan ini. Kebanyakan unit hanya butuh step 2 dan 3:
+
+1. **Naikkan radio onboard dulu.** MT7922? Perbaiki firmware-nya ([Setup Wi-Fi MT7922](/id/setup/wifi-mt7922)): di kernel Tegra kartu bisa tak terlihat oleh NetworkManager, diam-diam mendorong hotspot ke jalur dongle. Bila radio onboard sudah muncul di `nmcli device status`, tidak ada yang perlu diperbaiki.
+2. [Provisioning hotspot](#provisioning-hotspot-sekali-per-unit) (`./setup.sh --provision-network`). Preflight-nya mengecek radio onboard dan otomatis fallback ke dongle bila dikonfigurasi.
+3. [Verifikasi](#verifikasi).
+4. **(Optional) [Instal driver dongle cadangan](#menginstal-driver-dongle).** Hanya bila preflight step 2 bilang radio onboard tak bisa jalur primary, atau untuk redundansi sengaja. Tidak perlu bila jalur primary jalan.
+
+Hanya step 2 yang interaktif dan per-unit (SSID, password). Sisanya bring-up hardware sekali saja, diulang hanya bila hardware berubah.
+
+## Radio primary vs. dongle cadangan
+
+Jalur primary menjalankan client + AP sekaligus di radio onboard. Cek output penuh `iw phy <phy> info` driver aslinya: tipe interface, limit, limit channel. Satu phy tidak menutup kemungkinan client+AP simultan di channel bersama; nama chip saja tidak membuktikan apa-apa. Cek provisioning hanya mencari `AP` di dekat "valid interface combinations", bukan kombinasi penuh.
+
+::: warning Seleksi bukan tes kesiapan
+Selector membuat/menaikkan `msd700-ap0` dan menulis pemenang ke state file. Ia tidak memverifikasi kombinasi atau menunggu hostapd broadcast. Backup dicoba hanya bila seleksi gagal. Failure hostapd/channel belakangan bisa me-retry jalur primary yang sama selamanya, tanpa failover ke dongle. Kedua jalur memakai channel 6 2.4 GHz; tidak ada yang menyinkronkannya dengan uplink client yang berubah. Simpan akses recovery kabel/konsol.
 :::
 
-**Hardware validated on this project**: TP-Link TL-WN722N v2/v3, Realtek **RTL8188EUS** chipset
-(USB ID `2357:010c`). Any RTL8188EUS-based dongle should work with the same driver, see
-`KNOWN_IDS` in `scripts/install-wifi-dongle-driver.sh` for other USB IDs of the same chipset. No
-driver for this chipset ships with the Jetson's kernel out of the box (neither the in-tree
-`rtl8xxxu` nor an out-of-tree module), it has to be built from source via DKMS, see
-[Installing the dongle driver](#installing-the-dongle-driver) below.
+| Jalur | Kapan dipakai | Butuh |
+| --- | --- | --- |
+| **Primary**: virtual AP di radio onboard | Dicoba dulu tiap start, di phy `STA_INTERFACE_LOCAL` | Driver/firmware dengan limit client+AP/channel yang bekerja; link-up saja tidak membuktikan broadcast |
+| **Backup**: dongle USB (`AP_INTERFACE_LOCAL`) | Dicoba bila seleksi interface primary gagal | Dongle AP-capable yang bekerja + driver. Tetap bukan failover setelah hostapd gagal |
 
-## How it is wired together
+::: info Hotspot Windows tidak membuktikan apa-apa soal driver Linux-mu
+Windows menjalankan AP+client lewat stack virtual-adapter sendiri, tak terkait konkurensi `mac80211` Linux. Itu hint hardware *mungkin* bisa, tapi tidak berkata apa-apa soal kombinasi interface driver-mu. Baca `iw phy <phy> info` di host aslinya.
+:::
+
+**Dongle cadangan tervalidasi**: TP-Link TL-WN722N v2/v3, Realtek **RTL8188EUS** (USB `2357:010c`). Dongle RTL8188EUS lain seharusnya bekerja dengan driver sama; lihat `KNOWN_IDS` di `scripts/install-wifi-dongle-driver.sh`. Setup lama butuh driver DKMS; cek modul kernel dan dukungan AP sendiri sebelum menganggap punyamu juga begitu.
+
+## Cara kerja keseluruhannya
 
 ```mermaid
 flowchart TB
-  subgraph HOST["Host (Jetson or dev laptop), Linux"]
-    HAP["hostapd<br/>msd700-hotspot.service, owns the AP interface"]
-    UNMANAGED["/etc/NetworkManager/conf.d/<br/>msd700-unmanaged-ap.conf"]
-    DNSM["dnsmasq (standalone)<br/>msd700-hotspot-dhcp.service<br/>DHCP + selective captive DNS"]
-    FW["msd700-hotspot-firewall.sh<br/>iptables: PREROUTING redirect,<br/>DOCKER-USER NAT relay"]
-    NM["NetworkManager<br/>STA profile only, autoconnect"]
-    HAP -->|"ExecStartPost/ExecStopPost"| FW
-    HAP -.->|"interface marked unmanaged"| UNMANAGED
-    DNSM -->|"BindsTo="| HAP
+  subgraph HOST["Host (Jetson atau laptop dev), Linux"]
+    SEL["msd700-hotspot-select-iface.sh<br/>memilih primary vs backup,<br/>menulis /run/msd700-hotspot-active"]
+    APIF["msd700-ap0 (primary)<br/>iface virtual di radio onboard"]
+    DONGLE["dongle USB (backup)<br/>AP_INTERFACE_LOCAL"]
+    HAP["hostapd<br/>msd700-hotspot.service"]
+    UNMANAGED["drop-in NetworkManager<br/>membiarkan iface AP sendiri"]
+    DNSM["dnsmasq<br/>msd700-hotspot-dhcp.service<br/>DHCP + satu hostname"]
+    FW["msd700-hotspot-firewall.sh<br/>redirect ke dashboard + relay NAT"]
+    NM["NetworkManager<br/>hanya profile client"]
+    SEL -->|"membuat + menaikkan pemenang"| APIF
+    SEL -.->|"atau"| DONGLE
+    SEL -->|"menulis IFACE/CONF"| HAP
+    HAP -->|"hook start/stop"| FW
+    DNSM -->|"mengikuti state file yang sama"| HAP
   end
 
-  subgraph AGENT["network_local container<br/>network_mode: host, cap_add: NET_ADMIN, apparmor:unconfined"]
+  subgraph AGENT["container network_local<br/>(host network, NET_ADMIN)"]
     NA["network-agent (Node)<br/>loopback :5011"]
   end
-  AGENT -->|"D-Bus socket bind mount"| NM
-  NA -.->|"iw dev <ap-iface> info / nmcli (STA)"| HAP
-  NA -.->|"nmcli"| NM
+  AGENT -->|"mount socket D-Bus"| NM
+  NA -->|"mengedit SSID/password"| HAP
+  NA -->|"menyentuh sentinel file"| RPATH["watcher restart<br/>me-restart service hotspot"]
 
-  BE["backend_local<br/>/local/wifi/*"] -->|"loopback proxy"| NA
-  FE["frontend_local :3000<br/>middleware.ts"] -->|"scan/connect/status"| BE
-  BADGE["Local Mode badge, WiFi section<br/>(dashboard, top-right)"] --> FE
+  BE["backend_local<br/>/local/wifi/*"] -->|"proxy loopback<br/>(wifi_proxy.js, timeout 25 dtk)"| NA
+  FE["frontend_local :3000<br/>panel WiFi"] -->|"scan/connect/status"| BE
 
-  CLIENT["Device joining the hotspot"] -->|"DNS: captive-probe domains only -> 192.168.4.1"| DNSM
-  CLIENT -->|"HTTP :80, redirected"| FW
+  CLIENT["Device di hotspot"] -->|"DNS: mymsd.jp -> unit"| DNSM
+  CLIENT -->|"HTTP :80 ke unit, di-redirect"| FW
   FW --> FE
-  FW -->|"MASQUERADE, only if STA_INTERFACE_LOCAL set"| STA["onboard radio's own uplink"]
+  FW -->|"NAT, hanya bila uplink diset"| STA["uplink radio onboard"]
 ```
 
-The hotspot's existence does **not** depend on Docker. `hostapd` and `dnsmasq` run as their own
-systemd services, brought up at boot and independent of `docker-manager.sh` ever having run, the
-same way a wired Ethernet cable "just works". `network_local` only serves live status/scan for the
-badge and carries out an operator's explicit "connect to a different network" request (client side
-only); provisioning the hotspot itself is a separate, one-time step (below).
+Hotspot tidak tergantung Docker. `hostapd` + `dnsmasq` jalan sebagai service systemd, naik saat boot dengan atau tanpa `docker-manager.sh`. `network_local` menyediakan status/scan/aksi client di dashboard, plus rename hotspot dan request restart. Dashboard tetap butuh stack Docker lokal jalan.
 
-### Why hostapd, not NetworkManager's own AP mode
+### Kenapa hostapd, bukan mode AP NetworkManager
 
-NetworkManager can create AP-mode connections itself (`nmcli connection add ... 802-11-wireless.mode
-ap`), driven internally by `wpa_supplicant`. That was the original design here, but on the
-RTL8188EUS dongle it **hangs every time**: NM's activation always failed after roughly 25 seconds
-with `"Hotspot network creation took too long"` / `reason 'supplicant-timeout'`.
+Mode AP milik NetworkManager hang di dongle RTL8188EUS tiap kali (`supplicant-timeout` setelah ~25 dtk). Menjalankan `hostapd` langsung menaikkan interface yang sama di bawah sedetik: driver mendukung mode AP, tapi event completion-nya tiba dalam urutan yang tidak diharapkan path AP NetworkManager. Jadi `hostapd` jalan sebagai service systemd sendiri, dan NetworkManager disuruh membiarkan interface AP sendiri (drop-in unmanaged). Sisi client tetap memakai profile NM normal.
 
-Diagnosed by running `hostapd -dd` directly against the same interface: the AP came up in under a
-second (`AP-ENABLED`), fully functional. The driver does support AP mode, but its
-`NL80211_CMD_START_AP` completion event arrives out of the order `wpa_supplicant`'s internal AP code
-expects (visible in the hostapd debug log as `Ignored unknown event (cmd=15)`, logged *after* the AP
-had already started through other means). `wpa_supplicant`'s softAP path apparently waits on that
-event; `hostapd` doesn't block on it and just proceeds.
+### Komponen
 
-The fix: run `hostapd` directly as its own systemd service, and tell NetworkManager to leave the
-interface alone entirely (`unmanaged-devices` in a `conf.d` drop-in) so the two never fight over it.
-The STA side (an upstream network to join as a client) has no such problem and still goes through a
-normal NM connection profile.
+| Komponen | Artinya |
+| --- | --- |
+| `msd700-hotspot-select-iface.sh` | Hook startup: menaikkan virtual AP primary bila radio onboard mengizinkan, bila tidak dongle backup; menulis pemenang (`IFACE`, `CONF`) ke `/run/msd700-hotspot-active` |
+| `msd700-hotspot.service` | Memberi interface pemenang `192.168.4.1/24`, menjalankan `hostapd`, memasang/melepas rule firewall. Aktif saat boot, `Restart=on-failure` |
+| `msd700-hotspot-firewall.sh` | Me-redirect trafik port-80 yang ditujukan ke alamat unit sendiri ke dashboard (bukan captive portal; port-80 lain lewat) + relay NAT untuk internet bila uplink ada |
+| `msd700-hotspot-dhcp.service` | `dnsmasq` khusus: DHCP (`192.168.4.10`-`192.168.4.200`) + me-resolve `PORTAL_HOSTNAME_LOCAL` ke unit. Terikat service AP |
+| `/etc/hostapd/hostapd-msd700-primary.conf` / `-backup.conf` | SSID/password sama di-render dua kali (satu per interface), sehingga client melihat satu identitas mana pun yang aktif. Mode `0600` |
+| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Menjauhkan NM dari `msd700-ap0` dan interface dongle |
+| `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Membiarkan panggilan `nmcli` `network_local` jalan tanpa prompt auth interaktif |
+| `msd700-hotspot-restart.path` / `.service` | Satu-satunya jalur `network_local` ke systemd host: menyentuh sentinel file me-restart service hotspot, tidak yang lain |
+| `/etc/tmpfiles.d/msd700-hotspot.conf` | Membuat state file/dir yang hilang saat boot; tidak memperbaiki path bertipe salah |
+| Profile koneksi NM (hanya onboard) | Koneksi client normal ke WiFi operator, `autoconnect: yes` |
 
-### Components
+Recovery best-effort: kedua service restart saat failure, tapi DHCP tidak kembali sendiri setelah restart AP saja. Cek DHCP/DNS terpisah setelah hotplug atau ganti SSID/password.
 
-| Component | What it does | Lifecycle |
-| --- | --- | --- |
-| `msd700-hotspot.service` | Assigns the static IP `192.168.4.1/24`, runs `hostapd -i <ap-iface> /etc/hostapd/hostapd-msd700.conf`, calls `msd700-hotspot-firewall.sh apply`/`teardown` | systemd, enabled at boot, `Restart=on-failure` |
-| `msd700-hotspot-firewall.sh` | Captive-portal HTTP redirect (port 80 on the AP interface, always) plus internet-relay NAT (`DOCKER-USER` chain, only when `STA_INTERFACE_LOCAL` is set) | Called from the service above's `ExecStartPost`/`ExecStopPost`, idempotent (check-then-act) |
-| `msd700-hotspot-dhcp.service` | Runs a dedicated `dnsmasq` instance: DHCP server (`192.168.4.10`-`192.168.4.200`) + selective captive-portal DNS | systemd, `BindsTo=msd700-hotspot.service` |
-| `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` | Tells NM to never touch the dongle's interface | Read by NetworkManager on restart |
-| `/etc/polkit-1/rules.d/50-msd700-network-manager.rules` | Grants `org.freedesktop.NetworkManager.*` actions unconditionally, so `network_local`'s `nmcli` calls (scan, connect, forget) work without an interactive polkit prompt the container can never answer | Read by `polkit` on restart |
-| NM connection profile (onboard radio only) | Normal client connection to the operator's WiFi | Managed by NetworkManager as usual, `autoconnect: yes` |
+`network_local` bukan `privileged`. Ia mengontrol NetworkManager host lewat socket D-Bus yang di-mount (`NET_ADMIN` + host network untuk baca status AP, `apparmor:unconfined` karena profile default Docker memblokir panggilan D-Bus). Ia juga me-mount `/run/msd700-hotspot-active` (read-only), `/etc/hostapd` (read-write, untuk rename), dan `/run/msd700-hotspot-restart` (read-write, untuk request restart).
 
-Both hotspot-side systemd services `Restart=on-failure`, so unplugging and replugging the *same*
-dongle while the unit is running recovers on its own (the interface name is MAC-derived and stable
-per physical dongle).
+## Menginstal driver dongle
 
-::: info Why `network_local` is not `privileged: true`
-`network_local` needs a few distinct things, none of them the broad grant `msd700` already uses
-(`privileged: true` + host network, see [Docker Reference](/id/setup/docker-reference#network-mode-host)).
-A bind-mounted D-Bus socket is what lets `nmcli` control the **host's own** NetworkManager daemon for
-the STA side; the client itself never touches a network interface directly. `cap_add: [NET_ADMIN]`
-plus `network_mode: host` is what the AP-status read (`iw dev <iface> info`) needs, since the AP
-interface lives in the host's network namespace. `security_opt: apparmor:unconfined` is the
-non-obvious one: Docker's default apparmor profile denies D-Bus method calls from inside the
-container even with the socket bind-mounted and `NET_ADMIN` granted, `nmcli`'s initial `Hello()` to
-the bus gets an `AccessDenied` before NetworkManager's own D-Bus policy is ever consulted. The
-container's only job is talking to the host's NetworkManager over that bus, so it runs unconfined
-rather than fighting the default profile rule by rule.
-:::
-
-## Installing the dongle driver
-
-One-time, per unit, before provisioning:
+Hanya untuk jalur **backup**: radio onboard tak bisa client+AP, atau redundansi sengaja. Sekali saja per unit, sebelum provisioning:
 
 ```bash
 ./scripts/install-wifi-dongle-driver.sh
 ```
 
-- Installs `dkms`, kernel headers, and a C toolchain if missing.
-- Clones the driver source ([aircrack-ng/rtl8188eus](https://github.com/aircrack-ng/rtl8188eus)) to
-  `/usr/src/`.
-- Builds and installs it via **DKMS**, not a one-off `insmod`. This matters: DKMS automatically
-  rebuilds the module against every future kernel this Jetson boots, so an `apt` kernel upgrade
-  doesn't silently kill the dongle the way a manual build would.
-- Loads the module and waits for the second WiFi interface to appear.
+- Menginstal `dkms`, header kernel, toolchain bila hilang.
+- Clone [aircrack-ng/rtl8188eus](https://github.com/aircrack-ng/rtl8188eus) ke `/usr/src/`.
+- Build via **DKMS** (selamat dari rebuild kernel bila header + source kompatibel ada; cek status DKMS setelah update kernel).
+- Load modul, tunggu interface WiFi kedua.
 
-Flags: `--check` (verify status only, no changes), `--remove` (uninstall).
+Flag: `--check` (verifikasi saja), `--remove` (uninstall).
 
-::: info This step can also run itself
-`setup.sh --provision-network` (below) detects a known RTL8188EUS dongle (`lsusb` against the same
-`KNOWN_IDS` list) and, if its driver isn't loaded yet, runs this script automatically before
-continuing. Running it by hand first is still useful to see the build output, or to `--check`
-status without changing anything.
-:::
+`setup.sh --provision-network` auto-install hanya bila `AP_INTERFACE_LOCAL` kosong dan `lsusb` cocok `2357:010c`. ID USB didukung lain butuh installer dijalankan eksplisit.
 
-## Provisioning the hotspot (once per unit)
+## Provisioning hotspot (sekali per unit)
 
-Everything below lives **outside Docker** on purpose: it has to survive `local_dev` being down, and
-it has to come up the instant a dongle is plugged into a unit that has never run
-`docker-manager.sh` at all.
+Semua di bawah tinggal **di luar Docker** dengan sengaja: harus selamat saat `local_dev` down, dan naik di unit yang tak pernah menjalankan `docker-manager.sh`.
 
-### 1. Plug in the dongle, set a password
+### 1. (Optional) Colok dongle cadangan
 
-`docker/.env` (created from `docker/.env.example` on first run if it doesn't exist yet) needs a
-hotspot password before anything is provisioned:
+Hanya bila radio onboard tak bisa jalur primary, atau untuk redundansi: [di atas](#radio-primary-vs-dongle-cadangan). Lewati total bila jalur primary jalan.
+
+Tidak ada yang perlu diset di `docker/.env` dulu. Colok dongle tervalidasi dan provisioning di bawah; semuanya ditanyakan interaktif di sana.
+
+Bila `nmcli` hilang di host:
 
 ```bash
-# msd700_noetic/docker/.env
-AP_PASSWORD_LOCAL=your-hotspot-password   # 8+ characters, required
+sudo apt install network-manager
 ```
 
-::: warning Do not commit a real password to `docker/.env`
-That file is **tracked by git**. Passing the password inline on the provisioning command below (step
-2) avoids ever writing it to disk on this repository checkout, `setup.sh` sources `docker/.env`
-without overriding variables already present in the environment, so an inline value wins, and
-nothing needs the password afterwards: NetworkManager stores the STA key itself, hostapd's own
-config file (`/etc/hostapd/hostapd-msd700.conf`, `chmod 0600`) stores the AP one, and later hotspot
-changes go through [the dashboard's badge menu](#changing-the-unit-s-own-hotspot).
-:::
+### 2. Provisioning
 
-Everything else, `AP_INTERFACE_LOCAL`, `STA_INTERFACE_LOCAL`, `AP_SSID_LOCAL`, is auto-detected or
-defaulted, see [Configuration reference](#configuration-reference-docker-env) below if a value needs
-to be overridden by hand.
-
-### 2. Provision
+Dari terminal interaktif (bukan piped, bukan non-TTY):
 
 ```bash
-sudo apt install network-manager     # if nmcli is not already on the host
-AP_PASSWORD_LOCAL='your-hotspot-password' ./setup.sh --provision-network
+./setup.sh --provision-network
 ```
 
-No need to look up interface names by hand first. This one command:
+Menanyakan nama interface dan SSID (dengan default terdeteksi). Entri password tersembunyi, menampilkan `[keep current]` bila diset, tidak pernah menampilkannya. Password hotspot baru diketik dua kali. Password **tidak** ditulis kembali ke `docker/.env`: key client masuk ke profile NetworkManager-nya, key AP ke config hostapd (`/etc/hostapd/hostapd-msd700-primary.conf` dan `-backup.conf` bila dongle ada, `chmod 0600`). SSID/password sama di keduanya, sehingga client melihat satu identitas mana pun yang aktif. Jawaban lain (nama interface, SSID) disimpan kembali ke `docker/.env`.
 
-1. **Installs udev rules.** Every `*.rules` file in `scripts/udev/`, not just the WiFi one, the
-   STM32 and RealSense rules already in the repo had no install path of their own until this
-   existed.
-2. **Installs a PolicyKit rule** (`/etc/polkit-1/rules.d/50-msd700-network-manager.rules`) so
-   `network_local`'s `nmcli` calls do not hang on an interactive auth prompt.
-3. **Auto-detects the AP interface**: if a known RTL8188EUS dongle is plugged in but
-   `AP_INTERFACE_LOCAL` is empty, installs its driver first (see above) if needed, then finds the
-   interface by walking `/sys/class/net/*/device/driver` for whichever one is owned by the `8188eu`
-   kernel driver, deterministic, independent of MAC address or plug order.
-4. **Auto-detects the STA interface**: whichever *other* WiFi device exists, if there's exactly one.
-   Both detected values are written back into `docker/.env` so future runs, and a human skimming the
-   file, see the real values. Ambiguous cases (e.g. two onboard radios) are left for a human to set
-   explicitly.
-5. **Installs `hostapd`** if missing, deletes any leftover `msd700-hotspot` NetworkManager
-   connection profile from before this project switched off NM's own AP mode, and writes
-   `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf` (restarting NetworkManager *before* hostapd
-   claims the interface, so NM isn't still holding it).
-6. **Renders and installs** `/etc/hostapd/hostapd-msd700.conf`, `/etc/dnsmasq-msd700-hotspot.conf`,
-   `/usr/local/sbin/msd700-hotspot-firewall.sh`, and the two systemd unit files, then enables and
-   **restarts** (not `enable --now`, which is a no-op on an already-running service and would leave
-   a changed config never actually re-applied) `msd700-hotspot.service` and
-   `msd700-hotspot-dhcp.service`.
-7. **Creates the STA client profile**, if `STA_INTERFACE_LOCAL`/`STA_SSID_LOCAL` are filled in,
-   left alone if a profile of that name already exists.
+::: info Provisioning unattended
+Tanpa TTY (atau `MSD700_NONINTERACTIVE=1`), prompt dilewati. `docker/.env` di-source langsung, sehingga nilainya mengalahkan environment warisan; lalu password hostapd yang ada mengalahkan keduanya. Password inline bisa bocor ke shell history dan tidak andal meng-override. Pilih entri interaktif tersembunyi. Rotasi password unattended yang aman masih belum solved.
+:::
 
-Re-running this command is always safe: every step is idempotent and only touches what actually
-needs to change. To add or change a client network afterward, use the WiFi section of the dashboard
-badge's dropdown instead of re-running this step, provisioning intentionally never touches an
-existing STA profile.
+Tak perlu lookup nama interface dulu. Satu perintah ini:
 
-### Why this isn't folded into `docker-manager.sh build`/`up`
+1. **Memasang udev rules** (semua `scripts/udev/*.rules`, termasuk STM32 + RealSense).
+2. **Memasang rule PolicyKit** agar `nmcli` `network_local` tak pernah hang menunggu prompt auth.
+3. **Menemukan interface backup**: bila USB `2357:010c` ada tapi `AP_INTERFACE_LOCAL` kosong, instal driver-nya bila perlu, lalu cocokkan interface by driver kernel `8188eu` (independen MAC/urutan colok).
+4. **Menemukan interface onboard**: satu device WiFi *lain*, bila tepat satu. Kedua nilai ditulis kembali ke `docker/.env`. Kasus ambigu (dua radio onboard) diserahkan untuk diset manual.
+5. **Mengecek kesiapan jalur primary**: interface STA diset tapi tidak ada → sekali coba `apt-get install -y linux-firmware` + re-trigger udev, bila tidak warning dan tetap di backup dongle (failure persis yang diperbaiki tangan di [Setup Wi-Fi MT7922](/id/setup/wifi-mt7922)). Interface ada tapi tanpa AP di kombinasi `iw phy` → warning jalur primary akan terus fallback; limit driver/hardware, tak bisa diperbaiki di sini.
+6. **Memasang `hostapd`** bila hilang, menghapus sisa profile NM `msd700-hotspot` pra-hostapd, menulis drop-in unmanaged NM untuk kedua interface AP (me-restart NM *sebelum* hostapd mengklaimnya).
+7. **Me-render dan memasang** kedua config hostapd, config dnsmasq, script firewall + selector, dan kedua unit systemd, lalu enable dan **restart** (bukan `enable --now`, no-op di service jalan) service hotspot + DHCP.
+8. **Membuat profile client** bila interface/SSID uplink diset; profile bernama sama yang ada dibiarkan.
 
-Considered and rejected on purpose. `docker-manager.sh` today never needs `sudo` at all (building
-and running the containers only needs `docker` group membership). Provisioning the hotspot does,
-`apt install`, `systemctl`, writing to `/etc/`. Folding it in would mean every `docker-manager.sh
-build`, including on a dev laptop running `--simulator` with no hotspot hardware at all, could start
-prompting for a `sudo` password it never needed before. Keeping the two commands separate keeps that
-surprise out of the common case.
+Re-provisioning menulis ulang config hostapd, me-restart NM/AP/DHCP, dan bisa memutus operator. Ia juga menjalankan ulang setup jaringan Velodyne setelahnya. Pakai konsol lokal atau akses kabel, bukan WiFi yang diubah. Profile client yang ada dibiarkan; ganti jaringan client dari dashboard.
 
-## The captive portal
+Host butuh: `nmcli`, `iw`, `dnsmasq`, `iptables`, systemd, udev, polkit. Jalur ini memasang hostapd bila tidak ada tapi **bukan** dnsmasq atau iw; cek dulu.
 
-**DNS is selective, not a wildcard.** `/etc/dnsmasq-msd700-hotspot.conf` (rendered from
-`docker/networkmanager/dnsmasq-hotspot.conf.tmpl`) only resolves the specific hostnames
-iOS/macOS, Android, Windows, Ubuntu/GNOME, and Firefox each query to detect "is this network behind
-a captive portal" (`captive.apple.com`, `connectivitycheck.gstatic.com`,
-`www.msftconnecttest.com`, `detectportal.firefox.com`, `nmcheck.gnome.org`, and a few more, see the
-template for the full list) to `192.168.4.1`. Every other hostname falls through to this dnsmasq's
-own upstream resolver (`/etc/resolv.conf`, normally systemd-resolved, which asks whatever DNS the
-onboard radio's own upstream network handed out). This replaced an earlier version of this feature
-that wildcarded *every* hostname to the unit's own address, wildcarding is still effectively what
-happens on an **AP-only unit** with no `STA_INTERFACE_LOCAL` configured (nothing to relay through
-regardless of what DNS says), but once an onboard uplink exists, resolving real domains to their
-real addresses is what lets HTTPS (port 443) traffic pass straight through the NAT relay below
-untouched.
+### Kenapa bukan bagian `docker-manager.sh build`/`up`
 
-**The redirect is interface-scoped, not hostname-scoped.** `msd700-hotspot-firewall.sh` installs one
-iptables rule:
+Provisioning jaringan host menyentuh paket, `/etc/`, dan systemd: disruptif, dan terpisah dari build container. (`up` juga memasang boot autostart via sudo kecuali `--no-autostart`.)
 
-```
-iptables -t nat -A PREROUTING -i <ap-interface> -p tcp --dport 80 -j REDIRECT --to-port <captive-port>
-```
+## Redirect dashboard
 
-This redirects **every** plain-HTTP (port 80) request arriving on the AP interface to the dashboard,
-regardless of which hostname it was headed for, iptables acts on interface and port, not on the DNS
-answer a client already resolved. That's deliberate for the captive-portal probes themselves (their
-DNS was already steered to `192.168.4.1` above, so they'd land here either way), but it also means a
-client's plain-HTTP request to some unrelated site (resolved to that site's real IP) still gets
-redirected here rather than actually reaching that site.
-`ROS-dashboard-next-ts/middleware.ts` handles that case explicitly: it answers each OS's specific
-probe host+path with something that *isn't* what the OS expects (a 302 for Apple, a plain 200 page
-for the rest, only when `NEXT_PUBLIC_DEPLOYMENT_MODE=local`), and for a foreign hostname that isn't
-one of those probes, 302-redirects back to the dashboard's own canonical address instead of trying
-to proxy it. HTTPS traffic never hits this rule at all (only `--dport 80` is redirected), so ordinary
-browsing over HTTPS is unaffected once an onboard uplink is relaying it.
+**Bukan captive portal, dengan sengaja.** Versi lama membajak hostname connectivity-check tiap OS, yang membuat tiap OS menyimpulkan jaringan **tidak** punya internet (Android bahkan fallback ke mobile data), menyembunyikan uplink-nya sendiri yang bekerja. Kini:
 
-Applied and removed automatically via `msd700-hotspot.service`'s `ExecStartPost`/`ExecStopPost`, tied
-to hostapd's own up/down, not to any container's lifecycle or a NetworkManager dispatcher script.
+- `dnsmasq` me-resolve tepat satu hostname, `PORTAL_HOSTNAME_LOCAL` (default `mymsd.jp`) plus subdomain, ke unit. Sisanya, termasuk connectivity check milik tiap OS, di-resolve sungguhan, sehingga dengan uplink bekerja kebanyakan OS menampilkan prompt "Sign in to WiFi" **tidak sama sekali**. Buka `http://mymsd.jp` langsung (atau alamat hotspot mentah).
+- Firewall me-redirect hanya trafik HTTP polos **yang ditujukan ke IP hotspot milik unit** ke dashboard. Browsing port-80 lain dan semua HTTPS lewat utuh. Unit yang di-provision sebelum perubahan ini mungkin masih membawa rule blanket lama; re-provisioning menghapusnya.
 
-::: danger HTTPS is never intercepted, and that is not a bug
-Redirecting TLS traffic breaks certificate validation outright: the client gets a hard security
-error, not a sign-in prompt. This is a protocol constraint, the same one every real captive portal
-runs into. What actually triggers the "Sign in to network" prompt is each OS's own plain-HTTP probe:
+Dipasang/dilepas otomatis dengan naik/turun hostapd, independen container.
 
-| OS | Probe URL | Expects |
+**Relay internet.** Hanya bila `STA_INTERFACE_LOCAL` diset, script firewall juga menambah rule `MASQUERADE` (`192.168.4.0/24` keluar radio onboard) plus rule `ACCEPT` di chain **`DOCKER-USER`** Docker (satu-satunya chain yang Docker janji tak pernah sentuh, sehingga rule selamat dari restart container).
+
+**Catatan keamanan:** siapa pun di hotspot menunggang koneksi internet milik unit. Pikirkan siapa lagi yang bisa mempelajari password hotspot di lokasi deployment.
+
+## Badge dashboard
+
+Tanpa badge WiFi terpisah. WiFi tinggal sebagai **seksi di dalam dropdown [Local Mode badge](/id/development/data-sync#badge-status-local-mode)**. Baris badge hanya menampilkan **glyph** WiFi, diwarnai sesuai state, dengan ringkasan (SSID, `hotspot only`, `no network`, `wifi unreachable`) sebagai hover tooltip, bukan teks cetakan. Kondisi agent tak terjangkau juga ditulis di atas seksi.
+
+Agent membaca interface *pemenang* dari `/run/msd700-hotspot-active` (primary `msd700-ap0` atau dongle backup, mana yang menang boot ini), fallback ke dongle `AP_INTERFACE_LOCAL` hanya bila file hilang. Di unit primary-only tanpa dongle, inilah yang membuat badge bisa melihat hotspot.
+
+Status polling `GET /local/wifi/status` tiap 30 dtk (lebih cepat sebentar setelah aksi), dari badge yang selalu ter-mount. Scan jalan hanya saat dropdown dibuka (rescan `nmcli` tidak gratis).
+
+| Endpoint | Auth | Tujuan |
 | --- | --- | --- |
-| Apple (iOS/macOS) | `http://captive.apple.com/hotspot-detect.html` | the literal string "Success" |
-| Android | `http://connectivitycheck.gstatic.com/generate_204` | HTTP 204 |
-| Windows (NCSI) | `http://www.msftconnecttest.com/connecttest.txt` | "Microsoft Connect Test" |
-| Windows (legacy) | `http://www.msftncsi.com/ncsi.txt` | "Microsoft NCSI" |
-| Firefox | `http://detectportal.firefox.com/success.txt` | "success\n" |
-| Ubuntu/GNOME (NetworkManager) | `http://connectivity-check.ubuntu.com/` , `http://nmcheck.gnome.org/` | a non-empty 200 body |
+| `GET /local/wifi/status` | none | State hotspot (up? SSID? jumlah client) + state client (tersambung? SSID? IP? internet?) |
+| `GET /local/wifi/scan` | none | SSID sekitar + security, untuk dropdown. **Mengecualikan hotspot milik unit ini** (bawah) |
+| `GET /local/wifi/saved` | none | Profile client dikenal |
+| `GET /local/wifi/hotspot` | none | SSID hotspot milik unit ini + hasil perubahan terakhir. **Tidak pernah mengembalikan password** |
+| `POST /local/wifi/connect` | none | Gabung jaringan client pilihan |
+| `POST /local/wifi/disconnect` | none | Tinggalkan jaringan client |
+| `POST /local/wifi/forget` | none | Hapus profile client tersimpan |
+| `POST /local/wifi/hotspot` | none | Ubah SSID dan/atau password hotspot milik unit |
+
+::: warning Tanpa login yang melindungi route ini
+Route lokal tidak membawa autentikasi operator. Agent bind loopback, tapi backend mem-proxy request browser tanpa cek login. Jangan expose ke jaringan tak tepercaya.
 :::
 
-**Internet relay.** Only when `STA_INTERFACE_LOCAL` is set, `msd700-hotspot-firewall.sh` also adds:
+### Hotspot sendiri tidak pernah muncul di scan
 
-- A `MASQUERADE` rule (`192.168.4.0/24` out the onboard radio) so return traffic has a route back to
-  a client's private hotspot address.
-- Two `ACCEPT` rules in Docker's **`DOCKER-USER`** chain, not `FORWARD` directly, because Docker sets
-  `FORWARD`'s default policy to `DROP` and owns its own chains there, but its own documentation names
-  `DOCKER-USER` as the one chain it guarantees never to insert into, flush, or otherwise touch, so
-  these rules survive `docker-manager.sh` restarting Docker or the containers, which rules added
-  straight to `FORWARD` would not.
+Scan di radio client sambil broadcast hotspot akan menampilkan hotspot sendiri pertama (terkuat). Memilihnya menyuruh unit gabung ke dirinya sendiri: hotspot memutusmu di tengah konfigurasi ulang, halaman muat ulang ke jaringan mati, dan refleksnya adalah memilihnya lagi. Jadi `scan()` membuangnya dan `connect()` menolak langsung (`own_hotspot`, ditampilkan sebagai kalimat penjelasan). SSID yang dikecualikan berasal dari radio yang live (`iw dev <ap-iface> info`) dan profile NM; keduanya gagal diam-diam bila tak bisa dibaca. Saat AP down di tengah restart, filter bisa sesaat lolos.
 
-**Security note:** anyone who connects to the hotspot rides the unit's own internet connection.
-Worth considering if a unit is deployed somewhere the hotspot password might reach people beyond the
-intended operator.
+## Mengubah hotspot milik unit
 
-## The dashboard badge
+Ganti nama hotspot dan set password baru dari seksi WiFi dropdown badge. Agent mengedit baris `ssid=`/`wpa_passphrase=` langsung di tempat di config hostapd mana pun yang ada (nilai sama di keduanya), lalu meminta restart tidak langsung: menyentuh sentinel file yang diawasi unit path systemd host, yang menjalankan `systemctl restart msd700-hotspot.service`. Tidak ada sinyal "restart done" sinkron, sehingga agent mem-polling state radio hingga 15 dtk alih-alih percaya jeda tetap.
 
-There is no separate WiFi badge. This is a **section inside** the
-[Local Mode badge](/id/development/data-sync#the-local-mode-badge)'s dropdown, under the sync state.
-On the badge line itself there is only a WiFi **glyph**, coloured by state and carrying the summary
-(an SSID, `hotspot only`, `no network`, `wifi unreachable`) as its hover tooltip and its
-screen-reader label rather than as printed text, an SSID is up to 32 bytes of arbitrary characters
-and the badge sits over the navbar, so the words belong one click away instead. The agent being
-unreachable is also stated in words at the top of the section, since a red glyph on its own is not
-something an operator can act on.
+::: danger Menyimpan memutus semua device di hotspot, termasuk kamu
+Tak terhindarkan: dashboard tiba lewat koneksi yang justru dihancurkan perubahan. Restart AP di bawah SSID/key baru mendrop tiap device, dan tak ada yang auto-rejoin (bagi OS-nya ini jaringan tak dikenal atau password salah).
 
-It polls `GET /local/wifi/status` every 30 seconds, faster for a short window
-after an action, from the always-mounted badge rather than from the section, so the summary is
-current whether or not the dropdown has ever been opened. The network scan is the opposite: it runs
-when the dropdown opens and not before, because `nmcli`'s rescan is not free and most page-views
-never open it.
+Maka `POST /local/wifi/hotspot` memvalidasi, menjawab **202 Accepted** dengan SSID untuk reconnect, *baru* menerapkan perubahan. Menjawab dulu membuat UI bisa bilang "reconnect ke `<nama baru>`" selagi masih punya koneksi. Respons berarti *diterima*, bukan *sukses*: baca `last_change` `GET /local/wifi/hotspot` setelah rejoin.
+:::
 
-| Endpoint | Auth | Purpose |
+::: warning Rollback best-effort, bukan konektivitas terverifikasi
+Saat gagal agent mengembalikan SSID/key sebelumnya dan mengaktifkannya (`last_change.rolled_back` membedakan rollback dari yang tak pernah dikirim). "Gagal" berarti SSID harapan tak pernah muncul dalam 15 dtk, bukan error dari perintah. Ia tidak memverifikasi password baru, DHCP, DNS, atau penyambungan ulang; rollback sendiri bisa gagal. `last_change` di memori, hilang saat agent restart.
+:::
+
+**Validasi** (di agent, bukan sekadar form): SSID 1-32 **oktet** (nama non-Latin mencapai limit lebih cepat dari jumlah karakternya), password WPA-PSK 8-63 karakter. Karakter kontrol ditolak, bukan di-strip. Tidak ada yang disentuh sampai validasi lolos, sehingga nilai buruk tak bisa membunuh hotspot.
+
+**Password tidak pernah ke browser.** Siapa pun di hotspot sudah tahu (mereka mengetiknya untuk masuk); mengembalikannya lewat HTTP polos menyerahkannya ke siapa pun yang mencapai dashboard dari jaringan sisi-*client*. Form meminta password baru; kosong berarti "pertahankan yang sekarang".
+
+::: warning `docker/.env` adalah seed, bukan kebenaran
+Provisioning membaca `docker/.env`, lalu memilih password live dari config hostapd primary, backup, atau legacy, berurutan. Ubah via prompt tersembunyi atau dashboard, jangan via env override. Tidak seperti password, SSID live *tidak* dipulihkan ke provisioning: rename dashboard bisa di-reset oleh re-provision berikutnya dari `AP_SSID_LOCAL` basi. Cek SSID broadcast (`iw dev <ap-interface> info`) di prompt.
+:::
+
+Reachability internet sisi-client (`full` / `limited` / `portal` / `none`) berasal langsung dari `nmcli networking connectivity`. Tidak ada probe kedua di sini.
+
+## Referensi konfigurasi (`docker/.env`)
+
+| Variable | Arti | Default |
 | --- | --- | --- |
-| `GET /local/wifi/status` | none | Hotspot state (up? SSID? client count, read via `iw dev <ap-iface> info` / `station dump`), client state (connected? SSID? IP? internet reachable, via `nmcli networking connectivity`?) |
-| `GET /local/wifi/scan` | none | Nearby SSIDs and security type, for the dropdown |
-| `GET /local/wifi/saved` | none | Known client profiles |
-| `GET /local/wifi/hotspot` | none | This unit's own hotspot SSID and the outcome of the last change. **Never returns the password** |
-| `POST /local/wifi/connect` | operator session | Connect the client radio to a chosen network |
-| `POST /local/wifi/forget` | operator session | Remove a saved client profile |
-| `POST /local/wifi/hotspot` | operator session | Change this unit's own hotspot SSID and/or password |
+| `AP_INTERFACE_LOCAL` | Interface dongle **backup** | auto-detect saat `--provision-network` |
+| `STA_INTERFACE_LOCAL` | Interface radio onboard, juga mendukung hotspot **primary** | auto-detect saat `--provision-network` |
+| `AP_SSID_LOCAL` | Nama broadcast hotspot | `MSD700-<hostname suffix>` bila kosong |
+| `AP_PASSWORD_LOCAL` | Password WPA2 hotspot (8+ karakter, wajib untuk membuat AP) | kosong di `.env.example` dengan sengaja |
+| `AP_CONNECTION_NAME_LOCAL` | Legacy: hanya membersihkan sisa profile NM pra-hostapd bernama ini | `msd700-hotspot` |
+| `PORTAL_HOSTNAME_LOCAL` | Hostname yang di-resolve dnsmasq ke unit; satu-satunya alamat yang di-redirect firewall | `mymsd.jp` |
+| `NETWORK_AGENT_PORT_LOCAL` | Port API loopback `network_local` | `5011` |
+| `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: jaringan upstream untuk auto-join saat provisioning pertama | kosong (tambah dari dropdown dashboard saja) |
+| `LOCAL_IP` | Alamat dashboard cetakan + fallback build frontend; alamat tetap hotspot tetap `192.168.4.1` | `192.168.4.1` |
 
-The mutating routes require the same operator session every other `/api/*` route does, unlike
-`/local/status`/`/local/sync`, which stay unauthenticated because a unit with no synced-down
-accounts yet has nobody who could log in. Connecting to a network (and handing over a password) is
-a meaningfully more sensitive action than reading a sync timestamp, so it does not get the same
-pre-login exception.
+## Referensi endpoint `network-agent`
 
-## Changing the unit's own hotspot
+`network_local` hanya bind `127.0.0.1:5011`; `backend_local` satu-satunya pemanggil dan menambahkan auth operator. Proxy di antara keduanya adalah `wifi_proxy.js` (timeout 25 dtk, meneruskan body hotspot apa adanya untuk menjaga beda absent-vs-empty). Agent memanggil `nmcli` via argv saja (tidak pernah shell), 15 dtk per panggilan, lewat bind-mount D-Bus ke NetworkManager host. Provisioning hotspot **bukan** tugasnya (`setup.sh --provision-network` yang mengerjakannya).
 
-The WiFi section of the badge's dropdown is meant to rename the hotspot and set a new password.
+| Endpoint | Tujuan |
+| --- | --- |
+| `GET /health` | `{ ok: true }` |
+| `GET /wifi/status` | State radio/koneksi |
+| `GET /wifi/scan` | Jaringan (SSID hotspot sendiri difilter, dedup terkuat-dulu) |
+| `GET /wifi/saved` | Profile tersimpan |
+| `POST /wifi/connect { ssid, ... }` | Gabung (standar, enterprise EAP, atau hidden); 400 tanpa ssid, 502 saat gagal |
+| `POST /wifi/disconnect` | Putus uplink client |
+| `GET /wifi/hotspot` | Hotspot saat ini + `limits` (SSID maks 32 oktet, password 8–63) + `last_change` |
+| `POST /wifi/hotspot` | Validasi kini, terapkan dalam 1.5 dtk: `202 { accepted, applies_in_ms: 1500, ssid, password_changed }` |
+| `POST /wifi/forget { name }` | Hapus profile tersimpan |
 
-::: danger Currently broken after the hostapd migration
-`network-agent`'s `setHotspot()` (`ros-web-ui/source/dependencies/network-agent/wifi_control.js`)
-still reads and writes the AP side as an `nmcli connection modify msd700-hotspot ...` /
-`nmcli connection down`/`up msd700-hotspot` NetworkManager profile. Provisioning (above) explicitly
-**deletes** that exact profile if one exists, the AP interface is NM-*unmanaged* now, `hostapd` owns
-it directly via `msd700-hotspot.service`. On any unit provisioned under the current architecture
-there is no `msd700-hotspot` connection for `setHotspot()` to read, so it fails immediately with
-`not_provisioned` before attempting any change. Reading status (`GET /local/wifi/hotspot`,
-`GET /local/wifi/status`) is unaffected, `getApInfo()` was updated to read the interface directly
-via `iw`, only the *write* path was not carried over. Fixing this means rewriting `setHotspot()` to
-edit `/etc/hostapd/hostapd-msd700.conf` (SSID/`wpa_passphrase`) and `systemctl restart
-msd700-hotspot.service` instead of touching a NetworkManager profile that no longer exists. Not yet
-done.
-:::
-
-Once fixed, two behaviours are worth knowing before using it, and both are already reflected in the
-API's shape:
-
-::: danger Saving disconnects every device on the hotspot, including yours
-This is unavoidable, not a rough edge: the hotspot is what serves the dashboard, so the request to
-change it arrives over the very connection the change destroys. Restarting the AP under a new SSID
-(or a new key) drops every associated device, and none of them will auto-rejoin, to their OS this is
-now either an unknown network or one whose password no longer works.
-
-The API is built around that rather than against it. `POST /local/wifi/hotspot` validates
-immediately, answers **202 Accepted** carrying the SSID to reconnect to, and only *then* applies the
-change. Applying it inline would tear down the TCP connection mid-response, and a browser cannot
-tell that from a crash, the operator would see a network error for a change that actually succeeded,
-with no idea which network to look for. Answering first is what lets the UI say "reconnect to
-`<new name>`" while it still has a connection to say it on.
-
-Consequently the response means *accepted*, never *succeeded*. What actually happened is reported by
-`GET /local/wifi/hotspot`'s `last_change` field, read after the operator has rejoined.
-:::
-
-::: info A change that cannot activate is meant to roll back automatically
-The expensive failure here is a headless robot whose only access path is its own hotspot, left with
-a config that no longer activates: nobody can reach it to undo that, so it needs someone physically
-at the machine. The current implementation captures the previous SSID and key first and, if the new
-settings fail to come up, restores and reactivates them, with `last_change.rolled_back` set so a
-reconnecting operator can tell a rolled-back change from one that was never submitted, otherwise the
-two look identical, since in both cases the network in front of them is the one they started with.
-This logic still targets the deleted NetworkManager profile (see above), so it needs to move to
-editing/reverting the hostapd config file alongside the rest of the fix.
-:::
-
-**Validation** (enforced in the agent, not just the form): SSID is 1 to 32 **octets**, a name in a
-non-Latin script hits the limit sooner than its character count suggests, and the WPA-PSK password
-is 8 to 63 characters. Control characters are rejected rather than stripped, since quietly sanitising
-one leaves the operator hunting for a network whose name is not what they typed. Nothing is touched
-until validation passes, so a bad value can never be the reason a unit loses its hotspot.
-
-**The password is never sent to the browser.** Anyone already on the hotspot knows it (they typed it
-to get on), so returning it buys nothing, while putting it in a plain-HTTP response body hands it to
-anyone reaching the dashboard from the *client-side* network, who does not know it. The form asks
-for a new password and treats blank as "keep the current one".
-
-::: warning `docker/.env` is a seed, not the source of truth
-`AP_SSID_LOCAL` / `AP_PASSWORD_LOCAL` are read **only** by `setup.sh --provision-network`, and only
-when `/etc/hostapd/hostapd-msd700.conf` does not already exist (in effect: only on the first
-provisioning run). After that, `/etc/hostapd/hostapd-msd700.conf` is authoritative and those two keys
-are stale, re-running `--provision-network` re-renders the same file from `docker/.env` again, so
-edit `docker/.env` and re-run provisioning to change the hotspot from the CLI, or wait for the
-dashboard path above to be fixed. The honest live answer for the broadcast SSID is
-`iw dev <ap-interface> info`.
-:::
-
-Client-side internet reachability (`full` / `limited` / `portal` / `none`) is read straight from
-`nmcli networking connectivity`, NetworkManager's own periodic connectivity probe, nothing here
-implements a second one.
-
-## Configuration reference (`docker/.env`)
-
-| Variable | Meaning | Default |
-| --- | --- | --- |
-| `AP_INTERFACE_LOCAL` | Dongle's interface name | auto-detected during `--provision-network` |
-| `STA_INTERFACE_LOCAL` | Onboard radio's interface name | auto-detected during `--provision-network` |
-| `AP_SSID_LOCAL` | Hotspot's broadcast name | `MSD700-<hostname suffix>` if left blank |
-| `AP_PASSWORD_LOCAL` | Hotspot's WPA2 password (8+ chars, required for provisioning to create the AP) | blank in `docker/.env.example` on purpose |
-| `AP_CONNECTION_NAME_LOCAL` | Legacy, only used to clean up a leftover pre-hostapd NetworkManager profile of this name during provisioning | `msd700-hotspot` |
-| `NETWORK_AGENT_PORT_LOCAL` | Port `network_local`'s loopback API listens on | `5011` |
-| `STA_SSID_LOCAL` / `STA_PASSWORD_LOCAL` | Optional: an upstream network to auto-join as a client on first provisioning | empty (add later from the dashboard's WiFi dropdown instead) |
-| `LOCAL_IP` | IP the dashboard's frontend build points at | `192.168.4.1` (matches the hotspot's static IP) |
-
-## Verifying it works
+## Verifikasi
 
 ```bash
-# Services running?
+# Service jalan?
 systemctl status msd700-hotspot.service msd700-hotspot-dhcp.service
 
-# Actually in AP mode, broadcasting?
-iw dev <AP_INTERFACE_LOCAL> info        # should show: type AP
+# Jalur mana menang, primary (msd700-ap0) atau backup (dongle)?
+cat /run/msd700-hotspot-active
 
-# NetworkManager correctly staying out of the way?
-nmcli device status                      # dongle should show "unmanaged"
+# Broadcast dalam mode AP? (IFACE dari file di atas)
+iw dev <IFACE> info                      # harus tampil: type AP
 
-# Captive-portal domains still redirected?
-dig +short @192.168.4.1 captive.apple.com       # should print 192.168.4.1
+# NetworkManager menjauh dengan benar?
+nmcli device status                      # msd700-ap0 / dongle harus "unmanaged"
 
-# Everything else resolving for real (only meaningful if STA_INTERFACE_LOCAL is set)?
-dig +short @192.168.4.1 github.com              # should print a real GitHub IP, not 192.168.4.1
+# Hostname dashboard resolve ke unit ini?
+dig +short @192.168.4.1 mymsd.jp                # harus cetak 192.168.4.1
 
-# NAT + relay rules present?
+# Sisanya resolve sungguhan (hanya bila STA_INTERFACE_LOCAL diset)?
+dig +short @192.168.4.1 github.com              # IP asli, bukan 192.168.4.1
+
+# Rule NAT + relay ada?
 sudo iptables -t nat -L POSTROUTING -n | grep 192.168.4.0
 sudo iptables -L DOCKER-USER -n
 ```
 
-From another device: connect to the SSID, the OS's own "Sign in to WiFi" prompt should appear and
-land on `http://192.168.4.1:3000` (or whatever port 80 redirects to, see `FRONTEND_PORT_LOCAL`).
-Everything else should browse normally if `STA_INTERFACE_LOCAL` is configured.
+Dari device lain: join SSID, buka `http://mymsd.jp` (atau alamat hotspot mentah). Dengan uplink bekerja kebanyakan OS menampilkan prompt "Sign in to WiFi" **tidak**; itu sengaja dihapus ([di atas](#redirect-dashboard)). Browsing lain normal bila `STA_INTERFACE_LOCAL` diset.
 
 ## Troubleshooting
 
-**`lsusb` doesn't show the dongle, or `nmcli device status` doesn't show a second WiFi device**
-Driver isn't installed/loaded yet. Run `./scripts/install-wifi-dongle-driver.sh --check` to see
-what's missing.
+**Dongle hilang dari `lsusb`, atau WiFi kedua tidak ada di `nmcli device status`**
+`lsusb` hilang = masalah USB/daya/koneksi, bukan driver. USB ada tapi interface tidak ada → cek driver (`./scripts/install-wifi-dongle-driver.sh --check`) dan kernel log.
 
-**`install-wifi-dongle-driver.sh` reports the module isn't loaded even right after a successful
-build**
-Retry once, there's a known race between `dkms install`'s own `depmod` and `modprobe` right after.
-The script already retries this internally (5 attempts); if it still fails, check
-`sudo dmesg | tail -40`.
+**Installer bilang modul tidak ter-load tepat setelah build sukses**
+Retry sekali: race antara `depmod` milik `dkms install` dan `modprobe`. Script sudah retry internal (5x); bila tetap gagal, `sudo dmesg | tail -40`.
 
-**Hotspot won't broadcast / `iw dev` shows `type managed` instead of `AP`**
-Check `journalctl -u msd700-hotspot.service`. If you see repeated activation failures, confirm
-NetworkManager actually released the interface (`nmcli device status` should say `unmanaged`, not
-`disconnected` or `connecting`), a stale `/etc/NetworkManager/conf.d/msd700-unmanaged-ap.conf`
-pointing at the wrong interface name is the usual cause after swapping to a different dongle.
+**Hotspot tidak broadcast / `iw dev` menampilkan `type managed`, bukan `AP`**
+`journalctl -u msd700-hotspot.service` diawali decision log selector sendiri (jalur mana, kenapa fallback). Failure aktivasi berulang: konfirmasi NM melepas interface pemenang (`nmcli device status` harus bilang `unmanaged`). Unmanaged-conf basi menunjuk nama interface salah adalah penyebab umum setelah ganti dongle.
 
-**`--provision-network` fails with "nmcli not found"**
-NetworkManager is not installed on the host. `sudo apt install network-manager`.
+**Hotspot selalu memakai dongle backup padahal radio onboard seharusnya primary**
+Baca penuh `iw phy <phy> info` untuk phy onboard (managed+AP, total-interface, limit channel). Lalu `journalctl -u msd700-hotspot.service`: seleksi dan broadcast adalah tahap terpisah dengan error terpisah.
 
-**`--provision-network` fails, "AP_PASSWORD_LOCAL is not set"**
-Password missing or under 8 characters. Set an 8+ character password in `docker/.env` or pass it
-inline, then re-run.
+**Preflight warning driver/firmware radio onboard belum siap**
+Persis yang diperbaiki tangan di [Setup Wi-Fi MT7922](/id/setup/wifi-mt7922); `apt-get install -y linux-firmware` otomatis saat provisioning tidak selalu cukup di kernel Tegra ini. Hotspot tetap jalan di dongle backup sementara itu, bila dikonfigurasi.
 
-**Clients connect to the hotspot but get no IP**
-Check `systemctl status msd700-hotspot-dhcp.service` and `journalctl -u msd700-hotspot-dhcp.service`.
-Confirm `/etc/dnsmasq-msd700-hotspot.conf` has the right `interface=` line (re-run
-`./setup.sh --provision-network` to re-render it from the current `docker/.env`).
+**`--provision-network` gagal "nmcli not found"**
+`sudo apt install network-manager`.
 
-**Clients get the "Sign in to WiFi" prompt and reach the dashboard, but nothing else loads**
-`STA_INTERFACE_LOCAL` is probably empty in `docker/.env`, that's the AP-only mode, dashboard-only by
-design (no onboard uplink to relay through). If it should be set, check with `nmcli device status`,
-set it, and re-run `./setup.sh --provision-network`.
+**`--provision-network` gagal, "AP_PASSWORD_LOCAL is not set"**
+Jalankan ulang interaktif dan masukkan password baru di hidden prompt. Jangan commit ke `docker/.env` tracked atau taruh di shell history. Pakai SSID 1-32 byte dan passphrase WPA2 8-63 karakter tanpa karakter kontrol (provisioning hanya cek panjang; agent memvalidasi sisanya).
 
-**`STA_INTERFACE_LOCAL` is set but clients still have no internet**
-Check the NAT rules actually exist (see [Verifying it works](#verifying-it-works) above). If missing
-after a re-provision, confirm `msd700-hotspot.service` was actually **restarted** (not just
-`enable`d, see step 6 of provisioning), and that `net.ipv4.ip_forward` is `1`
-(`sysctl net.ipv4.ip_forward`). Otherwise, confirm the onboard radio itself has real internet
-(`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`), the relay only forwards to wherever that radio's own
-connection goes.
+**Client join tapi tidak dapat IP**
+`systemctl status msd700-hotspot-dhcp.service` + `journalctl -u msd700-hotspot-dhcp.service`. Interface dnsmasq berasal dari `/run/msd700-hotspot-active` di command line service; konfirmasi state file cocok dengan interface yang benar naik. Jalankan ulang `./setup.sh --provision-network` bila config basi.
 
-**Existing local services (backend, media, MySQL) become unreachable after provisioning**
-The iptables redirect rule was not scoped correctly to the AP interface. Check it targets only
-`<ap-interface>`, never the client interface or loopback: `sudo iptables -t nat -L PREROUTING -n`.
+**Client bisa `http://mymsd.jp` tapi tidak ada yang load**
+`STA_INTERFACE_LOCAL` mungkin kosong di `docker/.env`: mode AP-only, dashboard-only — memang didesain begitu. Bila seharusnya diset, cek `nmcli device status`, set, jalankan ulang provisioning.
 
-**Badge menu says "Hotspot: no hotspot radio"**
-`AP_INTERFACE_LOCAL` is empty, or `--provision-network` was never run. Fill in `docker/.env` and run
-`./setup.sh --provision-network`.
+**`STA_INTERFACE_LOCAL` diset tapi client tetap tanpa internet**
+Cek rule NAT ada ([di atas](#verifikasi)). Bila hilang setelah re-provision: konfirmasi service hotspot benar **di-restart** (bukan sekadar enable), `sysctl net.ipv4.ip_forward` adalah `1`, dan radio onboard sendiri punya internet (`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`).
 
-**No WiFi glyph on the badge at all**
-Neither radio is present, with no AP and no STA interface there is nothing to report. Expected on a
-unit built without WiFi; otherwise check `nmcli device` / `lsusb` for the interfaces.
+**Service lokal (backend, media, MySQL) tak terjangkau setelah provisioning**
+Rule redirect salah scope. Ia harus menarget hanya interface pemenang dari `/run/msd700-hotspot-active` dan hanya alamat milik unit (`-d`), jangan loopback atau `0.0.0.0/0`: `sudo iptables -t nat -L PREROUTING -n`.
 
-**Hotspot up, but the WiFi glyph is red and the menu says "WiFi service unreachable on this unit"**
-`network_local` is not running, or `backend_local` cannot reach it. `docker compose ps` for
-`network_local`; confirm `NETWORK_AGENT_PORT_LOCAL` matches on both services.
+**Badge bilang "Hotspot: no hotspot radio" padahal hotspot naik**
+Konfirmasi `/run/msd700-hotspot-active` ter-mount ke `network_local` (`docker compose exec network_local cat /run/msd700-hotspot-active` harus cocok dengan host). Kosong di dalam = bind mount belum terpasang. Mount oke = `--provision-network` belum pernah jalan, atau kedua variable interface memang kosong.
 
-**`nmcli device wifi connect` fails from the badge with an unhelpful reason**
-nmcli's own stderr is passed through verbatim rather than reworded. Read the reason text directly,
-it distinguishes wrong password from out-of-range from refused.
+**Glyph WiFi tidak ada sama sekali di badge**
+Kedua radio tidak ada: tanpa AP, tanpa interface client, tidak ada yang dilaporkan. Wajar di build tanpa WiFi; bila tidak cek `nmcli device` / `lsusb`.
 
-**Changing the hotspot name/password from the dashboard does nothing / reports `not_provisioned`**
-Known bug, see [Changing the unit's own hotspot](#changing-the-unit-s-own-hotspot) above, `setHotspot()`
-was not updated for the hostapd migration. Change `AP_SSID_LOCAL`/`AP_PASSWORD_LOCAL` in
-`docker/.env` and re-run `--provision-network` instead for now (only works before hostapd's config
-file already exists, see the warning under that section).
+**Hotspot naik, glyph merah, "WiFi service unreachable on this unit"**
+`network_local` down, atau `backend_local` tak mencapainya. `docker compose ps` untuk `network_local`; konfirmasi `NETWORK_AGENT_PORT_LOCAL` cocok di kedua service.
 
-## Related
+**`nmcli device wifi connect` dari badge gagal dengan reason tak membantu**
+Stderr nmcli diteruskan apa adanya. Baca langsung: ia membedakan password salah / di luar jangkauan / ditolak.
 
-- [Unit Setup](/id/setup/unit-setup): the base local-mode installation this feature sits on top of
-- [Docker Reference § network_mode: host](/id/setup/docker-reference#network-mode-host): why some
-  services share the host's network namespace
-- [Data Sync § The Local Mode badge](/id/development/data-sync#the-local-mode-badge): the badge this
-  section lives inside, and the sync state shown above it
-- [Architecture § Trust domains](/id/development/architecture#trust-domains): why `/local/wifi/connect`
-  needs an operator session and `/local/status` does not
+**Ubah hotspot dari dashboard lapor `not_provisioned`**
+Kedua config hostapd belum ada, atau `network_local` tak bisa membacanya (cek bind mount `/etc/hostapd`: `docker compose exec network_local ls -l /etc/hostapd`). `--provision-network` belum pernah jalan.
+
+**Ubah hotspot dari dashboard timeout / tak pernah konfirmasi**
+`setHotspot()` menyentuh sentinel file dan menunggu hingga 15 dtk SSID baru mengudara ([di atas](#mengubah-hotspot-milik-unit)). Cek `systemctl status msd700-hotspot-restart.path msd700-hotspot-restart.service`, mount read-write `/run/msd700-hotspot-restart` ke `network_local`, dan `journalctl -u msd700-hotspot-restart.service`.
+
+## Terkait
+
+- [Setup Wi-Fi MT7922](/id/setup/wifi-mt7922): step 1 [alur](#alur-setup) di atas, hanya untuk masalah firmware MT7922 terkonfirmasi di unit nyata
+- [Setup Unit](/id/setup/unit-setup): instal mode-lokal dasar yang ditumpangi fitur ini
+- [Referensi Docker](/id/setup/docker-reference#network-mode-host): kenapa sebagian service berbagi network host
+- [Data Sync: Local Mode badge](/id/development/data-sync#badge-status-local-mode): badge tempat seksi ini tinggal
+- [Architecture: Trust domains](/id/development/architecture#trust-domain-dan-keamanan-multi-tingkat): desain trust-boundary untuk route `/local/*` (middleware sesi operator di route WiFi mutating didesain tapi belum dipasang; lihat warning di atas)

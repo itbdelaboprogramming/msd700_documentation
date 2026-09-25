@@ -21,8 +21,8 @@ Every physical robot is addressed by a unique prefix: `/unit_<ULID>/...`. The UL
 
 ```mermaid
 flowchart LR
-  R_TOPIC["Robot ROS Master<br/>Topic: /string/robotpose"] -->|"aws_mqtt prepends prefix"| MQTT_TOPIC["Central MQTT Broker<br/>Topic: /unit_<ULID>/string/robotpose"]
-  MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_<ULID>/string/robotpose"]
+  R_TOPIC["Robot ROS Master<br/>Topic: /string/robotpose"] -->|"aws_mqtt prepends prefix"| MQTT_TOPIC["Central MQTT Broker<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
+  MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
 ```
 
 | Hop Location | Topic Format | Engineering Purpose |
@@ -341,12 +341,12 @@ flowchart LR
   end
 
   subgraph Broker["MQTT Transport"]
-    O_POSE --> M_POSE["/unit_<ULID>/string/robotpose"]
+    O_POSE --> M_POSE["/unit_#lt;ULID#gt;/string/robotpose"]
   end
 
   subgraph Cloud["Cloud Server"]
     M_POSE --> D_POSE["topic2string<br/>robotpose_server"]
-    D_POSE --> C_POSE["/unit_<ULID>/server/robot_pose<br/>(typed)"]
+    D_POSE --> C_POSE["/unit_#lt;ULID#gt;/server/robot_pose<br/>(typed)"]
     C_POSE --> ROSBRIDGE["rosbridge_suite (:9090)"]
   end
 ```
@@ -356,12 +356,55 @@ flowchart LR
 | Robot Topic | Cloud Server Topic | Update Rate | Content Description |
 | --- | --- | --- | --- |
 | `/string/robotpose` | `/unit_<ULID>/server/robot_pose` | 25 Hz | Robot position and orientation in `map` frame (`geometry_msgs/PoseStamped`). |
-| `/string/map` | `/unit_<ULID>/server/slam/map` | On update | Compressed occupancy grid (`base64(zlib(JSON))`). |
+| `/string/map` | `/unit_<ULID>/server/slam/map` | On change, plus a heartbeat | Compressed occupancy grid, `base64(zlib(M1))` with the cells packed as raw int8. The older `base64(zlib(JSON))` form is still accepted by the decoder. See [Map delivery](#map-delivery). |
 | `/string/laserscan` | `/unit_<ULID>/server/scan` | 2 Hz | Compressed 2D laser scan data (`sensor_msgs/LaserScan`). |
 | `/string/move_base/NavfnROS/plan` | `/unit_<ULID>/server/move_base/NavfnROS/plan` | On plan | Global path coordinates (`nav_msgs/Path`). |
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Continuous | Local trajectory trajectory (`nav_msgs/Path`). |
 | `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | On plan | Coverage sweep line coordinates (`nav_msgs/Path`). |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Full active mission snapshot for reconnect recovery. |
+
+### Map delivery
+
+The map is the largest payload on the link and the only one an operator cannot work without, so it
+is the one stream that does not simply repeat. The robot content-hashes the grid and sends it only
+when it actually changes, plus a heartbeat every 60 s while somebody is watching and every 300 s
+while nobody is. In navigation mode the grid comes from `map_server` and never changes at all, so
+in practice that is one message per heartbeat.
+
+That leaves a single message to carry something a browser cannot do without, over a QoS 0 hop with
+no broker retain. Three mechanisms make it survivable, and none of them is optional:
+
+| Mechanism | Where | What it covers |
+| --- | --- | --- |
+| The cloud relay latches `/unit_<ULID>/string/map` | `aws_mqtt/scripts/gen_bridge_params.py` | A browser that connects between two sends, and a relay that restarts (which happens whenever the fleet roster changes). |
+| A burst of `burst_sends` repeats, `burst_interval` apart, after a map reset or retire | `topic2string/scripts/map_compression_pipeline.py` | The map an operator just opened, delivered at the exact moment the robot is restarting its navigation stack. Starting a new mapping run is covered too. |
+| The pull channel `/string/map_request` | Browser to robot, same path as the ACK topics | Everything else: a dropped packet, a dashboard whose page mounted at the wrong instant, a local-mode relay that ate the first message while learning the topic type. |
+
+The dashboard publishes a `std_msgs/String` on `/unit_<ULID>/string/map_request` as soon as the
+Navigation canvas mounts, and keeps asking until a map is drawn. The robot rate-limits requests
+(`request_min_interval`, default 2 s), so several tabs on one unit cost one extra send rather than
+one each.
+
+A **0x0 grid is not a corrupt message**. The robot publishes one to retire the grid the relay is
+latching: without it, a dashboard that has just opened a *different* map would be handed the
+previous session's room and draw it with full confidence. The canvas treats it as "no map yet",
+shows that it is loading, and asks for the new one.
+
+The compressor advertises two services, and the difference between them is which situation it is:
+
+| Service | Called from | Effect |
+| --- | --- | --- |
+| `/map/reset` | Mapping stopped or discarded, navigation deactivated, emergency stop | The robot forgets its map. Whatever the dashboard is already drawing is left alone, because the operator is on their way out of that page and blanking their canvas buys nothing. |
+| `/map/retire` | `navigation.init` only | The same, plus the 0x0 sentinel. This is the one case where the latched copy is actively wrong: a different map was just opened. |
+
+Both arm the burst. A robot that predates `/map/retire` falls back to a plain reset, so a rolling
+deploy loses the stale-map fix rather than the reset itself.
+
+::: warning
+Do not lengthen `change_heartbeat` in `topic2string/config/egress.yaml` without checking all three
+mechanisms above are still in place. With change-gating alone and none of them, a dashboard that
+missed the send waited a measured ~52 s for the next one.
+:::
 
 ## Operation Supervisor Synchronization
 
@@ -430,7 +473,7 @@ sequenceDiagram
 
   Robot->>Robot: Generate 32-byte cryptographically random nonce<br/>Compute nonce_hash = sha256(nonce)<br/>Compute fingerprint = sha256(hardware_serial)
   Robot->>Backend: POST /enroll/claim { fingerprint, nonce_hash, hostname, mac }
-  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP", status: "pending" }
+  Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP4R", status: "pending" }
   Note over Robot: Displays claim code on LCD/terminal
   Admin->>Backend: Admin approves claim code in console
   loop Poll until Approved

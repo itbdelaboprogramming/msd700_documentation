@@ -17,7 +17,7 @@ ros-web-ui/
 ├── docker-compose.yml          # Server-side services (see Architecture)
 ├── docker-compose.robot.yml    # Robot-side container (used when this repo runs the robot half alone)
 ├── Docker/                     # Dockerfile, HiveMQ config, coturn config, patches
-├── Certificates/                # Robot credential cache (device.json, token.cred), MQTT/SQL certs
+├── Certificates/                # Robot credential cache (token.cred always; device.json written here by scripts/enroll.py at enrolment), MQTT/SQL certs
 ├── run_msd.sh                  # Launches roscore + ROS bringup + camera client + switch_mode in tmux
 ├── scripts/
 │   ├── docker-manager.sh        # Runs the robot half in a container (Ubuntu 24/ARM64 hosts)
@@ -39,7 +39,9 @@ ros-web-ui/
 │       ├── aws_mqtt/               # MQTT bridge launch files (local + cloud)
 │       ├── topic2string/           # Geometric topics ↔ MQTT string bridge
 │       ├── robot_pose_publisher/
-│       └── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
+│       ├── ssl_update/             # Certbot renewal + HiveMQ keystore rebuild
+│       ├── network-agent/          # Unit network helper
+│       └── shared/                 # Shared JS (jwt_keyring.js et al.)
 └── logs/
 ```
 
@@ -54,25 +56,26 @@ anything in the repo itself.
 
 ```
 msd700_robot/
-├── msd700_movement/
-│   ├── msd700_bringup/       # Launch files for primitive robot tasks
-│   ├── msd700_control/       # Sensor fusion (robot_localization)
-│   ├── msd700_firmware/      # Arduino firmware for the motor controller
-│   ├── msd700_msg/           # Robot-level messages
-│   └── msd700_navigations/   # SLAM, autonomous mapping, autonomous navigation, coverage
+├── msd700_bringup/           # Launch files for primitive robot tasks
+├── msd700_control/           # Sensor fusion (robot_localization), twist_mux
+├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
+├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
+├── msd700_firmware/          # Arduino firmware (plain directory, not a ROS package)
+├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
+├── msd700_movement/          # Vendored third_party only
+├── msd700_msgs/              # Robot-level messages
+├── msd700_navigation/        # move_base, TEB, SLAM, costmaps
+├── msd700_perception/        # Velodyne pipelines (scan, hazard)
 ├── msd700_simulation/        # Gazebo worlds and sim launches
 │   ├── worlds/               #   small, TurtleBot-scale worlds, committed
 │   ├── scripts/              #   fetch_sim_worlds.sh: pulls the AWS warehouse
 │   └── vendor/               #   fetched third-party worlds, gitignored
-├── msd700_visual/            # RViz/Gazebo robot visuals
-├── msd700_hardware/          # Hardware drivers
-├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
-└── ros_msd700_msgs/
+└── third_party/              # ira_laser_tools et al.
 ```
 
 Only `msd700_field.urdf.xacro` is the real 0.90 x 0.70 m robot; every other model here is a
 TurtleBot3 Waffle derivative at 0.266 m, and the committed worlds are sized to match. See
-[Simulation](/development/simulation) for which combination can validate coverage geometry.
+[Simulation](/development/ros/simulation) for which combination can validate coverage geometry.
 
 Sourced by both `msd700_noetic` (as a submodule, `src/msd700_robot`) and copied into `ros-web-ui`'s
 own `source/msd700_robot`. The robot half of a build needs both this repo's navigation stack and
@@ -86,13 +89,19 @@ msd700_noetic/
 ├── scripts/docker-manager.sh # build / up / down / shell / logs / local-* commands
 ├── docker/
 │   ├── Dockerfile             # osrf/ros:noetic-desktop-full based image
+│   ├── Dockerfile.webui-local # Unit local-stack image (COPYs ros-web-ui source in)
 │   ├── docker-compose.yml     # The single `msd700` robot container
+│   ├── entrypoint.sh          # Container entrypoint
 │   ├── .env.example           # Copied to .env on first run
-│   └── mosquitto/             # This unit's own local MQTT broker config
+│   ├── mosquitto/             # This unit's own local MQTT broker config
+│   └── networkmanager/        # Unit NetworkManager dispatcher scripts
 └── src/                       # Populated via git submodules:
     ├── msd700_robot/
     ├── ros-web-ui/
     └── ROS-dashboard-next-ts/
+    # NOTE: on a Server checkout (like this one) the submodules are NOT
+    # initialized — src/ holds only CMakeLists.txt. The robot code lives in
+    # the sibling directories /msd700_robot and /ros-web-ui instead.
 ```
 
 This is what a Unit actually runs. `src/` is bind-mounted into the container (not baked in), so
@@ -127,14 +136,16 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
+│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
 │   ├── index.md                 # homepage
-│   ├── getting-started/         # end-user docs
+│   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
 │   └── development/             # developer docs (this section)
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
+│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
 │   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
@@ -144,25 +155,37 @@ msd700_documentation/
 
 ### Diagrams
 
-Diagrams are authored as ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
-browser. Two pieces make that work:
+Diagrams are authored as ```` ```mermaid ```` fences in markdown, but readers get a static PNG,
+pre-rendered in the draw.io look of the hand-drawn figures in `docs/public/images/` (white boxes,
+thin black lines, Helvetica, right-angle connectors, group titles in a corner tab).
 
 | Piece | Job |
 | --- | --- |
-| `docs/.vitepress/config.mts`, `markdown.config` | Rewrites every `mermaid` fence into `<Mermaid code="<base64>" />`. Base64 because the diagram source is full of quotes, newlines and angle brackets that Vue would parse as template syntax once the fence became an element attribute |
-| `docs/.vitepress/theme/components/Mermaid.vue` | Decodes it and renders on mount. Client-side only: mermaid needs a DOM to measure text before it can lay a graph out, and the dynamic `import('mermaid')` keeps the layout engine out of every page with no diagram on it |
+| `scripts/render-diagrams.mjs` | Lays out every fence once in headless Chrome (mermaid + the ELK layout engine for flowcharts and state diagrams) and writes `docs/public/diagrams/<hash>.png` at 2x. Deletes images no fence uses any more |
+| `scripts/diagram-hash.mjs` | The hash of a fence body. Shared by the renderer and the build, so both name the same file |
+| `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. If the PNG is missing it falls back to the old in-browser `<Mermaid>` component and prints a `[diagrams]` warning |
 
-The component follows the reader's light or dark theme and re-renders on a theme flip, because
-mermaid bakes its palette into the SVG at render time. If a diagram fails to parse, the raw source is
-shown instead of an empty gap.
+Rendering in the reader's browser was dropped because mermaid measured labels with whatever font
+that browser resolved, so boxes came out the wrong size, text was clipped and layouts shifted between
+machines. One renderer with one known font gives the same picture everywhere.
 
 ```bash
-npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
+npm run docs:diagrams -- --all # re-render everything, e.g. after changing the style
+npm run docs:check-diagrams    # syntax-check every diagram and fail if any has no PNG
 ```
 
-::: warning A broken diagram does not fail the build
-VitePress never parses the diagram source; it only passes it through. A syntax error surfaces as a
-red block of source on the published page. Run the checker after editing diagrams.
+Commit the PNGs together with the markdown change. Set `CHROME_PATH` if Chrome is not in a
+standard location.
+
+::: warning Edited a diagram? Re-render it
+The image is looked up by a hash of the fence body, so any edit, even a single character, needs
+`npm run docs:diagrams`. Otherwise the page falls back to in-browser rendering.
+:::
+
+::: info Escape angle-bracket placeholders
+Write a placeholder such as `<unit>` as `#lt;unit#gt;` inside a diagram. Written raw, it is read as
+an HTML tag and silently dropped (`<u>` even turns the rest of the label into underlined text).
 :::
 
 ::: info Keep `<br/>` out of state-diagram transition labels

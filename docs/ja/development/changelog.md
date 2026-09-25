@@ -2,43 +2,51 @@
 search: false
 ---
 
-
-# Platform Changelog & Release Milestones
+# プラットフォーム変更履歴 & リリースマイルストーン
 
 <RoleBadge role="developer" />
 
-This changelog summarizes key architectural milestones, platform overhauls, and protocol advancements across the MSD700 robotics ecosystem.
+この変更履歴は、MSD700 ロボティクスエコシステム全体における主要なアーキテクチャ上のマイルストーン、プラットフォームの大規模刷新、プロトコルの進化をまとめたものです。
 
-## Architectural Milestones
+## アーキテクチャ上のマイルストーン
 
-### August 2026: Documentation Overhaul & Precision Kinematics
-- **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.
-- **True-Scale Gazebo Simulation**: Upgraded simulator model to `msd700_field` ($0.90 \times 0.70\text{ m}$ body footprint with 4 casters) operating in the AWS RoboMaker Small Warehouse.
-- **Correlative Scan Matching (Auto-Align)**: Implemented zero-spin initial pose alignment (< 50 ms) to eliminate 360-degree rotation in narrow corridors.
-- **32-Byte Nonce Cryptographic Enrolment**: Enforced CSPRNG nonce hashing protocol for robot device authentication.
+### 2026年9月: 帯域幅最適化 & ユニット単位のデータスコープ
+- **視聴者数に応じたエグレス制御**: ロボットからクラウドへのテレメトリは、現在 `/msd700/viewers` を読み取り、誰かが見ているかどうかに応じた頻度で送信するようになりました。オーバーレイと占有グリッドはタイマーベースではなく変更時に送信され、4つのオーバーレイトピックはクラウドブリッジ上でラッチされるため、再接続したタブでも自分の描画をすぐに取得できます。
+- **マップ配送の保証**: 変更時送信にしたことで、マップはハートビートごとに 1 通だけの投げっぱなしメッセージになっていました。これはオペレーターがそれなしでは作業できない唯一のペイロードにとって誤った保証です。マップトピックはクラウドリレーでラッチされるようになり、リセット後のマップは短いバーストとして繰り返し送られ、ダッシュボードは実測約 52 秒のハートビートを待つ代わりに `/string/map_request` で必要なときに要求できるようになりました。Database からマップを開く操作も、「準備完了のポーリング」と誤ってラベル付けされていた固定 5 秒の待ち時間の後ろに座らなくなりました。[メッセージ契約 § マップの配送](/ja/development/message-contracts#map-delivery)を参照。
+- **オペレーターをまたいで生き残るカバレッジ**: Manual Overrideはボストロフェドン走行を、素の`/move_base/cancel`ではなくカバレッジノード自身のpauseサービスで停めるようになりました。そのノードは前者をミッションのキャンセルと読むため、掃引は終端ステータスを一切発行しないまま即座に死んでいました。一時停止中に届いたキャンセルは走行を終わらせなくなり、一時停止は取った者にだけ返され、本当に死んだ走行は`/msd700/coverage_status`でそう宣言します。静止したロボットの上でダッシュボードが走行中を報告し続けることはもうありません。[手動操作 & オートパイロット § カバレッジ掃引をオペレーターに渡し、また受け取る](/ja/development/webui/navigation/manual-and-autopilot#カバレッジ掃引をオペレーターに渡し、また受け取る)を参照してください。
+- **ユニット単位のマップスコープ**: マップ一覧、単一マップの読み取り、`POST /api/navigation/init` は、レンタルだけでなく操作中のユニットにもスコープされるようになりました。複数のロボットを保有するレンタルが、すべてのロボットのマップを一緒に一覧表示することはなくなり、兄弟ロボットのマップはロボット側で失敗する代わりに API で拒否されます。
+- **メッセージ数よりも復旧範囲を優先**: スナップショットの再構築は、モードが選択されていない `Idle` タブ(データベースページからマップを再度開いた際に残る状態)でもトリガーされるようになり、resync のプロンプトは 3.4 秒ではなく 9.4 秒まで到達します。Navigation ページもマップコンポーネントも、マウント時に永続化されたステータスやモードを上書きしなくなりました。
+- **自己接続の防止**: ユニット自身のホットスポットは、そのユニットの WiFi スキャンから除外され、`connect()` によって拒否されるようになりました。これにより、そのホットスポット経由で一覧を読んでいるオペレーターが、ユニットに自分自身へ接続するよう指示することができなくなりました。
+- **モードを保持する起動時オートスタート**: `msd700.service` は現在、それを起動させた `up` の `--dev` と `--simulator` フラグを引き継ぎます。以前は起動用ユニットが素の `up` を再実行していたため、開発用クラウド相手に、あるいはシミュレーターとして起動されたロボットが、再起動後に静かに本番相手のハードウェアとして戻っていました。
 
-### July 2026: Multi-Tenant Rental Security & ULID Migration
-- **Rental Profile Authorization**: Added `attachUnit` Express middleware to enforce strict tenant isolation across maps and units.
-- **ULID Architecture**: Migrated system addressing from raw hardware strings to Universally Unique Lexicographically Sortable Identifiers (`/unit_<ULID>/...`).
-- **Uniform Database Timestamps**: Standardized `created_at` and `modified_at` columns with automatic `ON UPDATE CURRENT_TIMESTAMP` triggers across 15 database tables.
+### 2026年8月: ドキュメント大規模刷新 & 高精度キネマティクス
+- **モジュール化されたドキュメントアーキテクチャ**: レスポンシブな Mermaid SVG 図、数式による定式化、ゼロダウンタイム運用を伴う、全ドキュメントページの徹底的な書き直し。
+- **実寸スケールの Gazebo シミュレーション**: シミュレーターモデルを、AWS RoboMaker Small Warehouse 内で動作する `msd700_field`($0.90 \times 0.70\text{ m}$ボディ、4つの駆動輪、150 kg)にアップグレード。
+- **ゼロスピン Auto-Align**: 狭い通路での360度回転を排除するため、`particle_align_validator.py`による粗密な初期姿勢アライメント(< 50 ms)を実装。
+- **Nonce による暗号学的登録**: ロボットデバイス認証のために CSPRNG nonce ハッシュ化プロトコルを導入。3つの異なるシークレットを混同しないこと。ロボットの32バイトクレームnonce、8文字の管理者クレームコード(`K7M2QP4R`)、ハンドオーバー時に発行される32バイトデバイスシークレットである。
 
-### June 2026: Offline-First Replication & Local Mode Stack
-- **Bidirectional Data Sync Agent**: Deployed `sync_agent.js` and `sync_engine.js` with last-write-wins per-row conflict resolution and delete tombstones.
-- **Two-Tier Map Storage**: Implemented mandatory local upload (`media_local :3003`) with best-effort cloud sync (`media-server :3003`).
-- **Jetson Local Dashboard**: Bundled onboard `frontend_local` and `backend_local` stacks for autonomous offline field operations.
+### 2026年7月: マルチテナントレンタルセキュリティ & ULID 移行
+- **レンタルプロファイル認可**: マップとユニット全体にわたる厳格なテナント分離を強制するため、`attachUnit` Express ミドルウェアを追加。
+- **ULID アーキテクチャ**: システムのアドレス指定を、生のハードウェア文字列から Universally Unique Lexicographically Sortable Identifier(`/unit_<ULID>/...`)へ移行。
+- **統一されたデータベースタイムスタンプ**: 自動 `ON UPDATE CURRENT_TIMESTAMP` トリガーを備えた `created_at` および `modified_at` カラムを、18テーブル中15テーブルで標準化。
 
-### May 2026: Ultra-Low Latency WebRTC Video Pipeline
-- **mDNS Candidate Filter**: Introduced `_strip_mdns_candidates()` in `camera_client.py` to prevent RFC 8445 network resolution errors on offline LANs.
-- **coturn TURN Relay**: Integrated production WebRTC media relaying across symmetric NATs.
+### 2026年6月: オフラインファースト・レプリケーション & ローカルモードスタック
+- **双方向データ同期エージェント**: 行単位の last-write-wins 競合解決と削除トゥームストーンを備えた `sync_agent.js` と `sync_engine.js` をデプロイ。
+- **2層マップストレージ**: ベストエフォートのクラウド同期(`media-server :3003`)を伴う必須のローカルアップロード(`media_local :3003`)を実装。
+- **Jetson ローカルダッシュボード**: 自律的なオフラインフィールド運用のため、オンボードの `frontend_local` および `backend_local` スタックをバンドル。
+
+### 2026年5月: 超低遅延 WebRTC ビデオパイプライン
+- **mDNS 候補フィルター**: オフライン LAN での RFC 8445 ネットワーク解決エラーを防ぐため、`camera_client.py` に `_strip_mdns_candidates()` を導入。
+- **coturn TURN リレー**: 対称 NAT を跨ぐ本番用 WebRTC メディアリレーを統合。
 
 ---
 
-## Repository Commit Histories
+## リポジトリのコミット履歴
 
-For line-by-line commit logs, refer to the respective GitHub repositories:
+行単位のコミットログについては、それぞれの GitHub リポジトリを参照してください。
 
-- [msd700_documentation Commits](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2)
-- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2)
-- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2)
-- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)
+- [msd700_documentation のコミット](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
+- [ros-web-ui のコミット](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
+- [msd700_robot のコミット](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
+- [ROS-dashboard-next-ts のコミット](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
+- [msd700_noetic のコミット](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)
