@@ -58,8 +58,9 @@ npm run docs:preview   # Serves production build preview
 ドキュメントの変更をコミットする前に、以下を実行してください。
 
 ```bash
-# 1. Validate all Mermaid diagrams syntax
-npm run docs:check-diagrams   # node scripts/check-mermaid.mjs docs
+# 1. 新規・変更された図をレンダリングし、構文と全図の画像の有無を確認
+npm run docs:diagrams
+npm run docs:check-diagrams
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build
@@ -72,7 +73,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 このドキュメントテーマは、カスタムのグローバルコンポーネントで VitePress を拡張しています。
 - `<RoleBadge role="user | technician | developer" />`: ページ上部に対象読者のバッジを表示します。
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: セクションのランディングページで使用されるインタラクティブなカードグリッド。
-- `<Mermaid code="..." />`: レスポンシブなアーキテクチャのフローチャートやシーケンス図のためのクライアントサイド SVG レンダラー。
+- `<Mermaid code="..." />`: ブラウザ内フォールバック。事前レンダリング済み PNG がまだ無い ```` ```mermaid ```` フェンスにだけ使われます([リポジトリ構成](/ja/development/repository-structure)を参照)。
 
 ### コミットおよびプルリクエストの規約:
 コミットは標準的な Conventional Commits 形式(`feat: ...`、`fix: ...`、`docs: ...`、`refactor: ...`)に従います。

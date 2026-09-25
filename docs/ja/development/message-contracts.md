@@ -21,8 +21,8 @@ HTTP サーフェスについては [API リファレンス](/ja/development/api
 
 ```mermaid
 flowchart LR
-  R_TOPIC["Robot ROS Master<br/>Topic: /string/robotpose"] -->|"aws_mqtt prepends prefix"| MQTT_TOPIC["Central MQTT Broker<br/>Topic: /unit_<ULID>/string/robotpose"]
-  MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_<ULID>/string/robotpose"]
+  R_TOPIC["Robot ROS Master<br/>Topic: /string/robotpose"] -->|"aws_mqtt prepends prefix"| MQTT_TOPIC["Central MQTT Broker<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
+  MQTT_TOPIC -->|"Cloud Bridge preserves prefix"| C_TOPIC["Cloud ROS Master<br/>Topic: /unit_#lt;ULID#gt;/string/robotpose"]
 ```
 
 | ホップの場所 | トピック形式 | エンジニアリング上の目的 |
@@ -341,12 +341,12 @@ flowchart LR
   end
 
   subgraph Broker["MQTT Transport"]
-    O_POSE --> M_POSE["/unit_<ULID>/string/robotpose"]
+    O_POSE --> M_POSE["/unit_#lt;ULID#gt;/string/robotpose"]
   end
 
   subgraph Cloud["Cloud Server"]
     M_POSE --> D_POSE["topic2string<br/>robotpose_server"]
-    D_POSE --> C_POSE["/unit_<ULID>/server/robot_pose<br/>(typed)"]
+    D_POSE --> C_POSE["/unit_#lt;ULID#gt;/server/robot_pose<br/>(typed)"]
     C_POSE --> ROSBRIDGE["rosbridge_suite (:9090)"]
   end
 ```

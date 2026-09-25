@@ -22,7 +22,7 @@ flowchart LR
   subgraph CloudServer["MSD700 Cloud Server"]
     APACHE["Apache2 Reverse Proxy (:443)<br/>Route: /services/rosbridge"]
     ROSBRIDGE["rosbridge_suite WebSocket Server<br/>(Port: 9090)"]
-    RELAY["rosweb_unit_<ULID><br/>Deserialized Typed ROS Topics"]
+    RELAY["rosweb_unit_#lt;ULID#gt;<br/>Deserialized Typed ROS Topics"]
   end
 
   JS_CLIENT <-->|"WSS (/services/rosbridge)"| APACHE

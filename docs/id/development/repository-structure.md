@@ -137,7 +137,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
+│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -145,6 +145,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
+│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
 │   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
@@ -154,25 +156,36 @@ msd700_documentation/
 
 ### Diagram
 
-Diagram ditulis sebagai fence ```` ```mermaid ```` di markdown dan dirender sebagai SVG asli di browser. Dua
-bagian yang membuat itu bekerja:
+Diagram ditulis sebagai fence ```` ```mermaid ```` di markdown, tapi pembaca menerima PNG statis
+yang sudah dirender lebih dulu dengan gaya draw.io seperti gambar buatan tangan di
+`docs/public/images/` (kotak putih, garis hitam tipis, Helvetica, konektor siku, judul grup di tab pojok).
 
 | Bagian | Tugas |
 | --- | --- |
-| `docs/.vitepress/config.mts`, `markdown.config` | Menulis ulang setiap fence `mermaid` menjadi `<Mermaid code="<base64>" />`. Base64 karena sumber diagram penuh dengan tanda kutip, baris baru, dan tanda kurung siku yang akan diparse Vue sebagai sintaks template begitu fence tersebut menjadi atribut elemen |
-| `docs/.vitepress/theme/components/Mermaid.vue` | Mendekode dan merender saat mount. Hanya di sisi klien: mermaid membutuhkan DOM untuk mengukur teks sebelum bisa menata graf, dan `import('mermaid')` yang dinamis menjaga engine layout tersebut tetap di luar setiap halaman yang tidak memiliki diagram |
+| `scripts/render-diagrams.mjs` | Menata setiap fence sekali di Chrome headless (mermaid + engine layout ELK untuk flowchart dan state diagram) lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x. Menghapus gambar yang tidak dipakai fence mana pun |
+| `scripts/diagram-hash.mjs` | Hash dari isi fence. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama |
+| `docs/.vitepress/config.mts`, `markdown.config` | Mengganti setiap fence `mermaid` dengan `<img>` PNG-nya, ditautkan ke file ukuran penuh. Jika PNG belum ada, kembali ke komponen `<Mermaid>` lama di browser dan mencetak peringatan `[diagrams]` |
 
-Komponen ini mengikuti tema terang atau gelap pembaca dan merender ulang saat tema berpindah, karena mermaid
-memanggang palet warnanya ke dalam SVG saat waktu render. Jika sebuah diagram gagal diparse, sumber mentahnya
-ditampilkan alih-alih ruang kosong.
+Render di browser pembaca ditinggalkan karena mermaid mengukur label dengan font apa pun yang
+ditemukan browser itu, sehingga ukuran kotak meleset, teks terpotong, dan layout berbeda antar mesin.
+Satu renderer dengan satu font yang pasti menghasilkan gambar yang sama di mana pun.
 
 ```bash
-npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+npm run docs:diagrams          # render diagram baru atau yang berubah (butuh Chrome/Chromium lokal)
+npm run docs:diagrams -- --all # render ulang semua, misalnya setelah mengubah gaya
+npm run docs:check-diagrams    # cek sintaks semua diagram dan gagal jika ada yang belum punya PNG
 ```
 
-::: warning Diagram yang rusak tidak menggagalkan build
-VitePress tidak pernah mem-parse sumber diagram; ia hanya meneruskannya. Kesalahan sintaks muncul sebagai blok
-merah berisi sumber pada halaman yang dipublikasikan. Jalankan checker setelah mengedit diagram.
+Commit PNG bersama perubahan markdown-nya. Set `CHROME_PATH` jika Chrome tidak ada di lokasi standar.
+
+::: warning Mengubah diagram? Render ulang
+Gambar dicari berdasarkan hash isi fence, jadi setiap perubahan, bahkan satu karakter, perlu
+`npm run docs:diagrams`. Jika tidak, halaman kembali ke render di browser.
+:::
+
+::: info Escape placeholder berkurung siku
+Tulis placeholder seperti `<unit>` sebagai `#lt;unit#gt;` di dalam diagram. Jika ditulis mentah, ia
+dibaca sebagai tag HTML dan hilang tanpa pesan (`<u>` bahkan membuat sisa label bergaris bawah).
 :::
 
 ::: info Jauhkan `<br/>` dari label transisi state-diagram

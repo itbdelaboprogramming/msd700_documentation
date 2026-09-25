@@ -58,8 +58,9 @@ npm run docs:preview   # Serves production build preview
 Sebelum melakukan commit perubahan dokumentasi, jalankan:
 
 ```bash
-# 1. Validate all Mermaid diagrams syntax
-npm run docs:check-diagrams   # node scripts/check-mermaid.mjs docs
+# 1. Render diagram baru/berubah, lalu cek sintaks + semua diagram punya gambar
+npm run docs:diagrams
+npm run docs:check-diagrams
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build
@@ -72,7 +73,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 Tema dokumentasi ini memperluas VitePress dengan komponen global kustom:
 - `<RoleBadge role="user | technician | developer" />`: Menampilkan badge audiens target di bagian atas halaman.
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Grid kartu interaktif yang digunakan pada halaman landing bagian.
-- `<Mermaid code="..." />`: Perender SVG sisi klien untuk flowchart dan sequence diagram arsitektur yang responsif.
+- `<Mermaid code="..." />`: Fallback di browser, hanya dipakai untuk fence ```` ```mermaid ```` yang belum punya PNG hasil render (lihat [Struktur Repositori](/id/development/repository-structure#diagram)).
 
 ### Konvensi Commit dan Pull Request:
 Commit mengikuti format conventional commit standar (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).

@@ -25,7 +25,7 @@ flowchart TD
   Q2 -->|No| CMD_FAIL["Check Command Layer:<br/>1. Is system_command.py running on robot?<br/>2. Is HTTP request returning 504 Timeout?<br/>3. Is lease held by another session?"]
   Q2 -->|Yes| Q3{"Is the Map Canvas populated?"}
 
-  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_<u>_<unit>_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
+  Q3 -->|No| CANVAS_FAIL["Check rosbridge & Relay Container:<br/>1. Is the fleet relay (legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama) running on server?<br/>2. Is rosbridge WebSocket connected?<br/>3. Are deserializer nodes active?"]
   Q3 -->|Yes| Q4{"Is WebRTC Video Stream working?"}
 
   Q4 -->|No| VIDEO_FAIL["Check Camera & ICE Layer:<br/>1. Is camera_client.py active in tmux?<br/>2. Are .local mDNS candidates stripped?<br/>3. Is coturn TURN relay accessible?"]

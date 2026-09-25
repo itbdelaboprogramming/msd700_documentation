@@ -1,5 +1,43 @@
 import { defineConfig } from 'vitepress'
 import mathjax3 from 'markdown-it-mathjax3'
+import { existsSync, readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { diagramHash } from '../../scripts/diagram-hash.mjs'
+
+const BASE = '/itbdelabo/docs/'
+
+// ==================== DIAGRAMS ====================
+// ```mermaid fences are shown as static PNGs pre-rendered by scripts/render-diagrams.mjs
+// (npm run docs:diagrams), keyed by a hash of the fence body. See that script for why.
+const DIAGRAM_DIR = fileURLToPath(new URL('../public/diagrams/', import.meta.url))
+const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+
+function renderDiagram(tokens: any[], idx: number): string {
+  const token = tokens[idx]
+  const hash = diagramHash(token.content)
+  const file = `${DIAGRAM_DIR}${hash}.png`
+  if (!existsSync(file)) {
+    // Not rendered yet: fall back to in-browser mermaid so the page still shows something
+    console.warn(`[diagrams] no image for mermaid block (${hash}); run \`npm run docs:diagrams\``)
+    return `<Mermaid code="${Buffer.from(token.content, 'utf-8').toString('base64')}" />`
+  }
+  // PNG header: width/height as big-endian uint32 at bytes 16 and 20. Rendered at 2x.
+  const png = readFileSync(file)
+  const width = Math.round(png.readUInt32BE(16) / 2)
+  const height = Math.round(png.readUInt32BE(20) / 2)
+  // Alt text: the heading the diagram sits under
+  let alt = 'Diagram'
+  for (let i = idx - 1; i >= 0; i--) {
+    if (tokens[i].type === 'heading_open') { alt = tokens[i + 1]?.content || alt; break }
+  }
+  // img src is root-relative: VitePress resolves it from public/ and adds the base itself.
+  // The link is plain HTML that nothing rewrites, so it carries the base explicitly.
+  // Shrink to fit the column, but never below 80% of natural size (12px text stays >= ~10px);
+  // anything wider than that scrolls sideways inside the frame instead.
+  const style = `width:min(${width}px, max(100%, ${Math.round(width * 0.8)}px))`
+  return `<figure class="diagram-figure"><a href="${BASE}diagrams/${hash}.png" target="_blank" rel="noopener" title="Open full size">` +
+    `<img src="/diagrams/${hash}.png" alt="${escapeAttr(alt)}" width="${width}" height="${height}" style="${style}" loading="lazy" decoding="async"></a></figure>\n`
+}
 
 // ==================== EN SIDEBARS ====================
 const enSidebar = {
@@ -632,7 +670,7 @@ const jaSidebar = {
 export default defineConfig({
   title: "MSD700 System",
   description: "Complete Documentation of ITB de Labo MSD700 Development Project",
-  base: '/itbdelabo/docs/',
+  base: BASE,
   lastUpdated: true,
   cleanUrls: true,
   vite: {
@@ -647,10 +685,7 @@ export default defineConfig({
       const defaultFence = md.renderer.rules.fence!
       md.renderer.rules.fence = (tokens, idx, options, env, self) => {
         const token = tokens[idx]
-        if (token.info.trim().toLowerCase() === 'mermaid') {
-          const encoded = Buffer.from(token.content, 'utf-8').toString('base64')
-          return `<Mermaid code="${encoded}" />`
-        }
+        if (token.info.trim().toLowerCase() === 'mermaid') return renderDiagram(tokens, idx)
         return defaultFence(tokens, idx, options, env, self)
       }
     }

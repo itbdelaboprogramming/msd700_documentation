@@ -27,7 +27,15 @@ Setiap halaman berisi perintah shell, contoh output, dan template konfigurasi ya
 
 MSD700 selalu terdiri dari dua mesin: satu Server plus satu atau lebih Unit. Instal dengan urutan ini:
 
-![Setup Pipeline](/images/MSD700-SetupFlow.jpg)
+```mermaid
+flowchart LR
+  S1["1. Prasyarat<br/>Cek hardware &amp; port firewall"]
+  S2["2. Setup Server<br/>Jalankan cloud backend &amp; Apache"]
+  S3["3. Setup Unit<br/>Build image robot &amp; enrol"]
+  S4["4. Setup Sistem<br/>Checklist end-to-end"]
+  S5["5. Commissioning<br/>Terima unit, box per box"]
+  S1 --> S2 --> S3 --> S4 --> S5
+```
 
 1. [Prasyarat](/id/setup/prerequisites): cek hardware dan buka port firewall.
 2. [Setup Server](/id/setup/server-setup): jalankan cloud server lebih dulu, agar unit punya tempat untuk enrol.

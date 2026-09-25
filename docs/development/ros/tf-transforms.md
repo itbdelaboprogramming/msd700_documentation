@@ -74,7 +74,7 @@ sequenceDiagram
   autonumber
   participant Robot as Robot Jetson (Clock Domain A)
   participant MQTT as Cloud HiveMQ (TLS 8883)
-  participant Relay as rosweb_unit_<u>_<unit>_nakayama (Cloud Server Domain B)
+  participant Relay as rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama (Cloud Server Domain B)
   participant Canvas as Browser ROS2D Canvas
 
   Robot->>Robot: Stamp Pose with Jetson Time (t_robot)

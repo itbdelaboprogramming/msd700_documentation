@@ -58,8 +58,9 @@ npm run docs:preview   # Serves production build preview
 Before committing documentation changes, run:
 
 ```bash
-# 1. Validate all Mermaid diagrams syntax
-npm run docs:check-diagrams   # node scripts/check-mermaid.mjs docs
+# 1. Render new/changed diagrams, then validate syntax + that every diagram has an image
+npm run docs:diagrams
+npm run docs:check-diagrams
 
 # 2. Build VitePress bundle and test broken links
 npm run docs:build
@@ -72,7 +73,7 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 This documentation theme extends VitePress with custom global components:
 - `<RoleBadge role="user | technician | developer" />`: Displays target audience badge at the top of pages.
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Interactive card grid used on section landing pages.
-- `<Mermaid code="..." />`: Client-side SVG renderer for responsive architecture flowcharts and sequence diagrams.
+- `<Mermaid code="..." />`: In-browser fallback, used only for a ```` ```mermaid ```` fence that has no pre-rendered PNG yet (see [Repository Structure](/development/repository-structure#diagrams)).
 
 ### Commit and Pull Request Conventions:
 Commits follow standard conventional commit formats (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).

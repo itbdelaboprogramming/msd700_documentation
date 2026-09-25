@@ -30,7 +30,7 @@ sequenceDiagram
 
   B->>S: connect, then authenticate (JWT)
   S-->>B: auth_success
-  B->>S: client_ready { target: <this unit> }
+  B->>S: client_ready { target: #lt;this unit#gt; }
   S->>C: client_ready
   C->>C: start_stream(): build offer, setLocalDescription
   C->>S: offer

@@ -23,7 +23,7 @@ flowchart TD
   API --> UM["unit_manager.js<br/>Docker Engine Client"]
   UM -->|/var/run/docker.sock| DOCKER["Host Docker Daemon"]
 
-  DOCKER -->|Instantiate on Demand| CONTAINER["Container: rosweb_unit_<ULID>_nakayama<br/>Image: ros-noetic-webui-app-v2:latest"]
+  DOCKER -->|Instantiate on Demand| CONTAINER["Container: rosweb_unit_#lt;ULID#gt;_nakayama<br/>Image: ros-noetic-webui-app-v2:latest"]
   CONTAINER --> RELAY1["topic2string / rosbridge deserializers"]
   CONTAINER --> RELAY2["BoundaryPublisher (clock restamping)"]
 

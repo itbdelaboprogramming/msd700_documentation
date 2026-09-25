@@ -120,7 +120,25 @@ This section is frontend-engineering-heavy by nature: it covers the React state 
 mechanics `mapComponent.tsx` runs through when an operator reopens a closed browser tab or logs in
 from a new workstation, not just the high-level behavior.
 
-![Map Canvas Pipeline](/images/MSD700-RecoverySequenceDiagram.jpg)
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Browser as Browser
+  participant Backend as backend_node
+  participant Robot as Robot
+  participant Supervisor as operation_supervisor
+
+  Browser->>Backend: POST /user/login
+  Browser->>Backend: Ping (page: dashboard)
+  Backend->>Robot: Ping
+  Robot-->>Backend: active_page=nav, autopilot=true
+  Backend-->>Browser: Telemetry
+  Browser->>Browser: Route to Navigation
+  Browser->>Supervisor: Subscribe snapshot
+  Supervisor-->>Browser: Mission batch
+  Browser->>Browser: Rebuild state
+  Note over Browser: Recovery done
+```
 
 ### Recovery principles
 

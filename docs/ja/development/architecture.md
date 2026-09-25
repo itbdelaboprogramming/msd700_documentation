@@ -64,7 +64,7 @@ flowchart TB
     MEDIA["media-server (:3003)"]
     SIG["signalling_server (:3001)"]
     COTURN["coturn (:3478 / UDP Relay)"]
-    UNIT_RELAY["rosweb_unit_<u>_<unit>_nakayama<br/>MQTT-to-ROS Deserializer<br/>(legacy per-unit; default is the fleet relay)"]
+    UNIT_RELAY["rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama<br/>MQTT-to-ROS Deserializer<br/>(legacy per-unit; default is the fleet relay)"]
   end
 
   subgraph UnitHost["MSD700 Unit (Jetson SBC)"]
@@ -114,7 +114,7 @@ flowchart LR
   end
 
   subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
-    R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_<u>_<unit>_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
+    R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
   end
 ```
 
@@ -144,11 +144,11 @@ sequenceDiagram
   Apache->>Backend: Proxy request with Bearer JWT
   Note over Backend: verifyToken & attachUnit<br/>Validates account lease permissions
   Backend->>Backend: Generate unique request_id (UUID v4)
-  Backend->>HiveMQ: Publish to /unit_<ULID>/system_command
+  Backend->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_command
   HiveMQ->>UnitCmd: Deliver command envelope via TLS
   UnitCmd->>MoveBase: Convert to geometry_msgs/PoseStamped goal
   MoveBase-->>UnitCmd: Goal accepted by navigation actionlib
-  UnitCmd->>HiveMQ: Publish to /unit_<ULID>/system_feedback (request_id match)
+  UnitCmd->>HiveMQ: Publish to /unit_#lt;ULID#gt;/system_feedback (request_id match)
   HiveMQ->>Backend: Deliver feedback payload
   Backend-->>Apache: HTTP 200 { status: true, message: "Goal accepted" }
   Apache-->>UI: Update UI state to "Navigating"
@@ -210,7 +210,7 @@ flowchart LR
   end
 
   subgraph Transport["Encrypted Transport"]
-    MQTT_TOPIC["MQTT Topic<br/>/unit_<ULID>/string/..."]
+    MQTT_TOPIC["MQTT Topic<br/>/unit_#lt;ULID#gt;/string/..."]
   end
 
   subgraph CloudDomain["Cloud Clock Domain (Server)"]

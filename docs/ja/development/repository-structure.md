@@ -135,7 +135,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
+│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -143,6 +143,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
+│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
 │   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
@@ -152,25 +154,36 @@ msd700_documentation/
 
 ### 図
 
-図は markdown 内の ```` ```mermaid ```` フェンスとして記述され、ブラウザ上で実際の SVG としてレンダリングされます。
-これを実現している要素は2つあります。
+図は markdown 内の ```` ```mermaid ```` フェンスとして記述しますが、読者に届くのは静的な PNG です。
+`docs/public/images/` の手描き図と同じ draw.io 風の見た目(白いボックス、細い黒線、Helvetica、直角コネクタ、
+角のタブに置いたグループ名)で事前にレンダリングされます。
 
 | 要素 | 役割 |
 | --- | --- |
-| `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを `<Mermaid code="<base64>" />` に書き換えます。Base64 を使うのは、図のソースが引用符・改行・山括弧を大量に含んでおり、フェンスが要素の属性になった時点で Vue がそれらをテンプレート構文として解釈してしまうためです |
-| `docs/.vitepress/theme/components/Mermaid.vue` | それをデコードし、マウント時にレンダリングします。クライアントサイド限定です。mermaid はグラフをレイアウトする前にテキストを計測するために DOM を必要とし、動的な `import('mermaid')` によって、図を持たないすべてのページからレイアウトエンジンを排除しています |
+| `scripts/render-diagrams.mjs` | すべてのフェンスをヘッドレス Chrome で一度だけレイアウトし(mermaid + フローチャートと状態図には ELK レイアウトエンジン)、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。どのフェンスからも使われなくなった画像は削除します |
+| `scripts/diagram-hash.mjs` | フェンス本文のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします |
+| `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを、その PNG の `<img>`(原寸ファイルへのリンク付き)に置き換えます。PNG が無い場合は従来のブラウザ内 `<Mermaid>` コンポーネントに戻し、`[diagrams]` 警告を出します |
 
-このコンポーネントは読者のライト/ダークテーマに追従し、テーマが切り替わると再レンダリングします。mermaid は
-レンダリング時にパレットを SVG に焼き込むためです。図のパースに失敗した場合は、空白の代わりに生のソースが
-表示されます。
+読者のブラウザでのレンダリングをやめたのは、mermaid がそのブラウザで解決されたフォントでラベルを計測するため、
+ボックスの大きさがずれ、文字が切れ、マシンごとにレイアウトが変わっていたからです。
+フォントを固定した単一のレンダラーなら、どこでも同じ図になります。
 
 ```bash
-npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+npm run docs:diagrams          # 新規・変更された図をレンダリング(ローカルの Chrome/Chromium が必要)
+npm run docs:diagrams -- --all # スタイル変更後などに全図を再レンダリング
+npm run docs:check-diagrams    # 全図の構文を確認し、PNG の無い図があれば失敗
 ```
 
-::: warning 壊れた図はビルドを失敗させない
-VitePress は図のソースを一切パースせず、そのまま通過させるだけです。構文エラーは公開ページ上で赤いソースの
-ブロックとして表面化します。図を編集した後はチェッカーを実行してください。
+PNG は markdown の変更と一緒にコミットしてください。Chrome が標準の場所に無い場合は `CHROME_PATH` を設定します。
+
+::: warning 図を編集したら再レンダリング
+画像はフェンス本文のハッシュで引くため、1 文字の変更でも `npm run docs:diagrams` が必要です。
+実行しないと、そのページはブラウザ内レンダリングに戻ります。
+:::
+
+::: info 山括弧のプレースホルダーはエスケープする
+図の中の `<unit>` のようなプレースホルダーは `#lt;unit#gt;` と書きます。そのまま書くと HTML タグとして
+扱われ、何も言わずに消えます(`<u>` はラベルの残りを下線付きにしてしまいます)。
 :::
 
 ::: info state-diagram の遷移ラベルに `<br/>` を使わない

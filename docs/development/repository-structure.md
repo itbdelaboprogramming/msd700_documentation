@@ -136,7 +136,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid
+│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -144,6 +144,8 @@ msd700_documentation/
 ├── scripts/
 │   ├── deploy.sh                 # builds the site and swaps it into docs/.vitepress/dist
 │   ├── webhook-listener.mjs      # GitHub webhook receiver that triggers deploy.sh on push to main
+│   ├── render-diagrams.mjs       # pre-renders every diagram to docs/public/diagrams/*.png
+│   ├── diagram-hash.mjs          # fence-body hash shared by the renderer and config.mts
 │   ├── check-mermaid.mjs         # syntax-checks every diagram in the tree
 │   ├── apache-snippet.conf       # ProxyPass rules for the Apache front end
 │   └── systemd/                  # systemd unit for the webhook listener
@@ -153,25 +155,37 @@ msd700_documentation/
 
 ### Diagrams
 
-Diagrams are authored as ```` ```mermaid ```` fences in markdown and rendered as real SVG in the
-browser. Two pieces make that work:
+Diagrams are authored as ```` ```mermaid ```` fences in markdown, but readers get a static PNG,
+pre-rendered in the draw.io look of the hand-drawn figures in `docs/public/images/` (white boxes,
+thin black lines, Helvetica, right-angle connectors, group titles in a corner tab).
 
 | Piece | Job |
 | --- | --- |
-| `docs/.vitepress/config.mts`, `markdown.config` | Rewrites every `mermaid` fence into `<Mermaid code="<base64>" />`. Base64 because the diagram source is full of quotes, newlines and angle brackets that Vue would parse as template syntax once the fence became an element attribute |
-| `docs/.vitepress/theme/components/Mermaid.vue` | Decodes it and renders on mount. Client-side only: mermaid needs a DOM to measure text before it can lay a graph out, and the dynamic `import('mermaid')` keeps the layout engine out of every page with no diagram on it |
+| `scripts/render-diagrams.mjs` | Lays out every fence once in headless Chrome (mermaid + the ELK layout engine for flowcharts and state diagrams) and writes `docs/public/diagrams/<hash>.png` at 2x. Deletes images no fence uses any more |
+| `scripts/diagram-hash.mjs` | The hash of a fence body. Shared by the renderer and the build, so both name the same file |
+| `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. If the PNG is missing it falls back to the old in-browser `<Mermaid>` component and prints a `[diagrams]` warning |
 
-The component follows the reader's light or dark theme and re-renders on a theme flip, because
-mermaid bakes its palette into the SVG at render time. If a diagram fails to parse, the raw source is
-shown instead of an empty gap.
+Rendering in the reader's browser was dropped because mermaid measured labels with whatever font
+that browser resolved, so boxes came out the wrong size, text was clipped and layouts shifted between
+machines. One renderer with one known font gives the same picture everywhere.
 
 ```bash
-npm run docs:check-diagrams    # parse every diagram; exits non-zero on a syntax error
+npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
+npm run docs:diagrams -- --all # re-render everything, e.g. after changing the style
+npm run docs:check-diagrams    # syntax-check every diagram and fail if any has no PNG
 ```
 
-::: warning A broken diagram does not fail the build
-VitePress never parses the diagram source; it only passes it through. A syntax error surfaces as a
-red block of source on the published page. Run the checker after editing diagrams.
+Commit the PNGs together with the markdown change. Set `CHROME_PATH` if Chrome is not in a
+standard location.
+
+::: warning Edited a diagram? Re-render it
+The image is looked up by a hash of the fence body, so any edit, even a single character, needs
+`npm run docs:diagrams`. Otherwise the page falls back to in-browser rendering.
+:::
+
+::: info Escape angle-bracket placeholders
+Write a placeholder such as `<unit>` as `#lt;unit#gt;` inside a diagram. Written raw, it is read as
+an HTML tag and silently dropped (`<u>` even turns the rest of the label into underlined text).
 :::
 
 ::: info Keep `<br/>` out of state-diagram transition labels
