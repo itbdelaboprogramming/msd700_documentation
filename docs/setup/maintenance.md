@@ -37,21 +37,21 @@ Two more log systems, separate from ROS logs:
 - Launcher logs under `src/ros-web-ui/logs/`: five 10 MB files per service when `rotatelogs` exists, unbounded `tee` otherwise.
 - Docker stdout/stderr: every unit service caps at 20 MB x 3. On the server, only `coturn` sets that cap; other services use daemon defaults.
 
-`ROS_LOG_CAP_MB` and `ROS_LOG_SWEEP_SECONDS` configure the inner launcher only. Setting them on the host or in `docker/.env` does nothing. The janitor truncates largest-first by real block usage (never deletes — ROS holds the fd open) and never trusts `stat` sizes (sparse-file trap); ~96% of the tree is usually `rosout.log`.
+`ROS_LOG_CAP_MB` and `ROS_LOG_SWEEP_SECONDS` configure the inner launcher only. Setting them on the host or in `docker/.env` does nothing. The janitor truncates largest-first by real block usage (never deletes: ROS holds the fd open) and never trusts `stat` sizes (sparse-file trap); ~96% of the tree is usually `rosout.log`.
 
 ## `ros_doctor.sh`: reading its output
 
 `scripts/ros_doctor.sh` is read-only. Run it inside the backend container when the dashboard has status but no live topics:
 
-- `OK master answers` — a ROS master responds at all.
-- `stamped as '<role>' owned by <host>` — `/msd700/stack_role` + `/msd700/stack_host`; tells you whose master you are actually talking to.
-- `none: every node advertises a host this machine can resolve` — no foreign nodes. Anything else names nodes registered from hosts this machine cannot reach (the forwarded-port hijack).
-- `listening on 9090` vs `nothing listening on 9090. Dashboards get no live topics at all.` — is rosbridge up.
-- `no rosbridge node on this master (evicted by a duplicate name, or never started)` — the bridge lost its name registration.
+- `OK master answers`: a ROS master responds at all.
+- `stamped as '<role>' owned by <host>`: `/msd700/stack_role` + `/msd700/stack_host`; tells you whose master you are actually talking to.
+- `none: every node advertises a host this machine can resolve`: no foreign nodes. Anything else names nodes registered from hosts this machine cannot reach (the forwarded-port hijack).
+- `listening on 9090` vs `nothing listening on 9090. Dashboards get no live topics at all.`: is rosbridge up.
+- `no rosbridge node on this master (evicted by a duplicate name, or never started)`: the bridge lost its name registration.
 
 ## `deploy_certs.sh`: safe copy, explicit overwrite
 
-Run from `ros-web-ui/`. Default copies `Certificates/mqtt` and `Certificates/sql` into the backend/mqtt source trees with `cp -n` — **never overwrites**. Only `--force` overwrites. Do not confuse it with `update_ssl.sh` (renews Let's Encrypt + rebuilds the HiveMQ keystore).
+Run from `ros-web-ui/`. Default copies `Certificates/mqtt` and `Certificates/sql` into the backend/mqtt source trees with `cp -n`: **never overwrites**. Only `--force` overwrites. Do not confuse it with `update_ssl.sh` (renews Let's Encrypt + rebuilds the HiveMQ keystore).
 
 ## Rotating secrets
 
@@ -108,7 +108,7 @@ docker compose --profile server_prod up -d --no-deps --force-recreate hivemq   #
 ```
 
 ::: danger Restarting a broker interrupts every unit on it
-Losing operator pings for over 10 seconds can raise `/emergency_pause`. Schedule either broker's restart around active operations, not just production ones. Both profiles share the **same keystore file**, so renewal is never dev-isolated.
+Losing operator pings for over 2 seconds can raise `/emergency_pause`. Schedule either broker's restart around active operations, not just production ones. Both profiles share the **same keystore file**, so renewal is never dev-isolated.
 :::
 
 `update_ssl.sh` is fixed to `msd.nglobal.jp` and `/srv/msd/secrets/hivemq/keystore.p12`. Its export password must match the broker config. Never print it in diagnostics. Check served expiry separately for HTTPS and MQTT before and after.
@@ -181,7 +181,7 @@ Then rebuild/restart during a maintenance window, keeping the unit's `--dev` / `
 - **Local server stack** copies source into its images: use `local-build` then `up` for those edits.
 - A running robot container keeps its old image after `build`. Plan a `down` + matching `up -d` (same flags) to replace it. This interrupts robot and local services; add `--no-autostart` if you do not want to change boot behavior.
 
-No separate firmware path here for the Arduino motor controller; that is a manual re-flash.
+No firmware update path here for the STM32 motor controller: re-flash it manually from the `firmware-msd700` repository (`STM32H7_MSD700_Unified_Firmware`, STM32CubeIDE).
 
 ## Disk housekeeping
 

@@ -10,7 +10,7 @@ The Live Camera view streams the robot's onboard video feed directly to your bro
 
 ## Opening the Live View
 
-On the Navigation (or Mapping) screen, the **Camera - Front View** panel sits beside the map. The video feed loads within a few seconds.
+On the Navigation (or Mapping) page, the **Camera - Front View** panel sits beside the map. The video feed loads within a few seconds.
 
 ## Using the Live View
 

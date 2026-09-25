@@ -75,7 +75,7 @@ The fields most relevant to this page:
   [Manual & Autopilot](/development/webui/navigation/manual-and-autopilot); `in_use` and
   `origin_conflict` gate whether this tab is even allowed to issue the commands above.
 
-The REST-facing shape of the same ping is `POST /api/units/ping`, documented in
+The REST-facing shape of the same ping is `POST /api/hardware/ping`, documented in
 [API Reference § Robot Heartbeat Ping](/development/api-reference#_2-robot-heartbeat-ping); the
 `data` block matches the MQTT contract field-for-field.
 

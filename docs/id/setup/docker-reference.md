@@ -381,6 +381,9 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | `--dry-run` | diteruskan | Bukan preview aman: tetap start container, ubah host state, bisa kill sesi dan hubungi enrolment |
 | `--kill` | diteruskan | Kill sesi tmux di container |
 | `--local` | diterima, diabaikan | Deprecated. Stack lokal tetap start |
+| `--fresh` | hanya `reenroll` | Ikut menghapus cache lokal (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). Untuk robot yang akan dipakai rental **baru**; tanpa flag ini cache dipertahankan dan full sync merekonsiliasinya |
+| `--no-archive` | hanya `reenroll` | Lewati backup. Aman hanya jika unit sudah menyinkronkan semua datanya; jika tidak, map offline hilang |
+| `-y`, `--yes` | hanya `reenroll` | Tanpa prompt, termasuk konfirmasi unit-id |
 | `--unit_id` | **ditolak** | Sengaja dihapus. Identitas dari admin console cloud |
 
 ::: info Apa yang diubah `-d` (dan tidak)
@@ -435,7 +438,7 @@ Tiga langkah ada karena failure diam-diam:
 
 ### `manage-unit.sh` (sisi-server, hanya manual/debug)
 
-Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu — backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai di unit mode fleet.
+Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu: backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai di unit mode fleet.
 
 ## Unit: `run_msd.sh`
 
@@ -499,7 +502,7 @@ Di sana `run_msd.sh` **adalah** perintah utama container, sehingga return menghe
 
 Default, bukan hasil ukur host-mu. Tiap service memakai `network_mode: host`, sehingga **Docker mem-publish nothing**; firewall unit mengontrol akses. Default menghadap browser: `3000`, `5002`, `9090`, `3003`, `3001`, `3002`, `9001`. MySQL `3306`, MQTT polos `1883`, dan network agent `5011` internal unit. Listener MQTT WebSocket mengizinkan client anonymous di config checked-in: simpan di jaringan operator tepercaya, jangan internet publik.
 
-Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.example` saat pertama run). File live per-host; template adalah referensi yang ter-track. `docker/.env` ter-track di git di unit — `git pull` yang mengubah `MYSQL_*` setelah volume data diinisialisasi menyebabkan credential drift (lihat [Setup Troubleshooting](/id/setup/troubleshooting)).
+Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.example` saat pertama run). File live per-host; template adalah referensi yang ter-track. `docker/.env` ter-track di git di unit: `git pull` yang mengubah `MYSQL_*` setelah volume data diinisialisasi menyebabkan credential drift (lihat [Setup Troubleshooting](/id/setup/troubleshooting)).
 
 ## Referensi `.env` unit
 

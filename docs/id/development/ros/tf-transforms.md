@@ -13,20 +13,20 @@ Dokumen ini menyediakan spesifikasi komprehensif untuk pohon transformasi koordi
 
 Pohon transformasi koordinat mematuhi ROS REP-103 (Standard Units of Measure & Coordinate Conventions) dan REP-105 (Coordinate Frames for Mobile Platforms):
 
+Pohon di bawah adalah yang dipublikasikan **unit sungguhan**: `irbot.urdf.xacro` lewat `msd700_description/launch/robot_description.launch.xml`, dijalankan oleh `bringup_msd.launch` di setiap mode (termasuk idle) sehingga `/scan` dan EKF selalu punya transform statisnya. Tinggi lidar diambil dari `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) dan menjadi acuan `msd700_perception` untuk mengukur semua ketinggian.
+
 ```mermaid
 flowchart TD
-  MAP["map<br/>(Global Fixed World Frame, Origin at Homebase)"] -->|"AMCL / SLAM Global Correction (10 Hz)"| ODOM["odom<br/>(Smooth Continuous Local Odometry Frame)"]
-  ODOM -->|"EKF Fusion: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(Chassis 2D Projection on Floor Plane)"]
-
-  BASE_FP -->|"Static TF: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
-
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEELS["4 drive wheels: wheel_front/back_left/right_link<br/>(x = ±0.30 m, y = ±0.30 m)"]
-
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.085]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.40]"| BASE_SCAN["base_scan (3D LiDAR, 0.50 m above footprint)<br/>+ laser alias frame for bag replay"]
+  MAP["map<br/>(global fixed frame)"] -->|"AMCL / SLAM correction"| ODOM["odom<br/>(smooth local odometry frame)"]
+  ODOM -->|"EKF: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(chassis projected on the floor)"]
+  BASE_FP -->|"Static: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link"]
+  BASE_LINK -->|"Static: z = +0.427 m"| LASER["laser<br/>(Velodyne VLP-16)"]
+  BASE_LINK -->|"Static: identity"| IMU["imu<br/>(CMPS12 via STM32)"]
 ```
 
-Tidak ada `camera_link` pada robot lapangan: kamera adalah perangkat USB/WebRTC terpisah, bukan link URDF.
+Tidak ada `camera_link` pada robot: kamera adalah perangkat USB/WebRTC terpisah, bukan link URDF.
+
+Di simulasi yang dipakai adalah model Gazebo `msd700_field.urdf.xacro`: frame `base_scan` (0,40 m di atas `base_link`, 0,50 m di atas footprint, dengan alias `laser` untuk replay bag), `imu_link` (z ≈ 0,085 m), dan empat link roda yang digerakkan `joint_state_publisher`.
 
 ---
 
@@ -35,10 +35,10 @@ Tidak ada `camera_link` pada robot lapangan: kamera adalah perangkat USB/WebRTC 
 | Edge Transformasi | Node Broadcaster | Laju | Sumber Matematis | Perilaku Saat Terputus |
 | --- | --- | --- | --- | --- |
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Mengoreksi drift odometrik terhadap occupancy grid laser statis. | Lompatan diskret saat terlokalisasi; mempertahankan transformasi terakhir jika laser scan terputus. |
-| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Fusion kontinu kecepatan wheel encoder dan yaw/angular rate IMU. | Trajektori jangka pendek yang kontinu, halus, dan bebas-drift. |
-| `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset elevasi tetap ($z = 0.10\text{ m}$ = radius roda). | Transformasi tetap dari URDF. |
-| `base_link -> base_scan` | `robot_state_publisher` | Statis | Mast LiDAR ($x = 0$, $z = 0.40\text{ m}$ dari `base_link`, $0.50\text{ m}$ di atas footprint); frame alias `laser` terpasang untuk replay bag. | Transformasi tetap dari URDF. |
-| `base_link -> imu_link` | `robot_state_publisher` | Statis | Mounting chassis fisik ($z \approx 0.085\text{ m}$ = `body_center_z`). | Transformasi tetap dari URDF. |
+| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Fusion kontinu kecepatan odometri roda serta attitude dan angular rate IMU. | Trajektori jangka pendek yang kontinu, halus, dan bebas-drift. |
+| `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset elevasi tetap ($z = 0.10\text{ m}$ = `wheel_radius`). | Transformasi tetap dari URDF. |
+| `base_link -> laser` | `robot_state_publisher` | Statis | Dudukan LiDAR ($x = 0$, $z = 0.427\text{ m}$ dari `base_link`, `msd700_xacro_irbot.yaml`). | Transformasi tetap dari URDF. |
+| `base_link -> imu` | `robot_state_publisher` | Statis | Identitas; `/imu/data` dicap dengan frame `imu`, jadi tanpa edge ini EKF membuang setiap sampel IMU. | Transformasi tetap dari URDF. |
 
 ---
 
@@ -89,7 +89,7 @@ sequenceDiagram
 ### Mengapa Restamping Bersifat Krusial:
 1. **Keterbatasan RTC Jetson**: SBC fisik di lingkungan lapangan tanpa akses NTP dapat boot dengan clock yang menyimpang hingga hitungan detik atau bahkan bulan.
 2. **Buffer Eviction**: Jika pesan pose yang masuk membawa timestamp di masa lalu relatif terhadap ROS master server, `tf2_ros::Buffer` langsung membuangnya, mencegah kanvas web merender pergerakan robot.
-3. **Solusi `BoundaryPublisher`**: `patch_time.py` melucuti timestamp hardware robot dan me-restamp payload geometrik dengan `ros::Time::now()` saat memasuki ROS master server.
+3. **Solusi `BoundaryPublisher`**: `BoundaryPublisher` (`topic2string/scripts/clock_boundary.py`, versi C++ `include/topic2string/clock_boundary.h`) membungkus setiap publisher di sisi masuk bridge dan menulis ulang setiap timestamp absolut di message ke clock ROS lokal, sehingga stamp dari robot atau simulator lain tidak pernah sampai ke konsumen di master server.
 
 ## Dokumentasi Terkait
 

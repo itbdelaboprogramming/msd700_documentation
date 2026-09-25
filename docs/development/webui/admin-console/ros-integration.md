@@ -12,7 +12,7 @@ admin console does is a MySQL-and-REST concern with no ROS node on either end of
 the console do reach all the way to the robot or to the container fleet running underneath it: unit
 enrolment and unbinding, and `unit_manager.js`'s orchestration of the relay containers a unit's data
 actually flows through. This page covers both, plus the Docker socket boundary that limits what the
-backend can do to the host in the process. For the screens themselves, see
+backend can do to the host in the process. For the pages themselves, see
 [Units & Fleet](/development/webui/admin-console/units-and-fleet); for the full nonce handshake a
 robot runs on its own side, see
 [Hardware Enrolment](/development/webui/accounts/enrolment).
@@ -38,24 +38,24 @@ documented directly in the self-heal path a returning robot would otherwise take
 > nonce (a genuine re-image, or an impostor), or no live binding (the hardware was adopted onto a
 > different unit, **or an admin unbound it on purpose**).
 >
-> — [Hardware Enrolment § Self-heal
+>: [Hardware Enrolment § Self-heal
 > recovery](/development/webui/accounts/enrolment#self-heal-recovery-a-lost-device-json-without-a-new-approval)
 
 In other words, unbinding does not just clear a database row: it deliberately breaks the third of
 the three conditions self-heal recovery checks for ("a live `unit_devices` row still binds this
 exact `fingerprint` to the unit"), so the next time that robot's `enroll.py` calls
 `POST /enroll/claim`, it cannot silently recover its old identity. It falls through to the pending
-pool exactly as if it were new hardware, and needs a fresh administrator approval — Register or
-Adopt again — before it can rejoin the fleet. That is the entire point of offering "forces
+pool exactly as if it were new hardware, and needs a fresh administrator approval (Register or
+Adopt again) before it can rejoin the fleet. That is the entire point of offering "forces
 re-enrollment" as a distinct action from deleting the unit outright: the unit's identity, history,
 and rental assignment all survive; only the device credential is cut.
 
 ## `unit_manager.js` and the container fleet
 
-None of the Units tab's actions start or stop a robot's relay container. Container lifecycle — the
+None of the Units tab's actions start or stop a robot's relay container. Container lifecycle: the
 `Absent → Starting → Running → Retained → Stopped` state machine in
 [Unit Container Lifecycle § Container Lifecycle State
-Machine](/development/unit-container-lifecycle#container-lifecycle-state-machine) — is driven
+Machine](/development/unit-container-lifecycle#container-lifecycle-state-machine): is driven
 entirely by operator activity (opening a unit's dashboard, ping heartbeats, Autopilot state), not by
 anything an admin clicks here. What admin actions *do* change is the data the fleet relay's single
 shared container bridges, and that connection is real:
@@ -67,7 +67,7 @@ shared container bridges, and that connection is real:
   database](/development/unit-container-lifecycle#the-roster-comes-from-the-database); enrolling or
   deleting a unit is the whole mechanism, with no separate step to "turn on bridging" for it.
 - **`startRosterReconciler()`** re-reads that roster every `FLEET_ROSTER_POLL_MS` (default 60 s) and
-  restarts the relay container if it changed — see
+  restarts the relay container if it changed: see
   [Unit Container Lifecycle § Enrolment restarts the relay
   automatically](/development/unit-container-lifecycle#enrolment-restarts-the-relay-automatically).
   A unit registered or deleted from this console reaches the live relay within one poll interval,
@@ -93,14 +93,14 @@ of running both at once.
 
 ## Docker Socket Security
 
-`backend_node` — the process this entire console runs inside of — communicates with the host Docker
+`backend_node` (the process this entire console runs inside of) communicates with the host Docker
 engine via a bind mount of `/var/run/docker.sock`. Per
 [Unit Container Lifecycle § Docker Socket
 Security](/development/unit-container-lifecycle#docker-socket-security), container execution
 through that socket is restricted to managing containers matching the `rosweb_unit_*` namespace,
 preventing arbitrary container manipulation on the host. Every admin action that ultimately touches
-a container — starting, stopping, or restarting a relay as a side effect of the roster changing
-above — goes through that same restricted surface, never a general-purpose Docker command.
+a container (starting, stopping, or restarting a relay as a side effect of the roster changing
+above) goes through that same restricted surface, never a general-purpose Docker command.
 
 ## Related
 

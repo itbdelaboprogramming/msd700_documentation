@@ -41,13 +41,13 @@ flowchart TD
 ## Masalah Umum dan Solusinya
 
 ### 1. Kanvas Peta Kosong atau Loading Spinner Tanpa Henti
-- **Gejala**: Halaman navigasi terbuka, tetapi area tengah tetap berupa layar abu-abu gelap dengan loader berputar.
+- **Gejala**: Halaman navigasi terbuka, tetapi area tengah tetap berupa area abu-abu gelap dengan loader berputar.
 - **Kemungkinan Penyebab**:
   - Belum ada peta yang terbuka untuk unit ini saat ini.
-  - Koneksi langsung peramban ke robot sempat terputus sementara.
+  - Koneksi langsung browser ke robot sempat terputus sementara.
 - **Tindakan Operator**:
-  1. Buka peta fasilitas Anda dari halaman **Database** (atau pemilih peta di layar Navigasi).
-  2. Jika peta sudah dipilih tetapi masih kosong, refresh tab peramban Anda (`Ctrl + F5` atau `Cmd + Shift + R`).
+  1. Buka peta fasilitas Anda dari halaman **Database** (atau pemilih peta di halaman Navigasi).
+  2. Jika peta sudah dipilih tetapi masih kosong, refresh tab browser Anda (`Ctrl + F5` atau `Cmd + Shift + R`).
   3. Verifikasi bahwa lencana koneksi di header menampilkan **Connected** (hijau).
 
 ---
@@ -56,11 +56,11 @@ flowchart TD
 - **Gejala**: Jendela kamera menampilkan frame beku, roda berputar, atau kotak hitam.
 - **Kemungkinan Penyebab**:
   - Kehilangan paket sementara pada tautan Wi-Fi antara robot dan server.
-  - Peramban memblokir koneksi video.
+  - Browser memblokir koneksi video.
 - **Tindakan Operator**:
   1. Klik **Restart camera** (atau **Try Again**) jika muncul di atas video; jika tidak, feed akan tersambung ulang secara otomatis setelah beberapa saat.
-  2. Jika menggunakan Chrome, pastikan akselerasi perangkat keras diaktifkan di pengaturan peramban.
-  3. Jika beroperasi di jaringan fasilitas lokal tanpa internet, pastikan Anda terhubung ke Wi-Fi lokal robot dan mengakses `http://<unit-ip>:3000`.
+  2. Jika menggunakan Chrome, pastikan akselerasi perangkat keras diaktifkan di pengaturan browser.
+  3. Jika beroperasi di jaringan fasilitas lokal tanpa internet, pastikan Anda terhubung ke hotspot Wi-Fi robot dan membuka `http://mymsd.jp` (atau `http://<robot-ip>:3000` jika lewat jaringan lokal lain).
 
 ---
 
@@ -72,7 +72,7 @@ flowchart TD
 - **Tindakan Operator**:
   1. Klik goal di ruang kosong terbuka yang luas (area abu-abu terang), jauh dari dinding dan tiang.
   2. Klik tombol **Auto Align** pada toolbar untuk mencocokkan apa yang dilihat sensor dengan peta tersimpan.
-  3. Jika Auto-Align gagal, kendarai robot maju 0,5 meter secara manual lalu picu ulang Auto-Align.
+  3. Jika Auto-Align gagal, kemudikan robot maju 0,5 meter secara manual lalu picu ulang Auto-Align.
 
 ---
 
@@ -80,18 +80,18 @@ flowchart TD
 - **Gejala**: Banner kuning kecoklatan (amber) bertuliskan "Robot Stuck - Please adjust the robot position manually".
 - **Kemungkinan Penyebab**:
   - Seseorang, forklift, atau kotak yang baru diletakkan menghalangi jalur yang direncanakan.
-  - Robot mencoba sesi penyapuan cakupan area di koridor sempit yang lebih kecil dari 1,15 meter.
+  - Robot mencoba sesi sweep coverage area di koridor yang lebih sempit dari sekitar 1,24 meter, lebar yang dibutuhkannya untuk berputar balik. Robot bisa masuk ke koridor selebar 0,80 m, tetapi tidak bisa berputar di dalamnya.
 - **Tindakan Operator**:
   1. Periksa feed kamera langsung dan titik sensor merah pada kanvas untuk mencari halangan terdekat.
   2. Jika jalur terhalang oleh objek sementara, tunggu 10 detik; perencana lokal secara otomatis mengarahkan robot mengelilingi halangan setelah jalur terbuka.
-  3. Jika robot tidak dapat mengatasi kebuntuan itu, klik **Pause**, nyalakan **Manual Override**, dan kendarai robot ke ruang lantai terbuka sebelum melanjutkan.
+  3. Jika robot tidak dapat mengatasi kebuntuan itu, klik **Pause**, nyalakan **Manual Override**, dan kemudikan robot ke ruang lantai terbuka sebelum melanjutkan.
 
 ---
 
 ### 5. Kendali Terkunci: "In Use by Another Operator"
 - **Gejala**: Anda membuka sebuah robot dan semua tombol kendali dinonaktifkan dengan banner "In Use".
 - **Kemungkinan Penyebab**:
-  - Akun operator lain di organisasi Anda sedang mengendarai unit ini.
+  - Akun operator lain di organisasi Anda sedang mengemudikan unit ini.
   - Anda meninggalkan tab atau laptop lain terbuka dan masuk ke robot yang sama.
 - **Tindakan Operator**:
   1. Jika banner menampilkan nama rekan yang berbeda, koordinasikan dengan mereka sebelum meminta kendali.
@@ -102,7 +102,7 @@ flowchart TD
 ### 6. Emergency Stop Aktif
 - **Gejala**: Dashboard menampilkan halaman "Emergency Stop Activated" dan semua pergerakan terkunci.
 - **Kemungkinan Penyebab**:
-  - Seorang operator mengklik tombol E-Stop pada layar.
+  - Seorang operator mengklik tombol E-Stop di dashboard.
 - **Tindakan Operator**:
   1. Verifikasi bahwa lingkungan robot fisik sepenuhnya aman.
   2. Restart robot, lalu masuk kembali melalui tombol **Go to LOGIN page** untuk melanjutkan operasi.
@@ -110,7 +110,7 @@ flowchart TD
 ---
 
 ### 7. Tiba-tiba Kembali ke Halaman Login
-- **Gejala**: Dashboard tiba-tiba mengembalikan Anda ke layar login di tengah operasi.
+- **Gejala**: Dashboard tiba-tiba mengembalikan Anda ke halaman login di tengah operasi.
 - **Kemungkinan Penyebab**: Sesi login Anda kedaluwarsa, atau koneksi ke server terputus (timeout).
 - **Tindakan Operator**:
   1. Masuk kembali. Dashboard akan menanyakan ke robot apa yang sedang dilakukannya dan memulihkan operasi Anda (lihat [Bagaimana Robot Berperilaku](/id/user-guide/behavior#kembali-lagi)): tidak ada yang hilang kecuali robot itu sendiri sempat dijeda atau dimatikan.

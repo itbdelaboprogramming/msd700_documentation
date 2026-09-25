@@ -90,7 +90,7 @@ nonceが変わっている場合(本物の再イメージ化か、あるいは�
 
 nonceフローはロボットから始まる。バウチャーフローは手動登録ユニット向けに管理コンソールから始まる(プレースホルダーidentity、まだ物理接触なし):`POST /admin/api/units/:id/enrollment-code`(管理者トークン)がクレームコードと同じ30文字アルファベットから**10文字**コードを発行し、データベースにbcryptハッシュ保存、有効 `valid_hours`(既定72、1〜720に丸め)、表示は**一度きり**。
 
-ロボットは `POST /enroll/claim` に `enrollment_code` で引換え、pendingプールを省略する:サーバーは未使用・未期限の行を探し、`bcrypt.compare` して `used_at` を刻み、通常引継ぎと同じ `issueCredential` を実行する(`unit_id, unit_name, topic_root, device_secret, access_token` を返却)。不正・使用済み・期限切れコードは404。取消は `DELETE /units/:id/device`(ロボットのバインド解除)——コード削除エンドポイントはない。3つの秘密を混同しないこと:32バイトのクレーム**nonce**(ロボット生成、保存なし)、8文字の管理者**クレームコード**(pendingプール)、10文字の**バウチャー**(事前登録ユニット)、32バイトの**デバイスシークレット**(認証情報そのもの)。
+ロボットは `POST /enroll/claim` に `enrollment_code` で引換え、pendingプールを省略する:サーバーは未使用・未期限の行を探し、`bcrypt.compare` して `used_at` を刻み、通常引継ぎと同じ `issueCredential` を実行する(`unit_id, unit_name, topic_root, device_secret, access_token` を返却)。不正・使用済み・期限切れコードは404。取消は `DELETE /units/:id/device`(ロボットのバインド解除)：コード削除エンドポイントはない。3つの秘密を混同しないこと:32バイトのクレーム**nonce**(ロボット生成、保存なし)、8文字の管理者**クレームコード**(pendingプール)、10文字の**バウチャー**(事前登録ユニット)、32バイトの**デバイスシークレット**(認証情報そのもの)。
 
 ### `secret_prev_hash`: 一世代分の猶予
 

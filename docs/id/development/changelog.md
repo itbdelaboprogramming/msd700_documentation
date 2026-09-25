@@ -18,6 +18,13 @@ Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajua
 - **Jangkauan Pemulihan di Atas Jumlah Pesan**: Rebuild snapshot kini juga dipicu pada tab `Idle` tanpa mode terpilih (state yang ditinggalkan oleh membuka ulang peta dari halaman Database), dan prompt resync kini mencapai 9,4 detik alih-alih 3,4 detik. Baik halaman Navigation maupun komponen peta tidak lagi menimpa status atau mode yang tersimpan saat mount.
 - **Pencegahan Self-Join**: Hotspot milik unit sendiri kini dikecualikan dari pemindaian WiFi-nya dan ditolak oleh `connect()`, sehingga operator yang membaca daftar lewat hotspot tersebut tidak dapat menyuruh unit bergabung dengan dirinya sendiri.
 - **Autostart Boot yang Mempertahankan Mode**: `msd700.service` kini membawa flag `--dev` dan `--simulator` dari `up` yang mempersenjatainya. Unit boot sebelumnya menjalankan ulang `up` polos, sehingga robot yang dimulai melawan cloud dev, atau sebagai simulator, secara diam-diam kembali setelah reboot sebagai hardware melawan produksi.
+- **Jeda Keselamatan 2 Detik dan Heartbeat MQTT**: Jeda gerak watchdog kini aktif setelah 2 detik tanpa operator (sebelumnya 10 detik). Dashboard lokal unit membuktikan kehadiran dengan `heartbeat` 5 Hz lewat MQTT-over-WebSocket langsung ke broker unit, jadi link yang lossy tidak lagi menghentikan robot; ping HTTP tetap memegang lease dan otoritas. Autopilot menangguhkan ketiga tingkatan watchdog.
+- **Geometri Roda Hasil Ukur**: `pose_config.yaml` kini memakai track 26 cm hasil ukur (sebelumnya 78 cm, membuat setiap pivot berlebih 3×), dan node `rotation_guard` dihapus.
+- **Tuning TEB untuk Celah Sempit**: `min_obstacle_dist` 0,10 → 0,05 m dan `inflation_dist` 0,75 → 0,35 m, agar TEB tidak macet di celah yang sudah bisa direncanakan `navfn`. Clearance coverage yang diturunkan darinya ikut mengecil.
+- **topic2string C++ di Unit**: Konverter telemetri unit berjalan sebagai node C++ terpisah (`topic2string_impl:=cpp_nodes`); node Python disimpan untuk rollback.
+- **Hazard Scan Lebih Cepat**: Reduksi per grup di pipeline perception dipindah ke library C (`fastops`), memangkas satu frame dari sekitar 55 ms menjadi sekitar 37 ms, dengan fallback numpy.
+- **Restart Hotspot dari Dashboard**: `network_local` me-restart hotspot lewat unit sempit `msd700-hotspot-restart.path`, bukan lewat NetworkManager.
+- **Webhook Auto-Deploy**: Push ke branch deploy otomatis me-rebuild `server_prod` / `server_dev`.
 
 ### Agustus 2026: Overhaul Dokumentasi & Kinematika Presisi
 - **Arsitektur Dokumentasi Modular**: Penulisan ulang menyeluruh semua halaman dokumentasi dengan diagram SVG Mermaid responsif, formulasi matematis, dan operasi zero-downtime.

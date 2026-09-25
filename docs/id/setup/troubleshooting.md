@@ -65,7 +65,7 @@ Log, output launch, `docker inspect`, dan output Compose bisa berisi kredensial.
 | Backend log `ECONNREFUSED 127.0.0.1:1883` | Launch lama atau override mengarahkan MQTT ke loopback; default server kini `nakayama` | Perbaiki config service itu, recreate scoped. (Di unit, `backend_local` sengaja loopback: cek `mosquitto_local`) |
 | Backend log `EACCES /var/run/docker.sock` | `DOCKER_GID` tidak cocok dengan grup docker host | `getent group docker \| cut -d: -f3`, perbaiki `.env`, recreate backend |
 | Endpoint baru 404 di unit yang jelas punya source-nya | Image server lokal basi (source di-**copy** masuk, bukan bind-mount) | `./scripts/docker-manager.sh local-build`, lalu `up` |
-| Launcher warning image lokal out of date | `up` biasa memakai ulang image basi — memang didesain begitu | Rebuild dengan `local-build`, `build`, atau `up --build`; robot yang jalan mempertahankan image lama sampai recreated |
+| Launcher warning image lokal out of date | `up` biasa memakai ulang image basi: memang didesain begitu | Rebuild dengan `local-build`, `build`, atau `up --build`; robot yang jalan mempertahankan image lama sampai recreated |
 
 ## Bug lama yang diketahui (kenali, lalu eskalasi)
 

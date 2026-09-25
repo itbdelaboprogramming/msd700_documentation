@@ -7,22 +7,22 @@ search: false
 
 <RoleBadge role="developer" />
 
-The Database feature is the Map DB screen at `unit/database` in the dashboard
+The Database feature is the Map DB page at `unit/database` in the dashboard
 (`pages/unit/database/index.tsx`, component `DatabaseComponent.tsx`): the place an operator sees
 every map recorded on the current unit and picks one to load into Navigation, or cleans up an old
-one. This page describes how the screen behaves, for a frontend engineer working on it, not as an
+one. This document describes how the page behaves, for a frontend engineer working on it, not as an
 end-user tutorial. For the rename and delete flows, see
 [Rename and Delete](/development/webui/database/rename-and-delete). For the schema and REST
-endpoints underneath the screen, see [ROS Integration](/development/webui/database/ros-integration).
+endpoints underneath the page, see [ROS Integration](/development/webui/database/ros-integration).
 
 ## Scope
 
-The screen lists maps as first-class rows only. Routes, saved cover/no-cover areas, and operation
+The page lists maps as first-class rows only. Routes, saved cover/no-cover areas, and operation
 playlists are attributes that travel with a map rather than rows of their own here: a map's
 `modified_by_username` covers changes to "the map, its routes, its saved areas, or its playlists"
 as one value, and all three cascade-delete with their map (see
 [Rename and Delete § Cascade delete](/development/webui/database/rename-and-delete#cascade-delete)),
-but none of them get their own list, search box, or rename control on this screen. Rental profiles
+but none of them get their own list, search box, or rename control on this page. Rental profiles
 are not touched here either.
 
 ## Map list
@@ -61,7 +61,7 @@ for the rename and delete actions described in
 
 Opening a map routes to `/unit/navigation?index=<id>`. If a mapping session is currently running
 or paused on the unit and the operator opens a *different* map than the one being recorded, the
-screen does not silently drop the in-progress map. See
+page does not silently drop the in-progress map. See
 [Rename and Delete § Session-conflict guard](/development/webui/database/rename-and-delete#session-conflict-guard).
 
 ## Empty and loading states
@@ -72,7 +72,7 @@ filter.
 
 ## Related
 
-- [Rename and Delete](/development/webui/database/rename-and-delete): the two mutating actions on this screen, in detail
+- [Rename and Delete](/development/webui/database/rename-and-delete): the two mutating actions on this page, in detail
 - [ROS Integration](/development/webui/database/ros-integration): the schema and REST endpoints behind this feature
 - [Media Server Reference](/development/webui/database/media-server-reference): the map-asset API (upload, thumbnails, legacy-ID mapper)
 - [Architecture](/development/architecture)

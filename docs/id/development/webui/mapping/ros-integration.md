@@ -7,10 +7,10 @@ search: false
 
 <RoleBadge role="developer" />
 
-Kontrak jalur (wire contract) di balik layar [Pemetaan](/id/development/webui/mapping/overview):
+Kontrak jalur (wire contract) di balik halaman [Pemetaan](/id/development/webui/mapping/overview):
 panggilan REST yang memulai dan menghentikan sesi SLAM, envelope perintah/feedback MQTT yang
 membawa request yang sama ke `system_command.py`, dan apa yang sebenarnya dilakukan robot di disk
-serta di jaringan saat sebuah peta disimpan. Untuk perilaku layar itu sendiri, lihat
+serta di jaringan saat sebuah peta disimpan. Untuk perilaku halaman itu sendiri, lihat
 [Ikhtisar](/id/development/webui/mapping/overview) dan
 [Override Manual dan Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous).
 

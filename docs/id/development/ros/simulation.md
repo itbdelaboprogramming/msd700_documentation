@@ -36,7 +36,7 @@ flowchart LR
 2. **Kebocoran Konfigurasi**: Parameter legacy (`robot_width: 0.32`) tersisa dalam konfigurasi cakupan hingga pemodelan skala-nyata menggantikannya.
 3. **Ketidaksesuaian Skala Lingkungan**: Peta TurtleBot standar tidak memiliki clearance yang memadai untuk robot 0,9 x 0,7 m:
    - `turtlebot_world`: Clearance maksimum 0,39 m (tidak dapat menampung setengah-lebar inscribed 0,425 m di mana pun).
-   - `AWS RoboMaker Small Warehouse`: Clearance maksimum **3,83 m** dari geometri collision (65% lantai cukup lebar untuk berdiri, 46% untuk pivot), atau **3,68 m** (58% / 38%) dari occupancy map bawaan AWS — dua cara pengukuran independen yang selaras dalam toleransi.
+   - `AWS RoboMaker Small Warehouse`: Clearance maksimum **3,83 m** dari geometri collision (65% lantai cukup lebar untuk berdiri, 46% untuk pivot), atau **3,68 m** (58% / 38%) dari occupancy map bawaan AWS: dua cara pengukuran independen yang selaras dalam toleransi.
 
 ## Dunia Simulasi: AWS Small Warehouse
 
@@ -65,7 +65,7 @@ Pose spawn default yang telah diverifikasi adalah **`x: 0.50, y: -2.40, yaw: 1.5
 
 ## Model URDF Robot: `msd700_field`
 
-Robot fisik dimodelkan dalam `msd700_description/urdf/msd700_field.urdf.xacro` dengan plugin Gazebo di `msd700_field.gazebo.xacro`.
+Robot field (ukuran produksi) dimodelkan dalam `msd700_description/urdf/msd700_field.urdf.xacro` dengan plugin Gazebo di `msd700_field.gazebo.xacro`.
 
 ```mermaid
 flowchart TB
@@ -84,7 +84,7 @@ flowchart TB
 ### Spesifikasi Fisik:
 - **Dimensi**: panjang 0,90 m, lebar 0,70 m, tinggi 0,25 m, massa 150 kg.
 - **Geometri Drive**: Empat roda penggerak (depan/belakang kiri/kanan); odometri mem-fusi-kannya sebagai pasangan diferensial.
-- **LiDAR Velodyne VLP-16**: 0,50 m di atas footprint pada mast mounting, menyamai unit fisik.
+- **LiDAR Velodyne VLP-16**: 0,50 m di atas footprint pada mast mounting. (Prototype uji fisik, `irbot`, memasangnya 0,527 m di atas footprint.)
 - **Frame ROS Terstandarisasi**: Menggunakan konvensi frame standar (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Menjalankan Stack Simulasi

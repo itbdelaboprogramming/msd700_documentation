@@ -38,7 +38,7 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 > (本物の再イメージング、または偽物)、あるいは稼働中のバインディングがない(ハードウェアが
 > 別のユニットに採用された、**または管理者が意図的にバインドを解除した**)場合である。
 >
-> — [ハードウェアエンロールメント § セルフヒールリカバリー](/ja/development/webui/accounts/enrolment#self-heal復旧-承認をやり直さずに失われたdevice-jsonを復旧する)
+>、[ハードウェアエンロールメント § セルフヒールリカバリー](/ja/development/webui/accounts/enrolment#self-heal復旧-承認をやり直さずに失われたdevice-jsonを復旧する)
 
 言い換えれば、バインド解除は単にデータベースの行をクリアするだけではない。セルフヒールリカバ
 リーがチェックする3つの条件のうち3番目(「稼働中の `unit_devices` 行がこのまさに `fingerprint`

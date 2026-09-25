@@ -10,9 +10,9 @@ search: false
 Tab Cadangan (`BackupsPanel.tsx`) adalah front end konsol admin ke mesin arsip yang
 didokumentasikan lengkap di [Cadangan, Pemulihan, dan Migrasi
 Data](/id/development/backup-and-restore): arsip **seluruh profil penyewaan**. Tab Unit punya
-titik masuknya sendiri yang lebih sempit ke separuh bercakupan-unit dari arsitektur yang sama —
+titik masuknya sendiri yang lebih sempit ke separuh bercakupan-unit dari arsitektur yang sama:
 lihat [Unit & Armada § Cadangkan data bercakupan-penyewaan unit
-ini](/id/development/webui/admin-console/units-and-fleet#cadangkan-data-bercakupan-penyewaan-unit-ini) —
+ini](/id/development/webui/admin-console/units-and-fleet#cadangkan-data-bercakupan-penyewaan-unit-ini):
 tetapi tab ini adalah tempat admin mengelola arsip sebagai objek kelas satu: buat, hapus, unduh,
 unggah, dan pulihkan.
 
@@ -23,77 +23,75 @@ Dua-Cakupan](/id/development/backup-and-restore#arsitektur-backup-dua-lingkup) m
 cakupan backup independen, dikunci dengan `scope: 'profile'` atau `scope: 'unit'`. Tab ini
 mengerjakan sisi bercakupan-profil: arsip berpusat-penyewa yang menangkap "semua peta, rute, area,
 dan playlist yang dimiliki sebuah profil penyewaan di seluruh robot" yang pernah dipakainya,
-dipulihkan secara aditif ke sebuah profil target dengan robot yang hilang dapat dipetakan ulang.
-Sisi bercakupan-unit — arsip berpusat-robot dari semua yang pernah direkam satu unit fisik —
+dipulihkan secara aditif ke profil baru (atau profil yang sudah ada, jika admin memilihnya) dengan robot yang hilang dapat dipetakan ulang.
+Sisi bercakupan-unit: arsip berpusat-robot dari semua yang pernah direkam satu unit fisik:
 dicapai dari tab Unit sebagai gantinya (lihat di atas).
 
 ## Buat arsip sebuah profil
 
-Menghasilkan arsip `.tar.gz` dengan struktur yang didokumentasikan di
-[Cadangan dan Pemulihan § Struktur Arsip](/id/development/backup-and-restore#struktur-arsip-tar-gz):
-sebuah `manifest.json`, sebuah `database_dump.sql` berisi pernyataan SQL insert bercakupan, dan
-sebuah direktori `maps/` berisi berkas peta biner (`.pgm`, `.yaml`, `.png`) yang menyertainya.
+`POST /admin/api/profiles/:id/backups` menghasilkan arsip `.tar.gz` dengan struktur yang
+didokumentasikan di [Cadangan dan Pemulihan § Struktur Arsip](/id/development/backup-and-restore#struktur-arsip-tar-gz):
+sebuah `manifest.json` (baris profil, anggotanya, penugasan unitnya, dan setiap map beserta rute,
+area, dan playlist di bawahnya) ditambah direktori `files/` berisi `<mapId>.pgm`, `.yaml`, dan
+`.png` untuk tiap map. Tidak ada dump SQL di dalam arsip. Map yang file-nya sudah hilang tetap
+membawa rute dan areanya, dan response mencantumkannya.
 
 ::: info Apa yang ada, dan tidak ada, dalam arsip
-Dibawa: profil itu sendiri, penugasan unitnya, dan setiap peta, rute, area, dan playlist yang
-dimilikinya, ditambah berkas gambar peta yang ditunjuk baris-baris itu. **Tidak pernah dibawa: akun
-operator.** Manifest dan `database_dump.sql` memang menstempel baris individual dengan ULID
-pengguna `created_by` untuk atribusi — contoh `manifest.json` yang sama di Cadangan dan Pemulihan
-menampilkan field `created_by` tingkat-atas — tetapi itu hanya atribusi, aturan "Atribusi bukanlah
-otorisasi" yang sama seperti disebutkan di
-[Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap).
-Memulihkan sebuah arsip tidak pernah membuat, mengubah, atau menghapus apa pun di tabel `users`.
+Dibawa: profil itu sendiri, penugasan unitnya, serta setiap map, rute, area, dan playlist yang
+dimilikinya, ditambah file gambar map yang dirujuk baris-baris tersebut. **Tidak pernah dibawa: akun
+operator.** Keanggotaan dicatat dengan id dan username agar bisa dihubungkan kembali saat restore,
+tetapi hanya ke akun yang sudah ada. `created_by` / `modified_by` dibawa untuk atribusi; yang
+menunjuk ke akun yang sudah tidak ada menjadi `NULL` dan tampil sebagai "unknown". Restore arsip
+tidak pernah membuat, mengubah, atau menghapus apa pun di tabel `users`.
 :::
 
 ## Hapus sebuah arsip
 
-Menghapus arsip tersebut. Sesuai
-[Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#cadangan-dan-sinkronisasi),
-baris `profile_backups` independen dari profil asalnya (`profile_id` adalah `ON DELETE SET NULL`,
-"sebuah arsip harus bertahan lebih lama dari yang diarsipkannya"), tetapi sebaliknya tidak benar:
-menghapus arsip itu sendiri hanyalah menghapus arsip, tanpa efek pada profil hidup asalnya.
+`DELETE /admin/api/backups/:id` menghapus baris arsip beserta file-nya. Menurut
+[Skema Database § Cadangan dan sinkronisasi](/id/development/database-schema#cadangan-dan-sinkronisasi), baris
+`profile_backups` tidak bergantung pada profil asalnya (`profile_id` bernilai `ON DELETE SET NULL`,
+"arsip harus bertahan lebih lama dari yang diarsipkannya"), tetapi tidak sebaliknya: menghapus arsip
+hanya menghapus arsip, tanpa efek pada profil live asalnya.
 
 ## Unduh / unggah
 
-- **Unduh** sesuai dengan
-  [Cadangan dan Pemulihan § Buat Backup](/id/development/backup-and-restore#_1-buat-backup),
-  `POST /api/backup/export`, yang menghasilkan dan mengunduh `.tar.gz` untuk sebuah
-  `{ scope, profile_id }` tertentu.
-- **Unggah** sesuai dengan
-  [Cadangan dan Pemulihan § Restore Arsip](/id/development/backup-and-restore#_4-restore-arsip),
-  `POST /api/backup/import`, sebuah permintaan multipart yang membawa berkas arsip dan
-  `profile_id` target.
+- **Unduh**: `GET /admin/api/backups/:id/download` mengalirkan `.tar.gz` yang tersimpan. Nama file
+  unduhan dibentuk dari nama profil; file di disk dinamai dengan ULID backup.
+- **Unggah**: `POST /admin/api/backups/upload` menerima arsip sebagai **raw request body** (bukan
+  multipart). Server memvalidasinya (tipe file salah, gzip rusak, dan versi format yang lebih baru
+  ditolak), menyimpannya sebagai baris backup baru dengan `profile_id` `NULL`, dan langsung
+  mengembalikan rencana restore.
 
 ## Rencanakan sebuah restore
 
-Langkah pratinjau di depan panggilan impor di atas: ia menunjukkan apa yang akan digabung ke
-profil target versus apa yang harus dibuat baru, dan memungkinkan admin memetakan ulang penyewa
-atau robot milik arsip ke yang berbeda dalam sistem hidup sebelum apa pun ditulis. Ini penting
-karena sebuah arsip dirancang untuk bertahan lebih lama dari yang diarsipkannya — sebuah `unit_id`
-yang dirujuk di dalam dump mungkin tidak lagi berkaitan dengan unit terdaftar pada saat arsip
-dipulihkan (unitnya telah dihapus, atau arsip sedang dipulihkan ke armada yang sepenuhnya berbeda)
-— dan "robot yang hilang dapat dipetakan ulang" persis perilaku restore yang dijanjikan baris
-bercakupan-profil pada tabel dua-cakupan. REST API yang didokumentasikan di Cadangan dan Pemulihan
-mencakup langkah commit (`POST /api/backup/import`) sebagai satu panggilan tunggal; langkah
-rencana/pratinjau adalah UX konsol admin yang dilapiskan di depan commit itu, bukan endpoint yang
-didokumentasikan secara terpisah.
+`POST /admin/api/backups/:id/plan` adalah endpoint sungguhan dan tidak menulis apa pun. Endpoint ini
+melaporkan apa yang akan dibuat restore, robot mana di arsip yang sudah tidak terdaftar, dan ke profil
+mana data akan masuk. Console mengirim balik pilihan admin sebagai `unit_remap` (unit di arsip → unit
+terdaftar) dan `profile_remap` (profil di arsip → rental yang sudah ada) sampai rencana tidak punya
+unit yang belum terselesaikan. Ini penting karena arsip dirancang untuk bertahan lebih lama dari yang
+diarsipkannya: `unit_id` di dalamnya bisa milik robot yang sudah dihapus, diganti, atau tidak pernah
+ada di server ini.
 
 ## Jalankan restore
 
+`POST /admin/api/backups/:id/restore` menerapkan arsip dengan `unit_remap` / `profile_remap` yang
+sama. Endpoint ini menjawab `409` beserta rencananya jika masih ada unit yang belum terselesaikan atau
+profil tujuan yang dipilih sudah tidak ada.
+
 ::: warning Restore selalu aditif
-Sesuai [Cadangan dan Pemulihan § Arsitektur Backup
-Dua-Cakupan](/id/development/backup-and-restore#arsitektur-backup-dua-lingkup), restore
-bercakupan-profil adalah "restore aditif ke profil target," dan endpoint impor itu sendiri
-"menerapkannya secara aditif." Menjalankan sebuah restore tidak pernah menimpa data profil yang
-sudah ada; paling buruk ia menambahkan baris di samping apa yang sudah ada. Tidak ada mode
-"ganti" yang destruktif.
+Tidak ada yang diubah atau ditimpa; restore hanya menambah baris dan file. ULID asli dipakai ulang
+jika masih bebas, jika tidak dibuat ULID baru dan setiap referensi dipetakan ulang. Tanpa
+`profile_remap`, arsip profil selalu masuk ke profil **baru** (memakai ULID dan nama asli bila
+keduanya masih bebas), sehingga me-restore arsip yang sama dua kali menghasilkan dua profil: berisik,
+tetapi tidak pernah merusak. Tidak ada mode "replace".
 :::
+
 
 Evolusi skema untuk tabel yang disentuh backup (`profile_backups.scope`, tabel sinkronisasi, dan
 sejenisnya) ditangani oleh skrip migrasi di
 [Cadangan dan Pemulihan § Skrip Migrasi
 Skema](/id/development/backup-and-restore#script-migrasi-skema), bukan oleh apa pun pada tab
-ini — skrip itu berjalan langsung terhadap basis data dan di luar cakupan untuk `BackupsPanel.tsx`.
+ini: skrip itu berjalan langsung terhadap basis data dan di luar cakupan untuk `BackupsPanel.tsx`.
 
 ## Terkait
 

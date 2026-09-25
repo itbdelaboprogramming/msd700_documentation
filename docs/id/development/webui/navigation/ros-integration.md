@@ -78,7 +78,7 @@ Field yang paling relevan dengan halaman ini:
   dan `origin_conflict` mengatur apakah tab ini bahkan diizinkan mengeluarkan perintah-perintah di
   atas.
 
-Bentuk sisi-REST dari ping yang sama adalah `POST /api/units/ping`, didokumentasikan di
+Bentuk sisi-REST dari ping yang sama adalah `POST /api/hardware/ping`, didokumentasikan di
 [Referensi API § Robot Heartbeat Ping](/id/development/api-reference#_2-ping-heartbeat-robot);
 blok `data`-nya cocok dengan kontrak MQTT field demi field.
 

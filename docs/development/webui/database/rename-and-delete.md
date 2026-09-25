@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-The two mutating actions available directly from the Database screen (`DatabaseComponent.tsx`):
+The two mutating actions available directly from the Database page (`DatabaseComponent.tsx`):
 renaming a map in place, and deleting one. For how the map list itself behaves, see
 [Overview](/development/webui/database/overview); for the schema and endpoints these actions
 touch, see [ROS Integration](/development/webui/database/ros-integration).
@@ -39,7 +39,7 @@ area, and playlist attached to it, plus the map's stored files. See
 [ROS Integration § Foreign keys](/development/webui/database/ros-integration#foreign-keys) for
 which tables cascade and which are only nulled out.
 
-There is no undo. Because routes, areas, and playlists are not separately listed on this screen
+There is no undo. Because routes, areas, and playlists are not separately listed on this page
 (see [Overview § Scope](/development/webui/database/overview#scope)), an operator deleting a map
 is not shown an itemized list of what it is about to take with it beyond the confirmation prompt
 itself.

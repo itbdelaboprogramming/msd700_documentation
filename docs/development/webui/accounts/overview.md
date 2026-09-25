@@ -7,9 +7,9 @@ search: false
 
 <RoleBadge role="developer" />
 
-The screens that stand between a person and the robot: the operator login and its unit picker, the
-operator signup form, the separate admin console login, and the admin password-change screen. This
-page introduces each screen and how they relate to one another. The cryptographic mechanics behind
+The pages that stand between a person and the robot: the operator login and its unit picker, the
+operator signup form, the separate admin console login, and the admin password-change page. This
+document introduces each page and how they relate to one another. The cryptographic mechanics behind
 the tokens they issue are in [Security & Tokens](/development/webui/accounts/security-and-tokens);
 how a physical robot acquires its own credentials is in
 [Hardware Enrolment](/development/webui/accounts/enrolment); how those tokens and the operating
@@ -27,7 +27,7 @@ is purely about logging in as an operator.
 
 A self-registration form for new operator accounts: username and email uniqueness checks, a
 password and confirmation field, and a `ConfirmRegister` success dialog once the account is
-created. Like the signup link on the login page, this screen is not present at all in local or unit
+created. Like the signup link on the login page, this page is not present at all in local or unit
 builds.
 
 ::: warning Signing up does not grant access to any robot
@@ -39,13 +39,13 @@ authorization.
 
 ## Admin login (`/admin`)
 
-A second, unlisted login screen, reached only by navigating to `/admin` directly, that calls a
+A second, unlisted login page, reached only by navigating to `/admin` directly, that calls a
 distinct `adminLogin()` rather than the operator `/user/login` used on the root page. This is the
 back-office door for fleet and tenant management staff, separate from anything an operator sees.
 
 ## Admin change password (`/admin/change-password`)
 
-This screen has two distinct modes:
+This page has two distinct modes:
 
 - **Forced**: a seeded or freshly reset admin account is redirected here before it can reach the
   admin dashboard at all, with no way back until the password is changed.
@@ -60,7 +60,7 @@ entirely separate credential systems. The platform's security model, detailed in
 independent trust domains rather than a single shared login; the **Operator Domain** issued by the
 cloud backend is what the operator login page authenticates against, and it is explicitly scoped to
 human operators accessing the web dashboard. The admin login draws from its own, separate account
-store and login path (`adminLogin()`, rather than the operator `/user/login`): the two screens do
+store and login path (`adminLogin()`, rather than the operator `/user/login`): the two pages do
 not share a login form, a session, or a redirect path into one another.
 
 ## Related

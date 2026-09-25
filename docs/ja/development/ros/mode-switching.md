@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、MSD700ロボットが`switch_mode.py`、`system_command.py`、`operation_supervisor.py`を用いて、メインのROS coreを再起動することなく実行時に運用モード(`navigation`、`slam`、`explore`、`boustrophedon` — idleは単に「launchスタックなし」)を動的に切り替える仕組みを詳述する。モード名は`switch_mode.yaml`由来であり、`/switch_mode`サービス経由で送られる文字列と一致しなければならない。
+本ドキュメントは、MSD700ロボットが`switch_mode.py`、`system_command.py`、`operation_supervisor.py`を用いて、メインのROS coreを再起動することなく実行時に運用モード(`navigation`、`slam`、`explore`、`boustrophedon`：idleは単に「launchスタックなし」)を動的に切り替える仕組みを詳述する。モード名は`switch_mode.yaml`由来であり、`/switch_mode`サービス経由で送られる文字列と一致しなければならない。
 
 ## モードオーケストレーションのトポロジー
 
@@ -36,7 +36,7 @@ flowchart TD
 
 | モード(`switch_mode.yaml`) | Launchファイル | 備考 |
 | --- | --- | --- |
-| (idle — スタックなし) | — | ベースノードは動き続ける(`serial_node`、`imu_filter`、`robot_state_publisher`、`aws_mqtt`、`camera_client`)。 |
+| (idle、スタックなし) | - | ベースノードは動き続ける(`serial_node`、`imu_filter`、`robot_state_publisher`、`aws_mqtt`、`camera_client`)。 |
 | **`navigation`** | `msd700_navigation.launch` | `map_server`、`amcl`、`move_base`、コストマップ。 |
 | **`slam`** | `msd700_slam.launch` | ライブマッピング。テレオペはスタックの一部ではなく別のlaunch。 |
 | **`explore`** | `msd700_explore.launch` | `explore_lite`によるフロンティア探索。 |
@@ -80,7 +80,7 @@ stateDiagram-v2
 
 ### スーパーバイザーの主要機能:
 - **ラッチされたOperation Snapshot**: `/string/operation_snapshot`をlatched QoSでパブリッシュする。オペレーターがブラウザタブを開くと、アクティブなミッションの全状態(現在のウェイポイントインデックス、残りのルートピン、滞留タイマー)が数ミリ秒で復元される。
-- **Autopilotの安全性に関する例外扱い**: Autopilotが有効(ON)になると、スーパーバイザーは10秒のオペレーター切断一時停止を抑制し、長時間の網羅走行ミッションが無人のまま継続できるようにする。
+- **Autopilotの安全性に関する例外扱い**: Autopilotが有効(ON)になると、ウォッチドッグは切断時の3階層すべて(2秒の一時停止、10分のidle、30分のシャットダウン)を抑制し、長時間の網羅走行ミッションが無人のまま継続できるようにする。
 
 ## 関連ドキュメント
 

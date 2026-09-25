@@ -59,7 +59,7 @@ msd700_robot/
 ├── msd700_control/           # Sensor fusion (robot_localization), twist_mux
 ├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
 ├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
-├── msd700_firmware/          # Arduino firmware (plain directory, not a ROS package)
+├── msd700_firmware/          # Legacy Arduino firmware (reference only; the unit runs the STM32 firmware from firmware-msd700)
 ├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
 ├── msd700_movement/          # Vendored third_party only
 ├── msd700_msgs/              # Robot-level messages
@@ -99,7 +99,7 @@ msd700_noetic/
     ├── ros-web-ui/
     └── ROS-dashboard-next-ts/
     # NOTE: on a Server checkout (like this one) the submodules are NOT
-    # initialized — src/ holds only CMakeLists.txt. The robot code lives in
+    # initialized、src/ holds only CMakeLists.txt. The robot code lives in
     # the sibling directories /msd700_robot and /ros-web-ui instead.
 ```
 
@@ -135,7 +135,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
+│   │       └── components/       # LinkCard(s), RoleBadge
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -162,7 +162,7 @@ msd700_documentation/
 | --- | --- |
 | `scripts/render-diagrams.mjs` | すべてのフェンスをヘッドレス Chrome で一度だけレイアウトし(mermaid + フローチャートと状態図には ELK レイアウトエンジン)、`docs/public/diagrams/<hash>.png` を 2 倍解像度で書き出します。どのフェンスからも使われなくなった画像は削除します |
 | `scripts/diagram-hash.mjs` | フェンス本文と `RENDER_VERSION` のハッシュ。レンダラーとビルドで共有し、両者が同じファイル名を指すようにします。スタイル変更後は `RENDER_VERSION` を上げ、キャッシュされた古い画像ではなく新しい URL が配信されるようにします |
-| `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを、その PNG の `<img>`(原寸ファイルへのリンク付き)に置き換えます。PNG が無い場合は従来のブラウザ内 `<Mermaid>` コンポーネントに戻し、`[diagrams]` 警告を出します |
+| `docs/.vitepress/config.mts`、`markdown.config` | すべての `mermaid` フェンスを、その PNG の `<img>`(原寸ファイルへのリンク付き)に置き換えます。図がブラウザ内で描画されることはありません。PNG が無い場合、`npm run docs:diagrams` が生成するまでページには壊れた画像が表示され、ビルドは `[diagrams]` 警告を出します |
 
 読者のブラウザでのレンダリングをやめたのは、mermaid がそのブラウザで解決されたフォントでラベルを計測するため、
 ボックスの大きさがずれ、文字が切れ、マシンごとにレイアウトが変わっていたからです。
@@ -171,7 +171,7 @@ msd700_documentation/
 ```bash
 npm run docs:diagrams          # 新規・変更された図をレンダリング(ローカルの Chrome/Chromium が必要)
 npm run docs:diagrams -- --all # スタイル変更後などに全図を再レンダリング
-npm run docs:diagrams -- --all --audit # 文字・グループ名・ラベルを横切る線も一覧表示
+npm run docs:diagrams -- --all --audit # 図ごとのレイアウト上の指摘も一覧表示
 npm run docs:check-diagrams    # 全図の構文を確認し、PNG の無い図があれば失敗
 ```
 
@@ -179,8 +179,10 @@ PNG は markdown の変更と一緒にコミットしてください。Chrome �
 
 ::: warning 図を編集したら再レンダリング
 画像はフェンス本文のハッシュで引くため、1 文字の変更でも `npm run docs:diagrams` が必要です。
-実行しないと、そのページはブラウザ内レンダリングに戻ります。
+実行しないと、そのページには壊れた画像が表示されます(図がブラウザ内で描画されることはありません)。
 :::
+
+各フローチャートは複数の ELK バリアントでレイアウトされ、監査の指摘が最も少ないものが採用されます。`--audit` は残った指摘を表示します: 重大な指摘(線がボックス・グループ名・ラベルを貫通)と、`~` 付きの軽微な指摘(線がグループ名やボックスに近すぎる、グループ名の下に隠れる、グループの枠線に沿って走る、他の線と重なる、矢印の先端が密集している)です。グループ名は線を避けるように辺に沿って移動するか、複数行に折り返されます。ほぼ直線の線はまっすぐに補正されます。それでも窮屈に見える場合はソース側で並べ替えます: `~~~`(不可視リンク)でボックスやグループの順序を固定し、`subgraph` 内の `direction TB`/`LR` でその中の向きを指定します。
 
 ::: info 山括弧のプレースホルダーはエスケープする
 図の中の `<unit>` のようなプレースホルダーは `#lt;unit#gt;` と書きます。そのまま書くと HTML タグとして

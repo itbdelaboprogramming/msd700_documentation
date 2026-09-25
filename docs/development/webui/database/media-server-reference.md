@@ -11,7 +11,7 @@ search: false
 
 ## Endpoints
 
-All take JWT Bearer unless noted. Errors are uniform `{ success: false, msg }`. Rate limits: 100 req/15 min/IP general, 10 uploads/15 min/IP (code runs a wider general cap — the doc values are the contract).
+All take JWT Bearer unless noted. Errors are uniform `{ success: false, msg }`. Rate limits: 100 req/15 min/IP general, 10 uploads/15 min/IP (code runs a wider general cap: the doc values are the contract).
 
 | Method + path | Auth | Purpose |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ All take JWT Bearer unless noted. Errors are uniform `{ success: false, msg }`. 
 | `GET /api/media/maps/:id/download` | JWT | Download the map bundle |
 | `GET /api/media/checkMapName` | JWT | Name-availability check before save |
 | `DELETE /api/media/maps/:id` | JWT | Delete map + PGM/YAML/PNG (`user_id` query or JWT) |
-| `GET /api/media/images/:filename` | **none in code** | Serve PNG binary, cached immutable for a year. The API doc says JWT — the route has no `verifyToken` (`Tidak perlu cek user_id dan JWT`). Treat map PNGs as public |
+| `GET /api/media/images/:filename` | **none in code** | Serve PNG binary, cached immutable for a year. The API doc says JWT: the route has no `verifyToken` (`Tidak perlu cek user_id dan JWT`). Treat map PNGs as public |
 | `POST /api/media/uploadRouteImage` | JWT | Single `imageFile` + `id`, stored as `<UPLOAD_DIR>/images/{id}.jpg` (the log line says `.png`; the file is `.jpg`) |
 | `GET/POST/PUT/DELETE /api/legacy-id-mapper` | JWT | Lookup/create/change/delete legacy-int-ID ↔ ULID rows (`entity_type` + `legacy_int_id`/`new_ulid`) |
 
@@ -38,6 +38,6 @@ On the unit (`DEPLOYMENT_MODE=local`) the server trusts the browser `Origin` out
 
 ## Related Documentation
 
-- [Database](/development/webui/database/overview): The Map DB screen that reads this API.
+- [Database](/development/webui/database/overview): The Map DB page that reads this API.
 - [Mapping: ROS Integration](/development/webui/mapping/ros-integration): Save paths that end in an upload.
 - [API Reference](/development/api-reference): The backend REST API (separate service).

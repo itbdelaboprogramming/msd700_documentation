@@ -35,7 +35,7 @@ flowchart TB
   subgraph RobotDomain["Physical Robot Trust Domain (Jetson)"]
     DEV_SECRET["Device Secret (bcrypt hash, server-side)<br/>32 random bytes at enrolment"]
     ROBOT_TOKEN["Onboard Token Cache (12h TTL)<br/>Certificates/robot/token.cred"]
-    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets"]
+    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets<br/>Local Auth Only"]
   end
 
   HTTPS --> AUTH_MW
@@ -45,7 +45,6 @@ flowchart TB
 
   MQTTS <--> ROBOT_TOKEN
   DEV_SECRET --> ROBOT_TOKEN
-  LOCAL_KEYRING -.->|"Local Auth Only"| RobotDomain
 ```
 
 ## 三つの独立した信頼ドメイン

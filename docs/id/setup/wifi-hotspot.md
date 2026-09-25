@@ -65,8 +65,8 @@ flowchart TB
     DNSM -->|"mengikuti state file yang sama"| HAP
   end
 
-  subgraph AGENT["container network_local<br/>(host network, NET_ADMIN)"]
-    NA["network-agent (Node)<br/>loopback :5011"]
+  subgraph AGENT["network_local"]
+    NA["network-agent (Node)<br/>loopback :5011<br/>host network, NET_ADMIN"]
   end
   AGENT -->|"mount socket D-Bus"| NM
   NA -->|"mengedit SSID/password"| HAP
@@ -321,7 +321,7 @@ Jalankan ulang interaktif dan masukkan password baru di hidden prompt. Jangan co
 `systemctl status msd700-hotspot-dhcp.service` + `journalctl -u msd700-hotspot-dhcp.service`. Interface dnsmasq berasal dari `/run/msd700-hotspot-active` di command line service; konfirmasi state file cocok dengan interface yang benar naik. Jalankan ulang `./setup.sh --provision-network` bila config basi.
 
 **Client bisa `http://mymsd.jp` tapi tidak ada yang load**
-`STA_INTERFACE_LOCAL` mungkin kosong di `docker/.env`: mode AP-only, dashboard-only — memang didesain begitu. Bila seharusnya diset, cek `nmcli device status`, set, jalankan ulang provisioning.
+`STA_INTERFACE_LOCAL` mungkin kosong di `docker/.env`: mode AP-only, dashboard-only: memang didesain begitu. Bila seharusnya diset, cek `nmcli device status`, set, jalankan ulang provisioning.
 
 **`STA_INTERFACE_LOCAL` diset tapi client tetap tanpa internet**
 Cek rule NAT ada ([di atas](#verifikasi)). Bila hilang setelah re-provision: konfirmasi service hotspot benar **di-restart** (bukan sekadar enable), `sysctl net.ipv4.ip_forward` adalah `1`, dan radio onboard sendiri punya internet (`ping -I <STA_INTERFACE_LOCAL> 8.8.8.8`).

@@ -13,20 +13,20 @@ search: false
 
 座標変換ツリーは、ROS REP-103(Standard Units of Measure & Coordinate Conventions)とREP-105(Coordinate Frames for Mobile Platforms)に準拠する:
 
+以下のツリーは**実機**がパブリッシュするものである: `irbot.urdf.xacro`を`msd700_description/launch/robot_description.launch.xml`経由で読み込み、`bringup_msd.launch`が全モード(idleを含む)で起動するため、`/scan`とEKFは常に静的TFを利用できる。LiDARの高さは`config/msd700_xacro_irbot.yaml`(`offset_z_lidar: 0.427`、`wheel_radius: 0.10`)によるもので、`msd700_perception`はこれを基準にすべての高さを測る。
+
 ```mermaid
 flowchart TD
-  MAP["map<br/>(Global Fixed World Frame, Origin at Homebase)"] -->|"AMCL / SLAM Global Correction (10 Hz)"| ODOM["odom<br/>(Smooth Continuous Local Odometry Frame)"]
-  ODOM -->|"EKF Fusion: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(Chassis 2D Projection on Floor Plane)"]
-
-  BASE_FP -->|"Static TF: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link<br/>(Chassis Center of Rotation)"]
-
-  BASE_LINK -->|"Continuous TF: Joint State Publisher"| WHEELS["4 drive wheels: wheel_front/back_left/right_link<br/>(x = ±0.30 m, y = ±0.30 m)"]
-
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.085]"| IMU_LINK["imu_link (9-DOF IMU Sensor)"]
-  BASE_LINK -->|"Static TF: xyz = [0.00, 0.00, 0.40]"| BASE_SCAN["base_scan (3D LiDAR, 0.50 m above footprint)<br/>+ laser alias frame for bag replay"]
+  MAP["map<br/>(global fixed frame)"] -->|"AMCL / SLAM correction"| ODOM["odom<br/>(smooth local odometry frame)"]
+  ODOM -->|"EKF: robot_localization (30 Hz)"| BASE_FP["base_footprint<br/>(chassis projected on the floor)"]
+  BASE_FP -->|"Static: z = +0.10 m (wheel_radius)"| BASE_LINK["base_link"]
+  BASE_LINK -->|"Static: z = +0.427 m"| LASER["laser<br/>(Velodyne VLP-16)"]
+  BASE_LINK -->|"Static: identity"| IMU["imu<br/>(CMPS12 via STM32)"]
 ```
 
-フィールドロボットには`camera_link`は存在しない。カメラはURDFリンクではなく、別のUSB/WebRTCデバイスである。
+ロボットには`camera_link`は存在しない。カメラはURDFリンクではなく、別のUSB/WebRTCデバイスである。
+
+シミュレーションではGazeboモデル`msd700_field.urdf.xacro`を使う: フレーム`base_scan`(`base_link`から0.40 m、footprintから0.50 m上。bag再生用に`laser`エイリアスあり)、`imu_link`(z ≈ 0.085 m)、`joint_state_publisher`が駆動する4つの車輪リンク。
 
 ---
 
@@ -35,10 +35,10 @@ flowchart TD
 | 変換エッジ | ブロードキャストノード | レート | 数学的な源 | 通信断絶時の挙動 |
 | --- | --- | --- | --- | --- |
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | 静的なレーザーoccupancy gridに対してオドメトリドリフトを補正する。 | 位置推定が確定すると離散的にジャンプする。レーザースキャンが途絶えた場合は最後のトランスフォームを維持する。 |
-| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | ホイールエンコーダー速度とIMUのヨー/角速度を連続的に融合する。 | 連続的、滑らか、かつドリフトのない短期軌道。 |
-| `base_footprint -> base_link` | `robot_state_publisher` | 静的 | 固定の高さオフセット($z = 0.10\text{ m}$ = ホイール半径)。 | URDFからの固定トランスフォーム。 |
-| `base_link -> base_scan` | `robot_state_publisher` | 静的 | LiDARマスト($x = 0$、`base_link`から$z = 0.40\text{ m}$、footprintから$0.50\text{ m}$)。bag再生用の`laser`エイリアスフレーム付き。 | URDFからの固定トランスフォーム。 |
-| `base_link -> imu_link` | `robot_state_publisher` | 静的 | 物理シャーシへの取り付け位置($z \approx 0.085\text{ m}$ = `body_center_z`)。 | URDFからの固定トランスフォーム。 |
+| `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | ホイールオドメトリ速度とIMUの姿勢・角速度を連続的に融合する。 | 連続的、滑らか、かつドリフトのない短期軌道。 |
+| `base_footprint -> base_link` | `robot_state_publisher` | 静的 | 固定の高さオフセット($z = 0.10\text{ m}$ = `wheel_radius`)。 | URDFからの固定変換。 |
+| `base_link -> laser` | `robot_state_publisher` | 静的 | LiDARマウント($x = 0$、`base_link`から$z = 0.427\text{ m}$、`msd700_xacro_irbot.yaml`)。 | URDFからの固定変換。 |
+| `base_link -> imu` | `robot_state_publisher` | 静的 | 恒等変換。`/imu/data`はフレーム`imu`でスタンプされるため、このエッジがないとEKFはIMUサンプルをすべて破棄する。 | URDFからの固定変換。 |
 
 ---
 
@@ -89,7 +89,7 @@ sequenceDiagram
 ### 再スタンプが不可欠である理由:
 1. **JetsonのRTCの制約**: NTPアクセスのないフィールド環境の実機SBCは、数秒から数か月単位でずれたクロックのまま起動することがある。
 2. **バッファ破棄**: 受信したポーズメッセージのタイムスタンプがサーバーのROSマスターより過去の時刻を示している場合、`tf2_ros::Buffer`は即座にそれを破棄し、Webキャンバス上でのロボットの動き描画を妨げる。
-3. **`BoundaryPublisher`による解決**: `patch_time.py`はロボットハードウェアのタイムスタンプを取り除き、サーバーのROSマスターに到達した時点で幾何学的ペイロードに`ros::Time::now()`を用いて再スタンプする。
+3. **`BoundaryPublisher`による解決**: `BoundaryPublisher`(`topic2string/scripts/clock_boundary.py`、C++版は`include/topic2string/clock_boundary.h`)はブリッジ入口のすべてのパブリッシャーをラップし、メッセージ内の絶対タイムスタンプをすべてローカルのROSクロックに書き換える。これにより、他のロボットやシミュレーターのスタンプがサーバーマスターの購読者に届くことはない。
 
 ## 関連ドキュメント
 

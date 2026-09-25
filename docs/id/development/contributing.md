@@ -73,7 +73,6 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 Tema dokumentasi ini memperluas VitePress dengan komponen global kustom:
 - `<RoleBadge role="user | technician | developer" />`: Menampilkan badge audiens target di bagian atas halaman.
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Grid kartu interaktif yang digunakan pada halaman landing bagian.
-- `<Mermaid code="..." />`: Fallback di browser, hanya dipakai untuk fence ```` ```mermaid ```` yang belum punya PNG hasil render (lihat [Struktur Repositori](/id/development/repository-structure#diagram)).
 
 ### Konvensi Commit dan Pull Request:
 Commit mengikuti format conventional commit standar (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).

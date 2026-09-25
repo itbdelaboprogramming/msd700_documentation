@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="user" />
 
 MSD700 melakukan beberapa hal secara mandiri, tanpa diminta: ia berhenti saat Anda menghilang, ia menolak
-membiarkan dua orang mengendarai sekaligus, dan ia mengingat apa yang sedang dilakukannya saat Anda kembali. Tidak
+membiarkan dua orang mengemudikan sekaligus, dan ia mengingat apa yang sedang dilakukannya saat Anda kembali. Tidak
 satu pun dari itu bersifat sembarangan, dan mengetahui aturannya membuat perbedaan antara "robotnya melakukan sesuatu yang aneh"
 dan "wajar saja begitu."
 
@@ -22,21 +22,21 @@ Dashboard selalu menampilkan satu status untuk robot. Berikut yang benar-benar a
 | Status | Artinya | Normal? |
 | --- | --- | --- |
 | **Idle** | Tidak ada yang berjalan. Siap menerima perintah. | Ya |
-| **Manual** | Anda sedang mengendarai dengan W-A-S-D. | Ya |
+| **Manual** | Anda sedang mengemudikan dengan W-A-S-D. | Ya |
 | **On Progress** | Menuju titik tertentu, atau menjalankan rute. | Ya |
-| **Arrived** | Mencapai goal, atau menyelesaikan sesi cakupan. | Ya |
+| **Arrived** | Mencapai goal, atau menyelesaikan sesi coverage. | Ya |
 | **Mapping** | Sedang membangun peta. | Ya |
 | **Paused** | Anda menjedanya. Ia melanjutkan dari titik terakhir. | Ya |
 | **Robot Stuck** | Seharusnya bergerak namun tidak bergerak. | Lihat [di bawah](#robot-stuck) |
 | **Emergency Stopped** | E-Stop sedang diaktifkan. Tidak ada yang bergerak sampai dilepaskan. | Hanya jika Anda yang melakukannya |
 
-::: info Robotnya yang menyimpan status, bukan peramban Anda
+::: info Robotnya yang menyimpan status, bukan browser Anda
 Setiap status di atas tersimpan pada robot itu sendiri. Itulah sebabnya menutup tab, me-refresh, atau
 beralih ke komputer lain tidak menghilangkan operasi Anda, dan itulah sebabnya sakelar toggle pada
 panel akan kembali ke apa yang sebenarnya sedang aktif pada robot, bukan apa yang terakhir Anda klik.
 :::
 
-## Hanya satu orang yang mengendarai pada satu waktu
+## Hanya satu orang yang mengemudikan pada satu waktu
 
 ```mermaid
 flowchart TB
@@ -49,17 +49,17 @@ flowchart TB
 
 | Yang Anda lihat | Artinya | Yang bisa Anda lakukan |
 | --- | --- | --- |
-| Tidak ada yang khusus | Unit ini bebas | Kendarai |
-| Lencana **In Use** pada daftar unit | Sesi lain sedang mengendarai: tab kedua, operator lain, atau dashboard lokal unit itu sendiri | Buka unit, lalu tentukan pilihan pada dialog |
-| Dialog **"This unit is already being operated from …"** | Sesi Anda ditolak karena ada pihak lain yang sedang mengendarai | **Take over control**, atau **Leave it running** |
+| Tidak ada yang khusus | Unit ini bebas | Kemudikan |
+| Lencana **In Use** pada daftar unit | Sesi lain sedang mengemudikan: tab kedua, operator lain, atau dashboard lokal unit itu sendiri | Buka unit, lalu tentukan pilihan pada dialog |
+| Dialog **"This unit is already being operated from …"** | Sesi Anda ditolak karena ada pihak lain yang sedang mengemudikan | **Take over control**, atau **Leave it running** |
 
-::: warning Dua sesi tidak bisa mengendarai bersamaan
+::: warning Dua sesi tidak bisa mengemudikan bersamaan
 Itu memang disengaja. Dua sesi yang masing-masing mengirim perintah ke satu robot akan saling
 bertumpang tindih, dan tidak satu pun akan pernah diberi tahu tentang yang lain. Sesi mana pun yang mengambil alih menang, dan yang lain
 diberi tahu bahwa ia kehilangan kendali, alih-alih diam-diam mengirim perintah yang tak diterapkan siapa pun.
 :::
 
-Kendali adalah **lease** yang harus diperbarui. Jika peramban Anda berhenti memperbaruinya, lease itu berakhir sekitar 15
+Kendali adalah **lease** yang harus diperbarui. Jika browser Anda berhenti memperbaruinya, lease itu berakhir sekitar 15
 detik kemudian dan unit menjadi bebas untuk orang berikutnya. Itulah yang membuat tab yang crash atau
 laptop yang tertutup tidak lagi menahan robot agar tak bisa dipakai siapa pun.
 
@@ -71,7 +71,7 @@ jeda yang semakin meningkat.
 ```mermaid
 timeline
   title After your browser stops responding
-  10 seconds : Motion pauses
+  2 seconds : Motion pauses
              : the operation stays loaded
   10 minutes : Session ends
              : navigation or mapping is torn down
@@ -81,12 +81,12 @@ timeline
 
 | Setelah | Yang terjadi | Pulih sendiri? |
 | --- | --- | --- |
-| **10 detik** | Robot berhenti bergerak. Apa pun yang sedang dilakukannya tetap tersimpan di bawahnya. | **Ya.** Sambungkan kembali dan ia melanjutkan dari titik berhentinya |
+| **2 detik** | Robot berhenti bergerak. Apa pun yang sedang dilakukannya tetap tersimpan di bawahnya. | **Ya.** Sambungkan kembali dan ia melanjutkan dari titik berhentinya |
 | **10 menit** | Seluruh operasi dibongkar dan robot menjadi idle. | Tidak. Mulai ulang operasinya |
 | **30 menit** | Semua perangkat keras mati. | Tidak. Dibutuhkan teknisi atau restart eksplisit |
 
 ::: info Halaman mana yang Anda buka itu penting
-Jeda 10 detik hanya menghitung waktu ketika halaman yang memegang operasi yang sedang berjalan berhenti merespons.
+Jeda 2 detik hanya menghitung waktu ketika halaman yang memegang operasi yang sedang berjalan berhenti merespons.
 Duduk di daftar unit, atau di halaman login, tidak dianggap menahan robot yang berjalan: halaman-halaman itu
 sengaja dibuat read-only agar meninggalkan dashboard terbuka di suatu tempat tidak pernah dianggap sebagai mengawasi
 robot.
@@ -96,9 +96,9 @@ robot.
 
 Autopilot adalah cara Anda mengatakan "saya diizinkan untuk pergi." Dengan mode ini aktif:
 
-- Robot tetap berjalan dengan **tanpa peramban yang terhubung sama sekali**.
+- Robot tetap berjalan dengan **tanpa browser yang terhubung sama sekali**.
 - Jeda akibat terputus, idle 10 menit, dan shutdown 30 menit semuanya ditangguhkan.
-- Robot itu sendiri yang mengambil alih untuk melangkah melalui titik henti Anda, bukan peramban yang melakukannya.
+- Robot itu sendiri yang mengambil alih untuk melangkah melalui titik henti Anda, bukan browser yang melakukannya.
 - Logout **tidak** menghentikan proses yang berjalan.
 
 ```mermaid
@@ -141,7 +141,7 @@ sequenceDiagram
 ```
 
 Robot mengembalikan seluruh operasi: titik henti Anda, sedang di mana posisinya, peta, dan area
-cakupan apa pun. Tidak satu pun dari itu berasal dari peramban Anda, itulah sebabnya semuanya tetap bertahan di komputer yang berbeda.
+coverage apa pun. Tidak satu pun dari itu berasal dari browser Anda, itulah sebabnya semuanya tetap bertahan di komputer yang berbeda.
 
 | Situasi | Yang Anda dapatkan kembali |
 | --- | --- |
@@ -163,7 +163,7 @@ Banner ini berarti robot meyakini bahwa dirinya seharusnya bergerak dan ternyata
 | Kapan muncul | Biasanya |
 | --- | --- |
 | Sebentar, saat belokan tajam | Normal. Abaikan saja |
-| Tepat setelah memulai sesi cakupan area | Normal. Sedang menghitung jalur sapuan dan bisa memakan waktu hingga satu menit |
+| Tepat setelah memulai sesi coverage area | Normal. Sedang menghitung jalur sapuan dan bisa memakan waktu hingga satu menit |
 | Selama beberapa menit sementara robot jelas tidak bergerak | Halangan nyata, atau kegagalan perencanaan |
 | Saat robot terlihat sedang berjalan | Bug. Laporkan, jangan dikerjain sendiri |
 

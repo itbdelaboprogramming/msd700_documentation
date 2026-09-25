@@ -40,12 +40,12 @@ Adjacent sweep passes overlap so no strip is missed. For the fewest turns, draw 
 
 ## Building an Operation Playlist
 
-An Operation Playlist chains multiple saved **areas** into one run — it doesn't include routes, only cover and avoided areas.
+An Operation Playlist chains multiple saved **areas** into one run: it doesn't include routes, only cover and avoided areas.
 
 1. Click **Operation Playlist** on the Navigation toolbar.
 2. Add cover areas from your saved areas, in the order you want them swept (drag to reorder). Add any avoided areas too: they apply as keep-outs across the whole run, not as a sequence step.
 3. Type a name and click **Save New** (or pick an existing playlist and click **Update**; rename it with the pencil icon, or **Delete** it).
-4. Click **Run Playlist** to sweep the whole sequence in one dispatch. At least one cover area is required — a playlist made only of avoided areas is rejected before it reaches the robot.
+4. Click **Run Playlist** to sweep the whole sequence in one dispatch. At least one cover area is required: a playlist made only of avoided areas is rejected before it reaches the robot.
 5. To keep the run going after you close the dashboard, turn on **Autopilot** in the Robot Control panel.
 
 ## Renaming or Deleting

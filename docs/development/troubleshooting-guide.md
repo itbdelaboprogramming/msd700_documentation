@@ -44,10 +44,10 @@ flowchart TD
 
 ### 2. Unit Online, But Map Canvas Remains Blank (rosbridge / Relay Container)
 - **Symptom**: Commands succeed, but no map, robot icon, or laser scan appears on the web canvas.
-- **Root Cause**: The fleet relay container (`ros_web_ui_v2_unit_relays`) is down — or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper — or Apache WebSocket proxying is blocked.
+- **Root Cause**: The fleet relay container (`ros_web_ui_v2_unit_relays`) is down: or, on the legacy per-unit path, the on-demand container `rosweb_unit_<u>_<unit>_nakayama` was stopped by the idle reaper: or Apache WebSocket proxying is blocked.
 - **Diagnostic Steps**:
   1. Check the fleet relay first: `docker ps | grep unit_relays`. On the legacy path, check the per-unit container instead: `docker ps | grep rosweb_unit`.
-  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In fleet mode the roster comes from the `units` table, so no touch event is needed — an enrolled robot is reachable.
+  2. On the legacy path only: reload the unit page in the browser to trigger a `touch` event in `unit_manager.js`. In fleet mode the roster comes from the `units` table, so no touch event is needed: an enrolled robot is reachable.
   3. Test WebSocket connectivity to `/services/rosbridge` using browser developer tools.
 
 ### 3. Navigation Freezes with TF Errors (`use_sim_time` Staleness)
@@ -71,11 +71,11 @@ flowchart TD
 
 ### 6. Local Sync Reports "Access Denied" (Local Database Credential Drift)
 - **Symptom**: The Local Mode sync log shows `Access denied for user '<MYSQL_USER>'@'127.0.0.1' (using password: YES)`, historically mislabeled as failing during the `handshake` phase even though the cloud is reachable.
-- **Root Cause**: `docker/.env` on the unit is git-tracked and per-host. If `MYSQL_USER`/`MYSQL_PASSWORD` changes there (a `git pull`, or a manual edit) after the unit's `mysql_data_local` volume has already been initialized, MySQL keeps the old password baked into the data directory — it does not retroactively adopt the new one. `sync_agent.js` then fails its own first local `sync_state` read with `ER_ACCESS_DENIED_ERROR`, not a cloud connectivity error. See [Data Sync: Failure Classification](/development/data-sync#failure-classification) for how this is now distinguished from a real cloud outage.
+- **Root Cause**: `docker/.env` on the unit is git-tracked and per-host. If `MYSQL_USER`/`MYSQL_PASSWORD` changes there (a `git pull`, or a manual edit) after the unit's `mysql_data_local` volume has already been initialized, MySQL keeps the old password baked into the data directory: it does not retroactively adopt the new one. `sync_agent.js` then fails its own first local `sync_state` read with `ER_ACCESS_DENIED_ERROR`, not a cloud connectivity error. See [Data Sync: Failure Classification](/development/data-sync#failure-classification) for how this is now distinguished from a real cloud outage.
 - **Diagnostic Steps**:
   1. On the unit: `cat docker/.env | grep MYSQL_` and check whether the values look recently changed (e.g. right after a `git pull`).
-  2. Confirm the mismatch directly: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — a manual `Access denied` confirms drift rather than a transient blip.
-- **Resolution**: Either revert `docker/.env` to the password the volume was initialized with, or, if the rotation was intentional, run `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` against the local MySQL as root so the database matches the new `.env` value. Do not wipe `mysql_data_local` to "fix" this — it is the unit's only local copy of maps/routes not yet synced to the cloud, and this failure mode means sync itself is not currently working.
+  2. Confirm the mismatch directly: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"`: a manual `Access denied` confirms drift rather than a transient blip.
+- **Resolution**: Either revert `docker/.env` to the password the volume was initialized with, or, if the rotation was intentional, run `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` against the local MySQL as root so the database matches the new `.env` value. Do not wipe `mysql_data_local` to "fix" this: it is the unit's only local copy of maps/routes not yet synced to the cloud, and this failure mode means sync itself is not currently working.
 
 ### 7. Cloud Dashboard Has No Live Topics (ROS Master Hijacked by a Forwarded Port)
 - **Symptom**: The cloud dashboard shows status, activity and saved maps normally, but nothing live: no map while mapping, no lidar, no robot pose. The unit's own local dashboard works perfectly. The backend container still reports `Up`.

@@ -37,23 +37,25 @@ The envelope and body live in `costmap_common_params_field.yaml` and `msd700_cov
 
 ### Derived Clearance Constants (`src/msd700_coverage/coverage_geometry.py`)
 
-With TEB up (`min_obstacle_dist 0.10`, `safety_margin 0.0`):
+With TEB up (`min_obstacle_dist 0.05`, `safety_margin 0.0`):
 
 | Clearance Constant | Value | Mathematical Formula |
 | --- | --- | --- |
-| `wall_clearance` | **0.450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
-| `turn_clearance` | **0.670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `wall_clearance` | **0.400 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.05\text{ m})$ |
+| `turn_clearance` | **0.620 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.05\text{ m})$ |
 | `pitch` | **0.644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
 Without TEB (fallback `min_obstacle_dist 0.15`): `wall_clearance 0.500 m`, `turn_clearance 0.720 m`.
 
+`lane_edge_clearance` (the minimum distance from a cell boundary to a lane centre) is pinned to **0.35 m** in `config/boustrophedon_params.yaml` rather than left on `auto` (= `wall_clearance`); `lane_end_clearance` stays `auto` (= `turn_clearance`).
+
 ### Physical Geometric Limits (TEB up):
-- **Narrowest corridor robot can enter**: **0.90 m** ($2 \times \text{wall\_clearance}$).
-- **Narrowest corridor robot can pivot 180 degrees**: **1.34 m** ($2 \times \text{turn\_clearance}$).
-- **Unreachable boundary strip along walls**: **0.10 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
+- **Narrowest corridor robot can enter**: **0.80 m** ($2 \times \text{wall\_clearance}$).
+- **Narrowest corridor robot can pivot 180 degrees**: **1.24 m** ($2 \times \text{turn\_clearance}$).
+- **Unreachable boundary strip along walls**: **0.05 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Raw Coverage
-Because the 0.10 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of about **90%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
+Because the 0.05 m perimeter strip cannot be traversed without collision, a rectangular room (e.g. 3 x 6 m) reaches a theoretical maximum coverage of about **95%**. System performance is measured by **Attainment Ratio** (fraction of reachable floor actually swept), rather than unadjusted raw area percentage.
 :::
 
 ---
@@ -64,7 +66,7 @@ The coverage planner decomposes arbitrary concave polygonal boundaries with inte
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.400 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
   D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
@@ -132,8 +134,8 @@ Zero-spin alignment removed the *reason* to rotate. There used to be a `rotation
 | Source | Was | Now |
 | --- | --- | --- |
 | `rotate_recovery` | Last rung of move_base's recovery ladder | Not loaded. `recovery_behaviors` lists only the two costmap resets, neither of which commands motion |
-| TEB terminal pivot | Turned to face the goal heading at every waypoint | Tight. `yaw_goal_tolerance: 0.15` (coverage run: `0.10`) — waypoints now carry a real heading from click-drag, so the pivot lands on an operator-chosen orientation |
-| TEB initial pivot | Turned on the spot when the path led off behind the robot | Reverses instead. `allow_init_with_backwards_motion: false` |
+| TEB terminal pivot | Turned to face the goal heading at every waypoint | Tight. `yaw_goal_tolerance: 0.15` (coverage run: `0.10`): waypoints now carry a real heading from click-drag, so the pivot lands on an operator-chosen orientation |
+| TEB initial pivot | Turned on the spot when the path led off behind the robot | Pivots rather than reversing: `allow_init_with_backwards_motion: false`, because the VLP-16 sees nothing within 0.40 m behind the robot |
 | `SYNC` command (`nav_controller`) | 10 s of open-loop `0.5 rad/s`, no obstacle check | No-op. Use Auto Align, which scan-matches first |
 
 Motion arbitration lives in `twist_mux` alone now: navigation on `/mux/nav_vel` (priority 10), keyboard on its own input (priority 90), emergency stop flooding `/mux/emergency_vel` (priority 255). A node that writes `/cmd_vel` directly bypasses the ladder and cannot be stopped by it.

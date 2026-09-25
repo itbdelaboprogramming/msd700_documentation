@@ -14,8 +14,9 @@ Dokumen ini merinci pipeline rendering 2D, konversi ruang koordinat, arsitektur 
 Semua topic berakar per-unit: `` `${root}/server/…` `` dengan `root = /unit_<ULID>`. Nama `/server/…` polos di bawah adalah singkatan.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
+    direction TB
     OCC_MSG["/server/slam/map (OccupancyGrid)"]
     POSE_MSG["/server/robot_pose (PoseStamped)"]
     SCAN_MSG["/server/scan (LaserScan, derived<br/>from robot_pose topic name)"]
@@ -24,6 +25,7 @@ flowchart TD
   end
 
   subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
+    direction TB
     L1["Layer 1: Base Map OccupancyGrid Bitmap<br/>(resolution from map metadata)"]
     L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
     L3["Layer 3: Global Path (Pink) & Local Trajectory (Yellow)"]
@@ -33,6 +35,8 @@ flowchart TD
     L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
   end
 
+  OCC_MSG ~~~ POSE_MSG ~~~ SCAN_MSG ~~~ PATH_MSG ~~~ BOSTRO_MSG
+  L1 ~~~ L2 ~~~ L3 ~~~ L4 ~~~ L5 ~~~ L6 ~~~ L7
   rosbridgeWS --> StagePipeline
   StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
 ```
@@ -61,7 +65,7 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ## Patch `createjs.Stage.prototype` (`mapComponent.tsx`)
 
-EaselJS mengevaluasi ulang `createjs.Stage` menjadi konstruktor yang benar-benar baru yang prototypenya tidak lagi memiliki helper koordinat `ROS2D`. Viewer yang dibangun sesudahnya kemudian melempar `stage.globalToRos is not a function`. Perbaikannya adalah `ensureStagePrototype()` di `mapComponent.tsx`, diterapkan ulang secara idempoten pada prototype saat ini tepat sebelum setiap pembuatan viewer (matematikanya mencerminkan `public/script/ros2d.js` secara persis, sehingga perilaku tidak berubah pada jalur normal). Perhatikan `rosScriptLoader.ts` hanyalah sequential script loader — patch tidak berada di sana:
+EaselJS mengevaluasi ulang `createjs.Stage` menjadi konstruktor yang benar-benar baru yang prototypenya tidak lagi memiliki helper koordinat `ROS2D`. Viewer yang dibangun sesudahnya kemudian melempar `stage.globalToRos is not a function`. Perbaikannya adalah `ensureStagePrototype()` di `mapComponent.tsx`, diterapkan ulang secara idempoten pada prototype saat ini tepat sebelum setiap pembuatan viewer (matematikanya mencerminkan `public/script/ros2d.js` secara persis, sehingga perilaku tidak berubah pada jalur normal). Perhatikan `rosScriptLoader.ts` hanyalah sequential script loader: patch tidak berada di sana:
 
 ```typescript
 // src/components/navigationMap/mapComponent.tsx
@@ -104,7 +108,7 @@ const ensureStagePrototype = (): boolean => {
 Ketika seorang operator mendefinisikan poligon sweep coverage area atau zona keep-out (`customAreaDraw.ts`):
 1. **Penempatan Vertex**: Mengklik canvas mencatat koordinat metrik $(x_i, y_i)$.
 2. **Rubberbanding Dinamis**: Saat mouse bergerak, sebuah garis edge sementara yang dinamis dirender ke posisi kursor.
-3. **Snapping Penutupan**: Jika klik mendarat dalam `CLOSE_TOLERANCE_M` ($0.5\text{ m}$ secara default, dapat di-override via `NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`) dari vertex pertama — jarak metrik, bukan piksel — loop menutup. Poligon keep-out dirender sebagai overlay dan dikirim sebagai payload `areas`/`exclusions`; poligon coverage menuju `/msd700/coverage_polygon`. (`/msd700/keepout_grid` sendiri hanyalah inisialisasi grid kosong di sisi robot.)
+3. **Snapping Penutupan**: Jika klik mendarat dalam `CLOSE_TOLERANCE_M` ($0.5\text{ m}$ secara default, dapat di-override via `NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`) dari vertex pertama (jarak metrik, bukan piksel) loop menutup. Poligon keep-out dirender sebagai overlay dan dikirim sebagai payload `areas`/`exclusions`; poligon coverage menuju `/msd700/coverage_polygon`. (`/msd700/keepout_grid` sendiri hanyalah inisialisasi grid kosong di sisi robot.)
 
 ## Dokumentasi Terkait
 

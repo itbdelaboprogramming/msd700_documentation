@@ -52,13 +52,16 @@ flowchart LR
 オペレーターインターフェースは3つの主要な操作パネルに分かれています。
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph Workspace["MSD700 Operator Workspace Layout"]
     TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
     RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
+
+  TOP ~~~ LEFT
+  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
 ```
 
 ---
@@ -80,7 +83,7 @@ flowchart TD
 キーボードを使ってロボットを手動で操作できます。
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph KeyboardControls["Keyboard Drive Controls"]
     W["W: Drive Forward"]
     S["S: Drive Backward"]
@@ -88,13 +91,15 @@ flowchart LR
     D["D: Rotate Right (Clockwise)"]
     SHIFT["Hold Shift: Slow Mode"]
   end
+
+  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
 ```
 
 ### テレオペレーション操作:
 - **W / S**: 通常速度(`0.40 m/s`)で前進 / 後退します。
 - **A / D**: 左折 / 右折します。
 - **低速モードは Shift 長押し**: 狭い場所やマッピング時の精密な移動用の `0.20 m/s` です。操作パネル下のヒントには「Drive with W A S D · hold Shift = slow」と表示されます。
-- すべてのキーを離す(または **停止** をクリック)とロボットは即座に停止します。
+- すべてのキーを離す(または **Stop** をクリック)とロボットは即座に停止します。
 
 ---
 

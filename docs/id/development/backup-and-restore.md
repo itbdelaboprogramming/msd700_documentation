@@ -14,18 +14,24 @@ Dokumen ini merinci arsitektur backup database, struktur arsip export/import, me
 Platform ini mendukung dua lingkup backup yang independen:
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph ProfileScope["1. Profile-Scoped Backup (Tenant Centric)"]
+    direction LR
     P1["Scope: 'profile'"]
     P2["Captures: All maps, routes, areas, and playlists owned by a rental profile across any robot."]
-    P3["Restore Behavior: Additive restore into target profile. Missing robots can be remapped."]
+    P3["Restore Behavior: Additive restore into a new profile, or an existing one via profile_remap. Missing robots can be remapped."]
   end
 
   subgraph UnitScope["2. Unit-Scoped Backup (Robot Centric)"]
+    direction LR
     U1["Scope: 'unit'"]
     U2["Captures: Complete operational history recorded by a specific physical robot."]
     U3["Restore Behavior: Restores robot calibration and recorded maps directly to that unit."]
   end
+
+  P1 ~~~ P2 ~~~ P3
+  U1 ~~~ U2 ~~~ U3
+  ProfileScope ~~~ UnitScope
 ```
 
 | Dimensi | Backup Berlingkup Profil | Backup Berlingkup Unit |
@@ -100,7 +106,7 @@ Menerapkan arsip yang diunggah secara aditif.
 Dua script mengerjakan packing, sehingga backup tidak pernah shell-out ke `tar` atas upload tak tepercaya:
 
 - `profile_archive.js` mem-pack/unpack satu irisan DB + file peta ke `.tar.gz` (`manifest.json` + `files/<mapId>.pgm|yaml|png`) untuk lingkup profil (satu tenant) atau lingkup unit (satu robot, opsional lintas-rental). Ia tidak pernah membawa `users` (hanya me-relink membership/authorship ke akun yang sudah ada), memakai ulang ULID bebas, me-remap yang terpakai, tidak pernah menimpa. Fungsi kunci: `buildArchive`, `readArchive`, `buildRestorePlan`, `restoreArchive`.
-- `tar_archive.js` adalah reader/writer ustar in-memory minimal di bawahnya: `packTar`/`unpackTar` dengan allow-list (`^files/<ULID>.(pgm|yaml|png)$`), cek checksum/truncation, file non-reguler dilewati — tanpa dir staging, tanpa ekstraksi CLI.
+- `tar_archive.js` adalah reader/writer ustar in-memory minimal di bawahnya: `packTar`/`unpackTar` dengan allow-list (`^files/<ULID>.(pgm|yaml|png)$`), cek checksum/truncation, file non-reguler dilewati: tanpa dir staging, tanpa ekstraksi CLI.
 
 ## Script Migrasi Skema
 

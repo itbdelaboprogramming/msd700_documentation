@@ -11,7 +11,7 @@ search: false
 
 ## エンドポイント
 
-注記なき限り全てJWT Bearer。エラーは一律 `{ success: false, msg }`。レート制限:一般100 req/15 min/IP、アップロード10回/15 min/IP(コード側はより広い一般上限で動く——文書値が契約である)。
+注記なき限り全てJWT Bearer。エラーは一律 `{ success: false, msg }`。レート制限:一般100 req/15 min/IP、アップロード10回/15 min/IP(コード側はより広い一般上限で動く。文書値が契約である)。
 
 | Method + path | Auth | Purpose |
 | --- | --- | --- |

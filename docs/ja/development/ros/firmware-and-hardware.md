@@ -7,80 +7,80 @@ search: false
 
 <RoleBadge role="developer" />
 
-組み込みマイクロコントローラファームウェア(`msd700_firmware/firmware/firmware.ino`、Arduino)と、Jetsonがそれとどう通信するかについて説明する。ファームウェアは**2つ**の入力源(RC受信機(Taranis X7)またはROS経由のPC)からコマンドを受け取り、車輪ごとのPIDループで両輪モーターを駆動する。
+ユニットのモーターは、FreeRTOSを実行する**STM32H723**ボード(`0483:5740`、USB仮想COMポート、udevシンボリックリンク`/dev/stm32`)で駆動される。ファームウェアは別リポジトリ`firmware-msd700`のプロジェクト`STM32H7_MSD700_Unified_Firmware`(STM32CubeIDE)にある。SBUSのRC受信機またはROS経由のJetsonという**2つ**の入力源からコマンドを受け取り、各車輪でPID速度ループを回す。
+
+::: info 旧Arduinoファームウェア
+`msd700_robot/msd700_firmware/firmware/firmware.ino`(および`firmware-msd700/firmware_msd700`)は旧Arduino Megaスケッチである。参考として残されており、同じ`hardware_state` / `hardware_command`メッセージを使うが、現在のユニットで動作しているものではない。
+:::
 
 ## 組み込み制御トポロジー
 
 ```mermaid
 flowchart TD
-  subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
-    SERIAL_NODE["serial_node.py (rosserial_python)<br/>Port: /dev/stm32, 57600 baud"]
-    HW_IF["msd700_hardware interface<br/>Publishes /wheel/odom, /imu/data_raw,<br/>/imu/mag, /imu/data"]
+  subgraph JetsonSBC["NVIDIA Jetson (msd700 container)"]
+    SERIAL_NODE["serial_node.py (rosserial_python)<br/>/dev/stm32"]
+    RAW["raw_sensor_node (hardware_state.py)<br/>/wheel/odom, /imu/data_raw, /imu/mag"]
+    BRIDGER["bridger_node (bridger.py)<br/>/cmd_vel to wheel speeds"]
   end
 
-  subgraph Microcontroller["Microcontroller (Arduino, firmware.ino)"]
-    CMD_SEL["Command select: RC ch.3<br/>RC mode / hold mode / PC mode"]
-    FAILSAFE["Failsafe: RC ch.4<br/>ARMED only above 1400"]
-    PID_L["Left wheel PID (pidIr)<br/>10 ms control loop"]
-    PID_R["Right wheel PID (pidIr)<br/>10 ms control loop"]
-    ENC["Quadrature encoders<br/>PinChangeInterrupt pins"]
+  subgraph MCU["STM32H723 (FreeRTOS)"]
+    ROS_TASK["ROS task, 20 Hz<br/>pub hardware_state, sub hardware_command"]
+    STATE_TASK["VehicleState task<br/>SBUS arm switch + RC/PC select"]
+    ODOM_TASK["Odometry task, 5 ms<br/>encoders + per-wheel PID (pidIr)"]
+    MOTOR_TASK["Motor task, 20 ms<br/>PWM out, lamp on when armed"]
+    ATT_TASK["Attitude task, 5 ms<br/>CMPS12 heading/roll/pitch"]
   end
 
-  subgraph PowerStage["Actuators"]
-    H_BRIDGE_L["Left Motor Driver<br/>(REN / LEN / PWM)"]
-    H_BRIDGE_R["Right Motor Driver<br/>(REN / LEN / PWM)"]
-  end
-
-  SERIAL_NODE <-->|rosserial, 57600 baud| CMD_SEL
-  CMD_SEL --> FAILSAFE
-  FAILSAFE -->|ARMED| PID_L
-  FAILSAFE -->|ARMED| PID_R
-  FAILSAFE -->|DISARMED| STOP["Motors stopped"]
-
-  PID_L --> H_BRIDGE_L
-  PID_R --> H_BRIDGE_R
-
-  H_BRIDGE_L --> ENC
-  H_BRIDGE_R --> ENC
-  ENC --> PID_L
-  ENC --> PID_R
-
-  HW_IF --> SERIAL_NODE
+  RC["SBUS RC receiver"] --> STATE_TASK
+  SERIAL_NODE <-->|rosserial over USB CDC| ROS_TASK
+  BRIDGER -->|hardware_command| SERIAL_NODE
+  SERIAL_NODE -->|hardware_state| RAW
+  ROS_TASK --> STATE_TASK
+  STATE_TASK -->|RPM targets| ODOM_TASK
+  ODOM_TASK -->|PWM| MOTOR_TASK
+  MOTOR_TASK --> DRV["Left / right motor drivers"]
+  DRV --> ENC["Quadrature encoders (TIM3 / TIM4)"]
+  ENC --> ODOM_TASK
+  ATT_TASK --> ROS_TASK
 ```
 
-スタック内のどこにも`/battery_state`トピックは存在せず、このファームウェアにADCによるバッテリー分圧回路もない。ファームウェア内の車輪ジオメトリ定数(`WHEEL_RADIUS 2.75 cm`、`WHEEL_DISTANCE 23.0 cm`)は、ホスト側のオドメトリ設定(`odometry_config.yaml`: 半径`2.7 cm`、距離`23 cm`、`encoder_ppr 2400`)と一致する。
+## ROSインターフェース
 
----
+ファームウェアは、パブリッシャー1つとサブスクライバー1つを持つrosserialノードである。
 
-## ハードウェアピン配置(`firmware.ino`)
+| 方向 | トピック | メッセージ | 備考 |
+| --- | --- | --- | --- |
+| MCU → Jetson | `hardware_state` | `msd700_msgs/HardwareState` | ホスト接続中は50 msごとに送信。前回送信以降のエンコーダーパルス差分、CMPS12のheading/roll/pitch、加速度・ジャイロ・磁気、UWBフォロワー目標を含む。8つの超音波フィールドは常に`0.0` |
+| Jetson → MCU | `hardware_command` | `msd700_msgs/HardwareCommand` | PCモードでは`right_motor_speed` / `left_motor_speed`が車輪のRPM目標になる |
 
-| 信号機能 | マイコンピン |
+Jetson側では`serial_launch.launch`が`/dev/stm32`上で`rosserial_python`を起動する(`baud` 57600。リンクはUSB CDCなので実際の通信速度ではない)。既定の`hardware_mode 1`では、`hardware_state.py`(`raw_sensor_node`)が`hardware_state`を`/wheel/odom`、`/imu/data_raw`、`/imu/mag`に変換し、`bridger.py`がmux後の`/cmd_vel`を`hardware_command`に変換する。両者とも車輪形状を`msd700_control/config/pose_config.yaml`から読む(`wheel_radius 2.75` cm、`wheel_distance 26.0` cm、実機で計測)。[センサーフュージョン & 制御](/ja/development/ros/sensor-fusion-and-control)を参照。
+
+スタックのどこにも`/battery_state`トピックは存在しない。
+
+## アーミングとコマンド入力源
+
+アーミングと入力源の選択はSBUS受信機(`USART1`、100 kbaud、反転)で行う。
+
+| SBUSチャンネル | 意味 |
 | --- | --- |
-| **Right Motor REN / LEN / PWM** | Pins 4 / 5 / 9 |
-| **Left Motor REN / LEN / PWM** | Pins 6 / 7 / 8 |
-| **Right Encoder A / B** | Pins 52 / 12 |
-| **Left Encoder A / B** | Pins 11 / 10 |
-| **Status LEDs (red / blue)** | Pins 30 / 31 |
-| **Camera servo** | Pin 3 (range 125–175, step 10) |
-| **Ultrasonic (UART2 RX / TX)** | Pins 17 / 16 |
+| チャンネル3(0始まり) | アームスイッチ。992超で**ARMED**(ランプ点灯)、それ以外はDISARMED |
+| チャンネル2 | 1000未満でRCモード: チャンネル0/1が±40 RPMの前進/旋回に対応。それ以外はPCモード: RPM目標は`hardware_command`から来る |
 
-Jetsonとのリンクは`Serial.begin(57600)`である。
+SBUSフレームが**400 ms**届かない場合(受信機の抜けや圏外)、車両はDISARMEDになる。DISARMED中は両PIDループがリセットされ、ROS側が何を送ってもPWM出力はすべて0に保たれる。独立したハードウェアウォッチドッグ(IWDG)は50 msごとにリフレッシュされ、スケジューラが停止するとMCUをリセットする。
 
----
+## 閉ループ車輪速度制御
 
-## 閉ループPID速度制御
+オドメトリタスクは5 msごとに実行され、両エンコーダー(右`TIM3`、左`TIM4`)を読み、車輪RPMを計算し、車輪ごとに`pidIr`ループを1つ回す。
 
-各車輪は10 ms制御周期(`LOOP_TIME 10`)で離散PIDループ(`pidIr`)を実行する:
+$$u_k = K_p e_k + K_i T_s \sum e_j + \frac{K_d}{T_s} (e_k - e_{k-1}), \quad |u_k| \le 100$$
 
-$$\text{PWM}_k = K_p \cdot e_k + K_i \sum e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
+ゲインは`Core/Inc/configuration.h`にあり、出荷時のチューニングは積分のみ(両輪とも`KP 0.00`、`KI 0.02`、`KD 0.00`)。モータータスクは20 msごとに、クランプ後の出力を`TIM23`(右)と`TIM2`(左)のPWMコンペア値`95 × u`として適用し、どちらのチャンネルを駆動するかで回転方向を決める。ファームウェア独自の推測航法は`WHEEL_RADIUS 0.0275` mを使うが、ROSでは使われない。
 
-出力はフル8ビットの255ではなく`MAX_PWM 250`で飽和(`constrain`)する。速度上限は`MAX_RPM_MOVE 180`(直進)、`MAX_RPM_TURN 70`(回転)である。RC受信機チャンネルは0.25 Hzローパスフィルタ、エンコーダー信号は3 Hzローパスフィルタを通る。
+## その他のタスク
 
----
-
-## RCフェイルセーフ(アーミング)
-
-この試作機は**ARMED**のときのみ動作コマンドを受け付ける。RCチャンネル4が1400を超えていること(`update_failsafe()`)が必要で、それを下回るとDISARMEDとなり、RC・PCいずれのコマンドが届いてもモーターは停止する。コマンド源はRCチャンネル3に従う。RCモード、ホールドモード、PC(ROS)モードのいずれかである。
+- **Attitude**: CMPS12(傾斜補正コンパス)を5 msごとに読む。そのヨーがROSへ送るheadingにもなる。
+- **UWB**: `USART2`上のフォロワータグ測位。フィルタ後に`uwb_*`フィールドで報告する。
+- **LIDAR**: 試作機から残っているRPLIDAR読み取りタスク。ユニットはEthernet接続のVelodyne VLP-16を使う。
 
 ## 関連ドキュメント
 

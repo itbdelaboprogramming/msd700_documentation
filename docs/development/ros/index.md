@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops that make the physical MSD700 unit move, sense, and clean. This section has no operator-facing UI of its own — for how these subsystems surface as features an operator sees in the dashboard, see [ROS Web UI](/development/webui/).
+The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops that make the physical MSD700 unit move, sense, and clean. This section has no operator-facing UI of its own: for how these subsystems surface as features an operator sees in the dashboard, see [ROS Web UI](/development/webui/).
 
 ## Core Robot Packages
 

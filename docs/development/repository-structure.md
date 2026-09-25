@@ -60,7 +60,7 @@ msd700_robot/
 ├── msd700_control/           # Sensor fusion (robot_localization), twist_mux
 ├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
 ├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
-├── msd700_firmware/          # Arduino firmware (plain directory, not a ROS package)
+├── msd700_firmware/          # Legacy Arduino firmware (reference only; the unit runs the STM32 firmware from firmware-msd700)
 ├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
 ├── msd700_movement/          # Vendored third_party only
 ├── msd700_msgs/              # Robot-level messages
@@ -100,7 +100,7 @@ msd700_noetic/
     ├── ros-web-ui/
     └── ROS-dashboard-next-ts/
     # NOTE: on a Server checkout (like this one) the submodules are NOT
-    # initialized — src/ holds only CMakeLists.txt. The robot code lives in
+    # initialized: src/ holds only CMakeLists.txt. The robot code lives in
     # the sibling directories /msd700_robot and /ros-web-ui instead.
 ```
 
@@ -136,7 +136,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
+│   │       └── components/       # LinkCard(s), RoleBadge
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -163,7 +163,7 @@ thin black lines, Helvetica, right-angle connectors, group titles in a corner ta
 | --- | --- |
 | `scripts/render-diagrams.mjs` | Lays out every fence once in headless Chrome (mermaid + the ELK layout engine for flowcharts and state diagrams) and writes `docs/public/diagrams/<hash>.png` at 2x. Deletes images no fence uses any more |
 | `scripts/diagram-hash.mjs` | The hash of a fence body plus `RENDER_VERSION`. Shared by the renderer and the build, so both name the same file. Bump `RENDER_VERSION` after a style change so readers get new URLs, not cached old images |
-| `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. If the PNG is missing it falls back to the old in-browser `<Mermaid>` component and prints a `[diagrams]` warning |
+| `docs/.vitepress/config.mts`, `markdown.config` | Replaces every `mermaid` fence with an `<img>` of its PNG, linked to the full-size file. Diagrams are never drawn in the browser: if the PNG is missing, the page shows a broken image and the build prints a `[diagrams]` warning until `npm run docs:diagrams` writes it |
 
 Rendering in the reader's browser was dropped because mermaid measured labels with whatever font
 that browser resolved, so boxes came out the wrong size, text was clipped and layouts shifted between
@@ -172,7 +172,7 @@ machines. One renderer with one known font gives the same picture everywhere.
 ```bash
 npm run docs:diagrams          # render new or changed diagrams (needs a local Chrome/Chromium)
 npm run docs:diagrams -- --all # re-render everything, e.g. after changing the style
-npm run docs:diagrams -- --all --audit # also list lines crossing text, titles or labels
+npm run docs:diagrams -- --all --audit # also list layout findings per diagram
 npm run docs:check-diagrams    # syntax-check every diagram and fail if any has no PNG
 ```
 
@@ -181,8 +181,10 @@ standard location.
 
 ::: warning Edited a diagram? Re-render it
 The image is looked up by a hash of the fence body, so any edit, even a single character, needs
-`npm run docs:diagrams`. Otherwise the page falls back to in-browser rendering.
+`npm run docs:diagrams`. Otherwise the page shows a broken image (diagrams are never drawn in the browser).
 :::
+
+Each flowchart is laid out with a few ELK variants and the one with the fewest audit findings is kept. `--audit` lists what remains: hard findings (a line through a box, a group title or a label) and soft ones marked `~` (a line within a few px of a title or box, hidden under a title, running along a group border, overlapping another line, or arrowheads bunched together). Group titles slide along the group edge, or wrap onto more lines, to stay clear of lines. Near-straight lines are straightened. If a diagram still looks cramped, reorder it in the source: `~~~` (an invisible link) fixes the order of boxes and groups, and `direction TB`/`LR` inside a `subgraph` sets its own flow.
 
 ::: info Escape angle-bracket placeholders
 Write a placeholder such as `<unit>` as `#lt;unit#gt;` inside a diagram. Written raw, it is read as

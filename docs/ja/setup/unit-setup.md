@@ -75,6 +75,30 @@ Dockerの導入(未導入時)、グループ権限と`xhost`の設定、スク�
 スクリプトがユーザーを`docker`グループに追加した場合、ログアウト・ログインし直すか、`newgrp docker`を実行します(現在のシェルのみ有効)。
 :::
 
+ここで`DISPLAY`がない(ヘッドレスのSSHセッション)ことは警告にすぎません。X11はRVizまたはGazeboにのみ必要です。
+
+::: details Velodyne VLP-16の有線接続(VLP-16搭載ユニットのみ)
+VLP-16はDHCPなしで固定ホストIPのポート2368へUDPを送信します。そのサブネットに静的なホストIPがないと、
+ROSドライバーは何も表示せずにタイムアウトし、点群が現れません。
+
+`./setup.sh`(または単独で`./setup.sh --configure-lidar`)がNetworkManagerプロファイル`msd700-velodyne`を
+作成します: 静的`192.168.103.100/24`、IPv6無効、自動接続優先度100、デフォルトルートにはしません。有線
+インターフェースは自動検出されます(キャリアあり、IP未設定、デフォルトルートでないもの)。候補が0個または
+2個以上の場合は推測せず、警告を出してスキップします。
+
+| 変数(`docker/.env`) | 既定値 | 用途 |
+| --- | --- | --- |
+| `VELODYNE_IFACE` | 自動検出 | センサー側の有線NIC(例: `end0`) |
+| `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | ホストの静的IP |
+| `VELODYNE_SENSOR_IP` | `192.168.103.231` | センサーIP(検証用) |
+| `VELODYNE_CONNECTION_NAME` | `msd700-velodyne` | NetworkManagerプロファイル名 |
+
+`VELODYNE_SENSOR_IP`は`VELODYNE_HOST_CIDR`の範囲内にあり、
+`src/msd700_robot/msd700_hardware/launch/velodyne_scanner.launch`の`device_ip`と一致している必要があります。
+
+確認: `ping 192.168.103.231`が応答し、コンテナ内で`rostopic list | grep velodyne`に点群トピックが表示されること。
+:::
+
 ---
 
 ### Step 3: `docker/.env`の確認
@@ -261,7 +285,7 @@ grep ExecStart /etc/systemd/system/msd700.service                    # 現在の
 <details>
 <summary><b>非Ubuntu PC (sim/devのみ)</b></summary>
 
-`docker/.env`の`MAPS_FOLDER_LOCAL`をJetson風`/home/ubuntu`ではなく実在の書込可能フォルダにします。イメージのUID/GIDに合わせます。`msd700_noetic/docker/docker-compose.yml:219`と`ros-web-ui/run_msd.sh:606-613`参照。
+`docker/.env`の`MAPS_FOLDER_LOCAL`をJetson風`/home/ubuntu`ではなく実在の書込可能フォルダにします。イメージのUID/GIDに合わせます。`backend_local`が同じパスでバインドマウントし(`docker/docker-compose.yml`)、`run_msd.sh`が起動前に書き込み可能かを確認するため、誤ったパスはマップ保存時ではなく起動時に失敗します。
 
 </details>
 

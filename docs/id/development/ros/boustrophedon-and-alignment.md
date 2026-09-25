@@ -37,23 +37,25 @@ Envelope dan body berada di `costmap_common_params_field.yaml` dan `msd700_cover
 
 ### Konstanta Clearance Turunan (`src/msd700_coverage/coverage_geometry.py`)
 
-Dengan TEB menyala (`min_obstacle_dist 0.10`, `safety_margin 0.0`):
+Dengan TEB menyala (`min_obstacle_dist 0.05`, `safety_margin 0.0`):
 
 | Konstanta Clearance | Nilai | Formula Matematis |
 | --- | --- | --- |
-| `wall_clearance` | **0,450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
-| `turn_clearance` | **0,670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `wall_clearance` | **0,400 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.05\text{ m})$ |
+| `turn_clearance` | **0,620 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.05\text{ m})$ |
 | `pitch` | **0,644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
 Tanpa TEB (fallback `min_obstacle_dist 0.15`): `wall_clearance 0.500 m`, `turn_clearance 0.720 m`.
 
+`lane_edge_clearance` (jarak minimum dari batas cell ke tengah lane) dipatok **0,35 m** di `config/boustrophedon_params.yaml`, tidak dibiarkan `auto` (= `wall_clearance`); `lane_end_clearance` tetap `auto` (= `turn_clearance`).
+
 ### Batas Geometris Fisik (TEB menyala):
-- **Koridor tersempit yang dapat dimasuki robot**: **0,90 m** ($2 \times \text{wall\_clearance}$).
-- **Koridor tersempit dimana robot dapat pivot 180 derajat**: **1,34 m** ($2 \times \text{turn\_clearance}$).
-- **Strip batas yang tak terjangkau di sepanjang dinding**: **0,10 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
+- **Koridor tersempit yang dapat dimasuki robot**: **0,80 m** ($2 \times \text{wall\_clearance}$).
+- **Koridor tersempit dimana robot dapat pivot 180 derajat**: **1,24 m** ($2 \times \text{turn\_clearance}$).
+- **Strip batas yang tak terjangkau di sepanjang dinding**: **0,05 m** ($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$).
 
 ::: info Attainment vs Cakupan Mentah
-Karena strip perimeter 0,10 m tidak dapat dilintasi tanpa collision, ruangan persegi panjang (misalnya 3 x 6 m) mencapai cakupan maksimum teoretis sekitar **90%**. Performa sistem diukur menggunakan **Attainment Ratio** (fraksi lantai terjangkau yang benar-benar tersapu), bukan persentase area mentah yang tidak disesuaikan.
+Karena strip perimeter 0,05 m tidak dapat dilintasi tanpa collision, ruangan persegi panjang (misalnya 3 x 6 m) mencapai cakupan maksimum teoretis sekitar **95%**. Performa sistem diukur menggunakan **Attainment Ratio** (fraksi lantai terjangkau yang benar-benar tersapu), bukan persentase area mentah yang tidak disesuaikan.
 :::
 
 ---
@@ -64,7 +66,7 @@ Planner cakupan mendekomposisi batas poligonal konkaf sembarang dengan obstacle 
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.400 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
   D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
@@ -132,8 +134,8 @@ Zero-spin alignment menghilangkan *alasan* untuk berputar. Dulu ada node `rotati
 | Sumber | Sebelumnya | Sekarang |
 | --- | --- | --- |
 | `rotate_recovery` | Anak tangga terakhir dari tangga recovery move_base | Tidak dimuat. `recovery_behaviors` hanya mencantumkan dua reset costmap, tak satu pun memerintahkan gerakan |
-| TEB terminal pivot | Berputar menghadap heading goal di setiap waypoint | Ketat. `yaw_goal_tolerance: 0.15` (run coverage: `0.10`) — waypoint kini membawa heading nyata dari click-drag, sehingga pivot mendarat pada orientasi pilihan operator |
-| TEB initial pivot | Berputar di tempat ketika jalur mengarah ke belakang robot | Mundur sebagai gantinya. `allow_init_with_backwards_motion: false` |
+| TEB terminal pivot | Berputar menghadap heading goal di setiap waypoint | Ketat. `yaw_goal_tolerance: 0.15` (run coverage: `0.10`): waypoint kini membawa heading nyata dari click-drag, sehingga pivot mendarat pada orientasi pilihan operator |
+| TEB initial pivot | Berputar di tempat ketika jalur mengarah ke belakang robot | Tetap berputar, tidak mundur: `allow_init_with_backwards_motion: false`, karena VLP-16 tidak melihat apa pun dalam 0,40 m di belakang robot |
 | Perintah `SYNC` (`nav_controller`) | 10 detik open-loop `0.5 rad/s`, tanpa pengecekan obstacle | No-op. Gunakan Auto Align, yang melakukan scan-match terlebih dahulu |
 
 Arbitrasi gerakan kini berada di `twist_mux` semata: navigasi pada `/mux/nav_vel` (prioritas 10), keyboard pada inputnya sendiri (prioritas 90), emergency stop membanjiri `/mux/emergency_vel` (prioritas 255). Node yang menulis `/cmd_vel` langsung melewati tangga ini dan tidak dapat dihentikan olehnya.

@@ -7,11 +7,11 @@ search: false
 
 <RoleBadge role="developer" />
 
-The Navigation feature is the `unit/navigation` screen. `pages/unit/navigation/index.tsx` is a thin
+The Navigation feature is the `unit/navigation` page. `pages/unit/navigation/index.tsx` is a thin
 layout shell; essentially all real functionality lives in
 `src/components/navigationMap/mapComponent.tsx` (`MapComponent`) and the sub-components it renders,
 reached through a "Mode List" dropdown (`ModeListPanel.tsx`) and a persistent action bar
-(`actionBar.tsx`). This page covers the mechanics shared across every mode on this screen: the
+(`actionBar.tsx`). This document covers the mechanics shared across every mode on this page: the
 mode-switching pattern itself, the canvas rendering pipeline and coordinate math every mode draws
 on top of, and the small supporting UI pieces that appear regardless of which mode is active.
 
@@ -97,7 +97,7 @@ moment the operator tries to click the canvas.
 To guarantee the canvas never crashes this way, `ensureStagePrototype()` in `mapComponent.tsx`
 re-applies the helpers idempotently on the current prototype right before every viewer creation.
 The math mirrors `public/script/ros2d.js` exactly, so behaviour is unchanged on the happy path
-(`rosScriptLoader.ts` is only the sequential script loader — the patch does not live there).
+(`rosScriptLoader.ts` is only the sequential script loader: the patch does not live there).
 See [Frontend Canvas](/development/frontend-canvas) for the full snippet.
 
 Every mode's click handling on this page (pinpoint placement, home base placement, polygon
@@ -108,7 +108,7 @@ them rather than a detail specific to any one mode.
 
 A handful of components appear across modes rather than belonging to any single one:
 
-- **`RobotStuckNotification`**: an on-screen warning surfaced when the robot appears unable to make
+- **`RobotStuckNotification`**: a warning shown on the page when the robot appears unable to make
   progress toward its current goal.
 - **`HoverTooltip`**: contextual tooltips shown as the operator hovers elements on the canvas.
 - **`TopToast`**: surfaces errors from save/load operations (for example, a failed route save or

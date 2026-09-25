@@ -99,7 +99,7 @@ Kerjakan dari atas ke bawah. Setiap item menggugurkan satu jalur dari diagram di
 - [ ] Menyetir W-A-S-D menggerakkan robot, dan posisi dashboard mengikuti
 - [ ] Goal klik-navigasi diterima dan robot melaju ke sana
 - [ ] Emergency Stop, dites sekali, menghentikan robot seketika
-- [ ] Menutup browser di tengah operasi menghentikan robot dalam ~10 detik
+- [ ] Menutup browser di tengah operasi menghentikan robot dalam ~2 detik (dashboard cloud) atau seketika (dashboard lokal, yang heartbeat 5 Hz-nya berhenti bersama tab)
 
 ::: warning Jangan lewati empat terakhir
 Unit bisa terlihat tersambung penuh (online, video oke) padahal satu arah perintah rusak. Itu baru ketahuan saat robot disuruh bergerak. Tes disconnect adalah perilaku keselamatan: picu sekali dengan sengaja, dengan ruang kosong di sekitar robot.

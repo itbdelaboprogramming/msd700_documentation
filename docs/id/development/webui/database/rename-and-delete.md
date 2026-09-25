@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dua aksi pengubah yang tersedia langsung dari layar Basis Data (`DatabaseComponent.tsx`): mengganti
+Dua aksi pengubah yang tersedia langsung dari halaman Basis Data (`DatabaseComponent.tsx`): mengganti
 nama sebuah peta di tempat, dan menghapusnya. Untuk cara daftar peta itu sendiri berperilaku, lihat
 [Ikhtisar](/id/development/webui/database/overview); untuk skema dan endpoint yang disentuh aksi
 ini, lihat [Integrasi ROS](/id/development/webui/database/ros-integration).
@@ -39,7 +39,7 @@ setiap rute, area, dan playlist yang menyertainya, ditambah berkas tersimpan mil
 Lihat [Integrasi ROS § Foreign key](/id/development/webui/database/ros-integration#foreign-key)
 untuk tabel mana yang cascade dan mana yang hanya dinolkan.
 
-Tidak ada undo. Karena rute, area, dan playlist tidak didaftar secara terpisah di layar ini (lihat
+Tidak ada undo. Karena rute, area, dan playlist tidak didaftar secara terpisah di halaman ini (lihat
 [Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), operator yang menghapus
 sebuah peta tidak diperlihatkan daftar terperinci hal-hal yang akan ikut terbawa selain prompt
 konfirmasi itu sendiri.

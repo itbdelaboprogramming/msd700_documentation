@@ -10,7 +10,7 @@ search: false
 Despite the name, kept for consistency with the other ROS Web UI feature groups, the Database
 feature has no ROS-side component of its own: a robot produces a map through the Mapping feature,
 but browsing, renaming, and deleting recorded maps is a MySQL-and-REST-only concern. This page
-covers the schema and wire contract behind the Database screen. For the screen's own behavior,
+covers the schema and wire contract behind the Database page. For the page's own behavior,
 see [Overview](/development/webui/database/overview) and
 [Rename and Delete](/development/webui/database/rename-and-delete).
 
@@ -37,7 +37,7 @@ tables covered on their own page: see
 [Database Schema § Identity and access](/development/database-schema#identity-and-access).
 
 `maps_data.unique_map_unit (map_name, unit_id, profile_id)` is why two robots on one rental can
-each hold a map with the same name without collision, and why the Database screen must scope by
+each hold a map with the same name without collision, and why the Database page must scope by
 `unit_id` and deduplicate by `id` rather than by name (see
 [Overview § Map list](/development/webui/database/overview#map-list)).
 
@@ -79,9 +79,9 @@ From [API Reference § Map and Route Data Management](/development/api-reference
 
 `GET /api/maps_data?unit_id=<unit ULID>`
 
-`unit_id` is optional on the wire but mandatory in practice for the Database screen: without it
+`unit_id` is optional on the wire but mandatory in practice for the Database page: without it
 the response is every map in the caller's rental scope (what archive and admin views want), with
-it the list narrows to the maps that one robot recorded (what this screen needs, since a rental
+it the list narrows to the maps that one robot recorded (what this page needs, since a rental
 can hold several robots and a sibling robot's map cannot be navigated on this one). Passing a unit
 the caller has no active rental on is a `403`, not an empty list.
 
@@ -96,7 +96,7 @@ by `id`, and always scope by `unit_id`.
 ### Rename and delete: not yet documented here
 
 The API Reference's Map and Route Data Management section does not currently document a rename or
-delete endpoint for `maps_data`. The Database screen's rename and delete behavior (described in
+delete endpoint for `maps_data`. The Database page's rename and delete behavior (described in
 [Rename and Delete](/development/webui/database/rename-and-delete)) is confirmed against the
 frontend (`updateMapName` in `services.ts`, and a `ConfirmDelete`-gated delete call), but the
 exact HTTP method and path are not covered by the current source material and are not guessed at
@@ -106,7 +106,7 @@ here.
 
 The same API Reference section also documents `POST /api/routes` for saving a waypoint route.
 That endpoint belongs to the Navigation feature, not Database: routes are not listed or managed
-from this screen (see [Overview § Scope](/development/webui/database/overview#scope)), so it is
+from this page (see [Overview § Scope](/development/webui/database/overview#scope)), so it is
 not repeated here.
 
 ## Related

@@ -42,7 +42,7 @@ The unit's local stack is an **offline-first cache of the cloud, not an isolated
 | **MySQL Database** | MySQL 8.0 | Stores user accounts, rental profiles, enrolled unit records, route geometry, custom area boundaries, and sync journals. | Server (`db` / `db_dev`) and unit (`db_local`) |
 | **media-server** | Node.js, Express | Manages map asset uploads, thumbnail generation, and serves static `.pgm` and `.yaml` map files. | Server container and unit container (`media_local`) |
 | **signalling_server** | Node.js (WebSocket) | WebRTC peer negotiation server facilitating direct video streaming between robot cameras and operator browsers. | Server container (`signalling`) and unit container (`signalling_local`) |
-| **coturn** | Coturn (C) | RFC 5766 TURN / STUN relay server providing media fallback when NAT traversal prevents direct peer-to-peer WebRTC video. | Containerized `coturn` service (`ros_web_ui_v2_coturn`, `network_mode: host`, prod-only profiles) — a systemd service used to do this job before the container cutover |
+| **coturn** | Coturn (C) | RFC 5766 TURN / STUN relay server providing media fallback when NAT traversal prevents direct peer-to-peer WebRTC video. | Containerized `coturn` service (`ros_web_ui_v2_coturn`, `network_mode: host`, prod-only profiles): a systemd service used to do this job before the container cutover |
 | **Apache2** | Apache HTTP Server | Handles TLS termination, security headers, and routes all public traffic via `/services/...` paths. | Server host (native service) |
 | **ROS Robot Packages** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigation, SLAM, boustrophedon coverage, EKF, sensor drivers) and `ros-web-ui` bridge packages (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (`msd700` container) |
 
@@ -108,21 +108,25 @@ flowchart TB
 The platform uses two separate communication channels that fail independently:
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Channel1["Channel 1: MQTT Control Channel"]
+    direction LR
     M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
   end
 
   subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
+    direction LR
     R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
   end
+
+  Channel1 ~~~ Channel2
 ```
 
 | Channel | Transport | Data Carried | Failure Symptom |
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS (8883) | Commands, acknowledgements, pose strings, status pings. | Robot appears **Offline** in the console. Commands fail immediately with HTTP 504. |
 | **rosbridge** | WebSocket (WSS) | Typed ROS messages (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot appears **Online** and accepts commands, but the map canvas remains blank. |
-| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because the fleet relay is down — or, on the legacy per-unit path, because `rosweb_unit_<u>_<unit>_nakayama` is stopped or reaped due to inactivity. |
+| **Unit Relay Container** | Docker on Server | Translates MQTT strings to typed ROS topics for rosbridge. | Robot is online and rosbridge is connected, but the canvas remains blank because the fleet relay is down: or, on the legacy per-unit path, because `rosweb_unit_<u>_<unit>_nakayama` is stopped or reaped due to inactivity. |
 
 ## End-to-End Command Execution Flow
 
@@ -192,7 +196,7 @@ stateDiagram-v2
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 minutes) | Duration of operator inactivity before container is reaped. |
 | `UNIT_REAP_INTERVAL_MS` | `60000` (1 minute) | Frequency of the background reaper sweep. |
 | `UNIT_REMOVE_ON_REAP` | `false` | When true, deletes the container; when false, keeps it stopped. |
-| `UNIT_MODE` | `prod` (or `dev`) | Selects port offsets (cloud ROS masters 11311/11312, rosbridge 9090/9091). The unit's own roscore is 11321/11322 — not these. |
+| `UNIT_MODE` | `prod` (or `dev`) | Selects port offsets (cloud ROS masters 11311/11312, rosbridge 9090/9091). The unit's own roscore is 11321/11322: not these. |
 
 ::: warning Autopilot Retention Guard
 When a robot executes an autonomous mission in **Autopilot Mode**, its relay container enters the **Retained** state. Retained containers are exempt from idle timeouts and are not terminated when an operator logs out or closes their browser, ensuring continuous mission monitoring.

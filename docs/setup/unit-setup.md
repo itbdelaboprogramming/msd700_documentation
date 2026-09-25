@@ -286,7 +286,7 @@ Re-running `up` with different flags rewrites the unit; `down` removes autostart
 <details>
 <summary><b>Non-Ubuntu laptops (sim/dev only)</b></summary>
 
-Set `MAPS_FOLDER_LOCAL` in `docker/.env` to a real writable folder, not a Jetson-style `/home/ubuntu` path. Match the image UID/GID. See `msd700_noetic/docker/docker-compose.yml:219` and `ros-web-ui/run_msd.sh:606-613`.
+Set `MAPS_FOLDER_LOCAL` in `docker/.env` to a real writable folder, not a Jetson-style `/home/ubuntu` path. Match the image UID/GID. `backend_local` bind-mounts it at the same path (`docker/docker-compose.yml`), and `run_msd.sh` checks that it is writable before launching, so a bad path fails at start-up instead of when a map is saved.
 
 </details>
 

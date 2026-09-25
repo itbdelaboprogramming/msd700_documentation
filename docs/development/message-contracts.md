@@ -142,6 +142,7 @@ sequenceDiagram
 | Command Verb | Payload Content | Purpose |
 | --- | --- | --- |
 | `ping` | See [Heartbeat Ping Section](#heartbeat-ping-and-lease-contract) | Heartbeat, lease acquisition, telemetry retrieval, and watchdog refresh. |
+| `heartbeat` | `{ "page": "navigation" }` only. Published by the browser at 5 Hz, QoS 0, over MQTT-over-WebSocket straight to the unit's Mosquitto (local dashboard only) | Presence proof for the 2 s watchdog tier. Grants nothing: no lease, no claim/release, no `origin`, no feedback. See [Safety Watchdog](/development/ros/safety-watchdog#two-presence-signals). |
 | `check` | None | Queries status of low-level motor drivers and microcontrollers. |
 | `init` | None | Initialises hardware interfaces and power lines. |
 | `stop` | None | Shuts down hardware peripherals and power stages. |
@@ -377,7 +378,7 @@ no broker retain. Three mechanisms make it survivable, and none of them is optio
 | Mechanism | Where | What it covers |
 | --- | --- | --- |
 | The cloud relay latches `/unit_<ULID>/string/map` | `aws_mqtt/scripts/gen_bridge_params.py` | A browser that connects between two sends, and a relay that restarts (which happens whenever the fleet roster changes). |
-| A burst of `burst_sends` repeats, `burst_interval` apart, after a map reset or retire | `topic2string/scripts/map_compression_pipeline.py` | The map an operator just opened, delivered at the exact moment the robot is restarting its navigation stack. Starting a new mapping run is covered too. |
+| A burst of `burst_sends` repeats, `burst_interval` apart, after a map reset or retire | `topic2string/src/nodelets/map_compression.cpp` (Python twin: `scripts/map_compression_pipeline.py`) | The map an operator just opened, delivered at the exact moment the robot is restarting its navigation stack. Starting a new mapping run is covered too. |
 | The pull channel `/string/map_request` | Browser to robot, same path as the ACK topics | Everything else: a dropped packet, a dashboard whose page mounted at the wrong instant, a local-mode relay that ate the first message while learning the topic type. |
 
 The dashboard publishes a `std_msgs/String` on `/unit_<ULID>/string/map_request` as soon as the

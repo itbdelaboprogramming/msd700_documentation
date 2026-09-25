@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dua cara menggerakkan robot selagi sebuah peta sedang dibangun, keduanya tersedia dari layar
+Dua cara menggerakkan robot selagi sebuah peta sedang dibangun, keduanya tersedia dari halaman
 [Pemetaan](/id/development/webui/mapping/overview) yang sama begitu sebuah sesi berstatus
 `mapping_active`: membiarkan robot menjelajah sendiri, atau mengambil alih kendali secara
 langsung. Untuk kontrak jalur (wire contract) di balik sesi pemetaan itu sendiri, lihat
@@ -22,8 +22,8 @@ dan sebagian besar hanya mengawasi, memakai Pause/Stop dan emergency stop bila d
 
 ## Manual Override
 
-Sidebar me-render `ManualAutopilotPanel`, komponen bersama yang sama yang dipakai di layar
-Navigasi. Mengaktifkan **Manual Override** di layar Pemetaan menyerahkan teleop keyboard WASD ke
+Sidebar me-render `ManualAutopilotPanel`, komponen bersama yang sama yang dipakai di halaman
+Navigasi. Mengaktifkan **Manual Override** di halaman Pemetaan menyerahkan teleop keyboard WASD ke
 operator, mengambil alih kemudi dari perilaku eksplorasi otonom yang dijelaskan di atas. Ini
 adalah komponen dan toggle yang sama seperti di Navigasi; yang berbeda hanyalah apa yang
 kendalinya diserahkan *dari* (eksplorasi otonom di sini, alih-alih goal yang dikirim atau sapuan
@@ -34,12 +34,13 @@ cakupan di Navigasi), sehingga mekanismenya tidak diulang di halaman ini.
 Panel yang sama juga menampilkan toggle **Autopilot**. Khusus di Pemetaan, mengaktifkannya
 menjaga sesi eksplorasi otonom tetap berjalan tanpa kepala (headless): eksplorasi berlanjut
 bahkan jika operator menutup tab browser. Ini adalah makna praktis yang berbeda dari Autopilot di
-layar Navigasi (yang di sana mengatur pengiriman waypoint/cakupan otonom); toggle dan
-komponennya dibagikan, tetapi masing-masing layar mendefinisikan sendiri apa arti "tetap
+halaman Navigasi (yang di sana mengatur pengiriman waypoint/cakupan otonom); toggle dan
+komponennya dibagikan, tetapi masing-masing halaman mendefinisikan sendiri apa arti "tetap
 berjalan tanpa browser" untuk operasinya sendiri.
 
 ::: info Pengecualian heartbeat
-Jeda gerak 10 detik milik safety watchdog akibat heartbeat yang hilang ditangguhkan selama
+Tingkatan disconnect safety watchdog (jeda gerak 2 detik, idle 10 menit, dan shutdown 30 menit)
+ditangguhkan selama
 Autopilot aktif, sehingga sesi pemetaan bisa terus berjalan melewati koneksi yang terputus atau
 laptop yang ditutup. Lihat [Safety Watchdog](/id/development/ros/safety-watchdog) untuk tingkatan
 waktu lengkapnya; halaman itu tidak diduplikasi di sini.

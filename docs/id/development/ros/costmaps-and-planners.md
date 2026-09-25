@@ -92,7 +92,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-   Dimana $d_{\min} = 0.10\text{ m}$ (`min_obstacle_dist`, batas keras) adalah jarak clearance obstacle minimum. Gradien lunaknya adalah `inflation_dist` $0.75\text{ m}$ pada `weight_inflation` $2.0$.
+   Dengan $d_{\min} = 0.05\text{ m}$ (`min_obstacle_dist`, batas keras) sebagai jarak clearance obstacle minimum. Gradien lunaknya adalah `inflation_dist` $0.35\text{ m}$ pada `weight_inflation` $2.0$. Keduanya diturunkan pada 2026-09-17 (dari 0.10 / 0.75) agar TEB tidak macet di celah yang sudah bisa direncanakan `navfn`; nilai ini hanya menambah margin, bukan memperbaiki robot yang menyerempet dinding, yang penyebabnya local costmap berada di frame `odom` saat pivot.
 
 3. **Constraint Kinematik Non-Holonomic**:
    Memberi penalti pada kecepatan pergeseran lateral untuk menegakkan kinematika differential drive:

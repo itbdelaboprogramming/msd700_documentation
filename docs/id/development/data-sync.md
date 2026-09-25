@@ -39,7 +39,7 @@ flowchart LR
   end
 
   subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake() Dispatcher"]
+    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
     EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
   end
 
@@ -61,7 +61,7 @@ flowchart LR
 
 ## Separuh cloud (`sync_api.js`)
 
-Unit mengemudi; cloud menjawab. `sync_api.js` mengautentikasi token robot (`role: robot`, `typ: access`, `unit_id` dari claim, tidak pernah dari body) dan melayani `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` dan `/route-file/:routeId/:kind`. Push di-scope — dan dipaksa — ke unit + profil pemanggil; tabel identitas ditolak.
+Unit mengemudi; cloud menjawab. `sync_api.js` mengautentikasi token robot (`role: robot`, `typ: access`, `unit_id` dari claim, tidak pernah dari body) dan melayani `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` dan `/route-file/:routeId/:kind`. Push di-scope (dan dipaksa) ke unit + profil pemanggil; tabel identitas ditolak.
 
 ## Aturan Resolusi Konflik
 
@@ -104,11 +104,11 @@ Nama fase yang ditampilkan pada progress bar mencerminkan *kapan* sebuah ronde b
 
 | Tag Asal | Contoh Penyebab | Redaksi Log | Badge Status |
 | --- | --- | --- | --- |
-| `local_db` — kredensial ditolak | `MYSQL_USER`/`MYSQL_PASSWORD` pada `docker/.env` unit ini tidak cocok dengan password yang menjadi dasar inisialisasi volume `mysql_data_local` lokal (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
-| `local_db` — tidak terjangkau | Kontainer MySQL lokal unit tidak berjalan (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
-| `local_db` — lainnya | Error MySQL lain apa pun (skema, lock, dll.) selama read/write lokal. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
-| `cloud` — error jaringan | Kegagalan DNS, timeout, atau koneksi ditolak ke endpoint cloud. Diperkirakan terjadi selama unit tidak memiliki uplink. | *"cloud not reachable, will retry..."* | `offline` |
-| `cloud` — error HTTP | Cloud menjawab dengan status non-2xx di luar kasus `NOT_ENROLLED`/`NO_RENTAL`/reenroll yang sudah diketahui. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| `local_db`: kredensial ditolak | `MYSQL_USER`/`MYSQL_PASSWORD` pada `docker/.env` unit ini tidak cocok dengan password yang menjadi dasar inisialisasi volume `mysql_data_local` lokal (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db`: tidak terjangkau | Kontainer MySQL lokal unit tidak berjalan (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
+| `local_db`: lainnya | Error MySQL lain apa pun (skema, lock, dll.) selama read/write lokal. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud`: error jaringan | Kegagalan DNS, timeout, atau koneksi ditolak ke endpoint cloud. Diperkirakan terjadi selama unit tidak memiliki uplink. | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud`: error HTTP | Cloud menjawab dengan status non-2xx di luar kasus `NOT_ENROLLED`/`NO_RENTAL`/reenroll yang sudah diketahui. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
 | *(tidak ada)* | Sebuah throw di dalam `sync_agent.js` itu sendiri tanpa status HTTP dan tanpa tanda jaringan, sebuah bug di agen, bukan masalah konektivitas atau kredensial. | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
 
 Lihat `classifyFailure()` di `sync_agent.js` untuk aturan prioritas yang tepat.

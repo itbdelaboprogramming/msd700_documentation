@@ -42,7 +42,7 @@ Stack lokal unit adalah **cache offline-first dari cloud, bukan silo terisolasi*
 | **Database MySQL** | MySQL 8.0 | Menyimpan akun pengguna, rental profile, record unit terdaftar, geometri rute, batas area kustom, dan journal sinkronisasi. | Server (`db` / `db_dev`) dan unit (`db_local`) |
 | **media-server** | Node.js, Express | Mengelola upload aset peta, generasi thumbnail, dan menyajikan file peta `.pgm` dan `.yaml` statis. | Kontainer server dan kontainer unit (`media_local`) |
 | **signalling_server** | Node.js (WebSocket) | Server negosiasi peer WebRTC yang memfasilitasi streaming video langsung antara kamera robot dan browser operator. | Kontainer server (`signalling`) dan kontainer unit (`signalling_local`) |
-| **coturn** | Coturn (C) | Server relay TURN / STUN RFC 5766 yang menyediakan fallback media ketika NAT traversal mencegah WebRTC video peer-to-peer langsung. | Layanan `coturn` terkontainerisasi (`ros_web_ui_v2_coturn`, `network_mode: host`, profil prod-only) — layanan systemd dulu mengerjakan tugas ini sebelum cutover kontainer |
+| **coturn** | Coturn (C) | Server relay TURN / STUN RFC 5766 yang menyediakan fallback media ketika NAT traversal mencegah WebRTC video peer-to-peer langsung. | Layanan `coturn` terkontainerisasi (`ros_web_ui_v2_coturn`, `network_mode: host`, profil prod-only): layanan systemd dulu mengerjakan tugas ini sebelum cutover kontainer |
 | **Apache2** | Apache HTTP Server | Menangani terminasi TLS, header keamanan, dan merutekan semua traffic publik lewat path `/services/...`. | Host server (layanan native) |
 | **Paket Robot ROS** | C++, Python, ROS 1 Noetic | `msd700_robot` (navigasi, SLAM, coverage boustrophedon, EKF, driver sensor) dan paket bridge `ros-web-ui` (`topic2string`, `system_command`, `operation_supervisor`). | Jetson SBC (kontainer `msd700`) |
 
@@ -108,21 +108,25 @@ flowchart TB
 Platform ini menggunakan dua kanal komunikasi terpisah yang gagal secara independen:
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Channel1["Channel 1: MQTT Control Channel"]
+    direction LR
     M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
   end
 
   subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
+    direction LR
     R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
   end
+
+  Channel1 ~~~ Channel2
 ```
 
 | Kanal | Transport | Data yang Dibawa | Gejala Kegagalan |
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS (8883) | Perintah, acknowledgement, string pose, ping status. | Robot tampak **Offline** di konsol. Perintah gagal seketika dengan HTTP 504. |
 | **rosbridge** | WebSocket (WSS) | Pesan ROS bertipe (`/map`, `/robot_pose`, `/scan`, `/global_plan`). | Robot tampak **Online** dan menerima perintah, tetapi map canvas tetap kosong. |
-| **Kontainer Relay Unit** | Docker di Server | Menerjemahkan string MQTT ke topik ROS bertipe untuk rosbridge. | Robot online dan rosbridge terhubung, tetapi canvas tetap kosong karena fleet relay mati — atau, pada jalur per-unit legacy, karena `rosweb_unit_<u>_<unit>_nakayama` dihentikan atau di-reap karena inaktivitas. |
+| **Kontainer Relay Unit** | Docker di Server | Menerjemahkan string MQTT ke topik ROS bertipe untuk rosbridge. | Robot online dan rosbridge terhubung, tetapi canvas tetap kosong karena fleet relay mati: atau, pada jalur per-unit legacy, karena `rosweb_unit_<u>_<unit>_nakayama` dihentikan atau di-reap karena inaktivitas. |
 
 ## Alur Eksekusi Perintah End-to-End
 
@@ -192,7 +196,7 @@ stateDiagram-v2
 | `UNIT_IDLE_TIMEOUT_MS` | `1800000` (30 menit) | Durasi inaktivitas operator sebelum kontainer di-reap. |
 | `UNIT_REAP_INTERVAL_MS` | `60000` (1 menit) | Frekuensi sapuan reaper latar belakang. |
 | `UNIT_REMOVE_ON_REAP` | `false` | Bila true, menghapus kontainer; bila false, mempertahankannya dalam keadaan stopped. |
-| `UNIT_MODE` | `prod` (atau `dev`) | Memilih offset port (ROS master cloud 11311/11312, rosbridge 9090/9091). Roscore milik unit sendiri adalah 11321/11322 — bukan ini. |
+| `UNIT_MODE` | `prod` (atau `dev`) | Memilih offset port (ROS master cloud 11311/11312, rosbridge 9090/9091). Roscore milik unit sendiri adalah 11321/11322: bukan ini. |
 
 ::: warning Guard Retensi Autopilot
 Ketika sebuah robot menjalankan misi otonom dalam **Mode Autopilot**, kontainer relay-nya memasuki state **Retained**. Kontainer Retained dikecualikan dari idle timeout dan tidak dihentikan ketika seorang operator logout atau menutup browser-nya, memastikan pemantauan misi berlanjut secara kontinu.

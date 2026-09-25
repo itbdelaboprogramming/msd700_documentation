@@ -13,31 +13,48 @@ search: false
 
 ```mermaid
 flowchart TD
-  subgraph RobotCore["msd700_robot (Physical & Sim Stack)"]
-    BRINGUP["msd700_bringup<br/>Hardware startup & teleop"]
-    CONTROL["msd700_control<br/>EKF fusion & IMU filtering"]
-    DESC["msd700_description<br/>URDF, xacro & 3D meshes"]
-    FIRM["msd700_firmware<br/>MCU firmware (plain directory,<br/>not a ROS package)"]
-    HW["msd700_hardware<br/>Serial motor drivers & battery"]
-    NAV["msd700_navigation<br/>move_base, TEB, SLAM"]
-    COV["msd700_coverage<br/>boustrophedon sweep planner"]
-    SIM["msd700_simulation<br/>Gazebo warehouse & worlds"]
-    TP["third_party/ira_laser_tools<br/>Dual-LiDAR pointcloud merger"]
+  subgraph RobotCore["msd700_robot (physical and sim stack)"]
+    BRINGUP["msd700_bringup<br/>Launch layer, bridger, serial"]
+    CONTROL["msd700_control<br/>raw_sensor_node, EKF, IMU filter, twist_mux"]
+    DESC["msd700_description<br/>URDF/xacro (irbot = physical prototype)"]
+    HW["msd700_hardware<br/>hardware_monitor, Velodyne launch,<br/>C++ hw interface (mode 2)"]
+    PERC["msd700_perception<br/>Velodyne hazard scan"]
+    NAV["msd700_navigation<br/>move_base, TEB, SLAM, explore"]
+    COV["msd700_coverage<br/>Boustrophedon sweep planner"]
+    SIM["msd700_simulation<br/>Gazebo worlds"]
+    MSGS["msd700_msgs<br/>HardwareState / HardwareCommand"]
+    TP["third_party<br/>ira_laser_tools, sensor_pointcloud"]
   end
 
-  subgraph WebUIBridge["ros-web-ui/source (Web & Fleet Bridges)"]
-    W_BRINGUP["msd700_webui_bringup<br/>Top-level orchestrator launch"]
-    W_CTRL["msd700_webui_control<br/>system_command & supervisor"]
-    MQTT["dependencies/aws_mqtt<br/>TLS MQTT bridge (cloud & local)"]
-    T2S["dependencies/topic2string<br/>JSON telemetry serializer"]
+  subgraph WebUIBridge["ros-web-ui/source (web and fleet bridges)"]
+    W_BRINGUP["msd700_webui_bringup<br/>bringup_msd / bringup_cloud"]
+    W_CTRL["msd700_webui_control<br/>system_command, supervisor, switch_mode"]
+    W_UTILS["msd700_webui_utils<br/>idle_detector"]
+    W_MSG["msd700_webui_msg<br/>SwitchMode, SetMapPath"]
+    BACKEND["ros_dashboard_backend<br/>REST API (backend_node)"]
+    T2S["topic2string<br/>telemetry to strings"]
+    MQTT["aws_mqtt<br/>MQTT bridge (cloud and local)"]
+    RPP["robot_pose_publisher<br/>/robot_pose from TF"]
   end
 
-  W_CTRL --> NAV
-  W_CTRL --> CONTROL
+  W_BRINGUP --> W_CTRL
+  W_BRINGUP --> W_UTILS
+  W_BRINGUP --> T2S
+  W_BRINGUP --> BRINGUP
+  W_CTRL --> W_MSG
+  W_CTRL -->|switch_mode| NAV
+  W_CTRL -->|switch_mode| COV
+  BACKEND --> MQTT
   T2S --> MQTT
+  RPP --> T2S
+  COV --> NAV
+  PERC -->|/scan, /scan_hazard| NAV
   NAV --> CONTROL
-  CONTROL --> HW
-  HW --> FIRM
+  BRINGUP --> CONTROL
+  BRINGUP --> HW
+  HW --> PERC
+  CONTROL --> MSGS
+  NAV --> DESC
 ```
 
 ## パッケージディレクトリ: `msd700_robot`
@@ -78,8 +95,9 @@ flowchart TD
 状態推定、座標変換階層、センサーフュージョンを管理する。
 
 - **主要ノード**:
-  - `ekf_localization_node` (`robot_localization`): ホイールエンコーダーオドメトリ(`/wheel/odom`)とフィルタ済みIMUデータ(`/imu/from_filter`)を融合し、安定した`/odometry/filtered`トピックを30 Hzで生成する拡張カルマンフィルタ。
-  - `imu_filter_node` (`imu_filter_madgwick`、`imu_filter.launch`により`gain 0.01`、磁力計オン、固定フレーム`odom`で起動): 生の角速度と加速度をオリエンテーションクォータニオンに変換するMadgwick AHRSフィルタ。その出力トピックは`/imu/from_filter`(`/imu/data`からのリマップ)であり、これがEKFが実際に消費するもの。`/imu/data`自体は`hardware_state.py`がパブリッシュする。
+  - `ekf_localization_node` (`robot_localization`): ホイールオドメトリ(`/wheel/odom`)とIMU(`/imu/data`)を融合して30 Hzの`/odometry/filtered`を生成し、`odom -> base_footprint`をブロードキャストする拡張カルマンフィルタ。
+  - `imu_filter_node` (`imu_filter_madgwick`、`imu_filter.launch`により`gain 0.01`、磁力計オン、固定フレーム`odom`で起動): `/imu/data_raw` + `/imu/mag`に対するMadgwick AHRSフィルタ。出力は`/imu/from_filter`にリマップされ、`hardware_state.py`(`raw_sensor_node`)がそれを読んで姿勢を`/imu/data`として再パブリッシュし、これをEKFが消費する。
+  - `raw_sensor_node`(`hardware_state.py`、`hardware_mode 1`で`hardware_state_sub.launch`が起動): STM32の`hardware_state`を`config/pose_config.yaml`の形状を使って`/wheel/odom`、`/imu/data_raw`、`/imu/mag`、`/imu/data`に変換する。
 - **主要Launchファイル**:
   - `robot_localization.launch`: `ekf_localization_config.yaml`からパラメータを読み込み、EKFフュージョンを構成・起動する。
   - `imu_filter.launch`: Madgwickオリエンテーション推定を起動する。
@@ -88,16 +106,17 @@ flowchart TD
 URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、センサー配置を定義する。
 
 - **主要URDFモデル**:
-  - `urdf/msd700_field.urdf.xacro`: 実寸スケールの量産ロボットモデル(0.90 x 0.70 mボディ、x = ±0.30 m / y = ±0.30 mに4つの駆動輪、footprintから0.50 m上のVelodyneマスト)。キャスターなし、`camera_link`なし。
+  - `urdf/irbot.urdf.xacro`: **実機**がパブリッシュするモデル(`launch/robot_description.launch.xml`経由、`bringup_msd.launch`で常時起動)。固定チェーン`base_footprint -> base_link -> laser`と`base_link -> imu`。LiDARの高さは`config/msd700_xacro_irbot.yaml`による。
+  - `urdf/msd700_field.urdf.xacro`: 実寸スケールの**シミュレーション**モデル(0.90 x 0.70 mボディ、x = ±0.30 m / y = ±0.30 mに4つの駆動輪、footprintから0.50 m上のVelodyneマスト)。キャスターなし、`camera_link`なし。
   - `urdf/velodyne/VLP_16.urdf.xacro`: 高精度16チャンネル3D LiDARモデルとGazeboセンサープラグイン。
   - `urdf/turtlebot3_waffle.urdf.xacro`: レガシーな小型プロトタイプモデル。
 
 ### 4. `msd700_hardware` & `msd700_firmware`
-低レベルハードウェアインターフェース、モーター駆動、エンコーダーパルスカウント、バッテリー状態を扱う。
+低レベルハードウェアインターフェース、モーター駆動、エンコーダーパルスカウントを扱う。
 
 - **ハードウェア構成**:
   - `serial_launch.launch` (`msd700_bringup`): ホストを低レベルマイコンに`/dev/stm32`経由(57600ボー、`rosserial_python`の`serial_node.py`経由)で接続する。
-  - ファームウェアは`msd700_hardware`インターフェースに対してrosserialプロトコルを話し、同インターフェースが`/wheel/odom`と生IMUトピックをパブリッシュする。スタック内のどこにも`/battery_state`トピックは存在しない。ファームウェアの実装内容については[ファームウェア & ハードウェア](/ja/development/ros/firmware-and-hardware)を参照。
+  - STM32ファームウェアはrosserial(`hardware_state` / `hardware_command`)で通信する。既定の`hardware_mode 1`では`raw_sensor_node`と`bridger.py`が双方向を処理し、C++の`msd700_hardware`インターフェース(`msd700_hardware.launch`、`config/odometry_config.yaml`)は`hardware_mode 2`でのみ使われる。スタック内のどこにも`/battery_state`トピックは存在しない。ファームウェアの実装内容については[ファームウェア & ハードウェア](/ja/development/ros/firmware-and-hardware)を参照。
 
 ### 5. `msd700_simulation`
 ナビゲーションアルゴリズムをソフトウェア上でテストするGazeboシミュレーション環境。
@@ -116,6 +135,25 @@ URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、セ�
 - `HardwareState.msg`: 8× `float32 ch_ultrasonic_distance_1…_8`、`int32 right/left_motor_pulse_delta`、`float32 heading/pitch/roll`、`float32 acc/gyr/mag_x/y/z`、`float32 uwb_dist/deviation/rho/theta`。
 - `WebNavCommand.msg`: `string command`、`geometry_msgs/PoseStamped pose`、`string file_path`。
 
+### 8. `msd700_perception`
+Velodyneの点群を、スタックの他の部分が使う2Dスキャンに変換する: SLAM/AMCL用の`/scan`、コストマップ用の`/scan_hazard`(障害物と穴)、ダッシュボードのオーバーレイ用の`/scan_holes`。[知覚とハザードスキャン](/ja/development/ros/perception-and-hazard-scan)を参照。
+
+- **ノード**: `hazard_scan_node.py`(パイプライン本体。ライブラリコードは`src/msd700_perception/`、Cの高速パスは`src_cpp/fastops.cpp`)、段階ごとのデバッグ用`hazard_inspector.py`。
+- **launchファイル**: `velodyne_hazard.launch`(`msd700_hardware/velodyne_scanner.launch`の置き換え。`MSD700_HAZARD_SCAN=true`で選択)、`cloud_hazard.launch`、`hazard_scan.launch`。
+- **設定**: `config/hazard_scan.yaml`。
+
+### 9. `msd700_coverage`
+エリア掃引とオペレーションプレイリストを支えるブストロフェドン網羅走行プランナー。[ブストロフェドン網羅走行](/ja/development/ros/boustrophedon-and-alignment)を参照。
+
+- **ノード**: `path_coverage_node.py`(分割、レーン計画、ゴール送信、一時停止/再開の所有権)、`autocover_node.py`(任意の自動開始。既定はオフ)。
+- **launchファイル**: `msd700_boustrophedon.launch`(`switch_mode.yaml`の`boustrophedon`モード)、`coverage.launch`。
+- **設定**: `config/boustrophedon_params.yaml`、`config/robot/field.yaml` / `prototype.yaml`。
+
+### 10. `third_party/sensor_pointcloud`
+レンジメッセージを`PointCloud2`に集約する。リポジトリに同梱されているが、現在のスタックでは起動されない。
+
+`msd700_movement/`は`package.xml`のない残存ディレクトリ(旧ナビゲーションスクリプト、`rplidar_ros`、`robot_pose_publisher`の2つ目のコピー)で、catkinはビルドしない。
+
 ## パッケージディレクトリ: `ros-web-ui/source`
 
 ### 1. `msd700_webui_control`
@@ -128,12 +166,12 @@ Webコマンドとダッシュボードテレメトリを物理ロボットハ�
   - `hardware_monitor.py`: 重要なセンサープロセスとUSBデバイスの健全性を検証するバックグラウンドウォッチドッグ。
 
 ### 2. `dependencies/topic2string`
-重いROSメッセージ型をJSON文字列に変換する高性能シリアライゼーション層。
+重いROSメッセージ型をMQTT向けのコンパクトな文字列に変換するシリアライゼーション層。2026-09-18以降、ユニットは**C++ノード**を実行する(`bringup_msd.launch` → `topic2string_impl:=cpp_nodes` → `launch/msd_cpp_nodes.launch`、ソースは`src/nodelets/`)。`scripts/`のPythonスクリプトと`launch/msd.launch`はロールバック用に残されている(`topic2string_impl:=python`)。ノード名とトピックはどちらも同じ。
 
 - **主要ノード**:
-  - `robotpose_to_string.py`: ポーズテレメトリシリアライザ。デフォルト2 Hz(`topic2string/launch/msd.launch`により25 Hzに上げられ、手動走行中のダッシュボードマーカーが滑らかに保たれる)。
-  - `laserscan_to_string.py`: イベント駆動の圧縮レーザースキャンシリアライザ(固定レートなし)。
-  - `map_compression_pipeline.py`(ノード名`map_compression_node`): ライブSLAM occupancy grid用のBase64 zlib圧縮。
+  - `robotpose_msd`(`robotpose_to_string_node`): 25 Hzのポーズテレメトリシリアライザ。ロボットが動いていないときは送信をスキップする。
+  - `laserscan_to_string`(`laserscan_to_string_node`): 2 Hz(`publish_frequency 2.0`)の圧縮レーザースキャンシリアライザ。センチメートル単位に量子化する。
+  - `map_compression_node`(`map_compression_node`、`src/nodelets/map_compression.cpp`): ライブのoccupancy gridを圧縮し(`base64(zlib(...))`、セルはint8でパック)、変化時とハートビートで送信し、マップリセット後はバースト送信する。
 
 ### 3. `dependencies/aws_mqtt`
 ローカルのROSトピックを中央HiveMQブローカーに接続する暗号化トランスポートブリッジ。
@@ -142,6 +180,27 @@ Webコマンドとダッシュボードテレメトリを物理ロボットハ�
   - `nakayama_msd.launch`: ロボット側ブリッジ。オンボードのROSトピックをポート8883(TLS)でクラウドHiveMQに接続する。
   - `nakayama_cloud.launch`: サーバー側ブリッジ。MQTTトピックをユニットごとのクラウドROSトピックに変換する。
   - `local_msd.launch`: ユニット側ブリッジ。ローカルMosquittoブローカー(`127.0.0.1:1883`)に接続する。
+
+### 4. `msd700_webui_bringup`
+システムの片側全体を起動する最上位のlaunchファイル。
+
+- `bringup_msd.launch`: ユニット側。常時起動のベース(`twist_mux`、`bridger`、ロボット記述、ハードウェアモニター)、`topic2string`(既定はC++)、MQTTブリッジ、`system_command`、`switch_mode`、idle detector。
+- `bringup_cloud.launch`: クラウドサーバー側。ユニット単位またはフリートのリレー(`use_unit_relays`、`use_multi_unit_bridge`)、バックエンド、rosbridge。
+- `bringup_local_server.launch`: ユニットのローカルサーバー側(バックエンド、rosbridge、`topic2string/local.launch`)。同じroscoreを共有する別コンテナで動く。
+- `debug_local.launch`: デバッグ用にクラウドとユニットを1台で起動する。
+
+### 5. `msd700_webui_msg`
+モード切替用のメッセージとサービス型: `SwitchModeMsg.msg`、`SwitchMode.srv`、`SetMapPath.srv`。
+
+### 6. `msd700_webui_utils`
+- `idle_detector.py`(`idle_detector.launch`、`bringup_msd.launch`が起動): TF上のロボット姿勢を監視し、ロボットが実際に動いているかを報告する。`system_command.py`がスタック/idle判定に使う。
+- `string_monitor.py`: トピック上の`std_msgs/String`ペイロードサイズを報告するデバッグツール。
+
+### 7. `dependencies/robot_pose_publisher`
+TFから`map`フレームのロボット姿勢を`/robot_pose`としてパブリッシュするC++ノード。`topic2string`がダッシュボード向けにシリアライズする。
+
+### 8. `dependencies/ROS-dashboard-backend`(パッケージ`ros_dashboard_backend`)
+Node.jsのREST API(`scripts/backend_node`、`admin_api.js`、`enroll_api.js`、`sync_*.js`)。`launch/ros_dashboard_backend.launch`で起動する。[APIリファレンス](/ja/development/api-reference)を参照。
 
 ## 関連ドキュメント
 

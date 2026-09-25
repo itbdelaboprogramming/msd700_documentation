@@ -142,6 +142,7 @@ sequenceDiagram
 | Kata Kerja Perintah | Konten Payload | Tujuan |
 | --- | --- | --- |
 | `ping` | Lihat [Bagian Ping Heartbeat](#kontrak-ping-heartbeat-dan-lease) | Heartbeat, akuisisi lease, pengambilan telemetri, dan penyegaran watchdog. |
+| `heartbeat` | Hanya `{ "page": "navigation" }`. Dikirim browser pada 5 Hz, QoS 0, lewat MQTT-over-WebSocket langsung ke Mosquitto unit (hanya dashboard lokal) | Bukti kehadiran untuk tingkat watchdog 2 detik. Tidak memberi apa pun: tanpa lease, claim/release, `origin`, atau feedback. Lihat [Safety Watchdog](/id/development/ros/safety-watchdog#dua-sinyal-kehadiran). |
 | `check` | Tidak ada | Meng-query status driver motor dan mikrokontroler level rendah. |
 | `init` | Tidak ada | Menginisialisasi antarmuka hardware dan jalur daya. |
 | `stop` | Tidak ada | Mematikan periferal hardware dan tahap daya. |
@@ -378,7 +379,7 @@ retain di broker. Ada tiga mekanisme yang membuatnya selamat, dan tidak satu pun
 | Mekanisme | Lokasi | Yang dilindungi |
 | --- | --- | --- |
 | Relay cloud men-latch `/unit_<ULID>/string/map` | `aws_mqtt/scripts/gen_bridge_params.py` | Browser yang connect di antara dua pengiriman, dan relay yang restart (terjadi tiap kali roster fleet berubah). |
-| Burst `burst_sends` pengulangan berjarak `burst_interval` setelah reset atau retire map | `topic2string/scripts/map_compression_pipeline.py` | Map yang baru saja dibuka operator, yang dikirim tepat saat robot sedang me-restart seluruh stack navigasinya. Memulai run mapping baru ikut tercakup. |
+| Burst `burst_sends` pengulangan berjarak `burst_interval` setelah reset atau retire map | `topic2string/src/nodelets/map_compression.cpp` (Python twin: `scripts/map_compression_pipeline.py`) | Map yang baru saja dibuka operator, yang dikirim tepat saat robot sedang me-restart seluruh stack navigasinya. Memulai run mapping baru ikut tercakup. |
 | Kanal tarik `/string/map_request` | Browser ke robot, jalur yang sama dengan topik ACK | Sisanya: paket yang drop, dashboard yang halamannya mount di saat yang salah, relay mode lokal yang menelan pesan pertama saat masih belajar tipe topiknya. |
 
 Dashboard mem-publish `std_msgs/String` ke `/unit_<ULID>/string/map_request` begitu kanvas

@@ -18,12 +18,12 @@ The ROS 1 Noetic stack running on the physical unit: packages, algorithms, senso
 
 ## ROS Web UI: Platform
 
-The operator dashboard, admin console, and the backend/bridge services connecting them to the robot. Organized per actual feature screen, not by protocol layer.
+The operator dashboard, admin console, and the backend/bridge services connecting them to the robot. Organized per actual feature page, not by protocol layer.
 
 <LinkCards>
   <LinkCard icon="🧭" title="Navigation" details="Manual control, Autopilot, pinpoint/routes, map sync & alignment, and coverage cleaning." link="/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="Mapping" details="Building a new map: Play/Pause/Stop, manual vs. autonomous exploration, and save-on-stop." link="/development/webui/mapping/overview" />
-  <LinkCard icon="🗄️" title="Database" details="The Map DB screen: listing, searching, renaming, and deleting recorded maps." link="/development/webui/database/overview" />
+  <LinkCard icon="🗄️" title="Database" details="The Map DB page: listing, searching, renaming, and deleting recorded maps." link="/development/webui/database/overview" />
   <LinkCard icon="🛠️" title="Admin Console" details="Operators, Units & Fleet, Rentals, Backups, and superadmin-only Admins tabs." link="/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="Accounts & Access" details="Operator login/signup, admin login, JWT keyring, and hardware enrolment." link="/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="Camera & Live View" details="The WebRTC video pipeline behind the dashboard's live feed." link="/development/webui/camera/overview" />

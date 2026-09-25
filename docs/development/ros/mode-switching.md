@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-This document details how the MSD700 robot dynamically switches between operational modes (`navigation`, `slam`, `explore`, `boustrophedon` — idle is simply "no launch stack") at runtime using `switch_mode.py`, `system_command.py`, and `operation_supervisor.py` without restarting the primary ROS core. Mode names come from `switch_mode.yaml` and must match the strings sent over the `/switch_mode` service.
+This document details how the MSD700 robot dynamically switches between operational modes (`navigation`, `slam`, `explore`, `boustrophedon`: idle is simply "no launch stack") at runtime using `switch_mode.py`, `system_command.py`, and `operation_supervisor.py` without restarting the primary ROS core. Mode names come from `switch_mode.yaml` and must match the strings sent over the `/switch_mode` service.
 
 ## Mode Orchestration Topology
 
@@ -36,7 +36,7 @@ flowchart TD
 
 | Mode (`switch_mode.yaml`) | Launch file | Notes |
 | --- | --- | --- |
-| (idle — no stack) | — | Base nodes keep running (`serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`). |
+| (idle: no stack) | - | Base nodes keep running (`serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`). |
 | **`navigation`** | `msd700_navigation.launch` | `map_server`, `amcl`, `move_base`, costmaps. |
 | **`slam`** | `msd700_slam.launch` | Live mapping; teleop is a separate launch, not part of the stack. |
 | **`explore`** | `msd700_explore.launch` | `explore_lite` frontier search. |
@@ -80,7 +80,7 @@ stateDiagram-v2
 
 ### Key Supervisor Capabilities:
 - **Latched Operation Snapshot**: Publishes `/string/operation_snapshot` with latched QoS. When any operator opens a browser tab, the full state of the active mission (active waypoint index, remaining route pins, dwell timer) is recovered in milliseconds.
-- **Autopilot Safety Exemption**: When Autopilot is toggled ON, the supervisor suppresses the 10-second operator disconnect pause, allowing long-running sweeping missions to proceed unattended.
+- **Autopilot Safety Exemption**: When Autopilot is toggled ON, the watchdog suspends all three disconnect tiers (2 s pause, 10 min idle, 30 min shutdown), allowing long-running sweeping missions to proceed unattended.
 
 ## Related Documentation
 

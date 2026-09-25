@@ -7,9 +7,9 @@ search: false
 
 <RoleBadge role="developer" />
 
-Layar-layar yang berada di antara seseorang dan robot: login operator beserta pemilih unitnya, formulir
-signup operator, login konsol admin yang terpisah, dan layar ganti password admin. Halaman ini
-memperkenalkan tiap layar dan bagaimana hubungan antar layar tersebut. Mekanisme kriptografi di balik
+Halaman-halaman yang berada di antara seseorang dan robot: login operator beserta pemilih unitnya, formulir
+signup operator, login konsol admin yang terpisah, dan halaman ganti password admin. Dokumen ini
+memperkenalkan tiap halaman dan bagaimana hubungan antar halaman tersebut. Mekanisme kriptografi di balik
 token yang mereka terbitkan ada di [Keamanan & Token](/id/development/webui/accounts/security-and-tokens);
 bagaimana robot fisik memperoleh kredensialnya sendiri ada di
 [Pendaftaran Perangkat Keras](/id/development/webui/accounts/enrolment); bagaimana token dan lease
@@ -27,7 +27,7 @@ Selain satu tautan itu, halaman ini murni tentang login sebagai operator.
 
 Formulir pendaftaran mandiri untuk akun operator baru: pemeriksaan keunikan username dan email, bidang
 password dan konfirmasinya, serta dialog sukses `ConfirmRegister` setelah akun dibuat. Seperti tautan
-signup di halaman login, layar ini sama sekali tidak ada di build lokal atau build unit.
+signup di halaman login, halaman ini sama sekali tidak ada di build lokal atau build unit.
 
 ::: warning Signup tidak memberikan akses ke robot mana pun
 Membuat akun di sini hanya membuat identitas operator polos. Ini sendiri tidak memberikan akses untuk
@@ -38,14 +38,14 @@ identitas, bukan otorisasi.
 
 ## Login admin (`/admin`)
 
-Layar login kedua yang tidak dicantumkan di navigasi, hanya bisa dijangkau dengan menuju `/admin`
+Halaman login kedua yang tidak dicantumkan di navigasi, hanya bisa dijangkau dengan menuju `/admin`
 secara langsung, yang memanggil `adminLogin()` yang berbeda, bukan `/user/login` operator yang dipakai
 di halaman root. Ini adalah pintu back-office untuk staf manajemen armada dan tenant, terpisah dari
 apa pun yang dilihat operator.
 
 ## Ganti password admin (`/admin/change-password`)
 
-Layar ini punya dua mode yang berbeda:
+Halaman ini punya dua mode yang berbeda:
 
 - **Wajib (Forced)**: akun admin yang di-seed atau baru saja direset diarahkan ke sini sebelum bisa
   mencapai dashboard admin sama sekali, tanpa jalan kembali sampai password diganti.
@@ -61,7 +61,7 @@ dalam domain kepercayaan yang independen alih-alih satu login bersama; **Operato
 diterbitkan oleh backend cloud adalah yang menjadi acuan autentikasi halaman login operator, dan domain
 ini secara eksplisit dibatasi untuk operator manusia yang mengakses dashboard web. Login admin mengambil
 dari penyimpanan akun dan jalur login sendiri yang terpisah (`adminLogin()`, bukan `/user/login`
-operator): kedua layar ini tidak berbagi formulir login, sesi, maupun jalur pengalihan satu sama lain.
+operator): kedua halaman ini tidak berbagi formulir login, sesi, maupun jalur pengalihan satu sama lain.
 
 ## Terkait
 

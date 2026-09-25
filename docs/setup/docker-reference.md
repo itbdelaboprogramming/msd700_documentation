@@ -381,6 +381,9 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | `--dry-run` | forwarded | Not a safe preview: still starts containers, changes host state, can kill the session and contact enrolment |
 | `--kill` | forwarded | Kill the tmux session in the container |
 | `--local` | accepted, ignored | Deprecated. Local stack starts either way |
+| `--fresh` | `reenroll` only | Also wipe the local cache (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). For a robot going out on a **new** rental; without it the cache is kept and a full sync reconciles it |
+| `--no-archive` | `reenroll` only | Skip the backup. Safe only if the unit has synced everything it holds; otherwise offline maps are lost |
+| `-y`, `--yes` | `reenroll` only | No prompts, including the unit-id confirmation |
 | `--unit_id` | **rejected** | Removed on purpose. Identity comes from the cloud admin console |
 
 ::: info What `-d` changes (and doesn't)
@@ -435,7 +438,7 @@ Three steps exist because of silent failures:
 
 ### `manage-unit.sh` (server-side, manual/debug only)
 
-Drives **legacy per-unit** cloud containers by ULID only (names rejected): `start|stop|restart|status|logs|list|loop`. `loop` polls every 10 s for the 7 expected relay nodes and restarts on missing. Normally unneeded — the backend auto-starts/stops unit containers on dashboard open plus idle timeout. Never use it on a fleet-mode unit.
+Drives **legacy per-unit** cloud containers by ULID only (names rejected): `start|stop|restart|status|logs|list|loop`. `loop` polls every 10 s for the 7 expected relay nodes and restarts on missing. Normally unneeded: the backend auto-starts/stops unit containers on dashboard open plus idle timeout. Never use it on a fleet-mode unit.
 
 ## Unit: `run_msd.sh`
 
@@ -499,7 +502,7 @@ There `run_msd.sh` **is** the container's main command, so returning stops the c
 
 Defaults, not measurements of your host. Every service uses `network_mode: host`, so **Docker publishes nothing**; the unit firewall controls access. Browser-facing defaults: `3000`, `5002`, `9090`, `3003`, `3001`, `3002`, `9001`. MySQL `3306`, plain MQTT `1883`, and network agent `5011` are unit-internal. The MQTT WebSocket listener allows anonymous clients in the checked-in config: keep it on a trusted operator network, never public internet.
 
-Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on first run). The live file is per-host; the template is the tracked reference. `docker/.env` is git-tracked on the unit — a `git pull` that changes `MYSQL_*` after the data volume was initialized causes credential drift (see [Setup Troubleshooting](/setup/troubleshooting)).
+Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on first run). The live file is per-host; the template is the tracked reference. `docker/.env` is git-tracked on the unit: a `git pull` that changes `MYSQL_*` after the data volume was initialized causes credential drift (see [Setup Troubleshooting](/setup/troubleshooting)).
 
 ## Unit `.env` reference
 

@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 Widget video langsung yang ditampilkan di sidebar dashboard (`src/components/sidebar/sidebar.tsx`)
-pada layar Mapping dan Navigation: bagaimana `VideoStreamComponent` mendapatkan koneksi WebRTC ke
+pada halaman Mapping dan Navigation: bagaimana `VideoStreamComponent` mendapatkan koneksi WebRTC ke
 kamera robot, dan bagaimana browser menyadari saat koneksi tersebut diam-diam mati. Sidebar halaman
 Database menampilkan thumbnail pratinjau peta statis di slot yang sama, bukan video langsung. Untuk
 separuh jabat tangan ini yang di-host di robot, konfigurasi ICE `camera_client.py`, dan logika

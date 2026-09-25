@@ -46,7 +46,7 @@ daftar server ICE mereka: nilai yang tidak diset kembali ke default cloud (Googl
 TURN produksi), dan string literal `none` mengosongkan daftar tersebut sama sekali alih-alih
 membiarkannya tidak diset. `LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` /
 `LOCAL_TURN_CREDENTIAL` secara default berisi string literal `none` di dalam kode (`camera_client.py`)
-justru karena alasan ini — di `msd700_noetic/docker/.env` keduanya di-comment out, sehingga default
+justru karena alasan ini: di `msd700_noetic/docker/.env` keduanya di-comment out, sehingga default
 kode-lah yang berlaku. Keduanya hanya layak diset pada unit yang LAN-nya benar-benar membutuhkan
 relay (jaringan tersegmentasi, jembatan Wi-Fi captive antara robot dan operator).
 
@@ -123,7 +123,7 @@ Dua port, keduanya wajib dari env (proses exit bila salah satunya unset): `PORT_
 | `error` | server | Termasuk takeover `new_login`: `userId` ganda membunuh socket lama |
 | `server_shutdown` | server | Broadcast saat SIGTERM/SIGINT sebelum force-exit 5 dtk |
 
-`GET /clients` (HTTP, Bearer) me-list client yang terhubung. Server me-log substring `Answer SDP` — ia memeriksa framing SDP, hanya tidak pernah media.
+`GET /clients` (HTTP, Bearer) me-list client yang terhubung. Server me-log substring `Answer SDP`: ia memeriksa framing SDP, hanya tidak pernah media.
 
 ## Reconnect dan retry
 

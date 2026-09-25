@@ -40,7 +40,7 @@ robot yang kembali:
 > nonce yang berubah (re-image sungguhan, atau penipu), atau tidak ada ikatan hidup (perangkat
 > keras diadopsi ke unit yang berbeda, **atau seorang admin melepas ikatannya dengan sengaja**).
 >
-> — [Enrolmen Perangkat Keras § Pemulihan
+>: [Enrolmen Perangkat Keras § Pemulihan
 > self-heal](/id/development/webui/accounts/enrolment#pemulihan-self-heal-device-json-yang-hilang-tanpa-persetujuan-baru)
 
 Dengan kata lain, melepas ikatan tidak sekadar menghapus baris basis data: ia dengan sengaja
@@ -48,7 +48,7 @@ mematahkan kondisi ketiga dari tiga kondisi yang diperiksa pemulihan self-heal (
 `unit_devices` hidup masih mengikat `fingerprint` persis ini ke unit tersebut"), sehingga lain
 kali `enroll.py` robot tersebut memanggil `POST /enroll/claim`, ia tidak dapat diam-diam
 memulihkan identitas lamanya. Ia jatuh ke kolam tertunda persis seolah-olah ia perangkat keras
-baru, dan membutuhkan persetujuan administrator yang segar — Daftarkan atau Adopsi lagi — sebelum
+baru, dan membutuhkan persetujuan administrator yang segar (Daftarkan atau Adopsi lagi) sebelum
 dapat bergabung kembali ke armada. Itulah keseluruhan inti dari menawarkan "memaksa
 pendaftaran-ulang" sebagai aksi terpisah dari menghapus unit sepenuhnya: identitas, riwayat, dan
 penugasan penyewaan unit tersebut semuanya bertahan; hanya kredensial perangkatnya yang diputus.
@@ -56,9 +56,9 @@ penugasan penyewaan unit tersebut semuanya bertahan; hanya kredensial perangkatn
 ## `unit_manager.js` dan armada kontainer
 
 Tidak ada satu pun aksi tab Unit yang memulai atau menghentikan kontainer relay milik sebuah
-robot. Siklus hidup kontainer — mesin status `Absent → Starting → Running → Retained → Stopped`
+robot. Siklus hidup kontainer: mesin status `Absent → Starting → Running → Retained → Stopped`
 di [Siklus Hidup Kontainer Unit § Mesin Status Siklus Hidup
-Kontainer](/id/development/unit-container-lifecycle#state-machine-siklus-hidup-kontainer) —
+Kontainer](/id/development/unit-container-lifecycle#state-machine-siklus-hidup-kontainer):
 sepenuhnya didorong oleh aktivitas operator (membuka dashboard sebuah unit, detak jantung ping,
 status Autopilot), bukan oleh apa pun yang diklik admin di sini. Yang *memang* diubah oleh aksi
 admin adalah data yang dijembatani kontainer bersama tunggal milik relay armada, dan koneksi itu
@@ -72,7 +72,7 @@ nyata:
   atau menghapus sebuah unit adalah keseluruhan mekanismenya, tanpa langkah terpisah untuk
   "menyalakan bridging" untuknya.
 - **`startRosterReconciler()`** membaca ulang roster itu setiap `FLEET_ROSTER_POLL_MS` (default
-  60 dtk) dan me-restart kontainer relay jika berubah — lihat
+  60 dtk) dan me-restart kontainer relay jika berubah: lihat
   [Siklus Hidup Kontainer Unit § Enrolmen me-restart relay secara
   otomatis](/id/development/unit-container-lifecycle#pendaftaran-me-restart-relay-secara-otomatis).
   Sebuah unit yang didaftarkan atau dihapus dari konsol ini mencapai relay hidup dalam satu
@@ -100,14 +100,14 @@ bahaya menjalankan keduanya sekaligus.
 
 ## Keamanan Soket Docker
 
-`backend_node` — proses tempat seluruh konsol ini berjalan — berkomunikasi dengan mesin Docker
+`backend_node` (proses tempat seluruh konsol ini berjalan) berkomunikasi dengan mesin Docker
 host lewat bind mount `/var/run/docker.sock`. Sesuai
 [Siklus Hidup Kontainer Unit § Keamanan Soket
 Docker](/id/development/unit-container-lifecycle#keamanan-docker-socket), eksekusi kontainer lewat
 soket itu dibatasi hanya untuk mengelola kontainer yang cocok dengan namespace `rosweb_unit_*`,
 mencegah manipulasi kontainer sembarangan pada host. Setiap aksi admin yang pada akhirnya
-menyentuh sebuah kontainer — memulai, menghentikan, atau me-restart sebuah relay sebagai efek
-samping perubahan roster di atas — melewati permukaan terbatas yang sama itu, tidak pernah
+menyentuh sebuah kontainer (memulai, menghentikan, atau me-restart sebuah relay sebagai efek
+samping perubahan roster di atas) melewati permukaan terbatas yang sama itu, tidak pernah
 perintah Docker serba-guna.
 
 ## Terkait

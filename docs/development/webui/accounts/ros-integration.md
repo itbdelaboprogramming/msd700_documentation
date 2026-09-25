@@ -7,9 +7,9 @@ search: false
 
 <RoleBadge role="developer" />
 
-The boundary between the Accounts & Access screens and the physical robot: how the enrolment
+The boundary between the Accounts & Access pages and the physical robot: how the enrolment
 protocol's tokens actually reach the robot host, and how the robot itself protects against two
-operators trying to drive it at once. For the screens that start this chain, see
+operators trying to drive it at once. For the pages that start this chain, see
 [Overview](/development/webui/accounts/overview); for the full nonce handshake, see
 [Hardware Enrolment](/development/webui/accounts/enrolment); for the token and trust domain
 mechanics, see [Security & Tokens](/development/webui/accounts/security-and-tokens).
@@ -59,7 +59,7 @@ lease, see [State & Behavior](/development/state-and-behavior).
 
 ## Related
 
-- [Overview](/development/webui/accounts/overview): the four Accounts & Access screens and how
+- [Overview](/development/webui/accounts/overview): the four Accounts & Access pages and how
   they relate.
 - [Security & Tokens](/development/webui/accounts/security-and-tokens): JWT keyring, trust domains,
   and TLS termination.

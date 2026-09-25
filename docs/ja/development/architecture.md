@@ -42,7 +42,7 @@ MSD700 における中心的なアーキテクチャ上の決定は、**ユニ�
 | **MySQL データベース** | MySQL 8.0 | ユーザーアカウント、レンタルプロファイル、登録済みユニットレコード、ルートジオメトリ、カスタムエリア境界、同期ジャーナルを保存する。 | サーバー(`db` / `db_dev`)およびユニット(`db_local`) |
 | **media-server** | Node.js、Express | マップアセットのアップロード、サムネイル生成を管理し、静的な `.pgm` および `.yaml` マップファイルを配信する。 | サーバーコンテナおよびユニットコンテナ(`media_local`) |
 | **signalling_server** | Node.js(WebSocket) | ロボットカメラとオペレーターのブラウザ間の直接ビデオストリーミングを仲介する WebRTC ピアネゴシエーションサーバー。 | サーバーコンテナ(`signalling`)およびユニットコンテナ(`signalling_local`) |
-| **coturn** | Coturn(C) | NAT トラバーサルが直接のピアツーピア WebRTC ビデオを妨げる際のメディアフォールバックを提供する、RFC 5766 TURN / STUN リレーサーバー。 | コンテナ化された`coturn`サービス(`ros_web_ui_v2_coturn`、`network_mode: host`、本番専用プロファイル) — コンテナ切り替え前はsystemdサービスがこの役割を担っていた |
+| **coturn** | Coturn(C) | NAT トラバーサルが直接のピアツーピア WebRTC ビデオを妨げる際のメディアフォールバックを提供する、RFC 5766 TURN / STUN リレーサーバー。 | コンテナ化された`coturn`サービス(`ros_web_ui_v2_coturn`、`network_mode: host`、本番専用プロファイル)：コンテナ切り替え前はsystemdサービスがこの役割を担っていた |
 | **Apache2** | Apache HTTP Server | TLS 終端、セキュリティヘッダーの処理、`/services/...` パス経由のすべての公開トラフィックのルーティングを担当する。 | サーバーホスト(ネイティブサービス) |
 | **ROS ロボットパッケージ** | C++、Python、ROS 1 Noetic | `msd700_robot`(ナビゲーション、SLAM、ボウストロフェドン・カバレッジ、EKF、センサードライバー)と `ros-web-ui` のブリッジパッケージ(`topic2string`、`system_command`、`operation_supervisor`)。 | Jetson SBC(`msd700` コンテナ) |
 
@@ -108,21 +108,25 @@ flowchart TB
 このプラットフォームは、それぞれ独立して障害を起こす2つの別々の通信チャネルを使用します。
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph Channel1["Channel 1: MQTT Control Channel"]
+    direction LR
     M1["Commands & Telemetry Strings"] --> M2["HiveMQ (:8883)"] --> M3["system_command.py"]
   end
 
   subgraph Channel2["Channel 2: rosbridge Visualization Channel"]
+    direction LR
     R1["Serialized ROS Topics"] --> R2["fleet relay ros_web_ui_v2_unit_relays<br/>(legacy: rosweb_unit_#lt;u#gt;_#lt;unit#gt;_nakayama)"] --> R3["rosbridge (:9090)"] --> R4["Browser Canvas"]
   end
+
+  Channel1 ~~~ Channel2
 ```
 
 | チャネル | トランスポート | 運ばれるデータ | 障害時の症状 |
 | --- | --- | --- | --- |
 | **MQTT** | TCP / TLS(8883) | コマンド、確認応答、ポーズ文字列、ステータス ping。 | コンソール上でロボットが**オフライン**と表示される。コマンドは即座に HTTP 504 で失敗する。 |
 | **rosbridge** | WebSocket(WSS) | 型付き ROS メッセージ(`/map`、`/robot_pose`、`/scan`、`/global_plan`)。 | ロボットは**オンライン**と表示されコマンドも受け付けるが、マップキャンバスは空のまま。 |
-| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、フリートリレーがダウンしている — あるいはレガシーなユニット単位の経路では `rosweb_unit_<u>_<unit>_nakayama` が停止または非アクティブによって reap されている — ため、キャンバスは空のまま。 |
+| **ユニットリレーコンテナ** | サーバー上の Docker | MQTT 文字列を型付き ROS トピックへ変換して rosbridge へ渡す。 | ロボットはオンラインで rosbridge も接続されているが、フリートリレーがダウンしている。あるいはレガシーなユニット単位の経路では `rosweb_unit_<u>_<unit>_nakayama` が停止または非アクティブによって reap されている。ため、キャンバスは空のまま。 |
 
 ## エンドツーエンドのコマンド実行フロー
 

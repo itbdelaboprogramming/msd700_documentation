@@ -7,28 +7,45 @@ search: false
 
 <RoleBadge role="developer" />
 
-Software onboard memantau kesehatan komunikasi melalui watchdog sliding-window kontinu, berjalan di dalam `system_command.py`. Ini adalah mekanisme keselamatan internal robot tanpa UI dashboard sendiri; untuk bagaimana operator melihat efeknya (field `in_use`/lease, activity state yang dapat dipaksakan), lihat [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#matriks-kepemilikan-dan-persistensi-state) dan [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot).
+Software onboard memantau kehadiran operator dengan watchdog yang berjalan di dalam `system_command.py`. Ini adalah mekanisme keselamatan internal robot tanpa UI dashboard sendiri; untuk bagaimana operator melihat efeknya (field `in_use`/lease, activity state yang dapat dipaksakan), lihat [Arsitektur § Matriks Kepemilikan dan Persistensi State](/id/development/architecture#matriks-kepemilikan-dan-persistensi-state) dan [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot).
 
 ```mermaid
 flowchart TB
-  PING["Incoming Heartbeat Ping<br/>(dashboard ping loop)"] --> RESET["Reset Watchdog Timer"]
-  RESET --> MONITOR["Watchdog Monitor Loop<br/>(presence / operation-elapsed based)"]
+  HB["MQTT heartbeat, 5 Hz<br/>(unit's local dashboard only)"] --> RESET["Refresh presence"]
+  PING["HTTP ping, 1 Hz<br/>POST /api/hardware/ping"] --> RESET
+  RESET --> MONITOR["Watchdog monitor loop<br/>(sampled every 0.2 s)"]
 
-  MONITOR -->|Ping missing for 10 s| PAUSE["10 Seconds: Motion Safety Pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
-  PAUSE -->|Ping missing for 10 min| TEARDOWN["10 Minutes: Session Teardown<br/>Switch mode to idle, drop navigation stack"]
-  TEARDOWN -->|Ping missing for 30 min| SHUTDOWN["30 Minutes: Hardware Shutdown<br/>De-energize motor stages"]
+  MONITOR -->|No presence for 2 s| PAUSE["2 seconds: motion safety pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
+  PAUSE -->|No presence for 10 min| TEARDOWN["10 minutes: session teardown<br/>Switch mode to idle, drop the navigation/mapping stack"]
+  TEARDOWN -->|No presence for 30 min| SHUTDOWN["30 minutes: hardware shutdown<br/>Lease dropped, motion lock kept on"]
 
-  RESET -.->|Ping Restored| UNPAUSE["Clear Emergency Pause<br/>Resume active mission safely"]
+  RESET -.->|Presence restored| UNPAUSE["Clear the 2 s pause<br/>Resume the active mission"]
 ```
+
+
+## Dua sinyal kehadiran
+
+Watchdog menerima salah satu dari dua sinyal sebagai bukti bahwa halaman operator sedang mengawasi:
+
+| Sinyal | Jalur | Rate | Isinya |
+| --- | --- | --- | --- |
+| `ping` | Browser → `POST /api/hardware/ping` → backend → MQTT → `/system_command` | 1 Hz, timeout request 1.5 s | Kehadiran **dan** otoritas: lease operasi, claim/release/takeover, `origin` yang dicap backend, feedback status |
+| `heartbeat` | Browser → MQTT over WebSocket langsung ke Mosquitto unit (`NEXT_PUBLIC_MQTT_WS_URL`, port `9001`) → `/system_command` | 5 Hz, QoS 0, tanpa retain | Kehadiran saja (`data.page`). Tidak memberi apa pun: tanpa claim, release, origin, atau feedback |
+
+Heartbeat ada karena ping HTTP adalah round trip lewat cloud: di link yang lossy, dua ping hilang berturut-turut sudah memicu tingkat 2 detik. Heartbeat butuh sepuluh kehilangan berturut-turut. Heartbeat hanya berjalan jika dashboard di-build dengan `NEXT_PUBLIC_MQTT_WS_URL`, seperti dashboard lokal unit (`ws://<LOCAL_IP>:9001`); dashboard cloud tidak mengaturnya, jadi sesi cloud hanya diawasi oleh ping HTTP. Pengirimnya `heartbeatService.ts`; penerimanya `_operator_heartbeat` di `system_command.py`.
 
 ## Tingkatan Waktu Watchdog Heartbeat
 
-1. **10 Detik (Motion Pause)**: Jika tidak ada heartbeat valid yang masuk selama 10 detik (`ping_pause_timeout 10.0`), `system_command.py` me-latch `/emergency_pause` (`std_msgs/Bool`) dan `emergency_stop_node` membanjiri zero-twist pada `/mux/emergency_vel` pada prioritas 255. Robot melambat hingga berhenti total tanpa membatalkan goal `move_base` yang aktif. Ketika komunikasi pulih, pause dilepas dan gerakan berlanjut secara otomatis.
-2. **10 Menit (Session Teardown)**: Jika operator tetap terputus selama 10 menit, sesi navigasi atau mapping aktif dibongkar secara graceful untuk mencegah motor overheating.
-3. **30 Menit (Hardware Shutdown)**: Setelah 30 menit ketidakhadiran terus-menerus, driver hardware mati ke mode standby daya-rendah.
+Nilai diambil dari `msd700_webui_control/config/system_command.yaml`.
+
+1. **2 detik (motion pause)**: Tanpa kehadiran selama 2 detik (`ping_pause_timeout: 2.0`, dicek setiap `ping_monitor_interval: 0.2`), `system_command.py` me-latch `/emergency_pause` (`std_msgs/Bool`) dan `emergency_stop_node` membanjiri zero-twist pada `/mux/emergency_vel` dengan prioritas 255. Goal `move_base` yang aktif tidak dibatalkan. Ping atau heartbeat berikutnya yang diterima melepas pause dan gerakan berlanjut.
+2. **10 menit (session teardown)**: Tanpa kehadiran selama 10 menit (`ping_timeout: 600.0`), sesi navigasi atau mapping aktif dibongkar dan robot menjadi idle.
+3. **30 menit (hardware shutdown)**: Setelah 30 menit (`ping_shutdown_timeout: 1800.0`) lease operasi dilepas, state operation supervisor dan manual override dibersihkan, dan semua hardware dimatikan dengan motion lock tetap aktif. Tingkat ini **tidak** pulih saat tersambung kembali: hardware harus diinisialisasi ulang secara eksplisit.
+
+Hanya halaman yang memiliki operasi berjalan yang menahan tingkatan ini. Daftar unit dan halaman login bersifat read-only dan tidak pernah dihitung sebagai mengawasi.
 
 ::: warning Pengecualian Mode Autopilot
-Ketika Mode Autopilot aktif, pause komunikasi 10 detik ditangguhkan. Robot melanjutkan rute otonomnya bahkan jika operator menutup laptop mereka atau melewati zona mati Wi-Fi. Lihat [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot) dan [Mapping: Manual Override & Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous) untuk apa yang memicu pengecualian ini dari masing-masing layar.
+Selama Autopilot aktif, **ketiga** tingkatan ditangguhkan: pause 2 detik, peralihan idle 10 menit, dan shutdown 30 menit. Robot menyelesaikan rute otonomnya bahkan jika operator menutup laptop atau melewati zona mati Wi-Fi. Lihat [Navigasi: Manual Override & Autopilot](/id/development/webui/navigation/manual-and-autopilot) dan [Mapping: Manual Override & Eksplorasi Otonom](/id/development/webui/mapping/manual-and-autonomous) untuk apa yang memicu pengecualian ini dari masing-masing halaman.
 :::
 
 ## Terkait

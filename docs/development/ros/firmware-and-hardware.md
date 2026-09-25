@@ -7,80 +7,80 @@ search: false
 
 <RoleBadge role="developer" />
 
-The embedded microcontroller firmware (`msd700_firmware/firmware/firmware.ino`, Arduino) and how the Jetson talks to it. The firmware takes commands from **two** sources — an RC receiver (Taranis X7) or the PC over ROS — and drives both wheel motors through per-wheel PID loops.
+The unit's motors are driven by an **STM32H723** board (`0483:5740`, USB virtual COM port, udev symlink `/dev/stm32`) running FreeRTOS. The firmware lives in the separate `firmware-msd700` repository, project `STM32H7_MSD700_Unified_Firmware` (STM32CubeIDE). It takes commands from **two** sources, an SBUS RC receiver or the Jetson over ROS, and closes a PID speed loop on each wheel.
+
+::: info Legacy Arduino firmware
+`msd700_robot/msd700_firmware/firmware/firmware.ino` (and `firmware-msd700/firmware_msd700`) is the older Arduino Mega sketch. It is kept for reference and speaks the same `hardware_state` / `hardware_command` messages, but it is not what the current unit runs.
+:::
 
 ## Embedded Control Topology
 
 ```mermaid
 flowchart TD
-  subgraph JetsonSBC["NVIDIA Jetson Single-Board Computer"]
-    SERIAL_NODE["serial_node.py (rosserial_python)<br/>Port: /dev/stm32, 57600 baud"]
-    HW_IF["msd700_hardware interface<br/>Publishes /wheel/odom, /imu/data_raw,<br/>/imu/mag, /imu/data"]
+  subgraph JetsonSBC["NVIDIA Jetson (msd700 container)"]
+    SERIAL_NODE["serial_node.py (rosserial_python)<br/>/dev/stm32"]
+    RAW["raw_sensor_node (hardware_state.py)<br/>/wheel/odom, /imu/data_raw, /imu/mag"]
+    BRIDGER["bridger_node (bridger.py)<br/>/cmd_vel to wheel speeds"]
   end
 
-  subgraph Microcontroller["Microcontroller (Arduino, firmware.ino)"]
-    CMD_SEL["Command select: RC ch.3<br/>RC mode / hold mode / PC mode"]
-    FAILSAFE["Failsafe: RC ch.4<br/>ARMED only above 1400"]
-    PID_L["Left wheel PID (pidIr)<br/>10 ms control loop"]
-    PID_R["Right wheel PID (pidIr)<br/>10 ms control loop"]
-    ENC["Quadrature encoders<br/>PinChangeInterrupt pins"]
+  subgraph MCU["STM32H723 (FreeRTOS)"]
+    ROS_TASK["ROS task, 20 Hz<br/>pub hardware_state, sub hardware_command"]
+    STATE_TASK["VehicleState task<br/>SBUS arm switch + RC/PC select"]
+    ODOM_TASK["Odometry task, 5 ms<br/>encoders + per-wheel PID (pidIr)"]
+    MOTOR_TASK["Motor task, 20 ms<br/>PWM out, lamp on when armed"]
+    ATT_TASK["Attitude task, 5 ms<br/>CMPS12 heading/roll/pitch"]
   end
 
-  subgraph PowerStage["Actuators"]
-    H_BRIDGE_L["Left Motor Driver<br/>(REN / LEN / PWM)"]
-    H_BRIDGE_R["Right Motor Driver<br/>(REN / LEN / PWM)"]
-  end
-
-  SERIAL_NODE <-->|rosserial, 57600 baud| CMD_SEL
-  CMD_SEL --> FAILSAFE
-  FAILSAFE -->|ARMED| PID_L
-  FAILSAFE -->|ARMED| PID_R
-  FAILSAFE -->|DISARMED| STOP["Motors stopped"]
-
-  PID_L --> H_BRIDGE_L
-  PID_R --> H_BRIDGE_R
-
-  H_BRIDGE_L --> ENC
-  H_BRIDGE_R --> ENC
-  ENC --> PID_L
-  ENC --> PID_R
-
-  HW_IF --> SERIAL_NODE
+  RC["SBUS RC receiver"] --> STATE_TASK
+  SERIAL_NODE <-->|rosserial over USB CDC| ROS_TASK
+  BRIDGER -->|hardware_command| SERIAL_NODE
+  SERIAL_NODE -->|hardware_state| RAW
+  ROS_TASK --> STATE_TASK
+  STATE_TASK -->|RPM targets| ODOM_TASK
+  ODOM_TASK -->|PWM| MOTOR_TASK
+  MOTOR_TASK --> DRV["Left / right motor drivers"]
+  DRV --> ENC["Quadrature encoders (TIM3 / TIM4)"]
+  ENC --> ODOM_TASK
+  ATT_TASK --> ROS_TASK
 ```
 
-There is no `/battery_state` topic anywhere in the stack, and no ADC battery divider in this firmware. Wheel geometry constants in the firmware (`WHEEL_RADIUS 2.75 cm`, `WHEEL_DISTANCE 23.0 cm`) match the host-side odometry config (`odometry_config.yaml`: radius `2.7 cm`, distance `23 cm`, `encoder_ppr 2400`).
+## ROS interface
 
----
+The firmware is a rosserial node with one publisher and one subscriber:
 
-## Hardware Pinout (`firmware.ino`)
+| Direction | Topic | Message | Notes |
+| --- | --- | --- | --- |
+| MCU → Jetson | `hardware_state` | `msd700_msgs/HardwareState` | Published every 50 ms while the host is connected. Encoder pulse deltas accumulated since the last publish, CMPS12 heading/roll/pitch, accelerometer/gyro/magnetometer, UWB follower target. The eight ultrasonic fields are always `0.0` |
+| Jetson → MCU | `hardware_command` | `msd700_msgs/HardwareCommand` | `right_motor_speed` / `left_motor_speed` become the wheel RPM targets in PC mode |
 
-| Signal Function | Microcontroller Pin |
+On the Jetson, `serial_launch.launch` runs `rosserial_python` on `/dev/stm32` (`baud` 57600; the link is USB CDC, so the value is not a real line rate). In the default `hardware_mode 1`, `hardware_state.py` (`raw_sensor_node`) turns `hardware_state` into `/wheel/odom`, `/imu/data_raw` and `/imu/mag`, and `bridger.py` turns the muxed `/cmd_vel` into `hardware_command`. Both read the wheel geometry from `msd700_control/config/pose_config.yaml` (`wheel_radius 2.75` cm, `wheel_distance 26.0` cm, measured on the real robot). See [Sensor Fusion and Control](/development/ros/sensor-fusion-and-control).
+
+There is no `/battery_state` topic anywhere in the stack.
+
+## Arming and command source
+
+Arming and source selection come from the SBUS receiver (`USART1`, 100 kbaud, inverted):
+
+| SBUS channel | Meaning |
 | --- | --- |
-| **Right Motor REN / LEN / PWM** | Pins 4 / 5 / 9 |
-| **Left Motor REN / LEN / PWM** | Pins 6 / 7 / 8 |
-| **Right Encoder A / B** | Pins 52 / 12 |
-| **Left Encoder A / B** | Pins 11 / 10 |
-| **Status LEDs (red / blue)** | Pins 30 / 31 |
-| **Camera servo** | Pin 3 (range 125–175, step 10) |
-| **Ultrasonic (UART2 RX / TX)** | Pins 17 / 16 |
+| Channel 3 (0-based) | Arm switch. Above 992 = **ARMED** (lamp on), otherwise DISARMED |
+| Channel 2 | Below 1000 = RC mode: channels 0/1 map to ±40 RPM move/turn. Otherwise PC mode: RPM targets come from `hardware_command` |
 
-The Jetson link is `Serial.begin(57600)`.
+If no SBUS frame arrives for **400 ms** (receiver unplugged or out of range), the vehicle drops to DISARMED. While disarmed both PID loops are reset and all PWM outputs are held at 0, whatever the ROS side sends. An independent hardware watchdog (IWDG) is refreshed every 50 ms and resets the MCU if the scheduler stalls.
 
----
+## Closed-loop wheel speed control
 
-## Closed-Loop PID Velocity Control
+The odometry task runs every 5 ms: it reads both encoders (`TIM3` right, `TIM4` left), computes wheel RPM and runs one `pidIr` loop per wheel:
 
-Each wheel runs a discrete PID loop (`pidIr`) on a 10 ms control period (`LOOP_TIME 10`):
+$$u_k = K_p e_k + K_i T_s \sum e_j + \frac{K_d}{T_s} (e_k - e_{k-1}), \quad |u_k| \le 100$$
 
-$$\text{PWM}_k = K_p \cdot e_k + K_i \sum e_j \cdot \Delta t + K_d \cdot \frac{e_k - e_{k-1}}{\Delta t}$$
+Gains are in `Core/Inc/configuration.h`; the shipped tuning is integral-only (`KP 0.00`, `KI 0.02`, `KD 0.00` on both wheels). The motor task applies the clamped output every 20 ms as a PWM compare value of `95 × u` on `TIM23` (right) and `TIM2` (left), direction chosen by which of the two channels is driven. The firmware's own dead-reckoned pose uses `WHEEL_RADIUS 0.0275` m and is not used by ROS.
 
-The output is saturated (`constrain`) at `MAX_PWM 250`, not the full 8-bit 255. Speed caps are `MAX_RPM_MOVE 180` (longitudinal) and `MAX_RPM_TURN 70` (rotation). RC receiver channels pass through a 0.25 Hz low-pass filter; encoder signals through a 3 Hz low-pass filter.
+## Other tasks
 
----
-
-## RC Failsafe (Arming)
-
-The prototype only accepts motion commands while **ARMED**: RC channel 4 must read above 1400 (`update_failsafe()`). Below that the state is DISARMED and the motors stop, regardless of what RC or PC commands arrive. Command source follows RC channel 3: RC mode, hold mode, or PC (ROS) mode.
+- **Attitude**: CMPS12 tilt-compensated compass read every 5 ms; its yaw is also the heading published to ROS.
+- **UWB**: follower-tag positioning on `USART2`, filtered and reported in the `uwb_*` fields.
+- **LIDAR**: an RPLIDAR reader left over from the prototype. The unit uses the Velodyne VLP-16 over Ethernet instead.
 
 ## Related Documentation
 

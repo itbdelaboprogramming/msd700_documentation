@@ -7,24 +7,24 @@ search: false
 
 <RoleBadge role="developer" />
 
-Fitur Basis Data adalah layar Map DB di `unit/database` pada dashboard
+Fitur Basis Data adalah halaman Map DB di `unit/database` pada dashboard
 (`pages/unit/database/index.tsx`, komponen `DatabaseComponent.tsx`): tempat operator melihat
 setiap peta yang tercatat pada unit saat ini dan memilih satu untuk dimuat ke Navigasi, atau
-membersihkan peta lama. Halaman ini menjelaskan cara layar ini berperilaku, untuk insinyur frontend
+membersihkan peta lama. Dokumen ini menjelaskan cara halaman ini berperilaku, untuk insinyur frontend
 yang mengerjakannya, bukan sebagai tutorial pengguna akhir. Untuk alur ganti nama dan hapus, lihat
 [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete). Untuk skema dan endpoint
-REST di balik layar ini, lihat [Integrasi ROS](/id/development/webui/database/ros-integration).
+REST di balik halaman ini, lihat [Integrasi ROS](/id/development/webui/database/ros-integration).
 
 ## Cakupan
 
-Layar ini mendaftar peta sebagai baris kelas satu saja. Rute, area cover/no-cover tersimpan, dan
+Halaman ini mendaftar peta sebagai baris kelas satu saja. Rute, area cover/no-cover tersimpan, dan
 playlist operasi adalah atribut yang menyertai sebuah peta alih-alih baris tersendiri di sini:
 `modified_by_username` pada sebuah peta mencakup perubahan pada "peta itu sendiri, rute-rutenya,
 area tersimpannya, atau playlist-nya" sebagai satu nilai, dan ketiganya cascade-delete bersama
 petanya (lihat
 [Ganti Nama & Hapus § Cascade delete](/id/development/webui/database/rename-and-delete#cascade-delete)),
 tetapi tak satu pun dari ketiganya punya daftar, kotak pencarian, atau kontrol ganti nama sendiri
-di layar ini. Profil penyewaan juga tidak disentuh di sini.
+di halaman ini. Profil penyewaan juga tidak disentuh di sini.
 
 ## Daftar peta
 
@@ -63,7 +63,7 @@ menandai peta mana yang menjadi target saat ini untuk aksi ganti nama dan hapus 
 
 Membuka sebuah peta mengarahkan ke `/unit/navigation?index=<id>`. Jika sesi pemetaan sedang
 berjalan atau dijeda pada unit dan operator membuka peta yang *berbeda* dari yang sedang direkam,
-layar ini tidak diam-diam membuang peta yang sedang berjalan itu. Lihat
+halaman ini tidak diam-diam membuang peta yang sedang berjalan itu. Lihat
 [Ganti Nama & Hapus § Pengaman konflik sesi](/id/development/webui/database/rename-and-delete#pengaman-konflik-sesi).
 
 ## Keadaan kosong dan memuat
@@ -74,7 +74,7 @@ pencarian saat ini.
 
 ## Terkait
 
-- [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete): dua aksi pengubah pada layar ini, secara rinci
+- [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete): dua aksi pengubah pada halaman ini, secara rinci
 - [Integrasi ROS](/id/development/webui/database/ros-integration): skema dan endpoint REST di balik fitur ini
 - [Referensi Media Server](/id/development/webui/database/media-server-reference): API aset peta (upload, thumbnail, legacy-ID mapper)
 - [Arsitektur](/id/development/architecture)

@@ -8,7 +8,7 @@ search: false
 <RoleBadge role="developer" />
 
 The live video widget shown in the dashboard sidebar (`src/components/sidebar/sidebar.tsx`) on the
-Mapping and Navigation screens: how `VideoStreamComponent` gets a WebRTC connection to the robot's
+Mapping and Navigation pages: how `VideoStreamComponent` gets a WebRTC connection to the robot's
 camera, and how the browser notices when that connection has silently died. The Database page's
 sidebar shows a static map-preview thumbnail in the same slot instead of live video. For the
 robot-hosted half of this same handshake, `camera_client.py`'s ICE configuration, and the reconnect

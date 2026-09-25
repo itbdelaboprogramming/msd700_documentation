@@ -124,7 +124,7 @@ Ini menjalankan `certbot renew`, lalu menulis `/srv/msd/secrets/hivemq/keystore.
 
 - Script terkunci ke domain `msd.nglobal.jp` dan path itu. Password export harus cocok dengan `Docker/hivemq/config.xml`.
 - Satu file keystore melayani broker **prod dan dev**.
-- HiveMQ membacanya sekali saat startup, jadi **restart broker** setelahnya, di jam maintenance. Restart memutus MQTT se-armada dan bisa memicu watchdog 10-detik (`/emergency_pause`).
+- HiveMQ membacanya sekali saat startup, jadi **restart broker** setelahnya, di jam maintenance. Restart memutus MQTT se-armada dan bisa memicu jeda watchdog 2 detik (`/emergency_pause`).
 - `certbot renew` saja **tidak** mengupdate HiveMQ. Lihat [Maintenance](/id/setup/maintenance#sertifikat).
 
 ---
@@ -297,9 +297,9 @@ Host live punya blok tambahan yang tidak ditampilkan (MQTT WebSocket, webhook, d
 | `/itbdelabo/docs` | exclusion + `Alias` ke `dist/` | Harus tetap di atas catch-all |
 | `/` | `http://localhost:3000/` | Frontend dashboard, **harus terakhir** |
 
-Catatan HiveMQ: satu `config.xml` melayani prod dan dev; plaintext `1883` hanya internal container; TLS `8883` di dalam container untuk keduanya, dipetakan ke host 8883 prod / 8884 dev (jangan "perbaiki" port dev di XML). Auth client NONE — TLS hanya untuk transport/identitas server; keystore di `/opt/hivemq/conf/keystore.p12` di-rebuild oleh `update_ssl.sh` dan butuh restart broker. HTTP control-center `8080` ada untuk healthcheck.
+Catatan HiveMQ: satu `config.xml` melayani prod dan dev; plaintext `1883` hanya internal container; TLS `8883` di dalam container untuk keduanya, dipetakan ke host 8883 prod / 8884 dev (jangan "perbaiki" port dev di XML). Auth client NONE: TLS hanya untuk transport/identitas server; keystore di `/opt/hivemq/conf/keystore.p12` di-rebuild oleh `update_ssl.sh` dan butuh restart broker. HTTP control-center `8080` ada untuk healthcheck.
 
-Catatan coturn: `realm=msd.nglobal.jp`, `lt-cred-mech` (config lama tanpa auth memberi Allocate tanpa kredensial — sudah ditutup). Kredensial, port, dan `external-ip` masuk sebagai **flag** container dari compose (coturn tidak mengekspansi env), bukan file conf. Tanpa TURN-over-TLS/5349 by design; `no-cli`, tanpa relay TCP, peer LAN/loopback/multicast ditolak. Dev berbagi relay prod.
+Catatan coturn: `realm=msd.nglobal.jp`, `lt-cred-mech` (config lama tanpa auth memberi Allocate tanpa kredensial: sudah ditutup). Kredensial, port, dan `external-ip` masuk sebagai **flag** container dari compose (coturn tidak mengekspansi env), bukan file conf. Tanpa TURN-over-TLS/5349 by design; `no-cli`, tanpa relay TCP, peer LAN/loopback/multicast ditolak. Dev berbagi relay prod.
 
 ```bash
 sudo apache2ctl configtest
@@ -323,7 +323,7 @@ sequenceDiagram
   Tech->>Unit: Jalankan script enrolment di Jetson
   Unit->>Server: POST /enroll/claim (fingerprint, nonce hash, hostname/MAC)
   Server-->>Unit: Kode klaim 8 karakter, mis. "K7M2QP4R"
-  Unit-->>Tech: Tampilkan "K7M2QP4R" di layar
+  Unit-->>Tech: Tampilkan "K7M2QP4R" di terminal
 
   Tech->>Admin: Buka https://msd.nglobal.jp/admin, login
   Tech->>Admin: Cari "K7M2QP4R" di Pending Units

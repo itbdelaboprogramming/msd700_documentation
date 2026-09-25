@@ -13,6 +13,7 @@ Hardware, OS, port jaringan, dan software yang wajib siap **sebelum** menginstal
 ```mermaid
 flowchart LR
   subgraph ServerSpecs["1. Cloud Server"]
+    direction TB
     S_CPU["4 hingga 8 vCPU (x86_64)"]
     S_RAM["RAM 8 hingga 16 GB"]
     S_DISK["NVMe 100 GB"]
@@ -20,12 +21,17 @@ flowchart LR
   end
 
   subgraph UnitSpecs["2. Robot Unit"]
+    direction TB
     U_SBC["NVIDIA Jetson (ARM64)"]
     U_LIDAR["LiDAR Velodyne VLP-16 (Ethernet)"]
     U_IMU["IMU 9-DOF"]
     U_MOTOR["Motor ganda + encoder"]
     U_BAT["Baterai + E-Stop (cek BOM unit)"]
   end
+
+  S_CPU ~~~ S_RAM ~~~ S_DISK ~~~ S_NET
+  U_SBC ~~~ U_LIDAR ~~~ U_IMU ~~~ U_MOTOR ~~~ U_BAT
+  ServerSpecs ~~~ UnitSpecs
 ```
 
 ### 1. Cloud server
@@ -54,8 +60,9 @@ flowchart LR
 Buka port **publik** di bawah ini. Sisanya harus tertutup, hanya bisa diakses dari jaringan tepercaya.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph PublicIngress["Publik (buka di firewall)"]
+    direction TB
     P443["TCP 443: HTTPS / WSS (Apache)"]
     P8883["TCP 8883: MQTTS (HiveMQ)"]
     P3478["UDP/TCP 3478: STUN/TURN (coturn)"]
@@ -63,11 +70,16 @@ flowchart TD
   end
 
   subgraph LocalLoopback["Internal (batasi akses)"]
+    direction TB
     P3306["TCP 3307: MySQL"]
     P5000["TCP 5000: Backend API"]
     P9090["TCP 9090: rosbridge"]
     P3003["TCP 3003: Media server"]
   end
+
+  P443 ~~~ P8883 ~~~ P3478 ~~~ PRANGE
+  P3306 ~~~ P5000 ~~~ P9090 ~~~ P3003
+  PublicIngress ~~~ LocalLoopback
 ```
 
 | Port | Protokol | Cakupan | Layanan |
@@ -108,6 +120,7 @@ Di **unit**, laptop operator di LAN butuh dashboard `3000`, backend `5002`, rosb
 3. **udev rules**: untuk kontroler motor `/dev/stm32` dan USB RealSense (dipasang oleh `setup.sh`, lihat [Setup Unit](/id/setup/unit-setup)).
 4. **Link LiDAR**: Ethernet khusus, umumnya host `192.168.103.100/24` dan sensor `192.168.103.231`. Nama interface terdeteksi otomatis; override dengan `VELODYNE_IFACE` bila perlu.
 5. **Tool hotspot**: NetworkManager, `iw`, `dnsmasq`, `iptables`, systemd, udev, polkit. Instal sebelum start pertama; lihat [WiFi Hotspot](/id/setup/wifi-hotspot).
+6. **Display X11** (opsional): hanya untuk RViz atau Gazebo. `DISPLAY` yang tidak ada saat setup hanya berupa warning.
 
 ---
 

@@ -42,7 +42,7 @@ enforcing suspension at the login boundary is distinct, not-yet-done work.
 
 This is a different mechanism from suspending a *rental profile*, which does immediately remove a
 unit and its data from every member's view even though the member accounts themselves stay active
-and able to log in — see [Rentals](/development/webui/admin-console/rentals) and
+and able to log in: see [Rentals](/development/webui/admin-console/rentals) and
 [Database Schema § Identity and access](/development/database-schema#identity-and-access) for that
 distinction. If the goal is to actually cut an operator off from a robot today, suspending the
 profile membership or the unit assignment is the lever that works; suspending the operator account

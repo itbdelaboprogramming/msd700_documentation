@@ -183,6 +183,61 @@ const mermaidConfig = {
 // moves their titles into a draw.io-style tab at the top-left corner of the frame.
 function postProcess(svg) {
   const NS = 'http://www.w3.org/2000/svg'
+  // Connectors: ELK sometimes leaves a 1-2 px step where a line should be straight (ports a hair
+  // apart), and mermaid rounds every bend, so the step shows as a visible kink. Snap near-straight
+  // segments onto their neighbour, working back from the arrowhead so the tip stays exact, then
+  // redraw the path with the same small rounded corners.
+  for (const path of svg.querySelectorAll('path[data-edge="true"][data-points]')) {
+    let pts
+    try { pts = JSON.parse(atob(path.dataset.points)) } catch { continue }
+    if (!Array.isArray(pts) || pts.length < 3) continue
+    const orig = pts.map((p) => ({ ...p }))
+    for (let i = pts.length - 2; i >= 0; i--) {
+      const a = pts[i], b = pts[i + 1]
+      const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y)
+      if (dy > 0 && dy < 7 && dx > dy * 2) a.y = b.y
+      else if (dx > 0 && dx < 7 && dy > dx * 2) a.x = b.x
+    }
+    // A short perpendicular step between two parallel runs (_|- shape): lift the earlier run onto
+    // the later one so the step disappears
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 1; i + 2 < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], c = pts[i + 1], d = pts[i + 2]
+        const step = Math.hypot(c.x - b.x, c.y - b.y)
+        if (step === 0 || step >= 8) continue
+        if (Math.abs(a.y - b.y) < 0.5 && Math.abs(c.y - d.y) < 0.5 && Math.abs(b.x - c.x) < 0.5) { a.y = b.y = c.y }
+        else if (Math.abs(a.x - b.x) < 0.5 && Math.abs(c.x - d.x) < 0.5 && Math.abs(b.y - c.y) < 0.5) { a.x = b.x = c.x }
+      }
+    }
+    if (pts.every((p, i) => p.x === orig[i].x && p.y === orig[i].y)) continue
+    // drop points that are now on a straight line with their neighbours
+    const clean = [pts[0]]
+    for (let i = 1; i < pts.length - 1; i++) {
+      const a = clean[clean.length - 1], b = pts[i], c = pts[i + 1]
+      const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+      if (Math.abs(cross) > 0.01 && (a.x !== b.x || a.y !== b.y)) clean.push(b)
+    }
+    clean.push(pts[pts.length - 1])
+    // the drawn path stops short of the raw points where a marker sits; keep those gaps
+    const len = path.getTotalLength()
+    const s0 = path.getPointAtLength(0), s1 = path.getPointAtLength(len)
+    const first = orig[0], last = orig[orig.length - 1]
+    const gapStart = Math.hypot(s0.x - first.x, s0.y - first.y), gapEnd = Math.hypot(s1.x - last.x, s1.y - last.y)
+    const pull = (p, q, d) => { const l = Math.hypot(q.x - p.x, q.y - p.y) || 1; return { x: p.x + (q.x - p.x) * d / l, y: p.y + (q.y - p.y) * d / l } }
+    const P = clean.map((p) => ({ ...p }))
+    P[0] = pull(P[0], P[1], gapStart)
+    P[P.length - 1] = pull(P[P.length - 1], P[P.length - 2], gapEnd)
+    const R = 5
+    let d = `M${P[0].x},${P[0].y}`
+    for (let i = 1; i < P.length - 1; i++) {
+      const a = P[i - 1], b = P[i], c = P[i + 1]
+      const r = Math.min(R, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2)
+      const p1 = pull(b, a, r), p2 = pull(b, c, r)
+      d += `L${p1.x},${p1.y}Q${b.x},${b.y} ${p2.x},${p2.y}`
+    }
+    d += `L${P[P.length - 1].x},${P[P.length - 1].y}`
+    path.setAttribute('d', d)
+  }
   // Sequence diagrams: mermaid draws lifelines to a height estimated before wrapping, leaving a
   // long empty tail. Cut them just below the last message / note / block.
   const lifelines = svg.querySelectorAll('line.actor-line, line[class*="actor-line"]')
@@ -280,29 +335,104 @@ function postProcess(svg) {
     const rect = cluster.querySelector(':scope > rect')
     const label = cluster.querySelector(':scope > .cluster-label')
     if (!rect || !label) continue
-    const rx = +rect.getAttribute('x'), y = +rect.getAttribute('y'), rw = +rect.getAttribute('width')
-    const lb = label.getBBox()
-    if (!lb.width) continue
+    const rx = +rect.getAttribute('x'), ry = +rect.getAttribute('y')
+    const rw = +rect.getAttribute('width'), rh = +rect.getAttribute('height')
+    if (!label.getBBox().width) continue
     const padX = 8, padY = 4
-    const tw = lb.width + padX * 2, th = lb.height + padY * 2
-    // The tab goes top-left like draw.io, unless a connector entering the group runs through
-    // that spot: then slide it right along the top edge to the first clear position.
     const cm = toRoot(cluster)
-    // cost of a tab at tx: connector points under it (a box underneath rules the spot out)
-    const cost = (tx) => {
-      const p0 = new DOMPoint(tx - 3, y - 1).matrixTransform(cm), p1 = new DOMPoint(tx + tw + 3, y + th + 2).matrixTransform(cm)
-      const b = { x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y }
-      if (nodeBoxes.some((n) => n.x0 < b.x1 && b.x0 < n.x1 && n.y0 < b.y1 && b.y0 < n.y1)) return Infinity
-      return edgePts.filter((p) => p.x > b.x0 && p.x < b.x1 && p.y > b.y0 && p.y < b.y1).length
+    // The tab goes top-left like draw.io. Every other spot along the top edge, then along the
+    // bottom edge, is scored too: a connector under the tab is ruled out, a connector within
+    // CLEAR px (or a box within 4 px) is penalised as cramped, and distance from top-left costs a
+    // little so the tab only moves when it has to.
+    const CLEAR = 10
+    const over = (n, q) => n.x0 < q.x1 && q.x0 < n.x1 && n.y0 < q.y1 && q.y0 < n.y1
+    const inB = (p, q) => p.x > q.x0 && p.x < q.x1 && p.y > q.y0 && p.y < q.y1
+    const search = (tw, th) => {
+      const cost = (tx, ty) => {
+        const p0 = new DOMPoint(tx, ty).matrixTransform(cm), p1 = new DOMPoint(tx + tw, ty + th).matrixTransform(cm)
+        const b = { x0: p0.x, y0: p0.y, x1: p1.x, y1: p1.y }
+        const grow = (m) => ({ x0: b.x0 - m, y0: b.y0 - m, x1: b.x1 + m, y1: b.y1 + m })
+        if (nodeBoxes.some((n) => over(n, grow(1)))) return { hard: 1e6, soft: 0 }
+        let soft = nodeBoxes.filter((n) => over(n, grow(4))).length * 20
+        const g = grow(CLEAR), h = grow(2)
+        let hard = 0
+        for (const p of edgePts) { if (inB(p, h)) hard++; else if (inB(p, g)) soft++ }
+        return { hard, soft }
+      }
+      let best = null
+      for (const [edge, ty] of [[0, ry], [1, ry + rh - th]]) {
+        if (edge && rh < th * 3) break
+        for (let tx = rx; tx <= rx + rw - tw + 0.1; tx += 4) {
+          const c = cost(tx, ty)
+          const score = c.hard * 1000 + c.soft * 4 + (tx - rx) / 40 + edge * 120
+          if (!best || score < best.score) best = { score, hard: c.hard, soft: c.soft, x: tx, y: ty }
+        }
+      }
+      // A title wider than its group: no position fits, so it simply sits at the top-left corner
+      if (!best) { const c = cost(rx, ry); best = { score: c.hard * 1000 + c.soft * 4, hard: c.hard, soft: c.soft, x: rx, y: ry } }
+      return best
     }
-    let x = rx, best = cost(rx)
-    for (let tx = rx + 4; best > 0 && tx <= rx + rw - tw; tx += 4) {
-      const c = cost(tx)
-      if (c < best) { best = c; x = tx }
+    // If the one-line title has nowhere clear to go, try it wrapped onto more lines: a narrower
+    // tab often fits between the connectors that enter the group.
+    const fo = label.querySelector('foreignObject'), div = fo?.querySelector('div')
+    const natural = fo ? { w: fo.getAttribute('width'), h: fo.getAttribute('height'), style: div.getAttribute('style') } : null
+    const wrapTo = (w) => {
+      if (!fo || !div) return
+      if (w == null) { fo.setAttribute('width', natural.w); fo.setAttribute('height', natural.h); div.setAttribute('style', natural.style); return }
+      div.setAttribute('style', `${natural.style}; display: block; white-space: normal; width: ${w}px; text-align: left`)
+      fo.setAttribute('width', w); fo.setAttribute('height', 400)
+      const unit = fo.getBoundingClientRect().width / w || 1
+      // shrink to the widest wrapped line, then fit the height to the text
+      const range = document.createRange(); range.selectNodeContents(div)
+      const lines = [...range.getClientRects()]
+      const lw = Math.ceil(Math.max(...lines.map((r) => r.width)) / unit)
+      const lh = Math.ceil(div.getBoundingClientRect().height / unit)
+      fo.setAttribute('width', lw); fo.setAttribute('height', lh)
+      div.style.width = `${lw}px`
     }
-    // No clear spot (every stretch of the top edge has a connector entering): the tab is lifted
-    // above the connectors below, so a line passes behind the title instead of through its text.
-    const raised = best > 0
+    const measure = () => { const lb = label.getBBox(); return { lb, tw: lb.width + padX * 2, th: lb.height + padY * 2 } }
+    let pick = { wrap: null, ...measure() }
+    let best = search(pick.tw, pick.th)
+    const naturalW = pick.lb.width
+    // A title wider than its own group always wraps, to the group's width at most
+    const fitW = Math.round(rw * 0.75) - padX * 2
+    const tooWide = pick.tw > rw - 12
+    if (tooWide) best.score += 1e5
+    if ((best.hard > 0 || best.soft > 0 || tooWide) && fo && div) {
+      const widths = [0.7, 0.55, 0.4].map((f) => Math.max(60, Math.round(naturalW * f)))
+      if (tooWide) widths.unshift(fitW)
+      for (const w0 of widths) {
+        const w = Math.min(w0, fitW)
+        wrapTo(w)
+        const mm = measure()
+        const b2 = search(mm.tw, mm.th)
+        b2.score += 6 // a wrapped title costs a little: only worth it when it buys real clearance
+        if (b2.score < best.score) { best = b2; pick = { wrap: w, ...mm } }
+      }
+      wrapTo(pick.wrap)
+    }
+    const { lb, tw, th } = measure()
+    let x = best.x, y = best.y
+    // A wrapped title is taller than the band the layout reserved for one line. If nothing enters
+    // through the top edge and nothing sits just above, grow the group upward by the difference so
+    // the tab keeps its breathing room above the first box.
+    if (pick.wrap != null && y === ry) {
+      const oneLine = +natural.h + padY * 2
+      const extra = Math.ceil(th - oneLine)
+      if (extra > 0) {
+        const t0 = new DOMPoint(rx, ry - extra - 4).matrixTransform(cm), t1 = new DOMPoint(rx + rw, ry + 4).matrixTransform(cm)
+        const band = { x0: t0.x, y0: t0.y, x1: t1.x, y1: t1.y }
+        const clear = !edgePts.some((p) => inB(p, band)) && !nodeBoxes.some((n) => over(n, band))
+        if (clear) {
+          rect.setAttribute('y', ry - extra)
+          rect.setAttribute('height', rh + extra)
+          y = ry - extra
+        }
+      }
+    }
+    // Nowhere clear (connectors enter along both edges): the tab is lifted above the connectors,
+    // so a line passes behind the title instead of through its text.
+    const raised = best.hard > 0
     const tab = document.createElementNS(NS, 'rect')
     tab.setAttribute('x', x); tab.setAttribute('y', y)
     tab.setAttribute('width', tw); tab.setAttribute('height', th)
@@ -322,6 +452,16 @@ function postProcess(svg) {
     }
   }
 }
+
+// Layout variants tried per flowchart, in order of preference (see the render loop)
+const LAYOUT_VARIANTS = [
+  {},
+  { elk: { nodePlacementStrategy: 'BRANDES_KOEPF' } },
+  { flowchart: { nodeSpacing: 60, rankSpacing: 70 } },
+  { elk: { nodePlacementStrategy: 'BRANDES_KOEPF' }, flowchart: { nodeSpacing: 60, rankSpacing: 70 } },
+  { elk: { nodePlacementStrategy: 'LINEAR_SEGMENTS' }, flowchart: { nodeSpacing: 60, rankSpacing: 70 } },
+]
+const withVariant = (base, v) => ({ ...base, elk: { ...base.elk, ...v.elk }, flowchart: { ...base.flowchart, ...v.flowchart } })
 
 // Runs in the page after postProcess: lists every place a connector runs through text or a box it
 // does not belong to, or two labels overlap. `--audit` prints these; rendering itself uses the
@@ -350,11 +490,19 @@ function audit(svg) {
   })
   const nodeIds = new Set(nodes.map((n) => n.id))
   const clusterIds = new Set([...svg.querySelectorAll('g.cluster')].map((c) => key(c.id)))
-  // (tabs lifted into .cluster-tab-raised sit above the lines, so they are skipped here)
   const titles = [...svg.querySelectorAll('g.cluster')].map((c) => {
     const t = c.querySelector(':scope > rect.cluster-tab') || c.querySelector(':scope > .cluster-label')
     return t ? { name: txt(c.querySelector(':scope > .cluster-label') || c), b: box(t, 1) } : null
   }).filter((t) => t && valid(t.b))
+  // Tabs lifted above the lines (no clear spot on the group's edges): the text is readable, but a
+  // connector disappears under it, which is the next worst thing.
+  const raisedTitles = [...svg.querySelectorAll('g.cluster-tab-raised')].map((g) => ({ name: txt(g), b: box(g.querySelector('rect'), 1) }))
+  const grow = (b, m) => ({ x0: b.x0 - m, y0: b.y0 - m, x1: b.x1 + m, y1: b.y1 + m })
+  const groupRects = [...svg.querySelectorAll('g.cluster')].map((c) => {
+    const r = c.querySelector(':scope > rect:not(.cluster-tab)')
+    return r ? { name: txt(c.querySelector('.cluster-label') || c), ...box(r) } : null
+  }).filter(Boolean)
+  const edgeSamples = []
   const labels = [...svg.querySelectorAll('g.edgeLabel g.label[data-id], g.edgeLabel .label[data-id]')]
     .map((l) => ({ edge: l.dataset.id, name: txt(l), b: box(l, 1) })).filter((l) => valid(l.b) && l.name)
   const ends = (id) => {
@@ -369,19 +517,59 @@ function audit(svg) {
   }
   for (const path of svg.querySelectorAll('path[data-edge="true"], path.transition, path.flowchart-link')) {
     const id = path.dataset.id || key(path.id)
-    const [from, to] = ends(id)
     const m = mat(path)
     const len = path.getTotalLength()
     const pts = []
     for (let d = 0; d <= len; d += 2) pts.push(path.getPointAtLength(d).matrixTransform(m))
+    let [from, to] = ends(id)
+    // State diagram transitions carry no node ids: take the boxes the line starts and ends at
+    const at = (p) => nodes.filter((n) => inside(p, grow(n.shape, 10)))
+      .sort((a, b) => (a.shape.x1 - a.shape.x0) * (a.shape.y1 - a.shape.y0) - (b.shape.x1 - b.shape.x0) * (b.shape.y1 - b.shape.y0))[0]?.id
+    if (!from && pts.length) from = at(pts[0])
+    if (!to && pts.length) to = at(pts[pts.length - 1])
     const hit = (b) => pts.some((p) => inside(p, b))
     const edgeName = `${from || '?'} -> ${to || '?'}`
-    for (const t of titles) if (hit(t.b)) out.push(`line ${edgeName} crosses group title "${t.name}"`)
+    edgeSamples.push({ name: edgeName, pts })
+    // "~" marks a soft finding: legible, but cramped or hidden
+    for (const t of titles) {
+      if (hit(t.b)) out.push(`line ${edgeName} crosses group title "${t.name}"`)
+      else if (hit(grow(t.b, 6))) out.push(`~ line ${edgeName} runs within 6px of group title "${t.name}"`)
+    }
+    for (const t of raisedTitles) if (hit(t.b)) out.push(`~ line ${edgeName} is hidden under group title "${t.name}"`)
+    // A connector running along a group's border for a stretch reads as part of the border
+    for (const g of groupRects) {
+      let run = 0, longest = 0
+      for (const p of pts) {
+        const onV = (Math.abs(p.x - g.x0) < 3 || Math.abs(p.x - g.x1) < 3) && p.y > g.y0 - 3 && p.y < g.y1 + 3
+        const onH = (Math.abs(p.y - g.y0) < 3 || Math.abs(p.y - g.y1) < 3) && p.x > g.x0 - 3 && p.x < g.x1 + 3
+        run = onV || onH ? run + 2 : 0
+        longest = Math.max(longest, run)
+      }
+      if (longest > 16) out.push(`~ line ${edgeName} runs along the border of group "${g.name}" for ${longest}px`)
+    }
     for (const n of nodes) {
       if (n.id !== from && n.id !== to && hit(n.shape)) out.push(`line ${edgeName} crosses box "${n.name}"`)
       else if (n.text && hit(n.text) && n.id !== from && n.id !== to) out.push(`line ${edgeName} crosses text "${n.name}"`)
+      else if (n.id !== from && n.id !== to && hit(grow(n.shape, 5))) out.push(`~ line ${edgeName} runs within 5px of box "${n.name}"`)
     }
     for (const l of labels) if (l.edge !== id && hit(l.b)) out.push(`line ${edgeName} crosses label "${l.name}"`)
+  }
+  // Arrowheads landing right next to each other read as one blurred arrow
+  for (let i = 0; i < edgeSamples.length; i++) for (let j = i + 1; j < edgeSamples.length; j++) {
+    const a = edgeSamples[i].pts.at(-1), b = edgeSamples[j].pts.at(-1)
+    if (a && b && Math.hypot(a.x - b.x, a.y - b.y) < 12) out.push(`~ arrowheads of ${edgeSamples[i].name} and ${edgeSamples[j].name} are ${Math.round(Math.hypot(a.x - b.x, a.y - b.y))}px apart`)
+  }
+  // Two connectors drawn on top of each other for more than a few px read as one line
+  for (let i = 0; i < edgeSamples.length; i++) {
+    const a = edgeSamples[i]
+    const trimA = a.pts.slice(6, -6)
+    for (let j = i + 1; j < edgeSamples.length; j++) {
+      const b = edgeSamples[j]
+      const trimB = b.pts.slice(6, -6)
+      let shared = 0
+      for (const p of trimA) if (trimB.some((q) => Math.abs(p.x - q.x) < 1.5 && Math.abs(p.y - q.y) < 1.5)) shared++
+      if (shared * 2 > 16) out.push(`~ line ${a.name} overlaps line ${b.name} for ${shared * 2}px`)
+    }
   }
   for (let i = 0; i < labels.length; i++) {
     for (let j = i + 1; j < labels.length; j++) if (overlap(labels[i].b, labels[j].b)) out.push(`label "${labels[i].name}" overlaps label "${labels[j].name}"`)
@@ -467,7 +655,7 @@ if (todo.length) {
       const code = d.code
       // stateDiagram / sequence / timeline ignore ELK or break with it; only flowcharts use it
       const isFlow = /^\s*(flowchart|graph|stateDiagram)/m.test(code.split('\n').find((l) => l.trim() && !l.trim().startsWith('%%')) || '')
-      const issues = await page.evaluate(async ({ code, hash, isFlow, cfg, post, check }) => {
+      const renderOnce = (cfg) => page.evaluate(async ({ code, hash, isFlow, cfg, post, check }) => {
         const m = window.__mermaid
         m.initialize({ ...cfg, layout: isFlow ? 'elk' : 'dagre' })
         const stage = document.getElementById('stage')
@@ -486,12 +674,25 @@ if (todo.length) {
         el.style.maxWidth = 'none'
         // eslint-disable-next-line no-new-func
         return new Function('svg', `return (${check})(svg)`)(el)
-      }, { code, hash, isFlow, cfg: mermaidConfig, post: postProcess.toString(), check: audit.toString() })
+      }, { code, hash, isFlow, cfg, post: postProcess.toString(), check: audit.toString() })
+      // Flowcharts: try each layout variant and keep the one the audit likes best (a hard finding
+      // costs 10, a "~" one 1). Ties keep the earlier variant, so the default wins when it is clean.
+      const variants = isFlow ? LAYOUT_VARIANTS : [{}]
+      let best = null
+      for (let v = 0; v < variants.length; v++) {
+        const cfg = withVariant(mermaidConfig, variants[v])
+        const found = await renderOnce(cfg)
+        const score = found.reduce((n, x) => n + (x.startsWith('~') ? 1 : 10), 0)
+        if (!best || score < best.score) best = { score, v, cfg, found }
+        if (score === 0) break
+      }
+      if (best.v !== variants.length - 1 || best.score !== 0) await renderOnce(best.cfg)
+      const issues = best.found
       await page.evaluate(() => document.fonts.ready)
       const stage = await page.$('#stage')
       if (process.env.DIAGRAM_SVG_DIR) writeFileSync(join(process.env.DIAGRAM_SVG_DIR, `${hash}.svg`), await page.$eval('#stage', (e) => e.innerHTML))
       writeFileSync(pngPath(hash), await stage.screenshot({ type: 'png', omitBackground: false }))
-      process.stdout.write(`[${i}/${todo.length}] ${hash}  ${d.sources[0]}${issues.length ? `  (${issues.length} collisions)` : ''}\n`)
+      process.stdout.write(`[${i}/${todo.length}] ${hash}  ${d.sources[0]}${best.v ? `  [layout ${best.v}]` : ''}${issues.length ? `  (${issues.length} findings)` : ''}\n`)
       if (args.has('--audit')) for (const x of issues) process.stdout.write(`    - ${x}\n`)
       totalIssues += issues.length
     } catch (err) {
@@ -509,5 +710,5 @@ if (!match) for (const name of readdirSync(OUT)) {
   if (name.endsWith('.png') && !diagrams.has(name.slice(0, -4))) { unlinkSync(join(OUT, name)); pruned++ }
 }
 
-console.log(`${diagrams.size} diagrams, ${todo.length - failed} rendered, ${failed} failed, ${pruned} stale images removed, ${totalIssues} collisions`)
+console.log(`${diagrams.size} diagrams, ${todo.length - failed} rendered, ${failed} failed, ${pruned} stale images removed, ${totalIssues} findings`)
 process.exit(failed ? 1 : 0)

@@ -38,8 +38,8 @@ If your account has access to more than one robot, you'll see a list after loggi
 If you're on-site at a facility with no internet access, you can still use the full dashboard by connecting directly to the robot instead of the cloud:
 
 1. Connect your laptop to the robot's onboard Wi-Fi hotspot (ask your administrator for its name).
-2. Open `http://<robot-ip>:3000` in Chrome or Edge instead of the usual cloud address. Mapping, navigation, and coverage all work exactly as they do online.
-3. Once the robot is back on internet-connected Wi-Fi, use the on-screen **Sync** option to push anything recorded offline up to the cloud database.
+2. Open `http://mymsd.jp` in Chrome or Edge instead of the usual cloud address. (On a different local network, use `http://<robot-ip>:3000`.) Mapping, navigation, and coverage all work exactly as they do online.
+3. Once the robot is back on internet-connected Wi-Fi, use the **Sync** option in the dashboard to push anything recorded offline up to the cloud database.
 
 ## Logging Out
 

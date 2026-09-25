@@ -14,18 +14,24 @@ search: false
 このプラットフォームは2つの独立したバックアップスコープをサポートします。
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph ProfileScope["1. Profile-Scoped Backup (Tenant Centric)"]
+    direction LR
     P1["Scope: 'profile'"]
     P2["Captures: All maps, routes, areas, and playlists owned by a rental profile across any robot."]
-    P3["Restore Behavior: Additive restore into target profile. Missing robots can be remapped."]
+    P3["Restore Behavior: Additive restore into a new profile, or an existing one via profile_remap. Missing robots can be remapped."]
   end
 
   subgraph UnitScope["2. Unit-Scoped Backup (Robot Centric)"]
+    direction LR
     U1["Scope: 'unit'"]
     U2["Captures: Complete operational history recorded by a specific physical robot."]
     U3["Restore Behavior: Restores robot calibration and recorded maps directly to that unit."]
   end
+
+  P1 ~~~ P2 ~~~ P3
+  U1 ~~~ U2 ~~~ U3
+  ProfileScope ~~~ UnitScope
 ```
 
 | 軸 | プロファイルスコープのバックアップ | ユニットスコープのバックアップ |
@@ -100,7 +106,7 @@ msd700_backup_01JZ8QK2H.tar.gz
 パッキングは2つのスクリプトが担うため、未検証アップロードへの `tar` シェルアウトは決して行わない:
 
 - `profile_archive.js` は1つのDBスライス+マップファイルを `.tar.gz`(`manifest.json` + `files/<mapId>.pgm|yaml|png`)に詰め/開く。プロファイルスコープ(1テナント)またはユニットスコープ(1ロボット、任意でレンタル跨ぎ)用。`users` は決して運ばず(既存アカウントへのメンバーシップ/著者紐付けのみ)、空きULID再利用、奪取済みは再マップ、上書きなし。主要関数:`buildArchive`、`readArchive`、`buildRestorePlan`、`restoreArchive`。
-- `tar_archive.js` はその下の最小インメモリustarリーダー/ライター:`packTar`/`unpackTar`、許可リスト(`^files/<ULID>.(pgm|yaml|png)$`)、チェックサム/切詰め検査、非通常ファイル skip——ステージングdirなし、CLI展開なし。
+- `tar_archive.js` はその下の最小インメモリustarリーダー/ライター:`packTar`/`unpackTar`、許可リスト(`^files/<ULID>.(pgm|yaml|png)$`)、チェックサム/切詰め検査、非通常ファイル skip、ステージングdirなし、CLI展開なし。
 
 ## スキーママイグレーションスクリプト
 

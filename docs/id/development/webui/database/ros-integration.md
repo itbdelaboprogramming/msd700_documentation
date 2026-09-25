@@ -10,8 +10,8 @@ search: false
 Meski namanya demikian, dipertahankan demi konsistensi dengan grup fitur ROS Web UI lainnya, fitur
 Basis Data tidak punya komponen sisi-ROS sendiri: robot menghasilkan peta lewat fitur Mapping,
 tetapi menelusuri, mengganti nama, dan menghapus peta yang tercatat adalah urusan MySQL-dan-REST
-semata. Halaman ini mencakup skema dan kontrak jalur data di balik layar Basis Data. Untuk
-perilaku layar itu sendiri, lihat [Ikhtisar](/id/development/webui/database/overview) dan
+semata. Dokumen ini mencakup skema dan kontrak jalur data di balik halaman Basis Data. Untuk
+perilaku halaman itu sendiri, lihat [Ikhtisar](/id/development/webui/database/overview) dan
 [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete).
 
 ## Tabel
@@ -36,7 +36,7 @@ identitas/akses yang dibahas pada halamannya sendiri: lihat
 [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses).
 
 `maps_data.unique_map_unit (map_name, unit_id, profile_id)` adalah alasan mengapa dua robot pada
-satu penyewaan bisa masing-masing memegang peta dengan nama sama tanpa tabrakan, dan mengapa layar
+satu penyewaan bisa masing-masing memegang peta dengan nama sama tanpa tabrakan, dan mengapa halaman
 Basis Data harus dicakup berdasarkan `unit_id` dan dedupe berdasarkan `id` alih-alih berdasarkan
 nama (lihat [Ikhtisar § Daftar peta](/id/development/webui/database/overview#daftar-peta)).
 
@@ -79,10 +79,10 @@ Dari [Referensi API § Manajemen Data Peta dan Rute](/id/development/api-referen
 
 `GET /api/maps_data?unit_id=<unit ULID>`
 
-`unit_id` bersifat opsional di jalur data tetapi wajib dalam praktiknya untuk layar Basis Data:
+`unit_id` bersifat opsional di jalur data tetapi wajib dalam praktiknya untuk halaman Basis Data:
 tanpanya respons berisi semua peta dalam cakupan penyewaan pemanggil (yang diinginkan tampilan
 arsip dan admin), dengan itu daftarnya menyempit ke peta yang direkam satu robot (yang dibutuhkan
-layar ini, karena satu penyewaan bisa memiliki beberapa robot dan peta robot sesama unit tak bisa
+halaman ini, karena satu penyewaan bisa memiliki beberapa robot dan peta robot sesama unit tak bisa
 dinavigasikan pada robot ini). Meneruskan sebuah unit yang pemanggilnya tidak punya penyewaan aktif
 di situ menghasilkan `403`, bukan daftar kosong.
 
@@ -97,7 +97,7 @@ yang sungguhan. Dedupe berdasarkan `id`, dan selalu cakup berdasarkan `unit_id`.
 ### Ganti nama dan hapus: belum terdokumentasi di sini
 
 Bagian Manajemen Data Peta dan Rute pada Referensi API saat ini tidak mendokumentasikan endpoint
-ganti nama atau hapus untuk `maps_data`. Perilaku ganti nama dan hapus layar Basis Data
+ganti nama atau hapus untuk `maps_data`. Perilaku ganti nama dan hapus halaman Basis Data
 (dijelaskan di [Ganti Nama & Hapus](/id/development/webui/database/rename-and-delete)) dikonfirmasi
 terhadap frontend (`updateMapName` di `services.ts`, dan panggilan hapus yang dijaga
 `ConfirmDelete`), tetapi metode HTTP dan path yang persis tidak tercakup dalam materi sumber saat
@@ -107,7 +107,7 @@ ini dan tidak ditebak-tebak di sini.
 
 Bagian Referensi API yang sama juga mendokumentasikan `POST /api/routes` untuk menyimpan rute
 waypoint. Endpoint itu milik fitur Navigasi, bukan Basis Data: rute tidak didaftar atau dikelola
-dari layar ini (lihat [Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), jadi
+dari halaman ini (lihat [Ikhtisar § Cakupan](/id/development/webui/database/overview#cakupan)), jadi
 tidak diulang di sini.
 
 ## Terkait

@@ -71,7 +71,7 @@ increasing intervals.
 ```mermaid
 timeline
   title After your browser stops responding
-  10 seconds : Motion pauses
+  2 seconds : Motion pauses
              : the operation stays loaded
   10 minutes : Session ends
              : navigation or mapping is torn down
@@ -81,12 +81,12 @@ timeline
 
 | After | What happens | Recovers by itself? |
 | --- | --- | --- |
-| **10 seconds** | The robot stops moving. Whatever it was doing stays loaded underneath. | **Yes.** Reconnect and it picks up where it stopped |
+| **2 seconds** | The robot stops moving. Whatever it was doing stays loaded underneath. | **Yes.** Reconnect and it picks up where it stopped |
 | **10 minutes** | The whole operation is torn down and the robot goes idle. | No. Start the operation again |
 | **30 minutes** | All hardware powers down. | No. A technician or an explicit restart is needed |
 
 ::: info Which page you have open matters
-The 10 second pause only counts time when the page that owns the running operation stops responding.
+The 2 second pause only counts time when the page that owns the running operation stops responding.
 Sitting on the unit list, or on the login page, does not hold a robot running: those pages are
 deliberately read-only so that leaving a dashboard open somewhere never counts as supervising a
 robot.

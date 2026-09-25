@@ -10,16 +10,16 @@ Tampilan Kamera Langsung menyiarkan rekaman video dari kamera robot langsung ke 
 
 ## Membuka Tampilan Langsung
 
-Di layar Navigasi (atau Pemetaan), panel **Camera - Front View** berada di samping peta. Rekaman video akan termuat dalam beberapa detik.
+Di halaman Navigasi (atau Pemetaan), panel **Camera - Front View** berada di samping peta. Rekaman video akan termuat dalam beberapa detik.
 
 ## Menggunakan Tampilan Langsung
 
 - **Layar penuh**: Klik ikon perbesar untuk memenuhi layar dengan video demi tampilan yang lebih jelas.
-- **Pantau sambil bernavigasi**: Kamera tetap terlihat di samping peta, sehingga Anda bisa memantau dan mengendarai robot secara bersamaan.
+- **Pantau sambil bernavigasi**: Kamera tetap terlihat di samping peta, sehingga Anda bisa memantau dan mengemudikan robot secara bersamaan.
 
 ## Kapan Menggunakannya
 
-- Memeriksa alasan robot melaporkan "Terjebak" saat navigasi atau cakupan
+- Memeriksa alasan robot melaporkan "Stuck" saat navigasi atau coverage
 - Memastikan tidak ada rintangan, orang, atau bahaya sebelum memulai misi
 - Pemantauan jarak jauh secara umum terhadap ruangan tempat robot berada
 

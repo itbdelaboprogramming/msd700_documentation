@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat unit fisik MSD700 bergerak, merasakan lingkungan, dan membersihkan. Bagian ini tidak memiliki UI operator sendiri — untuk bagaimana subsistem ini muncul sebagai fitur yang dilihat operator di dashboard, lihat [ROS Web UI](/id/development/webui/).
+Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat unit fisik MSD700 bergerak, merasakan lingkungan, dan membersihkan. Bagian ini tidak memiliki UI operator sendiri: untuk bagaimana subsistem ini muncul sebagai fitur yang dilihat operator di dashboard, lihat [ROS Web UI](/id/development/webui/).
 
 ## Paket Inti Robot
 

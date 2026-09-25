@@ -124,7 +124,7 @@ This runs `certbot renew`, then writes `/srv/msd/secrets/hivemq/keystore.p12` (o
 
 - The script is fixed to domain `msd.nglobal.jp` and that path. The export password must match `Docker/hivemq/config.xml`.
 - One keystore file serves **both** prod and dev brokers.
-- HiveMQ reads it once at startup, so **restart the broker** afterward, in a maintenance window. Restarting drops MQTT fleet-wide and can trigger the 10-second watchdog (`/emergency_pause`).
+- HiveMQ reads it once at startup, so **restart the broker** afterward, in a maintenance window. Restarting drops MQTT fleet-wide and can trigger the 2-second watchdog pause (`/emergency_pause`).
 - Plain `certbot renew` alone does **not** update HiveMQ. See [Maintenance](/setup/maintenance#certificates).
 
 ---
@@ -297,9 +297,9 @@ The live host has extra blocks not shown here (MQTT WebSocket, webhook, legacy d
 | `/itbdelabo/docs` | exclusion + `Alias` to `dist/` | Must stay above the catch-all |
 | `/` | `http://localhost:3000/` | Dashboard frontend, **must be last** |
 
-HiveMQ notes: one `config.xml` serves prod and dev; plaintext `1883` is container-internal only; TLS `8883` in-container for both, host-mapped 8883 prod / 8884 dev (don't "fix" the dev port in the XML). Client auth NONE — TLS is transport/server identity only; the keystore at `/opt/hivemq/conf/keystore.p12` is rebuilt by `update_ssl.sh` and needs a broker restart. Control-center HTTP `8080` exists for the healthcheck.
+HiveMQ notes: one `config.xml` serves prod and dev; plaintext `1883` is container-internal only; TLS `8883` in-container for both, host-mapped 8883 prod / 8884 dev (don't "fix" the dev port in the XML). Client auth NONE: TLS is transport/server identity only; the keystore at `/opt/hivemq/conf/keystore.p12` is rebuilt by `update_ssl.sh` and needs a broker restart. Control-center HTTP `8080` exists for the healthcheck.
 
-coturn notes: `realm=msd.nglobal.jp`, `lt-cred-mech` (the old no-auth config granted Allocate with no credentials — closed). Credentials, ports, and `external-ip` come as container **flags** from compose (coturn expands no env), not the conf file. No TURN-over-TLS/5349 by design; `no-cli`, no TCP relay, LAN/loopback/multicast denied peers. Dev shares the prod relay.
+coturn notes: `realm=msd.nglobal.jp`, `lt-cred-mech` (the old no-auth config granted Allocate with no credentials: closed). Credentials, ports, and `external-ip` come as container **flags** from compose (coturn expands no env), not the conf file. No TURN-over-TLS/5349 by design; `no-cli`, no TCP relay, LAN/loopback/multicast denied peers. Dev shares the prod relay.
 
 ```bash
 sudo apache2ctl configtest
@@ -323,7 +323,7 @@ sequenceDiagram
   Tech->>Unit: Run enrolment script on Jetson
   Unit->>Server: POST /enroll/claim (fingerprint, nonce hash, hostname/MAC)
   Server-->>Unit: 8-character claim code, e.g. "K7M2QP4R"
-  Unit-->>Tech: Show "K7M2QP4R" on screen
+  Unit-->>Tech: Show "K7M2QP4R" in the terminal
 
   Tech->>Admin: Open https://msd.nglobal.jp/admin, log in
   Tech->>Admin: Find "K7M2QP4R" under Pending Units

@@ -73,7 +73,6 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 このドキュメントテーマは、カスタムのグローバルコンポーネントで VitePress を拡張しています。
 - `<RoleBadge role="user | technician | developer" />`: ページ上部に対象読者のバッジを表示します。
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: セクションのランディングページで使用されるインタラクティブなカードグリッド。
-- `<Mermaid code="..." />`: ブラウザ内フォールバック。事前レンダリング済み PNG がまだ無い ```` ```mermaid ```` フェンスにだけ使われます([リポジトリ構成](/ja/development/repository-structure)を参照)。
 
 ### コミットおよびプルリクエストの規約:
 コミットは標準的な Conventional Commits 形式(`feat: ...`、`fix: ...`、`docs: ...`、`refactor: ...`)に従います。

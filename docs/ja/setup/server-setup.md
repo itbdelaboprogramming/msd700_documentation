@@ -124,7 +124,7 @@ sudo ./source/dependencies/ssl_update/update_ssl.sh
 
 - スクリプトはドメイン`msd.nglobal.jp`とこのパスに固定です。エクスポートパスワードは`Docker/hivemq/config.xml`と一致させます。
 - 1つのキーストアファイルを**本番・開発**両ブローカーで使います。
-- HiveMQは起動時に一度だけ読むため、後は**ブローカーを再起動**します。メンテナンス時間帯に行います。再起動はフリート全体のMQTTを切断し、10秒ウォッチドッグ(`/emergency_pause`)が発動する場合があります。
+- HiveMQは起動時に一度だけ読むため、後は**ブローカーを再起動**します。メンテナンス時間帯に行います。再起動はフリート全体のMQTTを切断し、2秒のウォッチドッグ一時停止(`/emergency_pause`)が発動する場合があります。
 - `certbot renew`だけではHiveMQは更新され**ません**。[メンテナンス](/ja/setup/maintenance#証明書)参照。
 
 ---
@@ -297,9 +297,9 @@ sudo systemctl restart apache2
 | `/itbdelabo/docs` | 除外 + `dist/` への `Alias` | キャッチオールより上に維持必須 |
 | `/` | `http://localhost:3000/` | ダッシュボードフロントエンド、**必ず最後** |
 
-HiveMQメモ:1つの `config.xml` で本番と開発を賄う。平文 `1883` はコンテナ内部専用。TLS `8883` は両方ともコンテナ内で、ホストマップは本番8883/開発8884(XML内の開発ポートを「修正」しないこと)。クライアント認証NONE——TLSは転送路/サーバーidentityのみ。`/opt/hivemq/conf/keystore.p12` のキーストアは `update_ssl.sh` が再生成し、ブローカー再起動が必要。Control Center HTTP `8080` はヘルスチェック用に存在する。
+HiveMQメモ:1つの `config.xml` で本番と開発を賄う。平文 `1883` はコンテナ内部専用。TLS `8883` は両方ともコンテナ内で、ホストマップは本番8883/開発8884(XML内の開発ポートを「修正」しないこと)。クライアント認証NONE、TLSは転送路/サーバーidentityのみ。`/opt/hivemq/conf/keystore.p12` のキーストアは `update_ssl.sh` が再生成し、ブローカー再起動が必要。Control Center HTTP `8080` はヘルスチェック用に存在する。
 
-coturnメモ:`realm=msd.nglobal.jp`、`lt-cred-mech`(旧無認証設定は認証なしAllocateを許可していた——閉鎖済み)。認証情報・ポート・`external-ip` はconfファイルでなくcompose由来のコンテナ**フラグ**で渡す(coturnはenv展開しない)。TURN-over-TLS/5349なしは設計通り。`no-cli`、TCPリレーなし、LAN/ループバック/マルチキャストのpeer拒否。開発は本番リレーを共有する。
+coturnメモ:`realm=msd.nglobal.jp`、`lt-cred-mech`(旧無認証設定は認証なしAllocateを許可していた。閉鎖済み)。認証情報・ポート・`external-ip` はconfファイルでなくcompose由来のコンテナ**フラグ**で渡す(coturnはenv展開しない)。TURN-over-TLS/5349なしは設計通り。`no-cli`、TCPリレーなし、LAN/ループバック/マルチキャストのpeer拒否。開発は本番リレーを共有する。
 
 ```bash
 sudo apache2ctl configtest

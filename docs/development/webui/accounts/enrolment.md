@@ -9,7 +9,7 @@ search: false
 
 The full cryptographic protocol a physical robot uses to register itself with the cloud server and
 receive its own device credentials, with no human at the robot doing anything beyond reading a
-claim code off a screen. This protocol produces the Robot Cloud Domain credentials described in
+claim code off the terminal. This protocol produces the Robot Cloud Domain credentials described in
 [Security & Tokens](/development/webui/accounts/security-and-tokens); for where the resulting
 `device.json` and token cache live on the robot host, see
 [ROS Integration](/development/webui/accounts/ros-integration).
@@ -31,7 +31,7 @@ sequenceDiagram
   Robot->>Backend: POST /enroll/claim { fingerprint, nonce_hash, nonce, hostname, mac }
   Backend->>Backend: Store in pending_units table (status: pending)
   Backend-->>Robot: HTTP 202 Accepted { claim_code: "K7M2QP4R" }
-  Note over Robot: Displays 8-character claim code on screen
+  Note over Robot: Prints 8-character claim code in the terminal
 
   Note over Admin: Stage 2: Administrator Authorization
   Admin->>Backend: Approve claim code "K7M2QP4R" for Unit ULID
@@ -88,7 +88,7 @@ different unit, or an admin unbound it on purpose).
 
 The nonce flow starts at the robot. The voucher flow starts at the admin console for units registered manually (placeholder identity, no physical contact yet): `POST /admin/api/units/:id/enrollment-code` (admin token) mints a **10-character** code from the same 30-char alphabet as claim codes, bcrypt-hashed in the database, valid `valid_hours` (default 72, clamped 1–720), shown **once**.
 
-The robot redeems it at `POST /enroll/claim` with `enrollment_code`, skipping the pending pool: the server finds an unused, unexpired row, `bcrypt.compare`s, marks `used_at`, and runs the same `issueCredential` as a normal handover (returns `unit_id, unit_name, topic_root, device_secret, access_token`). Invalid, used, or expired codes get 404. Revocation is `DELETE /units/:id/device` (unbind the robot) — there is no code-delete endpoint. Do not confuse the three secrets: the 32-byte claim **nonce** (robot-generated, never stored), the 8-char admin **claim code** (pending pool), the 10-char **voucher** (pre-registered units), and the 32-byte **device secret** (the credential itself).
+The robot redeems it at `POST /enroll/claim` with `enrollment_code`, skipping the pending pool: the server finds an unused, unexpired row, `bcrypt.compare`s, marks `used_at`, and runs the same `issueCredential` as a normal handover (returns `unit_id, unit_name, topic_root, device_secret, access_token`). Invalid, used, or expired codes get 404. Revocation is `DELETE /units/:id/device` (unbind the robot): there is no code-delete endpoint. Do not confuse the three secrets: the 32-byte claim **nonce** (robot-generated, never stored), the 8-char admin **claim code** (pending pool), the 10-char **voucher** (pre-registered units), and the 32-byte **device secret** (the credential itself).
 
 ### `secret_prev_hash`: one generation of grace
 
@@ -101,7 +101,7 @@ cuts over immediately, with no grace for the box being replaced.
 
 ## Related
 
-- [Overview](/development/webui/accounts/overview): the four Accounts & Access screens and how
+- [Overview](/development/webui/accounts/overview): the four Accounts & Access pages and how
   they relate.
 - [Security & Tokens](/development/webui/accounts/security-and-tokens): JWT keyring, trust domains,
   and TLS termination.

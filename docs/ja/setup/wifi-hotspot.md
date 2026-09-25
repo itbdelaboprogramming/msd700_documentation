@@ -65,8 +65,8 @@ flowchart TB
     DNSM -->|"同状態ファイル追従"| HAP
   end
 
-  subgraph AGENT["network_localコンテナ<br/>(ホストネットワーク、NET_ADMIN)"]
-    NA["network-agent (Node)<br/>ループバック :5011"]
+  subgraph AGENT["network_local"]
+    NA["network-agent (Node)<br/>ループバック :5011<br/>ホストネットワーク、NET_ADMIN"]
   end
   AGENT -->|"D-Busソケットマウント"| NM
   NA -->|"SSID/パスワード編集"| HAP

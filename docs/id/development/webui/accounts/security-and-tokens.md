@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Mekanisme backend di balik [layar Akun & Akses](/id/development/webui/accounts/overview): keyring JWT
+Mekanisme backend di balik [halaman Akun & Akses](/id/development/webui/accounts/overview): keyring JWT
 yang menandatangani dan memverifikasi token, tiga domain kepercayaan independen tempat token tersebut
 berada, dan terminasi TLS yang melindunginya saat transit. Untuk bagaimana robot pertama kali
 memperoleh kredensialnya sendiri, lihat
@@ -36,7 +36,7 @@ flowchart TB
   subgraph RobotDomain["Physical Robot Trust Domain (Jetson)"]
     DEV_SECRET["Device Secret (bcrypt hash, server-side)<br/>32 random bytes at enrolment"]
     ROBOT_TOKEN["Onboard Token Cache (12h TTL)<br/>Certificates/robot/token.cred"]
-    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets"]
+    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets<br/>Local Auth Only"]
   end
 
   HTTPS --> AUTH_MW
@@ -46,7 +46,6 @@ flowchart TB
 
   MQTTS <--> ROBOT_TOKEN
   DEV_SECRET --> ROBOT_TOKEN
-  LOCAL_KEYRING -.->|"Local Auth Only"| RobotDomain
 ```
 
 ## Tiga domain kepercayaan independen
@@ -105,7 +104,7 @@ yang bukan dokumen `msd-jwt-keyring`, dan proses exit alih-alih berjalan dengan 
 
 ## Terkait
 
-- [Ikhtisar](/id/development/webui/accounts/overview): keempat layar Akun & Akses dan bagaimana
+- [Ikhtisar](/id/development/webui/accounts/overview): keempat halaman Akun & Akses dan bagaimana
   hubungannya.
 - [Pendaftaran Perangkat Keras](/id/development/webui/accounts/enrolment): protokol nonce yang dipakai
   robot untuk mendaftarkan dirinya sendiri.

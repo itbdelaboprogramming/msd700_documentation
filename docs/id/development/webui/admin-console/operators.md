@@ -44,7 +44,7 @@ penangguhan pada batas login adalah pekerjaan lain yang belum selesai.
 
 Ini adalah mekanisme yang berbeda dari menangguhkan sebuah *profil penyewaan*, yang segera
 menghilangkan sebuah unit dan datanya dari tampilan setiap anggota meskipun akun anggota itu
-sendiri tetap aktif dan dapat login — lihat [Penyewaan](/id/development/webui/admin-console/rentals)
+sendiri tetap aktif dan dapat login: lihat [Penyewaan](/id/development/webui/admin-console/rentals)
 dan [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses)
 untuk perbedaan itu. Jika tujuannya adalah benar-benar memutus seorang operator dari sebuah robot
 hari ini, menangguhkan keanggotaan profil atau penugasan unit adalah tuas yang bekerja;

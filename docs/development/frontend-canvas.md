@@ -14,8 +14,9 @@ This document details the 2D rendering pipeline, coordinate space conversions, l
 All topics are per-unit rooted: `` `${root}/server/…` `` with `root = /unit_<ULID>`. The bare `/server/…` names below are shorthand.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
+    direction TB
     OCC_MSG["/server/slam/map (OccupancyGrid)"]
     POSE_MSG["/server/robot_pose (PoseStamped)"]
     SCAN_MSG["/server/scan (LaserScan, derived<br/>from robot_pose topic name)"]
@@ -24,6 +25,7 @@ flowchart TD
   end
 
   subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
+    direction TB
     L1["Layer 1: Base Map OccupancyGrid Bitmap<br/>(resolution from map metadata)"]
     L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
     L3["Layer 3: Global Path (Pink) & Local Trajectory (Yellow)"]
@@ -33,6 +35,8 @@ flowchart TD
     L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
   end
 
+  OCC_MSG ~~~ POSE_MSG ~~~ SCAN_MSG ~~~ PATH_MSG ~~~ BOSTRO_MSG
+  L1 ~~~ L2 ~~~ L3 ~~~ L4 ~~~ L5 ~~~ L6 ~~~ L7
   rosbridgeWS --> StagePipeline
   StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
 ```
@@ -61,7 +65,7 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 
 ## The `createjs.Stage.prototype` Patch (`mapComponent.tsx`)
 
-EaselJS re-evaluates `createjs.Stage` into a brand-new constructor whose prototype no longer has the `ROS2D` coordinate helpers. A viewer built afterwards then throws `stage.globalToRos is not a function`. The fix is `ensureStagePrototype()` in `mapComponent.tsx`, re-applied idempotently on the current prototype right before every viewer creation (the math mirrors `public/script/ros2d.js` exactly, so behaviour is unchanged on the happy path). Note `rosScriptLoader.ts` is only the sequential script loader — the patch does not live there:
+EaselJS re-evaluates `createjs.Stage` into a brand-new constructor whose prototype no longer has the `ROS2D` coordinate helpers. A viewer built afterwards then throws `stage.globalToRos is not a function`. The fix is `ensureStagePrototype()` in `mapComponent.tsx`, re-applied idempotently on the current prototype right before every viewer creation (the math mirrors `public/script/ros2d.js` exactly, so behaviour is unchanged on the happy path). Note `rosScriptLoader.ts` is only the sequential script loader: the patch does not live there:
 
 ```typescript
 // src/components/navigationMap/mapComponent.tsx
@@ -104,7 +108,7 @@ const ensureStagePrototype = (): boolean => {
 When an operator defines area coverage sweep polygons or keep-out zones (`customAreaDraw.ts`):
 1. **Vertex Placement**: Clicking the canvas records metric coordinates $(x_i, y_i)$.
 2. **Dynamic Rubberbanding**: As the mouse moves, a dynamic temporary edge line renders to the cursor position.
-3. **Closing Snapping**: If the click lands within `CLOSE_TOLERANCE_M` ($0.5\text{ m}$ by default, overridable via `NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`) of the first vertex — a metric distance, not pixels — the loop closes. Keep-out polygons render as overlay and are sent as `areas`/`exclusions` payloads; coverage polygons go to `/msd700/coverage_polygon`. (`/msd700/keepout_grid` itself is only an empty-grid initializer on the robot side.)
+3. **Closing Snapping**: If the click lands within `CLOSE_TOLERANCE_M` ($0.5\text{ m}$ by default, overridable via `NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`) of the first vertex (a metric distance, not pixels) the loop closes. Keep-out polygons render as overlay and are sent as `areas`/`exclusions` payloads; coverage polygons go to `/msd700/coverage_polygon`. (`/msd700/keepout_grid` itself is only an empty-grid initializer on the robot side.)
 
 ## Related Documentation
 

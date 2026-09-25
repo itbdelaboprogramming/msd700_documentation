@@ -69,7 +69,7 @@ AlignのRESTエンドポイント、ライブcanvasに供給するrosbridgeサ�
   [手動操作 &
   オートパイロット](/ja/development/webui/navigation/manual-and-autopilot)で扱う2つのモードを反映する。`in_use`と`origin_conflict`は、このタブが上記のコマンドを発行することすらできるかどうかを制御する。
 
-同じpingのREST側の形は`POST /api/units/ping`であり、
+同じpingのREST側の形は`POST /api/hardware/ping`であり、
 [APIリファレンス § ロボットハートビートPing](/ja/development/api-reference#_2-ロボットハートビート-ping)で文書化されている。`data`ブロックはMQTT契約とフィールド単位で一致する。
 
 ## Operation Supervisor同期

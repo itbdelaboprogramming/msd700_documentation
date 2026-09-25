@@ -18,7 +18,7 @@ Dashboard **ROS Web UI** adalah antarmuka operator untuk platform MSD700, dikemb
 
 Dengan ROS Web UI, Anda dapat:
 
-- **Membuat Peta**: Kendarai robot mengelilingi area baru untuk otomatis membangun denah digital
+- **Membuat Peta**: Kemudikan robot mengelilingi area baru untuk otomatis membangun denah digital
 - **Navigasi**: Klik di mana saja pada peta untuk mengirim robot ke lokasi tersebut dengan penghindaran rintangan otomatis
 - **Menyapu Area**: Gambar zona dan perintahkan robot untuk menyapu seluruh ruangan atau koridor secara sistematis
 - **Memantau Langsung**: Lihat rekaman kamera robot secara real-time dengan latensi sangat rendah
@@ -35,9 +35,9 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
   <LinkCard icon="🚀" title="Panduan Cepat" details="Instruksi langkah demi langkah untuk masuk, memilih robot, dan menjalankan misi pertama Anda." link="/id/user-guide/quick-start" />
   <LinkCard icon="👥" title="Akun & Akses" details="Masuk, buat akun, dan pahami perbedaan izin operator vs admin." link="/id/user-guide/accounts" />
   <LinkCard icon="🧭" title="Navigasi" details="Kendali manual joystick, mengirim robot ke suatu lokasi, dan misi Autopilot." link="/id/user-guide/navigation" />
-  <LinkCard icon="🗺️" title="Pemetaan" details="Buat peta baru dengan mengendarai robot mengelilingi area. Play, pause, dan simpan." link="/id/user-guide/mapping" />
+  <LinkCard icon="🗺️" title="Pemetaan" details="Buat peta baru dengan mengemudikan robot mengelilingi area. Play, pause, dan simpan." link="/id/user-guide/mapping" />
   <LinkCard icon="🗄️" title="Peta & Database" details="Lihat, cari, ganti nama, dan hapus peta yang tersimpan." link="/id/user-guide/database" />
-  <LinkCard icon="📍" title="Rute & Cakupan" details="Simpan rute titik-ke-titik dan gambar area untuk penyapuan sistematis." link="/id/user-guide/routes-coverage" />
+  <LinkCard icon="📍" title="Rute & Coverage" details="Simpan rute titik-ke-titik dan gambar area untuk penyapuan sistematis." link="/id/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="Kamera Langsung" details="Lihat sudut pandang robot secara real-time dari mana saja." link="/id/user-guide/camera" />
   <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami watchdog keselamatan, lease operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/user-guide/behavior" />
   <LinkCard icon="🛠️" title="Konsol Admin" details="Untuk manajer armada: tambah operator, kelola penyewaan, dan pantau status armada." link="/id/user-guide/admin-console" />
@@ -61,14 +61,14 @@ flowchart LR
 4. **[Navigasi](/id/user-guide/navigation)**: Pelajari cara mengendalikan robot
 5. **[Pemetaan](/id/user-guide/mapping)**: Buat peta pertama Anda
 6. **[Peta & Database](/id/user-guide/database)**: Kelola peta yang tersimpan
-7. **[Rute & Cakupan](/id/user-guide/routes-coverage)**: Rencanakan misi otomatis
+7. **[Rute & Coverage](/id/user-guide/routes-coverage)**: Rencanakan misi otomatis
 8. **[Kamera Langsung](/id/user-guide/camera)**: Pantau robot dari jarak jauh
 9. **[Bagaimana Robot Berperilaku](/id/user-guide/behavior)**: Pahami jeda keselamatan, lease, dan Autopilot
 10. **[Konsol Admin](/id/user-guide/admin-console)**: (Khusus manajer armada) Kelola operator dan unit
 
 ## Persyaratan Sistem
 
-- **Peramban yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge.
+- **Browser yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge.
 - **Hanya desktop**: Gunakan laptop atau desktop dengan jendela minimal 1366 x 768. Ponsel dan tablet diblokir dengan pemberitahuan satu halaman penuh, dan jendela desktop yang lebih kecil ditutup overlay pemblokir: bilah kendali yang terlihat separuh tidak boleh mengendalikan robot yang sedang aktif.
 - **Jaringan**: Akses internet untuk dashboard cloud (`msd.nglobal.jp`), atau koneksi Wi-Fi lokal saat mengoperasikan robot secara offline di lapangan.
 

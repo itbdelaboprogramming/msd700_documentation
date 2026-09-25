@@ -21,7 +21,7 @@ for the enrolment protocol and container orchestration underneath these actions 
 ::: info Registering a unit does not grant driving access
 A row in `units` only means the robot exists in the fleet. Whether anyone can drive it is decided
 entirely on the [Rentals](/development/webui/admin-console/rentals) tab, by which rental profile
-(if any) the unit is assigned to — see `profile_units` in
+(if any) the unit is assigned to: see `profile_units` in
 [Database Schema § Identity and access](/development/database-schema#identity-and-access).
 :::
 
@@ -33,7 +33,7 @@ Creates a `units` row directly (a new ULID and a `unit_name`), ahead of any phys
 contacting the cloud. This is the admin-side counterpart to the `unit_enrollment_codes` table
 described in [Database Schema § Enrolment](/development/database-schema#enrolment): "single-use
 vouchers to claim a specific unit before its robot exists." A manually-registered unit is exactly
-that kind of unit — a placeholder identity a robot will claim later, rather than one that already
+that kind of unit: a placeholder identity a robot will claim later, rather than one that already
 announced itself in the Pending view below.
 
 ### Rename a unit
@@ -49,7 +49,7 @@ nothing about routing, the fleet relay's roster, or any topic the robot publishe
 Removes the `units` row, gated by a confirmation that is explicitly aware the change may not have
 reached the running system yet. That staleness is real, not defensive UI copy: the fleet relay
 holds its roster in memory and only re-reads the `units` table on a poll, `FLEET_ROSTER_POLL_MS`
-(default 60 s) — see
+(default 60 s): see
 [Unit Container Lifecycle § The roster comes from the database](/development/unit-container-lifecycle#the-roster-comes-from-the-database).
 Deletion is explicitly called out there as one of the ways the roster changes without going through
 the enrolment endpoint the reconciler was originally built to catch:
@@ -62,7 +62,7 @@ within one poll interval, which is what the confirmation dialog's staleness fram
 about. Per the foreign keys on `units`
 ([Database Schema § Foreign keys, in full](/development/database-schema#foreign-keys-in-full)),
 deleting the row also cascades to its rental assignment (`profile_units`) and its device binding
-(`unit_devices`), and to its recorded maps — see
+(`unit_devices`), and to its recorded maps: see
 [Database](/development/webui/database/ros-integration) for what happens to a unit's maps
 specifically, which is out of scope here.
 
@@ -79,8 +79,8 @@ hardware servicing or refurbishment."
 
 ### Swap data between two units
 
-Exchanges the unit-scoped dataset — the same "complete operational history recorded by a specific
-physical robot" defined above — between two existing units, rather than lifting it out into an
+Exchanges the unit-scoped dataset (the same "complete operational history recorded by a specific
+physical robot" defined above) between two existing units, rather than lifting it out into an
 archive. This is the bidirectional counterpart to the backup and restore operations described in
 [Backups](/development/webui/admin-console/backups): a robot's own history moves to a different
 unit identity instead of leaving the live system.
@@ -111,7 +111,7 @@ identity afterward.
 
 ## Pending view
 
-Robots that have completed the "hello" stage of the nonce protocol — `POST /enroll/claim` — but are
+Robots that have completed the "hello" stage of the nonce protocol (`POST /enroll/claim`) but are
 not yet claimed onto a `units` row sit in `pending_units`
 ([Database Schema § Enrolment](/development/database-schema#enrolment)), with `status` one of
 `pending`, `approved`, `claimed`, or `rejected`. The badge count next to the Pending tab is a count
@@ -122,10 +122,10 @@ protocol)](/development/webui/accounts/enrolment#cryptographic-hardware-enrolmen
 this page only covers what an admin does with a row once it is here.
 
 - **Register as a brand-new unit**: approves the pending robot by creating a fresh `units` row for
-  it — the administrator-authorization stage of the nonce protocol, completing the handshake for
+  it: the administrator-authorization stage of the nonce protocol, completing the handshake for
   hardware nobody has seen before.
 - **Adopt into an existing unit record**: approves the pending robot onto an *already-existing*
-  `units` row instead of creating a new one — the same "adopted... onto a different unit" language
+  `units` row instead of creating a new one: the same "adopted... onto a different unit" language
   used in
   [Hardware Enrolment § Self-heal recovery](/development/webui/accounts/enrolment#self-heal-recovery-a-lost-device-json-without-a-new-approval)
   to describe a unit whose hardware changed underneath it. This is how replacement hardware keeps a

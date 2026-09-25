@@ -142,6 +142,7 @@ sequenceDiagram
 | コマンド動詞 | ペイロード内容 | 目的 |
 | --- | --- | --- |
 | `ping` | [ハートビート Ping セクション](#ハートビート-ping-とリース契約)参照 | ハートビート、リースの取得、テレメトリの取得、ウォッチドッグのリフレッシュ。 |
+| `heartbeat` | `{ "page": "navigation" }`のみ。ブラウザが5 Hz、QoS 0でMQTT over WebSocket経由でユニットのMosquittoへ直接送信(ローカルダッシュボードのみ) | 2秒ウォッチドッグ階層向けの在席証明。権限は一切与えない: リース、claim/release、`origin`、フィードバックなし。[セーフティウォッチドッグ](/ja/development/ros/safety-watchdog#_2つの在席シグナル)参照。 |
 | `check` | なし | 低レベルのモータードライバーとマイクロコントローラーのステータスを問い合わせる。 |
 | `init` | なし | ハードウェアインターフェースと電源ラインを初期化する。 |
 | `stop` | なし | ハードウェア周辺機器と電源段をシャットダウンする。 |
@@ -377,7 +378,7 @@ flowchart LR
 | 仕組み | 場所 | カバーする範囲 |
 | --- | --- | --- |
 | クラウド側リレーが `/unit_<ULID>/string/map` をラッチする | `aws_mqtt/scripts/gen_bridge_params.py` | 2 回の送信の間に接続してきたブラウザ、およびリレーの再起動(フリートのロスターが変わるたびに発生します)。 |
-| マップのリセットまたはリタイア後に `burst_interval` 間隔で `burst_sends` 回繰り返す | `topic2string/scripts/map_compression_pipeline.py` | オペレーターが今開いたばかりのマップ。ちょうどロボットがナビゲーションスタックを再起動している最中に配送されます。新しいマッピングの開始もカバーされます。 |
+| マップのリセットまたはリタイア後に `burst_interval` 間隔で `burst_sends` 回繰り返す | `topic2string/src/nodelets/map_compression.cpp` (Python twin: `scripts/map_compression_pipeline.py`) | オペレーターが今開いたばかりのマップ。ちょうどロボットがナビゲーションスタックを再起動している最中に配送されます。新しいマッピングの開始もカバーされます。 |
 | プルチャネル `/string/map_request` | ブラウザからロボットへ、ACK トピックと同じ経路 | それ以外のすべて。パケット落ち、悪いタイミングでマウントしたダッシュボード、トピック型の学習中に最初のメッセージを飲み込んだローカルモードのリレーなど。 |
 
 ダッシュボードは Navigation キャンバスがマウントされた時点で `/unit_<ULID>/string/map_request` に

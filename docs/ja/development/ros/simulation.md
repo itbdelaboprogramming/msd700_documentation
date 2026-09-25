@@ -36,7 +36,7 @@ flowchart LR
 2. **設定の漏れ残り**: 実寸スケールモデリングに置き換えられるまで、レガシーなパラメータ(`robot_width: 0.32`)が網羅走行設定内に残っていた。
 3. **環境スケールの不整合**: 標準のTurtleBotマップには、0.9 x 0.7 mのロボットに対する十分なクリアランスがなかった:
    - `turtlebot_world`: 最大クリアランス0.39 m(0.425 mの内接ハーフ幅をどこにも収容できない)。
-   - `AWS RoboMaker Small Warehouse`: 衝突ジオメトリからは最大クリアランス**3.83 m**(立つために十分な幅の床が65%、旋回に十分な幅が46%)、AWS同梱の占有地図からは**3.68 m**(58% / 38%) — 許容誤差内で一致する2通りの独立した測定方法。
+   - `AWS RoboMaker Small Warehouse`: 衝突ジオメトリからは最大クリアランス**3.83 m**(立つために十分な幅の床が65%、旋回に十分な幅が46%)、AWS同梱の占有地図からは**3.68 m**(58% / 38%)：許容誤差内で一致する2通りの独立した測定方法。
 
 ## シミュレーションワールド: AWS Small Warehouse
 
@@ -65,7 +65,7 @@ AWS RoboMakerは2025-09-10にアーカイブされた。そのGitHubのデフォ
 
 ## ロボットURDFモデル: `msd700_field`
 
-実機ロボットは`msd700_description/urdf/msd700_field.urdf.xacro`でモデル化され、Gazeboプラグインは`msd700_field.gazebo.xacro`に定義されている。
+fieldロボット(量産サイズ)は`msd700_description/urdf/msd700_field.urdf.xacro`でモデル化され、Gazeboプラグインは`msd700_field.gazebo.xacro`に定義されている。
 
 ```mermaid
 flowchart TB
@@ -84,7 +84,7 @@ flowchart TB
 ### 物理仕様:
 - **寸法**: 長さ0.90 m、幅0.70 m、高さ0.25 m、質量150 kg。
 - **駆動ジオメトリ**: 4つの駆動輪(前後左右)。オドメトリはそれらを差動ペアとして融合する。
-- **Velodyne VLP-16 LiDAR**: 実機と一致するよう、footprintから0.50 m上のマウントマストに設置。
+- **Velodyne VLP-16 LiDAR**: footprintから0.50 m上のマウントマストに設置。(実機試験用のprototype `irbot`ではfootprintから0.527 m上。)
 - **標準化されたROSフレーム**: 標準的なフレーム規約(`base_footprint`、`base_link`、`base_scan`、`imu_link`、`odom`、`map`)を使用する。
 
 ## シミュレーションスタックの起動

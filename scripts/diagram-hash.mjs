@@ -15,7 +15,7 @@ export function normalizeDiagram(code) {
 
 // Bump whenever render-diagrams.mjs changes how diagrams look. It is part of every image's file
 // name, so a restyle produces new URLs instead of browsers and Apache serving the cached old PNGs.
-export const RENDER_VERSION = 2
+export const RENDER_VERSION = 3
 
 export function diagramHash(code) {
   return createHash('sha256').update(`v${RENDER_VERSION}\n${normalizeDiagram(code)}`).digest('hex').slice(0, 16)

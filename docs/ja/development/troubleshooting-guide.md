@@ -44,7 +44,7 @@ flowchart TD
 
 ### 2. ユニットはオンラインだが、マップキャンバスが空のまま(rosbridge / リレーコンテナ)
 - **症状**: コマンドは成功するが、Web キャンバス上にマップ、ロボットアイコン、レーザースキャンのいずれも表示されない。
-- **根本原因**: フリートリレーコンテナ(`ros_web_ui_v2_unit_relays`)がダウンしている — あるいはレガシーなユニット単位の経路では、オンデマンドコンテナ `rosweb_unit_<u>_<unit>_nakayama` がアイドルリーパーによって停止された — または Apache の WebSocket プロキシがブロックされている。
+- **根本原因**: フリートリレーコンテナ(`ros_web_ui_v2_unit_relays`)がダウンしている。あるいはレガシーなユニット単位の経路では、オンデマンドコンテナ `rosweb_unit_<u>_<unit>_nakayama` がアイドルリーパーによって停止された。または Apache の WebSocket プロキシがブロックされている。
 - **診断手順**:
   1. まずフリートリレーを確認する: `docker ps | grep unit_relays`。レガシー経路では代わりにユニット単位のコンテナを確認する: `docker ps | grep rosweb_unit`。
   2. レガシー経路でのみ: ブラウザでユニットページをリロードし、`unit_manager.js` の `touch` イベントを発生させる。フリートモードではロスターは`units`テーブルから得られるため、touchイベントは不要であり、登録済みロボットは到達可能である。
@@ -74,7 +74,7 @@ flowchart TD
 - **根本原因**: ユニット上の `docker/.env` は git 管理下にあり、ホストごとに異なる。ユニットの `mysql_data_local` ボリュームが既に初期化された後に、そこで `MYSQL_USER`/`MYSQL_PASSWORD` が変更されると(`git pull`、または手動編集)、MySQL はデータディレクトリに焼き込まれた古いパスワードを保持し続け、遡って新しいパスワードを採用することはない。その結果 `sync_agent.js` は自身の最初のローカル `sync_state` 読み取りで、クラウド接続エラーではなく `ER_ACCESS_DENIED_ERROR` で失敗する。これが現在、実際のクラウド障害とどう区別されているかについては [データ同期: 障害分類](/ja/development/data-sync#障害の分類) を参照。
 - **診断手順**:
   1. ユニット上で: `cat docker/.env | grep MYSQL_` を実行し、値が最近変更されたように見えるか確認する(`git pull` 直後など)。
-  2. 不一致を直接確認する: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — 手動での `Access denied` は、一時的な不具合ではなくドリフトを裏付ける。
+  2. 不一致を直接確認する: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"`：手動での `Access denied` は、一時的な不具合ではなくドリフトを裏付ける。
 - **解決策**: `docker/.env` を、そのボリュームが初期化された時点のパスワードに戻すか、ローテーションが意図的なものであった場合は、ローカル MySQL に対して root で `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` を実行し、データベースを新しい `.env` の値に合わせる。これを「直す」ために `mysql_data_local` を消去してはならない。それはまだクラウドに同期されていないマップ/ルートのユニット側唯一のローカルコピーであり、この障害モードは同期そのものが現在機能していないことを意味する。
 
 ### 7. クラウドダッシュボードにライブトピックがない(転送されたポートによって ROS Master が乗っ取られる)

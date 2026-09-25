@@ -55,9 +55,9 @@ the backend, not merely kept from seeing the button.
 
 The console keeps three questions deliberately separate, each with its own tab and its own table:
 
-- **Who can drive at all** — an operator account, managed on [Operators](/development/webui/admin-console/operators).
-- **What robots exist** — a unit row, managed on [Units & Fleet](/development/webui/admin-console/units-and-fleet).
-- **Who is renting which robot** — a rental profile and its assignments, managed on
+- **Who can drive at all**: an operator account, managed on [Operators](/development/webui/admin-console/operators).
+- **What robots exist**: a unit row, managed on [Units & Fleet](/development/webui/admin-console/units-and-fleet).
+- **Who is renting which robot**: a rental profile and its assignments, managed on
   [Rentals](/development/webui/admin-console/rentals).
 
 Creating an operator account grants no access to anything by itself, and registering a unit grants
@@ -92,12 +92,12 @@ covers three things:
 
 - Viewing the signed-in admin's own identity (username, role).
 - Editing that admin's own profile (username, full name).
-- Jumping to the change-own-password screen, the same voluntary mode described in
+- Jumping to the change-own-password page, the same voluntary mode described in
   [Accounts & Access § Admin change password](/development/webui/accounts/overview#admin-change-password-admin-change-password).
 
-Resetting *another* account's password is a separate, tab-specific action — the Admins tab above
+Resetting *another* account's password is a separate, tab-specific action (the Admins tab above
 for a fellow back-office account, [Operators](/development/webui/admin-console/operators) for an
-operator account — not something reachable from this menu.
+operator account) not something reachable from this menu.
 
 ## Related
 

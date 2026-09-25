@@ -9,7 +9,7 @@ search: false
 
 Protokol kriptografi lengkap yang dipakai robot fisik untuk mendaftarkan dirinya ke server cloud dan
 menerima kredensial perangkatnya sendiri, tanpa perlu ada manusia di dekat robot yang melakukan apa
-pun selain membaca kode klaim di layar. Protokol ini menghasilkan kredensial Robot Cloud Domain yang
+pun selain membaca kode klaim di terminal. Protokol ini menghasilkan kredensial Robot Cloud Domain yang
 dijelaskan di [Keamanan & Token](/id/development/webui/accounts/security-and-tokens); untuk di mana
 `device.json` dan cache token hasilnya berada di host robot, lihat
 [Integrasi ROS](/id/development/webui/accounts/ros-integration).
@@ -91,7 +91,7 @@ nonce yang berubah (re-image yang genuine, atau seorang penyamar), atau tidak ad
 
 Alur nonce dimulai di robot. Alur voucher dimulai di admin console untuk unit yang didaftarkan manual (identitas placeholder, belum ada kontak fisik): `POST /admin/api/units/:id/enrollment-code` (token admin) mencetak kode **10 karakter** dari alfabet 30-char yang sama dengan claim code, di-bcrypt-hash di database, berlaku `valid_hours` (default 72, dijepit 1–720), ditampilkan **sekali**.
 
-Robot menebusnya di `POST /enroll/claim` dengan `enrollment_code`, melewati kolam pending: server menemukan baris yang belum dipakai dan belum kedaluwarsa, `bcrypt.compare`, menandai `used_at`, dan menjalankan `issueCredential` yang sama dengan handover normal (mengembalikan `unit_id, unit_name, topic_root, device_secret, access_token`). Kode tak valid, sudah dipakai, atau kedaluwarsa mendapat 404. Revokasi adalah `DELETE /units/:id/device` (lepas ikatan robot) — tidak ada endpoint hapus-kode. Jangan tertukar ketiga secret ini: claim **nonce** 32-byte (dibuat robot, tidak pernah disimpan), **claim code** 8-char milik admin (kolam pending), **voucher** 10-char (unit pra-registrasi), dan **device secret** 32-byte (kredensialnya sendiri).
+Robot menebusnya di `POST /enroll/claim` dengan `enrollment_code`, melewati kolam pending: server menemukan baris yang belum dipakai dan belum kedaluwarsa, `bcrypt.compare`, menandai `used_at`, dan menjalankan `issueCredential` yang sama dengan handover normal (mengembalikan `unit_id, unit_name, topic_root, device_secret, access_token`). Kode tak valid, sudah dipakai, atau kedaluwarsa mendapat 404. Revokasi adalah `DELETE /units/:id/device` (lepas ikatan robot): tidak ada endpoint hapus-kode. Jangan tertukar ketiga secret ini: claim **nonce** 32-byte (dibuat robot, tidak pernah disimpan), **claim code** 8-char milik admin (kolam pending), **voucher** 10-char (unit pra-registrasi), dan **device secret** 32-byte (kredensialnya sendiri).
 
 ### `secret_prev_hash`: satu generasi masa tenggang
 
@@ -105,7 +105,7 @@ dipotong, tanpa masa tenggang untuk perangkat yang sedang digantikan.
 
 ## Terkait
 
-- [Ikhtisar](/id/development/webui/accounts/overview): keempat layar Akun & Akses dan bagaimana
+- [Ikhtisar](/id/development/webui/accounts/overview): keempat halaman Akun & Akses dan bagaimana
   hubungannya.
 - [Keamanan & Token](/id/development/webui/accounts/security-and-tokens): keyring JWT, domain
   kepercayaan, dan terminasi TLS.

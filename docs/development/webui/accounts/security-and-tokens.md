@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-The backend mechanics behind the [Accounts & Access screens](/development/webui/accounts/overview):
+The backend mechanics behind the [Accounts & Access pages](/development/webui/accounts/overview):
 the JWT keyring that signs and verifies tokens, the three independent trust domains those tokens
 live in, and the TLS termination that protects them in transit. For how a robot first acquires its
 own credentials, see [Hardware Enrolment](/development/webui/accounts/enrolment); for how those
@@ -35,7 +35,7 @@ flowchart TB
   subgraph RobotDomain["Physical Robot Trust Domain (Jetson)"]
     DEV_SECRET["Device Secret (bcrypt hash, server-side)<br/>32 random bytes at enrolment"]
     ROBOT_TOKEN["Onboard Token Cache (12h TTL)<br/>Certificates/robot/token.cred"]
-    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets"]
+    LOCAL_KEYRING["Unit Local Keyring<br/>Isolated from Cloud Secrets<br/>Local Auth Only"]
   end
 
   HTTPS --> AUTH_MW
@@ -45,7 +45,6 @@ flowchart TB
 
   MQTTS <--> ROBOT_TOKEN
   DEV_SECRET --> ROBOT_TOKEN
-  LOCAL_KEYRING -.->|"Local Auth Only"| RobotDomain
 ```
 
 ## Three independent trust domains
@@ -105,7 +104,7 @@ running on a stale secret.
 
 ## Related
 
-- [Overview](/development/webui/accounts/overview): the four Accounts & Access screens and how
+- [Overview](/development/webui/accounts/overview): the four Accounts & Access pages and how
   they relate.
 - [Hardware Enrolment](/development/webui/accounts/enrolment): the nonce protocol a robot uses to
   register itself.

@@ -13,7 +13,7 @@ For coverage planning geometry derived from physical robot dimensions, see [Bous
 
 ## Background: The True-Scale Dimension Model
 
-Older simulator setups in the repository used TurtleBot3 Waffle models: **0.266 x 0.266 m** footprint on a 0.287 m wheel track. In contrast, the real production MSD700 robot measures **0.90 x 0.70 m**, represented in the navigation costmap as a padded **1.20 x 0.85 m** footprint.
+Older simulator setups in the repository used TurtleBot3 Waffle models: **0.266 x 0.266 m** footprint on a 0.287 m wheel track. In contrast, the production-size MSD700 field robot measures **0.90 x 0.70 m**, represented in the navigation costmap as a padded **1.20 x 0.85 m** footprint.
 
 ```mermaid
 flowchart LR
@@ -36,7 +36,7 @@ flowchart LR
 2. **Configuration Leakage**: A legacy parameter (`robot_width: 0.32`) lingered in coverage configurations until true-scale modeling replaced it.
 3. **Environment Scale Mismatch**: Standard TurtleBot maps lacked adequate clearance for a 0.9 x 0.7 m robot:
    - `turtlebot_world`: Maximum clearance 0.39 m (cannot fit a 0.425 m inscribed half-width anywhere).
-   - `AWS RoboMaker Small Warehouse`: Maximum clearance **3.83 m** from collision geometry (65% of the floor wide enough to stand, 46% to pivot), or **3.68 m** (58% / 38%) from the occupancy map AWS shipped — two independent ways of measuring that agree within tolerance.
+   - `AWS RoboMaker Small Warehouse`: Maximum clearance **3.83 m** from collision geometry (65% of the floor wide enough to stand, 46% to pivot), or **3.68 m** (58% / 38%) from the occupancy map AWS shipped: two independent ways of measuring that agree within tolerance.
 
 ## The Simulation World: AWS Small Warehouse
 
@@ -65,7 +65,7 @@ The verified default spawn pose is **`x: 0.50, y: -2.40, yaw: 1.5708 (facing Nor
 
 ## The Robot URDF Model: `msd700_field`
 
-The physical robot is modeled in `msd700_description/urdf/msd700_field.urdf.xacro` with Gazebo plugins in `msd700_field.gazebo.xacro`.
+The field (production-size) robot is modeled in `msd700_description/urdf/msd700_field.urdf.xacro` with Gazebo plugins in `msd700_field.gazebo.xacro`.
 
 ```mermaid
 flowchart TB
@@ -84,7 +84,7 @@ flowchart TB
 ### Physical Specifications:
 - **Dimensions**: 0.90 m length, 0.70 m width, 0.25 m height, mass 150 kg.
 - **Drive Geometry**: Four drive wheels (front/back left/right); odometry fuses them as a differential pair.
-- **Velodyne VLP-16 LiDAR**: 0.50 m above the footprint on a mounting mast, matching the physical unit.
+- **Velodyne VLP-16 LiDAR**: 0.50 m above the footprint on a mounting mast. (The physical test prototype, `irbot`, carries it 0.527 m above the footprint.)
 - **Standardized ROS Frames**: Uses standard frame conventions (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Launching Simulation Stacks

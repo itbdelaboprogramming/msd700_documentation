@@ -19,7 +19,7 @@ The Admin Console is only visible to accounts with **Administrator** access. It'
 The **Units** tab has two views: **Fleet** (every registered robot) and **Pending** (new robots waiting for approval).
 
 - A brand-new robot shows up under **Pending** first. An administrator reviews it there and clicks **Register** (or **Adopt**) to accept it into the fleet. Registering alone grants nobody access: who may drive it is decided by its rental assignment.
-- The **Fleet** view lists every registered robot: which rental it's rented to, its operator and map counts, when it was registered, and per-unit actions (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). It doesn't show live connection status — that's only in the operator's unit table.
+- The **Fleet** view lists every registered robot: which rental it's rented to, its operator and map counts, when it was registered, and per-unit actions (Rename, Move data, Backup, Swap, Clear data, Unbind, Delete). It doesn't show live connection status: that's only in the operator's unit table.
 - Operators see the same robots in the unit table right after logging in: select a **Ready** row and click **Start** to connect.
 
 ## Rentals
@@ -50,4 +50,4 @@ If your account has superadmin privileges, the **Admins** tab lets you promote o
 : It may have been moved to a different rental, or is temporarily offline. Check its last-seen status.
 
 **Restoring a backup didn't bring back a deleted robot's data**
-: If the original robot no longer exists, the restore process will prompt you to remap the data to a different unit: follow the on-screen instructions to complete the transfer.
+: If the original robot no longer exists, the restore process will prompt you to remap the data to a different unit: follow the instructions in the console to complete the transfer.

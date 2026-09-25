@@ -27,7 +27,7 @@ No. To ensure safety, each robot is governed by an **exclusive operating lease**
 
 ::: details 4. What happens if my laptop loses Wi-Fi or closes while the robot is moving?
 The system responds based on the active operating mode:
-- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **10 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
+- **Standard Manual / Navigation Mode**: If the robot loses contact with your browser for **2 seconds**, it automatically executes a **Safety Motion Pause** and comes to a stop while keeping the mission in memory. Reconnecting your browser automatically resumes the mission.
 - **Autopilot Mode ON**: If Autopilot is enabled, the robot ignores browser disconnections and finishes its whole route or playlist on its own before returning to its homebase.
 :::
 
@@ -52,7 +52,7 @@ The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 t
 :::
 
 ::: details 9. Can I operate the robot if there is no internet connection in the building?
-Yes. Every MSD700 robot runs an onboard web server. Connect your laptop directly to the robot's Wi-Fi hotspot (ask your administrator for its name) and open `http://<robot-ip>:3000` in Chrome or Edge. You can perform all mapping, teleoperation, and coverage routines completely offline. Note the dashboard requires a desktop-size browser window even offline: phones and tablets are not supported.
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop directly to the robot's Wi-Fi hotspot (ask your administrator for its name) and open `http://mymsd.jp` in Chrome or Edge (on another local network, `http://<robot-ip>:3000`). You can perform all mapping, teleoperation, and coverage routines completely offline. Note the dashboard requires a desktop-size browser window even offline: phones and tablets are not supported.
 :::
 
 ::: details 10. How does the Emergency Stop work?

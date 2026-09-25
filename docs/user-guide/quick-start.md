@@ -52,20 +52,23 @@ Select a **Ready** row and click **Start**: the dashboard opens [Navigation](/us
 The operator interface is divided into three main operational panels:
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph Workspace["MSD700 Operator Workspace Layout"]
     TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
     RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
+
+  TOP ~~~ LEFT
+  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
 ```
 
 ---
 
 ## Step 4: Load a Map
 
-1. Open a map from the **Database** page (or the map selector on the Navigation screen).
+1. Open a map from the **Database** page (or the map selector on the Navigation page).
 2. Choose a saved map (e.g. `Warehouse_Floor_1`).
 3. The 2D floor plan appears on the canvas along with the robot's current position (robot icon with direction arrow).
 
@@ -80,7 +83,7 @@ If no maps exist in the dropdown, see [Mapping](/user-guide/mapping) to create y
 You drive the robot manually with your keyboard:
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph KeyboardControls["Keyboard Drive Controls"]
     W["W: Drive Forward"]
     S["S: Drive Backward"]
@@ -88,6 +91,8 @@ flowchart LR
     D["D: Rotate Right (Clockwise)"]
     SHIFT["Hold Shift: Slow Mode"]
   end
+
+  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
 ```
 
 ### Teleoperation Controls:

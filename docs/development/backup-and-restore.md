@@ -14,18 +14,24 @@ This document details the database backup architecture, export/import archive st
 The platform supports two independent backup scopes:
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph ProfileScope["1. Profile-Scoped Backup (Tenant Centric)"]
+    direction LR
     P1["Scope: 'profile'"]
     P2["Captures: All maps, routes, areas, and playlists owned by a rental profile across any robot."]
-    P3["Restore Behavior: Additive restore into target profile. Missing robots can be remapped."]
+    P3["Restore Behavior: Additive restore into a new profile, or an existing one via profile_remap. Missing robots can be remapped."]
   end
 
   subgraph UnitScope["2. Unit-Scoped Backup (Robot Centric)"]
+    direction LR
     U1["Scope: 'unit'"]
     U2["Captures: Complete operational history recorded by a specific physical robot."]
     U3["Restore Behavior: Restores robot calibration and recorded maps directly to that unit."]
   end
+
+  P1 ~~~ P2 ~~~ P3
+  U1 ~~~ U2 ~~~ U3
+  ProfileScope ~~~ UnitScope
 ```
 
 | Dimension | Profile-Scoped Backup | Unit-Scoped Backup |
@@ -100,7 +106,7 @@ Applies the uploaded archive additively.
 Two scripts do the packing, so backups never shell out to `tar` on untrusted uploads:
 
 - `profile_archive.js` packs/unpacks one DB slice + map files into a `.tar.gz` (`manifest.json` + `files/<mapId>.pgm|yaml|png`) for profile scope (one tenant) or unit scope (one robot, optionally cross-rental). It never ships `users` (re-links membership/authorship to existing accounts only), reuses free ULIDs, remaps taken ones, never overwrites. Key functions: `buildArchive`, `readArchive`, `buildRestorePlan`, `restoreArchive`.
-- `tar_archive.js` is the minimal in-memory ustar reader/writer underneath it: `packTar`/`unpackTar` with an allow-list (`^files/<ULID>.(pgm|yaml|png)$`), checksum/truncation checks, non-regular files skipped — no staging dir, no CLI extraction.
+- `tar_archive.js` is the minimal in-memory ustar reader/writer underneath it: `packTar`/`unpackTar` with an allow-list (`^files/<ULID>.(pgm|yaml|png)$`), checksum/truncation checks, non-regular files skipped: no staging dir, no CLI extraction.
 
 ## Schema Migration Scripts
 

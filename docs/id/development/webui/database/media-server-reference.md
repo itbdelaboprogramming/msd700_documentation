@@ -11,7 +11,7 @@ search: false
 
 ## Endpoint
 
-Semua memakai JWT Bearer kecuali dinyatakan lain. Error seragam `{ success: false, msg }`. Rate limit: 100 req/15 mnt/IP umum, 10 upload/15 mnt/IP (kode menjalankan cap umum yang lebih lebar — nilai doc adalah kontraknya).
+Semua memakai JWT Bearer kecuali dinyatakan lain. Error seragam `{ success: false, msg }`. Rate limit: 100 req/15 mnt/IP umum, 10 upload/15 mnt/IP (kode menjalankan cap umum yang lebih lebar: nilai doc adalah kontraknya).
 
 | Method + path | Auth | Tujuan |
 | --- | --- | --- |
@@ -22,7 +22,7 @@ Semua memakai JWT Bearer kecuali dinyatakan lain. Error seragam `{ success: fals
 | `GET /api/media/maps/:id/download` | JWT | Unduh bundle peta |
 | `GET /api/media/checkMapName` | JWT | Cek ketersediaan nama sebelum simpan |
 | `DELETE /api/media/maps/:id` | JWT | Hapus peta + PGM/YAML/PNG (query `user_id` atau JWT) |
-| `GET /api/media/images/:filename` | **none di kode** | Sajikan biner PNG, di-cache immutable setahun. Doc API bilang JWT — route-nya tanpa `verifyToken` (`Tidak perlu cek user_id dan JWT`). Perlakukan PNG peta sebagai publik |
+| `GET /api/media/images/:filename` | **none di kode** | Sajikan biner PNG, di-cache immutable setahun. Doc API bilang JWT: route-nya tanpa `verifyToken` (`Tidak perlu cek user_id dan JWT`). Perlakukan PNG peta sebagai publik |
 | `POST /api/media/uploadRouteImage` | JWT | Satu `imageFile` + `id`, disimpan sebagai `<UPLOAD_DIR>/images/{id}.jpg` (baris log bilang `.png`; filenya `.jpg`) |
 | `GET/POST/PUT/DELETE /api/legacy-id-mapper` | JWT | Lookup/buat/ubah/hapus baris legacy-int-ID ↔ ULID (`entity_type` + `legacy_int_id`/`new_ulid`) |
 
@@ -38,6 +38,6 @@ Di unit (`DEPLOYMENT_MODE=local`) server memercayai `Origin` browser begitu saja
 
 ## Terkait
 
-- [Database](/id/development/webui/database/overview): Layar Map DB yang membaca API ini.
+- [Database](/id/development/webui/database/overview): Halaman Map DB yang membaca API ini.
 - [Mapping: ROS Integration](/id/development/webui/mapping/ros-integration): Jalur simpan yang berakhir di upload.
 - [API Reference](/id/development/api-reference): REST API backend (service terpisah).

@@ -13,30 +13,32 @@ Dokumen ini menyediakan spesifikasi matematis dan arsitektural yang menyeluruh u
 
 ```mermaid
 flowchart TD
-  subgraph RawSensors["Physical Sensor Hardware Suite"]
+  subgraph RawSensors["Physical sensors"]
     VLP16["Velodyne VLP-16 3D LiDAR<br/>(16 beams, Ethernet: 192.168.103.231)"]
-    IMU_HW["9-DOF IMU (I2C / Serial)<br/>3-Axis Accel, Gyro, Magnetometer"]
-    ENCODERS["Wheel Encoders<br/>2400 PPR (msd700_odom)"]
+    IMU_HW["CMPS12 compass/IMU on the STM32<br/>accel, gyro, magnetometer, heading"]
+    ENCODERS["Wheel encoders<br/>pulse deltas in hardware_state"]
     CAM["USB Camera<br/>separate WebRTC device, not a URDF link"]
   end
 
-  subgraph Preprocessing["ROS Preprocessing & Filtering"]
-    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D Pointcloud to 2D Planar /scan<br/>Height Window: -0.30 to +0.30 m"]
-    IMU_FILT["imu_filter_madgwick<br/>Madgwick AHRS Orientation Filter<br/>gain 0.01, use_mag, fixed frame odom<br/>/imu/mag in, /imu/from_filter out"]
-    WHEEL_ODOM["msd700_hardware<br/>Computes Forward Kinematics (/wheel/odom)"]
+  subgraph Preprocessing["ROS preprocessing and filtering"]
+    PCL2SCAN["pointcloud_to_laserscan<br/>Projects 3D pointcloud to 2D /scan<br/>Height window: -0.30 to +0.30 m"]
+    RAW["raw_sensor_node (hardware_state.py)<br/>/wheel/odom, /imu/data_raw, /imu/mag"]
+    IMU_FILT["imu_filter_madgwick<br/>gain 0.01, use_mag, fixed frame odom<br/>output remapped to /imu/from_filter"]
+    IMU_OUT["raw_sensor_node republishes<br/>/imu/data (frame imu)"]
   end
 
-  subgraph StateEstimation["Continuous State Estimation (EKF)"]
-    EKF["robot_localization (ekf_localization_node)<br/>15-Dimensional Extended Kalman Filter<br/>Fuses /wheel/odom and /imu/data"]
-    ODOM_FILT["/odometry/filtered<br/>Publishes TF: odom -> base_footprint (30 Hz)"]
+  subgraph StateEstimation["EKF"]
+    EKF["robot_localization (ekf_localization_node)<br/>Fuses /wheel/odom and /imu/data"]
+    ODOM_FILT["/odometry/filtered<br/>TF odom -> base_footprint (30 Hz)"]
   end
 
   VLP16 --> PCL2SCAN
-  IMU_HW --> IMU_FILT
-  ENCODERS --> WHEEL_ODOM
-
-  WHEEL_ODOM --> EKF
-  IMU_FILT --> EKF
+  IMU_HW --> RAW
+  ENCODERS --> RAW
+  RAW -->|/imu/data_raw, /imu/mag| IMU_FILT
+  IMU_FILT -->|/imu/from_filter| IMU_OUT
+  RAW -->|/wheel/odom| EKF
+  IMU_OUT --> EKF
   EKF --> ODOM_FILT
 ```
 
@@ -44,36 +46,33 @@ flowchart TD
 
 ## Kinematika Maju Differential Drive
 
-Robot lapangan memiliki empat roda penggerak (depan/belakang kiri/kanan pada $x = \pm 0.30\text{ m}$, $y = \pm 0.30\text{ m}$); odometri mem-fusi-kannya sebagai pasangan diferensial.
+Dua mesin memakai stack ini. Simulasi menjalankan robot **field** (0,90 x 0,70 m, tracked, model `msd700_field`, plugin skid-steer dengan odometri ground truth Gazebo). Uji fisik memakai **prototype** yang lebih kecil (model `irbot`, sekitar 0,30 x 0,30 m, dua roda penggerak belakang plus caster, differential drive sungguhan). Jangan membawa tuning dari satu ke yang lain. Angka di bawah milik prototype.
 
-### Parameter Kinematik (`msd700_hardware/config/odometry_config.yaml`):
-- Radius Roda: $r = 0.027\text{ m}$ ($2.7\text{ cm}$).
-- Track Gauge (jarak antara centerline roda): $L = 0.23\text{ m}$ ($23\text{ cm}$).
-- Resolusi Encoder: $PPR = 2400\text{ pulses/revolution}$.
+Di unit sungguhan (`hardware_mode 1`, default), `raw_sensor_node` (`msd700_control/src/hardware_state.py`) mengubah delta pulse encoder dari STM32 menjadi `/wheel/odom`. (`msd700_hardware/config/odometry_config.yaml` milik interface hardware C++ terpisah yang hanya dipakai di `hardware_mode 2`.)
 
-### Perhitungan Displacement per Periode Kontrol $\Delta t$:
-Dengan delta encoder kiri $\Delta \text{ticks}_L$ dan delta encoder kanan $\Delta \text{ticks}_R$:
+### Parameter Kinematik (`msd700_control/config/pose_config.yaml`, namespace `/raw_sensor`):
+- Radius roda: $r = 0.0275\text{ m}$ (`wheel_radius: 2.75` cm).
+- Track (jarak antar roda): $L = 0.26\text{ m}$ (`wheel_distance: 26.0` cm, hasil ukur di robot sungguhan; sampai September 2026 nilainya `78.0`, yang membuat setiap pivot berlebih 3×).
+- Resolusi encoder: `ppr: 50000`, dikalikan faktor empiris `pulse_scale: 24.0`.
+- Sumber heading: `use_imu: 1`, jadi heading berasal dari IMU terfilter, bukan dari selisih roda.
 
-$$\Delta s_L = \frac{2 \pi r \cdot \Delta \text{ticks}_L}{PPR}, \quad \Delta s_R = \frac{2 \pi r \cdot \Delta \text{ticks}_R}{PPR}$$
+File yang sama dipakai `bridger.py`, sehingga sisi perintah (twist → kecepatan roda) dan sisi odometri memakai geometri yang sama.
 
-Displacement linear $\Delta s$ dan perubahan heading $\Delta \theta$:
+### Perhitungan per siklus ($\Delta t$, `compute_period` 10 ms):
 
-$$\Delta s = \frac{\Delta s_R + \Delta s_L}{2}, \quad \Delta \theta = \frac{\Delta s_R - \Delta s_L}{L}$$
+$$d = \frac{2 \pi r}{PPR} \cdot s_{\text{pulse}}, \quad \Delta s_L = d \cdot \Delta \text{ticks}_L, \quad \Delta s_R = d \cdot \Delta \text{ticks}_R$$
 
-### Integrasi Odometri Diskret:
-Dalam frame lokal robot dengan integrasi Runge-Kutta orde-2 (midpoint):
+$$v = \frac{\Delta s_R + \Delta s_L}{2 \Delta t}, \quad \omega = \frac{\Delta s_R - \Delta s_L}{L \, \Delta t}$$
 
-$$x_{k+1} = x_k + \Delta s \cdot \cos\left(\theta_k + \frac{\Delta \theta}{2}\right)$$
+$$x_{k+1} = x_k + \frac{\Delta s_R + \Delta s_L}{2} \cos \theta_k, \quad y_{k+1} = y_k + \frac{\Delta s_R + \Delta s_L}{2} \sin \theta_k, \quad \theta_k = \psi_{\text{IMU}}$$
 
-$$y_{k+1} = y_k + \Delta s \cdot \sin\left(\theta_k + \frac{\Delta \theta}{2}\right)$$
-
-$$\theta_{k+1} = \theta_k + \Delta \theta$$
+`/wheel/odom` membawa $v$ dan $\omega$ di bagian twist; EKF hanya memakai twist. `raw_sensor_node` **tidak** mem-broadcast `odom -> base_footprint` (`publish_tf` default false); transform itu milik EKF.
 
 ---
 
 ## Filter Orientasi Madgwick AHRS IMU
 
-Data IMU mentah pada `/imu/data_raw` diproses oleh `imu_filter_madgwick` untuk menurunkan orientasi quaternion bebas-drift $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$. Filter berjalan dengan `gain 0.01`, `use_mag true`, fixed frame `odom`, membaca `/imu/mag` dan mempublikasikan output terfusi pada `/imu/from_filter` (yang dikonsumsi EKF sebagai `imu0`):
+Data IMU mentah pada `/imu/data_raw` diproses oleh `imu_filter_madgwick` untuk menurunkan orientasi quaternion bebas-drift $\mathbf{q} = [q_w, q_x, q_y, q_z]^T$. Filter berjalan dengan `gain 0.01`, `use_mag true`, fixed frame `odom`, membaca `/imu/mag` dan mempublikasikan output terfusi pada `/imu/from_filter`. `raw_sensor_node` men-subscribe topic itu, menggabungkan roll/pitch filter dengan yaw terakumulasi, lalu menerbitkannya ulang sebagai `/imu/data` (frame `imu`), yang dikonsumsi EKF sebagai `imu0`:
 
 ### Optimisasi Gradient Descent:
 $$\mathbf{q}_{k+1} = \mathbf{q}_k + \left( \frac{1}{2} \mathbf{q}_k \otimes \mathbf{\omega}_{gyro} - \beta \frac{\nabla \mathbf{f}}{\|\nabla \mathbf{f}\|} \right) \Delta t$$
@@ -112,7 +111,7 @@ $$\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \left( \mathb
 
 $$\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k \mathbf{H}_k) \mathbf{P}_{k|k-1}$$
 
-- $\mathbf{z}_k$: Vektor pengukuran yang mem-fusi kecepatan $\dot{x}$ dari odometri roda (`odom0: /wheel/odom`), serta roll/pitch plus yaw rate dari IMU terfilter (`imu0`, frame `odom`). Roll dan pitch berasal dari IMU; filter berjalan pada $30\text{ Hz}$ dalam frame `odom`.
+- $\mathbf{z}_k$: Vektor pengukuran yang mem-fusi kecepatan badan $\dot{x}, \dot{y}$ dari odometri roda (`odom0: /wheel/odom`) serta roll, pitch, yaw dan ketiga kecepatan sudut dari `/imu/data` (`imu0`). Akselerasi linear tidak di-fusi. `two_d_mode` bernilai **false** (sejak Agustus 2026) sehingga robot boleh miring di permukaan tidak rata; $z$ hasil dead-reckoning dan bukan ketinggian sebenarnya. Filter berjalan pada $30\text{ Hz}$ dengan `world_frame: odom`.
 - $\mathbf{R}_k$: Matriks Kovarians Measurement Noise dari `ekf_localization_config.yaml` (process dan initial covariance dalam file; lihat yaml untuk nilai yang disetel).
 
 ---

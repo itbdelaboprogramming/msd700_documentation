@@ -92,7 +92,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-   $d_{\min} = 0.10\text{ m}$(`min_obstacle_dist`、ハードフロア)が最小障害物クリアランス距離である。ソフト勾配は `inflation_dist` $0.75\text{ m}$、`weight_inflation` $2.0$ である。
+   $d_{\min} = 0.05\text{ m}$(`min_obstacle_dist`、ハードフロア)が最小障害物クリアランス距離である。ソフト勾配は `inflation_dist` $0.35\text{ m}$、`weight_inflation` $2.0$ である。どちらも2026-09-17に(0.10 / 0.75から)下げられ、`navfn`が計画できる隙間でTEBが止まらないようにした。これは余裕を増やすだけで、壁をかすめる問題の対策ではない(原因は旋回中のローカルコストマップが`odom`フレームにあること)。
 
 3. **非ホロノミック運動学制約**:
    差動駆動のキネマティクスを満たすため、横滑り速度にペナルティを課す:

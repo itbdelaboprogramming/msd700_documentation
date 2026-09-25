@@ -42,7 +42,7 @@ search: false
 規約を読み取る。未設定の場合はクラウドのデフォルト(Google STUNと本番のTURN認証情報)にフォールバックし、
 リテラル文字列の `none` は未設定のまま放置するのではなく一覧を完全に空にする。
 `LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` / `LOCAL_TURN_CREDENTIAL`
-は、まさにこの理由からコード(`camera_client.py`)内ではリテラル文字列 `none` をデフォルトとする — 
+は、まさにこの理由からコード(`camera_client.py`)内ではリテラル文字列 `none` をデフォルトとする。
 `msd700_noetic/docker/.env` ではコメントアウトされているため、適用されるのはコードのデフォルトである。これらはユニットのLANが本当に
 リレーを必要とする場合(セグメント化されたネットワーク、ロボットとオペレーターの間にあるキャプティブ
 Wi-Fiブリッジなど)にのみ設定する価値がある。
@@ -116,7 +116,7 @@ mDNS候補は、クラウドターゲットにとっても等しく無意味で�
 | `error` | サーバー | `new_login` 乗っ取り含む:重複 `userId` は旧ソケットを殺す |
 | `server_shutdown` | サーバー | SIGTERM/SIGINT時に5秒強制終了前に放送 |
 
-`GET /clients`(HTTP、Bearer)は接続中クライアント一覧。サーバーは `Answer SDP` 部分文字列をログする——SDP framingは見るが、メディアは決して見ない。
+`GET /clients`(HTTP、Bearer)は接続中クライアント一覧。サーバーは `Answer SDP` 部分文字列をログする。SDP framingは見るが、メディアは決して見ない。
 
 ## 再接続とリトライ
 

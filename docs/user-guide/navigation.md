@@ -6,13 +6,13 @@ search: false
 
 <RoleBadge role="user" />
 
-The Navigation screen is where you drive and dispatch the robot on a map you've already created. If you haven't made a map yet, start with [Mapping](/user-guide/mapping) first.
+The Navigation page is where you drive and dispatch the robot on a map you've already created. If you haven't made a map yet, start with [Mapping](/user-guide/mapping) first.
 
 ## Opening a Map
 
 1. From the main menu, select **Navigation**.
 2. Choose a saved map from the list, or the last-used map loads automatically.
-3. The map appears on screen with the robot's current position marked as a colored arrow.
+3. The map appears with the robot's current position marked as a colored arrow.
 
 ## Manual Control (Joystick / WASD)
 
@@ -59,7 +59,7 @@ If the robot's position on the map looks slightly off (for example, after moving
 
 ## Autopilot (Unattended Missions)
 
-Autopilot keeps a running, unattended operation alive on the robot even after you close the browser tab — whether that's a route you're driving through or an [Operation Playlist](/user-guide/routes-coverage) sweep.
+Autopilot keeps a running, unattended operation alive on the robot even after you close the browser tab: whether that's a route you're driving through or an [Operation Playlist](/user-guide/routes-coverage) sweep.
 
 1. Start the operation: load a saved route and click **Play**, or open **Operation Playlist** and click **Run Playlist**.
 2. Turn the **Autopilot** toggle ON in the Robot Control panel.

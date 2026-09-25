@@ -7,10 +7,10 @@ search: false
 
 <RoleBadge role="developer" />
 
-The Mapping screen is where an operator drives a robot around a new space to build a SLAM map, then
+The Mapping page is where an operator drives a robot around a new space to build a SLAM map, then
 saves it: `unit/mapping` in the dashboard (`pages/unit/mapping/index.tsx`), driven by
-`MappingActionBar` (`src/components/mappingActionBar/mappingActionBar.tsx`). This page describes how
-the screen behaves. For the two ways of actually moving the robot while a map is being built
+`MappingActionBar` (`src/components/mappingActionBar/mappingActionBar.tsx`). This document describes how
+the page behaves. For the two ways of actually moving the robot while a map is being built
 (autonomous exploration and manual override), see
 [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous). For
 the REST/MQTT wire contract and the robot-side save process underneath it, see
@@ -19,7 +19,7 @@ the REST/MQTT wire contract and the robot-side save process underneath it, see
 ## Before mapping starts: "Ready to Map"
 
 Until the operator presses Play, the live map view is covered by `MappingOverlay`, a placeholder
-telling the operator the screen is ready to begin a mapping session. There is nothing to render yet
+telling the operator the page is ready to begin a mapping session. There is nothing to render yet
 because no SLAM node is running and no occupancy grid exists.
 
 ## Play, Pause, Stop
@@ -41,7 +41,7 @@ retry saving). The full state machine these keys belong to is out of scope for t
 ## Live map view
 
 While a session is active, the occupancy grid being built is rendered inline, reusing the same
-canvas machinery as the Navigation screen: pan, zoom, rotate, and focus-follow on the robot's live
+canvas machinery as the Navigation page: pan, zoom, rotate, and focus-follow on the robot's live
 pose. No separate viewer or page is involved.
 
 ## Robot Stuck notification
@@ -54,7 +54,7 @@ re-documented here.
 
 Pressing Stop does not save immediately. It opens `ConfirmSaving`
 (`src/components/confirm-saving-mapping/confirmSaving.tsx`), a dialog where the operator names the
-map before it is persisted. Once confirmed, a `MapSaving` progress overlay covers the screen while
+map before it is persisted. Once confirmed, a `MapSaving` progress overlay covers the page while
 the robot writes the map and uploads it (see
 [ROS Integration § Starting and stopping a mapping session](/development/webui/mapping/ros-integration#starting-and-stopping-a-mapping-session)
 for what happens on the wire during this window, including why the save does not complete inside a
@@ -68,12 +68,12 @@ along with the rest of the map's metadata once Stop is confirmed.
 
 ## Emergency stop
 
-`EmergencyButton` is available throughout the Mapping screen. Triggering it exits to
+`EmergencyButton` is available throughout the Mapping page. Triggering it exits to
 `/emergency-mode`, the same shared emergency flow used elsewhere in the dashboard.
 
 ## Shared chrome
 
-The rest of the screen is chrome shared with other operational pages: `Header`, a sidebar carrying
+The rest of the page is chrome shared with other operational pages: `Header`, a sidebar carrying
 page-switch links, the live camera feed, and the Manual Override / Autopilot panel (see
 [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous)),
 plus `Footer`, `ControlInstruction`, and `TokenExpired`.

@@ -23,7 +23,7 @@ kontainer di balik aksi-aksi ini secara lebih mendalam, lihat
 ::: info Mendaftarkan sebuah unit tidak memberikan akses mengemudi
 Sebuah baris di `units` hanya berarti robot tersebut ada di armada. Apakah siapa pun dapat
 mengemudikannya diputuskan sepenuhnya di tab [Penyewaan](/id/development/webui/admin-console/rentals),
-oleh profil penyewaan mana (jika ada) yang ditugaskan ke unit tersebut — lihat `profile_units` di
+oleh profil penyewaan mana (jika ada) yang ditugaskan ke unit tersebut: lihat `profile_units` di
 [Skema Basis Data § Identitas dan akses](/id/development/database-schema#identitas-dan-akses).
 :::
 
@@ -35,7 +35,7 @@ Membuat baris `units` langsung (ULID baru dan `unit_name`), lebih dulu dari robo
 yang menghubungi cloud. Ini adalah rekan sisi-admin dari tabel `unit_enrollment_codes` yang
 dijelaskan di [Skema Basis Data § Enrolmen](/id/development/database-schema#pendaftaran): "voucher
 sekali-pakai untuk mengklaim unit tertentu sebelum robotnya ada." Unit yang didaftarkan secara
-manual persis jenis unit itu — identitas placeholder yang akan diklaim robot nanti, alih-alih yang
+manual persis jenis unit itu: identitas placeholder yang akan diklaim robot nanti, alih-alih yang
 sudah mengumumkan dirinya di tampilan Tertunda di bawah.
 
 ### Ganti nama unit
@@ -52,7 +52,7 @@ apa pun yang dipublikasikan robot.
 Menghapus baris `units`, dijaga oleh konfirmasi yang secara eksplisit sadar bahwa perubahan
 tersebut mungkin belum sampai ke sistem yang sedang berjalan. Kebasian data itu nyata, bukan salinan
 UI defensif: relay armada menyimpan rosternya di memori dan hanya membaca ulang tabel `units` saat
-polling, `FLEET_ROSTER_POLL_MS` (default 60 dtk) — lihat
+polling, `FLEET_ROSTER_POLL_MS` (default 60 dtk): lihat
 [Siklus Hidup Kontainer Unit § Roster berasal dari basis
 data](/id/development/unit-container-lifecycle#roster-berasal-dari-database). Penghapusan
 secara eksplisit disebut di sana sebagai salah satu cara roster berubah tanpa melalui endpoint
@@ -67,7 +67,7 @@ kedaluwarsa dalam satu interval polling, itulah yang diperingatkan oleh kerangka
 dialog konfirmasi. Sesuai foreign key pada `units`
 ([Skema Basis Data § Foreign key, lengkap](/id/development/database-schema#foreign-key-secara-lengkap)),
 menghapus baris tersebut juga mem-cascade ke penugasan penyewaannya (`profile_units`) dan ikatan
-perangkatnya (`unit_devices`), serta ke peta tercatatnya — lihat
+perangkatnya (`unit_devices`), serta ke peta tercatatnya: lihat
 [Basis Data](/id/development/webui/database/ros-integration) untuk apa yang terjadi pada peta milik
 sebuah unit secara khusus, yang di luar cakupan di sini.
 
@@ -84,8 +84,8 @@ sebelum servis atau pembaruan perangkat keras pabrikan."
 
 ### Tukar data antara dua unit
 
-Menukar dataset bercakupan-unit — "seluruh riwayat operasional yang tercatat oleh robot fisik
-tertentu" yang sama seperti didefinisikan di atas — antara dua unit yang sudah ada, alih-alih
+Menukar dataset bercakupan-unit ("seluruh riwayat operasional yang tercatat oleh robot fisik
+tertentu" yang sama seperti didefinisikan di atas) antara dua unit yang sudah ada, alih-alih
 mengangkatnya keluar ke sebuah arsip. Ini adalah rekan dua-arah dari operasi backup dan restore
 yang dijelaskan di [Cadangan](/id/development/webui/admin-console/backups): riwayat milik sebuah
 robot berpindah ke identitas unit lain alih-alih meninggalkan sistem yang hidup.
@@ -117,7 +117,7 @@ lamanya setelah itu.
 
 ## Tampilan Tertunda
 
-Robot yang telah menyelesaikan tahap "hello" dari protokol nonce — `POST /enroll/claim` — tetapi
+Robot yang telah menyelesaikan tahap "hello" dari protokol nonce (`POST /enroll/claim`) tetapi
 belum diklaim ke baris `units` berada di `pending_units`
 ([Skema Basis Data § Enrolmen](/id/development/database-schema#pendaftaran)), dengan `status` salah
 satu dari `pending`, `approved`, `claimed`, atau `rejected`. Badge jumlah di sebelah tab Tertunda
@@ -128,10 +128,10 @@ nonce)](/id/development/webui/accounts/enrolment#pendaftaran-perangkat-keras-kri
 halaman ini hanya mencakup apa yang dilakukan admin terhadap sebuah baris setelah baris itu ada.
 
 - **Daftarkan sebagai unit baru**: menyetujui robot tertunda dengan membuat baris `units` baru
-  untuknya — tahap otorisasi-administrator dari protokol nonce, menuntaskan jabat tangan untuk
+  untuknya: tahap otorisasi-administrator dari protokol nonce, menuntaskan jabat tangan untuk
   perangkat keras yang belum pernah dilihat siapa pun.
 - **Adopsi ke catatan unit yang sudah ada**: menyetujui robot tertunda ke baris `units` yang
-  *sudah ada* alih-alih membuat yang baru — bahasa "diadopsi... ke unit yang berbeda" yang sama
+  *sudah ada* alih-alih membuat yang baru: bahasa "diadopsi... ke unit yang berbeda" yang sama
   seperti dipakai di
   [Enrolmen Perangkat Keras § Pemulihan self-heal](/id/development/webui/accounts/enrolment#pemulihan-self-heal-device-json-yang-hilang-tanpa-persetujuan-baru)
   untuk menjelaskan sebuah unit yang perangkat kerasnya berubah di bawahnya. Ini adalah cara

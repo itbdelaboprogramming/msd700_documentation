@@ -87,7 +87,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
    \left( d_{\min} - \text{dist}(\mathbf{s}_k, \mathcal{O}) \right)^2 & \text{if } \text{dist}(\mathbf{s}_k, \mathcal{O}) < d_{\min} \\
    0 & \text{otherwise}
    \end{cases}$$
-    Where $d_{\min} = 0.10\text{ m}$ (`min_obstacle_dist`, hard floor) is the minimum obstacle clearance distance. The soft gradient is `inflation_dist` $0.75\text{ m}$ at `weight_inflation` $2.0$.
+    Where $d_{\min} = 0.05\text{ m}$ (`min_obstacle_dist`, hard floor) is the minimum obstacle clearance distance. The soft gradient is `inflation_dist` $0.35\text{ m}$ at `weight_inflation` $2.0$. Both were lowered on 2026-09-17 (from 0.10 / 0.75) so TEB stops stalling in gaps that `navfn` already plans through; they buy margin, not a fix for wall brushing, which comes from the local costmap living in `odom` during a pivot.
 
 3. **Kinematic Non-Holonomic Constraint**:
    Penalizes lateral sliding velocity to enforce differential drive kinematics:

@@ -43,7 +43,7 @@ Lihat [Docker Reference § Unit `run_msd.sh`](/id/setup/docker-reference#unit-ru
 
 ## 5. Kemampuan
 
-- [ ] Kendarai manual (teleop) 5 m pergi-pulang. Lolos: kembali, tanpa jeda watchdog saat link hidup.
+- [ ] Kemudikan manual (teleop) 5 m pergi-pulang. Lolos: kembali, tanpa jeda watchdog saat link hidup.
 - [ ] Petakan sebuah ruangan, berhenti, simpan. Lolos: peta muncul di Database cloud di bawah ULID unit ini.
 - [ ] Navigasi ke pin di peta itu. Lolos: goal diterima dan tercapai.
 - [ ] Kamera live di dashboard cloud dan di dashboard lokal-unit. Lolos: video di keduanya, tanpa loop stall 15 dtk.

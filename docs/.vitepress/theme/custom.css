@@ -27,8 +27,6 @@
   background: #fff;
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   text-align: center;
 }
 
@@ -37,12 +35,65 @@
   cursor: zoom-in;
 }
 
-/* width comes from an inline style set in config.mts (fit the column, floor at 80%) */
+/* Always fits the column (never wider than its natural size); click opens the full-size view */
 .vp-doc .diagram-figure img {
   display: block;
-  max-width: none;
+  width: auto;
+  max-width: 100%;
   height: auto;
   margin: 0 auto;
+}
+
+/* Full-size diagram pop-up (theme/index.ts). Fits the screen first; click the image for 1:1 and
+   scroll around it. */
+.diagram-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  overflow: auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.diagram-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  background: #fff;
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  cursor: zoom-in;
+}
+
+.diagram-lightbox.zoomed {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.diagram-lightbox.zoomed img {
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  cursor: zoom-out;
+}
+
+.diagram-lightbox-close {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #000;
+  font-size: 24px;
+  line-height: 40px;
+  cursor: pointer;
 }
 
 .dark .vp-doc .diagram-figure {

@@ -65,8 +65,8 @@ flowchart TB
     DNSM -->|"follows same state file"| HAP
   end
 
-  subgraph AGENT["network_local container<br/>(host network, NET_ADMIN)"]
-    NA["network-agent (Node)<br/>loopback :5011"]
+  subgraph AGENT["network_local"]
+    NA["network-agent (Node)<br/>loopback :5011<br/>host network, NET_ADMIN"]
   end
   AGENT -->|"D-Bus socket mount"| NM
   NA -->|"edits SSID/password"| HAP

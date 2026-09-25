@@ -44,10 +44,10 @@ flowchart TD
 
 ### 2. Unit Online, Tetapi Map Canvas Tetap Kosong (rosbridge / Kontainer Relay)
 - **Gejala**: Perintah berhasil, tetapi tidak ada peta, ikon robot, atau laser scan yang muncul di canvas web.
-- **Akar Penyebab**: Kontainer fleet relay (`ros_web_ui_v2_unit_relays`) mati — atau, pada jalur per-unit legacy, kontainer on-demand `rosweb_unit_<u>_<unit>_nakayama` dihentikan oleh idle reaper — atau proxy WebSocket Apache terblokir.
+- **Akar Penyebab**: Kontainer fleet relay (`ros_web_ui_v2_unit_relays`) mati (atau, pada jalur per-unit legacy, kontainer on-demand `rosweb_unit_<u>_<unit>_nakayama` dihentikan oleh idle reaper) atau proxy WebSocket Apache terblokir.
 - **Langkah Diagnostik**:
   1. Periksa fleet relay lebih dulu: `docker ps | grep unit_relays`. Pada jalur legacy, periksa kontainer per-unit sebagai gantinya: `docker ps | grep rosweb_unit`.
-  2. Hanya pada jalur legacy: muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`. Pada mode fleet roster berasal dari tabel `units`, sehingga tidak perlu event touch — robot yang terdaftar dapat dijangkau.
+  2. Hanya pada jalur legacy: muat ulang halaman unit di browser untuk memicu event `touch` di `unit_manager.js`. Pada mode fleet roster berasal dari tabel `units`, sehingga tidak perlu event touch: robot yang terdaftar dapat dijangkau.
   3. Uji konektivitas WebSocket ke `/services/rosbridge` menggunakan developer tools browser.
 
 ### 3. Navigasi Membeku dengan Error TF (Basi-nya `use_sim_time`)
@@ -74,7 +74,7 @@ flowchart TD
 - **Akar Penyebab**: `docker/.env` pada unit adalah git-tracked dan per-host. Jika `MYSQL_USER`/`MYSQL_PASSWORD` di sana berubah (sebuah `git pull`, atau edit manual) setelah volume `mysql_data_local` milik unit sudah diinisialisasi, MySQL tetap menyimpan password lama yang dipanggang ke dalam data directory; ia tidak secara retroaktif mengadopsi yang baru. `sync_agent.js` kemudian gagal pada pembacaan `sync_state` lokal pertamanya sendiri dengan `ER_ACCESS_DENIED_ERROR`, bukan error konektivitas cloud. Lihat [Sinkronisasi Data: Klasifikasi Kegagalan](/id/development/data-sync#klasifikasi-kegagalan) untuk bagaimana ini sekarang dibedakan dari pemadaman cloud yang sesungguhnya.
 - **Langkah Diagnostik**:
   1. Pada unit: `cat docker/.env | grep MYSQL_` dan periksa apakah nilainya terlihat baru saja berubah (misalnya tepat setelah `git pull`).
-  2. Konfirmasi ketidakcocokan secara langsung: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"` — `Access denied` secara manual mengonfirmasi adanya drift, bukan gangguan sesaat.
+  2. Konfirmasi ketidakcocokan secara langsung: `docker exec -it <local_db_container> mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD"`: `Access denied` secara manual mengonfirmasi adanya drift, bukan gangguan sesaat.
 - **Resolusi**: Kembalikan `docker/.env` ke password yang menjadi dasar inisialisasi volume tersebut, atau, jika rotasi memang disengaja, jalankan `ALTER USER '<user>'@'%' IDENTIFIED BY '<new_password>';` terhadap MySQL lokal sebagai root agar database cocok dengan nilai `.env` yang baru. Jangan menghapus `mysql_data_local` untuk "memperbaiki" ini; itu adalah satu-satunya salinan lokal milik unit atas peta/rute yang belum tersinkronisasi ke cloud, dan mode kegagalan ini berarti sinkronisasi itu sendiri saat ini tidak berfungsi.
 
 ### 7. Dashboard Cloud Tidak Memiliki Topik Live (ROS Master Dibajak oleh Port yang Di-forward)

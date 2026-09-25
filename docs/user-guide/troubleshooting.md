@@ -41,12 +41,12 @@ flowchart TD
 ## Common Issues and Solutions
 
 ### 1. Map Canvas is Blank or Infinite Loading Spinner
-- **Symptom**: The navigation page opens, but the center area remains a dark grey screen with a spinning loader.
+- **Symptom**: The navigation page opens, but the center area remains a dark grey area with a spinning loader.
 - **Probable Causes**:
   - No map is currently open for this unit.
   - The browser's live connection to the robot was temporarily interrupted.
 - **Operator Actions**:
-  1. Open your facility map from the **Database** page (or the map selector on the Navigation screen).
+  1. Open your facility map from the **Database** page (or the map selector on the Navigation page).
   2. If a map is selected but still blank, refresh your browser tab (`Ctrl + F5` or `Cmd + Shift + R`).
   3. Verify that the connection badge in the header displays **Connected** (green).
 
@@ -60,7 +60,7 @@ flowchart TD
 - **Operator Actions**:
   1. Click **Restart camera** (or **Try Again**) if it appears over the video; otherwise the feed reconnects automatically after a short delay.
   2. If using Chrome, ensure hardware acceleration is enabled in browser settings.
-  3. If operating on a local facility network without internet, ensure you are connected to the robot's local Wi-Fi and accessing `http://<unit-ip>:3000`.
+  3. If operating on a local facility network without internet, ensure you are connected to the robot's Wi-Fi hotspot and opening `http://mymsd.jp` (or `http://<robot-ip>:3000` on another local network).
 
 ---
 
@@ -80,7 +80,7 @@ flowchart TD
 - **Symptom**: An amber banner reads "Robot Stuck - Please adjust the robot position manually".
 - **Probable Causes**:
   - A person, forklift, or newly placed box is blocking the planned path.
-  - The robot is attempting an area coverage sweep in a tight corridor narrower than 1.15 meters.
+  - The robot is attempting an area coverage sweep in a tight corridor narrower than about 1.24 meters, the width it needs to turn around. It can enter corridors down to 0.80 m but cannot pivot in them.
 - **Operator Actions**:
   1. Check the live camera feed and the red sensor dots on the canvas for nearby obstructions.
   2. If the path is blocked by transient objects, wait 10 seconds; the local planner automatically steers around obstacles once clearance opens.
@@ -102,7 +102,7 @@ flowchart TD
 ### 6. Emergency Stop Engaged
 - **Symptom**: The dashboard shows an "Emergency Stop Activated" page and all movement is locked.
 - **Probable Causes**:
-  - An operator clicked the on-screen E-Stop button.
+  - An operator clicked the E-Stop button in the dashboard.
 - **Operator Actions**:
   1. Verify that the physical robot environment is completely safe.
   2. Restart the robot, then log in again via the **Go to LOGIN page** button to resume operations.
@@ -110,7 +110,7 @@ flowchart TD
 ---
 
 ### 7. Kicked Back to the Login Page
-- **Symptom**: The dashboard suddenly returns you to the login screen mid-operation.
+- **Symptom**: The dashboard suddenly returns you to the login page mid-operation.
 - **Probable Causes**: Your login session expired, or the connection to the server timed out.
 - **Operator Actions**:
   1. Log in again. The dashboard asks the robot what it is doing and restores your operation (see [How the Robot Behaves](/user-guide/behavior#coming-back)): nothing is lost unless the robot itself was paused or shut down meanwhile.

@@ -58,11 +58,11 @@ oleh backend, bukan hanya dicegah melihat tombolnya.
 Konsol ini menjaga tiga pertanyaan agar sengaja terpisah, masing-masing dengan tab dan tabelnya
 sendiri:
 
-- **Siapa yang bisa mengemudi sama sekali** — akun operator, dikelola di
+- **Siapa yang bisa mengemudi sama sekali**: akun operator, dikelola di
   [Operator](/id/development/webui/admin-console/operators).
-- **Robot apa saja yang ada** — baris unit, dikelola di
+- **Robot apa saja yang ada**: baris unit, dikelola di
   [Unit & Armada](/id/development/webui/admin-console/units-and-fleet).
-- **Siapa menyewa robot mana** — profil penyewaan dan penugasannya, dikelola di
+- **Siapa menyewa robot mana**: profil penyewaan dan penugasannya, dikelola di
   [Penyewaan](/id/development/webui/admin-console/rentals).
 
 Membuat akun operator tidak memberikan akses apa pun dengan sendirinya, dan mendaftarkan sebuah
@@ -97,12 +97,12 @@ akun lain, dan mencakup tiga hal:
 
 - Melihat identitas admin yang sedang masuk itu sendiri (nama pengguna, peran).
 - Menyunting profil admin itu sendiri (nama pengguna, nama lengkap).
-- Berpindah ke layar ganti-kata-sandi-sendiri, mode sukarela yang sama seperti yang dijelaskan di
+- Berpindah ke halaman ganti-kata-sandi-sendiri, mode sukarela yang sama seperti yang dijelaskan di
   [Akun & Akses § Ganti kata sandi admin](/id/development/webui/accounts/overview#ganti-password-admin-admin-change-password).
 
-Mereset kata sandi akun *lain* adalah aksi terpisah, khusus per tab — tab Admin di atas untuk
+Mereset kata sandi akun *lain* adalah aksi terpisah, khusus per tab (tab Admin di atas untuk
 sesama akun back-office, [Operator](/id/development/webui/admin-console/operators) untuk akun
-operator — bukan sesuatu yang dapat dicapai dari menu ini.
+operator) bukan sesuatu yang dapat dicapai dari menu ini.
 
 ## Terkait
 

@@ -10,9 +10,9 @@ search: false
 The Backups tab (`BackupsPanel.tsx`) is the admin console's front end onto the archive machinery
 documented in full in [Backup, Restore, and Data
 Migration](/development/backup-and-restore): archives of **whole rental profiles**. The Units tab
-has its own, narrower entry point into the unit-scoped half of the same architecture — see
+has its own, narrower entry point into the unit-scoped half of the same architecture (see
 [Units & Fleet § Backup this unit's rental-scoped
-data](/development/webui/admin-console/units-and-fleet#backup-this-unit-s-rental-scoped-data) — but
+data](/development/webui/admin-console/units-and-fleet#backup-this-unit-s-rental-scoped-data)) but
 this tab is where an admin manages archives as first-class objects: create, delete, download,
 upload, and restore.
 
@@ -22,29 +22,30 @@ upload, and restore.
 defines two independent backup scopes, keyed by `scope: 'profile'` or `scope: 'unit'`. This tab
 works the profile-scoped side: a tenant-centric archive that captures "all maps, routes, areas, and
 playlists owned by a rental profile across any robot" it has used, restored additively into a
-target profile with missing robots remappable. The unit-scoped side — a robot-centric archive of
-everything one physical unit has ever recorded — is reached from the Units tab instead (see above).
+new profile (or an existing one, if the admin chooses) with missing robots remappable. The unit-scoped side (a robot-centric archive of
+everything one physical unit has ever recorded) is reached from the Units tab instead (see above).
 
 ## Create an archive of a profile
 
-Produces a `.tar.gz` archive with the structure documented in
+`POST /admin/api/profiles/:id/backups` produces a `.tar.gz` archive with the structure documented in
 [Backup and Restore § Archive Structure](/development/backup-and-restore#archive-structure-tar-gz):
-a `manifest.json`, a `database_dump.sql` of scoped SQL insert statements, and a `maps/` directory of
-the binary map files (`.pgm`, `.yaml`, `.png`) that go with them.
+a `manifest.json` (the profile row, its members, its unit assignments, and every map with its
+routes, areas and playlists nested underneath) plus a `files/` directory holding each map's
+`<mapId>.pgm`, `.yaml` and `.png`. There is no SQL dump in the archive. Maps whose files were
+already missing still carry their routes and areas, and the response lists them.
 
 ::: info What is, and is not, in the archive
 Carried: the profile itself, its unit assignments, and every map, route, area, and playlist it
-owns, plus the map image files those rows point to. **Never carried: operator accounts.** The
-manifest and `database_dump.sql` do stamp individual rows with a `created_by` user ULID for
-attribution — the same `manifest.json` example in Backup and Restore shows a top-level `created_by`
-field — but that is attribution only, the same "Attribution is never authorization" rule called out
-in [Database Schema § Foreign keys, in full](/development/database-schema#foreign-keys-in-full).
-Restoring an archive never creates, modifies, or deletes anything in the `users` table.
+owns, plus the map image files those rows point to. **Never carried: operator accounts.**
+Membership is recorded by id and username so it can be re-linked on restore, but only to an account
+that already exists. `created_by` / `modified_by` are carried for attribution; any that point at an
+account that no longer exists land as `NULL` and show as "unknown". Restoring an archive never
+creates, modifies, or deletes anything in the `users` table.
 :::
 
 ## Delete an archive
 
-Removes the archive. Per
+`DELETE /admin/api/backups/:id` removes the archive row and its file. Per
 [Database Schema § Backup and sync](/development/database-schema#backup-and-sync), `profile_backups`
 rows are independent of the profile they were taken from (`profile_id` is `ON DELETE SET NULL`, "an
 archive must outlive what it archived"), but the reverse is not true: deleting the archive itself is
@@ -52,42 +53,42 @@ just deleting the archive, with no effect on the live profile it was taken from.
 
 ## Download / upload
 
-- **Download** corresponds to
-  [Backup and Restore § Create Backup](/development/backup-and-restore#_1-create-backup),
-  `POST /api/backup/export`, which generates and downloads the `.tar.gz` for a given
-  `{ scope, profile_id }`.
-- **Upload** corresponds to
-  [Backup and Restore § Restore Archive](/development/backup-and-restore#_4-restore-archive),
-  `POST /api/backup/import`, a multipart request carrying the archive file and a target
-  `profile_id`.
+- **Download**: `GET /admin/api/backups/:id/download` streams the stored `.tar.gz`. The download
+  name is built from the profile name; the file on disk is named by the backup ULID.
+- **Upload**: `POST /admin/api/backups/upload` takes the archive as the **raw request body** (not
+  multipart). The server validates it (wrong file type, corrupt gzip and newer format versions are
+  rejected), stores it as a new backup row with `profile_id` `NULL`, and returns the restore plan
+  straight away.
 
 ## Plan a restore
 
-A preview step in front of the import call above: it shows what would merge into the target
-profile versus what has to be created fresh, and lets an admin remap the archive's tenants or
-robots to different ones in the live system before anything is written. This matters because an
-archive is designed to outlive what it archived — a `unit_id` referenced inside the dump may no
-longer correspond to a registered unit by the time the archive is restored (the unit was deleted,
-or the archive is being restored onto a different fleet entirely), and "missing robots can be
-remapped" is exactly the restore behavior the profile-scoped row of the dual-scope table promises.
-The REST API documented in Backup and Restore covers the commit step (`POST /api/backup/import`)
-as a single call; the plan/preview step is the admin console's UX layered in front of that commit,
-not a separately documented endpoint.
+`POST /admin/api/backups/:id/plan` is a real endpoint and writes nothing. It reports what a restore
+would create, which robots in the archive are no longer registered, and which profile the data would
+land in. The console sends the admin's choices back with it as `unit_remap` (archived unit →
+registered unit) and `profile_remap` (archived profile → existing rental) until the plan has no
+unresolved units. This matters because an archive is designed to outlive what it archived: a
+`unit_id` inside it may belong to a robot that was deleted, replaced, or never existed on this
+server.
 
 ## Execute the restore
 
+`POST /admin/api/backups/:id/restore` applies the archive with the same `unit_remap` /
+`profile_remap`. It answers `409` with the plan when some units are still unresolved or a chosen
+destination profile has gone away.
+
 ::: warning Restore is always additive
-Per [Backup and Restore § Dual-Scope Backup
-Architecture](/development/backup-and-restore#dual-scope-backup-architecture), a profile-scoped
-restore is an "additive restore into target profile," and the import endpoint itself "applies it
-additively." Executing a restore never overwrites an existing profile's data; at worst it adds
-rows alongside what is already there. There is no destructive "replace" mode.
+Nothing existing is modified or overwritten; a restore only ever adds rows and files. Original
+ULIDs are reused where they are still free, otherwise new ones are minted and every reference is
+remapped. Without `profile_remap`, a profile archive always lands in a **new** profile (reusing
+the archived ULID and name when both are free), so restoring the same archive twice gives two
+profiles: noisy, never destructive. There is no "replace" mode.
 :::
+
 
 Schema evolution for the tables backups touch (`profile_backups.scope`, the sync tables, and so on)
 is handled by the migration scripts in
 [Backup and Restore § Schema Migration
-Scripts](/development/backup-and-restore#schema-migration-scripts), not by anything on this tab —
+Scripts](/development/backup-and-restore#schema-migration-scripts), not by anything on this tab:
 those run against the database directly and are out of scope for `BackupsPanel.tsx`.
 
 ## Related

@@ -7,28 +7,45 @@ search: false
 
 <RoleBadge role="developer" />
 
-オンボードソフトウェアは、`system_command.py`内で動作する連続的なスライディングウィンドウウォッチドッグを通じて通信の健全性を監視する。これはロボット内部の安全機構であり、それ自体にはダッシュボードUIを持たない。オペレーターからその効果(`in_use`/リースフィールド、強制されうるアクティビティ状態)がどう見えるかについては、[アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#状態の所有権と永続化のマトリクス)と[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)を参照。
+オンボードソフトウェアは、`system_command.py`内で動作するウォッチドッグでオペレーターの在席を監視する。これはロボット内部の安全機構であり、それ自体にはダッシュボードUIを持たない。オペレーターからその効果(`in_use`/リースフィールド、強制されうるアクティビティ状態)がどう見えるかについては、[アーキテクチャ § State Ownership and Persistence Matrix](/ja/development/architecture#状態の所有権と永続化のマトリクス)と[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)を参照。
 
 ```mermaid
 flowchart TB
-  PING["Incoming Heartbeat Ping<br/>(dashboard ping loop)"] --> RESET["Reset Watchdog Timer"]
-  RESET --> MONITOR["Watchdog Monitor Loop<br/>(presence / operation-elapsed based)"]
+  HB["MQTT heartbeat, 5 Hz<br/>(unit's local dashboard only)"] --> RESET["Refresh presence"]
+  PING["HTTP ping, 1 Hz<br/>POST /api/hardware/ping"] --> RESET
+  RESET --> MONITOR["Watchdog monitor loop<br/>(sampled every 0.2 s)"]
 
-  MONITOR -->|Ping missing for 10 s| PAUSE["10 Seconds: Motion Safety Pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
-  PAUSE -->|Ping missing for 10 min| TEARDOWN["10 Minutes: Session Teardown<br/>Switch mode to idle, drop navigation stack"]
-  TEARDOWN -->|Ping missing for 30 min| SHUTDOWN["30 Minutes: Hardware Shutdown<br/>De-energize motor stages"]
+  MONITOR -->|No presence for 2 s| PAUSE["2 seconds: motion safety pause<br/>Latch /emergency_pause (std_msgs/Bool);<br/>emergency_stop_node floods /mux/emergency_vel (prio 255)"]
+  PAUSE -->|No presence for 10 min| TEARDOWN["10 minutes: session teardown<br/>Switch mode to idle, drop the navigation/mapping stack"]
+  TEARDOWN -->|No presence for 30 min| SHUTDOWN["30 minutes: hardware shutdown<br/>Lease dropped, motion lock kept on"]
 
-  RESET -.->|Ping Restored| UNPAUSE["Clear Emergency Pause<br/>Resume active mission safely"]
+  RESET -.->|Presence restored| UNPAUSE["Clear the 2 s pause<br/>Resume the active mission"]
 ```
+
+
+## 2つの在席シグナル
+
+ウォッチドッグは、次のどちらかをオペレーター画面が監視している証拠として受け付ける。
+
+| シグナル | 経路 | レート | 内容 |
+| --- | --- | --- | --- |
+| `ping` | ブラウザ → `POST /api/hardware/ping` → バックエンド → MQTT → `/system_command` | 1 Hz、リクエストタイムアウト1.5秒 | 在席**と**権限: 操作リース、claim/release/takeover、バックエンドが付与する`origin`、ステータスフィードバック |
+| `heartbeat` | ブラウザ → MQTT over WebSocketでユニットのMosquittoへ直接(`NEXT_PUBLIC_MQTT_WS_URL`、ポート`9001`)→ `/system_command` | 5 Hz、QoS 0、retainなし | 在席のみ(`data.page`)。何の権限も与えない: claim、release、origin、フィードバックなし |
+
+heartbeatが存在するのは、HTTP pingがクラウド経由の往復通信だからである。損失の多い回線では、pingが2回連続で失われるだけで2秒階層が発動する。heartbeatなら10回連続で失われる必要がある。heartbeatは`NEXT_PUBLIC_MQTT_WS_URL`付きでビルドされたダッシュボードでのみ動作し、ユニットのローカルダッシュボードはこれに該当する(`ws://<LOCAL_IP>:9001`)。クラウドダッシュボードは設定していないため、クラウドのセッションはHTTP pingのみで監視される。送信側は`heartbeatService.ts`、受信側は`system_command.py`の`_operator_heartbeat`。
 
 ## ハートビートウォッチドッグの時間階層
 
-1. **10秒(モーション一時停止)**: 10秒間(`ping_pause_timeout 10.0`)有効なハートビートが届かない場合、`system_command.py`は`/emergency_pause`(`std_msgs/Bool`)をラッチし、`emergency_stop_node`が優先度255で`/mux/emergency_vel`にゼロツイストを流し込む。ロボットはアクティブな`move_base`ゴールをキャンセルすることなく完全停止まで減速する。通信が復旧すると一時停止は解除され、動作は自動的に再開される。
-2. **10分(セッション終了)**: オペレーターが10分間切断されたままの場合、モーターの過熱を防ぐため、アクティブなナビゲーションまたはマッピングセッションは安全にアンロードされる。
-3. **30分(ハードウェアシャットダウン)**: 30分間継続して不在の場合、ハードウェアドライバは低電力スタンバイモードに移行して電源を落とす。
+値は`msd700_webui_control/config/system_command.yaml`による。
+
+1. **2秒(モーション一時停止)**: 2秒間在席がない場合(`ping_pause_timeout: 2.0`、`ping_monitor_interval: 0.2`ごとに確認)、`system_command.py`は`/emergency_pause`(`std_msgs/Bool`)をラッチし、`emergency_stop_node`が優先度255で`/mux/emergency_vel`にゼロツイストを流し込む。アクティブな`move_base`ゴールはキャンセルされない。次に受理されたpingまたはheartbeatで一時停止は解除され、動作が再開する。
+2. **10分(セッション終了)**: 10分間在席がない場合(`ping_timeout: 600.0`)、アクティブなナビゲーションまたはマッピングセッションはアンロードされ、ロボットはidleになる。
+3. **30分(ハードウェアシャットダウン)**: 30分後(`ping_shutdown_timeout: 1800.0`)、操作リースが解放され、operation supervisorと手動オーバーライドの状態がクリアされ、モーションロックを保持したまま全ハードウェアがシャットダウンされる。この階層は再接続しても**復旧しない**。ハードウェアを明示的に再初期化する必要がある。
+
+これらの階層を抑えられるのは、実行中の操作を所有する画面だけである。ユニット一覧とログイン画面は読み取り専用で、監視とはみなされない。
 
 ::: warning Autopilotモードの例外扱い
-Autopilotモードが有効な間、10秒の通信一時停止は抑制される。オペレーターがノートPCを閉じても、Wi-Fiの不感地帯を通過しても、ロボットは自律ルートを継続する。各画面からこの例外がどうトリガーされるかについては、[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)と[マッピング: 手動オーバーライド & 自律探索](/ja/development/webui/mapping/manual-and-autonomous)を参照。
+Autopilotが有効な間は、**3つすべて**の階層が抑制される: 2秒の一時停止、10分のidle切替、30分のシャットダウン。オペレーターがノートPCを閉じても、Wi-Fiの不感地帯を通過しても、ロボットは自律ルートを最後まで実行する。各画面からこの例外がどうトリガーされるかについては、[ナビゲーション: 手動オーバーライド & Autopilot](/ja/development/webui/navigation/manual-and-autopilot)と[マッピング: 手動オーバーライド & 自律探索](/ja/development/webui/mapping/manual-and-autonomous)を参照。
 :::
 
 ## 関連

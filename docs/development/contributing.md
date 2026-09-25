@@ -73,7 +73,6 @@ grep -rn $'\xe2\x80\x94' docs/ scripts/
 This documentation theme extends VitePress with custom global components:
 - `<RoleBadge role="user | technician | developer" />`: Displays target audience badge at the top of pages.
 - `<LinkCards>` / `<LinkCard title="..." details="..." link="..." icon="..." />`: Interactive card grid used on section landing pages.
-- `<Mermaid code="..." />`: In-browser fallback, used only for a ```` ```mermaid ```` fence that has no pre-rendered PNG yet (see [Repository Structure](/development/repository-structure#diagrams)).
 
 ### Commit and Pull Request Conventions:
 Commits follow standard conventional commit formats (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`).

@@ -39,7 +39,7 @@ flowchart LR
   end
 
   subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake() Dispatcher"]
+    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
     EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
   end
 
@@ -61,7 +61,7 @@ flowchart LR
 
 ## The cloud half (`sync_api.js`)
 
-The unit drives; the cloud answers. `sync_api.js` authenticates the robot token (`role: robot`, `typ: access`, `unit_id` from claims, never the body) and serves `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` and `/route-file/:routeId/:kind`. Pushes are scoped — and forced — to the caller unit + profile; identity tables are refused.
+The unit drives; the cloud answers. `sync_api.js` authenticates the robot token (`role: robot`, `typ: access`, `unit_id` from claims, never the body) and serves `POST /handshake|/pull|/push|/ack` plus `GET|PUT /file/:mapId/:kind` and `/route-file/:routeId/:kind`. Pushes are scoped (and forced) to the caller unit + profile; identity tables are refused.
 
 ## Conflict Resolution Rules
 
@@ -95,7 +95,7 @@ flowchart TB
 7. `finish`: Acknowledging committed watermarks.
 
 ::: warning Phase Label vs. Failure Origin
-The phase name shown in the progress bar reflects *when* a round stopped, not *where*. `readState()`, the first read of this unit's own `sync_state` row, runs immediately after the handshake HTTP call but before `setPhase('pull')` — so a failure there still displays as `handshake`, even though it never touched the network. Read the log line itself (see below) to tell the two apart.
+The phase name shown in the progress bar reflects *when* a round stopped, not *where*. `readState()`, the first read of this unit's own `sync_state` row, runs immediately after the handshake HTTP call but before `setPhase('pull')`: so a failure there still displays as `handshake`, even though it never touched the network. Read the log line itself (see below) to tell the two apart.
 :::
 
 ### Failure Classification
@@ -104,12 +104,12 @@ The phase name shown in the progress bar reflects *when* a round stopped, not *w
 
 | Origin Tag | Example Cause | Log Wording | Status Badge |
 | --- | --- | --- | --- |
-| `local_db` — credentials rejected | `MYSQL_USER`/`MYSQL_PASSWORD` in this unit's `docker/.env` do not match the password the local `mysql_data_local` volume was already initialized with (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
-| `local_db` — unreachable | The unit's local MySQL container is not running (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
-| `local_db` — other | Any other MySQL error (schema, lock, etc.) during a local read/write. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
-| `cloud` — network error | DNS failure, timeout, or refused connection to the cloud endpoint. Expected while the unit has no uplink. | *"cloud not reachable, will retry..."* | `offline` |
-| `cloud` — HTTP error | The cloud answered with a non-2xx status outside the known `NOT_ENROLLED`/`NO_RENTAL`/reenroll cases. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
-| *(none)* | A throw inside `sync_agent.js` itself with no HTTP status and no network signature — a bug in the agent, not a connectivity or credential problem. | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
+| `local_db`: credentials rejected | `MYSQL_USER`/`MYSQL_PASSWORD` in this unit's `docker/.env` do not match the password the local `mysql_data_local` volume was already initialized with (mysql2 `ER_ACCESS_DENIED_ERROR`). | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db`: unreachable | The unit's local MySQL container is not running (`ECONNREFUSED`, `PROTOCOL_CONNECTION_LOST`). | *"cannot reach this unit's own database..."* | `error` |
+| `local_db`: other | Any other MySQL error (schema, lock, etc.) during a local read/write. | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud`: network error | DNS failure, timeout, or refused connection to the cloud endpoint. Expected while the unit has no uplink. | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud`: HTTP error | The cloud answered with a non-2xx status outside the known `NOT_ENROLLED`/`NO_RENTAL`/reenroll cases. | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| *(none)* | A throw inside `sync_agent.js` itself with no HTTP status and no network signature: a bug in the agent, not a connectivity or credential problem. | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
 
 See `classifyFailure()` in `sync_agent.js` for the exact precedence rules.
 

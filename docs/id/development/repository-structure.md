@@ -60,7 +60,7 @@ msd700_robot/
 ├── msd700_control/           # Sensor fusion (robot_localization), twist_mux
 ├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
 ├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
-├── msd700_firmware/          # Arduino firmware (plain directory, not a ROS package)
+├── msd700_firmware/          # Legacy Arduino firmware (reference only; the unit runs the STM32 firmware from firmware-msd700)
 ├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
 ├── msd700_movement/          # Vendored third_party only
 ├── msd700_msgs/              # Robot-level messages
@@ -100,7 +100,7 @@ msd700_noetic/
     ├── ros-web-ui/
     └── ROS-dashboard-next-ts/
     # NOTE: on a Server checkout (like this one) the submodules are NOT
-    # initialized — src/ holds only CMakeLists.txt. The robot code lives in
+    # initialized: src/ holds only CMakeLists.txt. The robot code lives in
     # the sibling directories /msd700_robot and /ros-web-ui instead.
 ```
 
@@ -137,7 +137,7 @@ msd700_documentation/
 │   │   └── theme/                # custom theme (extends the default theme)
 │   │       ├── index.ts          # registers global components
 │   │       ├── custom.css        # site-wide style overrides
-│   │       └── components/       # LinkCard(s), RoleBadge, Mermaid (fallback only)
+│   │       └── components/       # LinkCard(s), RoleBadge
 │   ├── index.md                 # homepage
 │   ├── user-guide/              # end-user docs
 │   ├── setup/                   # technician / deployment docs
@@ -164,7 +164,7 @@ yang sudah dirender lebih dulu dengan gaya draw.io seperti gambar buatan tangan 
 | --- | --- |
 | `scripts/render-diagrams.mjs` | Menata setiap fence sekali di Chrome headless (mermaid + engine layout ELK untuk flowchart dan state diagram) lalu menulis `docs/public/diagrams/<hash>.png` pada skala 2x. Menghapus gambar yang tidak dipakai fence mana pun |
 | `scripts/diagram-hash.mjs` | Hash dari isi fence plus `RENDER_VERSION`. Dipakai bersama oleh renderer dan build, sehingga keduanya menunjuk file yang sama. Naikkan `RENDER_VERSION` setelah mengubah gaya agar pembaca mendapat URL baru, bukan gambar lama dari cache |
-| `docs/.vitepress/config.mts`, `markdown.config` | Mengganti setiap fence `mermaid` dengan `<img>` PNG-nya, ditautkan ke file ukuran penuh. Jika PNG belum ada, kembali ke komponen `<Mermaid>` lama di browser dan mencetak peringatan `[diagrams]` |
+| `docs/.vitepress/config.mts`, `markdown.config` | Mengganti setiap fence `mermaid` dengan `<img>` PNG-nya, ditautkan ke file ukuran penuh. Diagram tidak pernah digambar di browser: jika PNG belum ada, halaman menampilkan gambar rusak dan build mencetak peringatan `[diagrams]` sampai `npm run docs:diagrams` membuatnya |
 
 Render di browser pembaca ditinggalkan karena mermaid mengukur label dengan font apa pun yang
 ditemukan browser itu, sehingga ukuran kotak meleset, teks terpotong, dan layout berbeda antar mesin.
@@ -173,7 +173,7 @@ Satu renderer dengan satu font yang pasti menghasilkan gambar yang sama di mana 
 ```bash
 npm run docs:diagrams          # render diagram baru atau yang berubah (butuh Chrome/Chromium lokal)
 npm run docs:diagrams -- --all # render ulang semua, misalnya setelah mengubah gaya
-npm run docs:diagrams -- --all --audit # plus daftar garis yang memotong teks, judul, atau label
+npm run docs:diagrams -- --all --audit # plus daftar temuan layout per diagram
 npm run docs:check-diagrams    # cek sintaks semua diagram dan gagal jika ada yang belum punya PNG
 ```
 
@@ -181,8 +181,10 @@ Commit PNG bersama perubahan markdown-nya. Set `CHROME_PATH` jika Chrome tidak a
 
 ::: warning Mengubah diagram? Render ulang
 Gambar dicari berdasarkan hash isi fence, jadi setiap perubahan, bahkan satu karakter, perlu
-`npm run docs:diagrams`. Jika tidak, halaman kembali ke render di browser.
+`npm run docs:diagrams`. Jika tidak, halaman menampilkan gambar rusak (diagram tidak pernah digambar di browser).
 :::
+
+Setiap flowchart di-layout dengan beberapa varian ELK, lalu yang temuan audit-nya paling sedikit yang dipakai. `--audit` menampilkan sisanya: temuan berat (garis menembus kotak, judul grup, atau label) dan temuan ringan bertanda `~` (garis terlalu dekat ke judul atau kotak, tertutup judul, menempel di border grup, berimpit dengan garis lain, atau ujung panah yang berdempetan). Judul grup digeser di sepanjang tepi grup, atau dipecah menjadi beberapa baris, agar tidak kena garis. Garis yang hampir lurus diluruskan. Jika diagram masih terlihat sempit, ubah urutannya di sumber: `~~~` (link tak terlihat) mengatur urutan kotak dan grup, dan `direction TB`/`LR` di dalam `subgraph` mengatur arahnya sendiri.
 
 ::: info Escape placeholder berkurung siku
 Tulis placeholder seperti `<unit>` sebagai `#lt;unit#gt;` di dalam diagram. Jika ditulis mentah, ia

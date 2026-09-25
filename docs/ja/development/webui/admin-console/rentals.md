@@ -34,12 +34,12 @@ search: false
 によれば、`rental_profiles` はその従属先と3つの異なる方法で関係しており、そのうち削除を実際に
 ブロックするのは1つだけである。
 
-- `maps_data` 上の `profile_id RESTRICT` — 何らかのマップを所有するプロファイルは、それらの
+- `maps_data` 上の `profile_id RESTRICT`：何らかのマップを所有するプロファイルは、それらの
   マップが処理される(例えば、まずプロファイルをアーカイブする; [バックアップ](/ja/development/webui/admin-console/backups)
   を参照)まで**削除できない**。
-- `profile_members` と `profile_units` 上の `profile_id CASCADE` — メンバーシップ行とユニット
+- `profile_members` と `profile_units` 上の `profile_id CASCADE`：メンバーシップ行とユニット
   割り当ては、プロファイルとともに自動的に消える。
-- `profile_backups` 上の `profile_id SET NULL` — このプロファイルの既存のアーカイブは、
+- `profile_backups` 上の `profile_id SET NULL`：このプロファイルの既存のアーカイブは、
   [データベーススキーマ § バックアップと同期](/ja/development/database-schema#バックアップと同期)
   で説明されているのと同じ「アーカイブはアーカイブされたものより長生きしなければならない」という
   ルールに従い、プロファイル自体の削除後も存続する。

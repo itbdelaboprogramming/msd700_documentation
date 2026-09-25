@@ -48,14 +48,14 @@ langsung menghapus sebuah unit dan datanya dari tampilan setiap anggota (lihat
 
 `maps_data` sengaja dikunci ke rental yang merekamnya, bukan ke unit: sebuah unit yang disewakan
 ulang ke tenant berbeda tidak menyerahkan peta tenant sebelumnya, dan tenant yang masa rentalnya
-berakhir tetap menyimpan peta miliknya meskipun mereka tidak lagi bisa mengendarai unit yang
+berakhir tetap menyimpan peta miliknya meskipun mereka tidak lagi bisa mengemudikan unit yang
 merekamnya. Lihat [Admin Console § Rentals](/id/development/webui/admin-console/rentals)
 untuk bagaimana ini berlaku di lapisan akses.
 
 Aturan itu menjawab "apakah saya boleh melihat baris ini sama sekali". Itu bukan pertanyaan yang
-sama dengan "peta mana yang seharusnya tampil di layar saat saya mengendarai robot INI", dan
+sama dengan "peta mana yang seharusnya tampil di halaman saat saya mengemudikan robot INI", dan
 keduanya dicampuradukkan hingga 2026-09-10. Sebuah rental yang memegang beberapa robot mendaftarkan
-peta semua robot bersamaan di halaman Database, tanpa apa pun di layar yang menyatakan mana yang
+peta semua robot bersamaan di halaman Database, tanpa apa pun di halaman yang menyatakan mana yang
 mana; memilih peta milik robot sibling menyerahkan ke robot sebuah ULID peta yang file-nya tidak
 pernah ia rekam, sehingga navigation init dikirim, unit tersebut tidak bisa me-resolve peta, dan
 run tersebut mati di sana sementara dashboard melaporkan permulaan yang berhasil. `unit_id`

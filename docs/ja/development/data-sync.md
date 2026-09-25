@@ -39,7 +39,7 @@ flowchart LR
   end
 
   subgraph UnitAgent["sync_agent.js (Onboard Unit)"]
-    WAKE["wake() Dispatcher"]
+    WAKE["wake()<br/>Dispatcher<br/>(one sync round at a time)"]
     EXEC["Sync Round Execution:<br/>1. Handshake & Clock Calibration<br/>2. Pull Downstream Changes<br/>3. Apply Rows & Upsert Tombstones<br/>4. Push Upstream Operational Rows<br/>5. Transfer Missing Map Binary Files"]
   end
 
@@ -104,11 +104,11 @@ flowchart TB
 
 | 出所タグ | 原因の例 | ログの文言 | ステータスバッジ |
 | --- | --- | --- | --- |
-| `local_db` — 資格情報が拒否された | このユニットの `docker/.env` にある `MYSQL_USER`/`MYSQL_PASSWORD` が、ローカルの `mysql_data_local` ボリュームが既に初期化された時点のパスワードと一致しない(mysql2 `ER_ACCESS_DENIED_ERROR`)。 | *"this unit's own database refused the login it was given..."* | `error` |
-| `local_db` — 到達不能 | ユニットのローカル MySQL コンテナが稼働していない(`ECONNREFUSED`、`PROTOCOL_CONNECTION_LOST`)。 | *"cannot reach this unit's own database..."* | `error` |
-| `local_db` — その他 | ローカルの読み書き中に発生するその他の MySQL エラー(スキーマ、ロックなど)。 | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
-| `cloud` — ネットワークエラー | クラウドエンドポイントへの DNS 失敗、タイムアウト、または接続拒否。ユニットにアップリンクがない間は想定内。 | *"cloud not reachable, will retry..."* | `offline` |
-| `cloud` — HTTP エラー | 既知の `NOT_ENROLLED`/`NO_RENTAL`/reenroll のケース以外で、クラウドが非 2xx ステータスで応答した。 | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
+| `local_db`：資格情報が拒否された | このユニットの `docker/.env` にある `MYSQL_USER`/`MYSQL_PASSWORD` が、ローカルの `mysql_data_local` ボリュームが既に初期化された時点のパスワードと一致しない(mysql2 `ER_ACCESS_DENIED_ERROR`)。 | *"this unit's own database refused the login it was given..."* | `error` |
+| `local_db`：到達不能 | ユニットのローカル MySQL コンテナが稼働していない(`ECONNREFUSED`、`PROTOCOL_CONNECTION_LOST`)。 | *"cannot reach this unit's own database..."* | `error` |
+| `local_db`：その他 | ローカルの読み書き中に発生するその他の MySQL エラー(スキーマ、ロックなど)。 | *"this unit's own database rejected the &lt;phase&gt; step..."* | `error` |
+| `cloud`：ネットワークエラー | クラウドエンドポイントへの DNS 失敗、タイムアウト、または接続拒否。ユニットにアップリンクがない間は想定内。 | *"cloud not reachable, will retry..."* | `offline` |
+| `cloud`：HTTP エラー | 既知の `NOT_ENROLLED`/`NO_RENTAL`/reenroll のケース以外で、クラウドが非 2xx ステータスで応答した。 | *"the cloud rejected the &lt;phase&gt; request (HTTP &lt;status&gt;)..."* | `error` |
 | *(なし)* | HTTP ステータスもネットワーク上の特徴もない、`sync_agent.js` 自体の内部での throw。接続や資格情報の問題ではなく、エージェント自体のバグ。 | *"sync_agent hit an unexpected internal error during &lt;phase&gt;..."* | `error` |
 
 正確な優先順位ルールについては `sync_agent.js` の `classifyFailure()` を参照してください。

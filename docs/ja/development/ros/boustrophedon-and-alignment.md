@@ -37,23 +37,25 @@ flowchart LR
 
 ### 派生クリアランス定数(`src/msd700_coverage/coverage_geometry.py`)
 
-TEB起動時(`min_obstacle_dist 0.10`、`safety_margin 0.0`):
+TEB起動時(`min_obstacle_dist 0.05`、`safety_margin 0.0`):
 
 | クリアランス定数 | 値 | 数式 |
 | --- | --- | --- |
-| `wall_clearance` | **0.450 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.10\text{ m})$ |
-| `turn_clearance` | **0.670 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.10\text{ m})$ |
+| `wall_clearance` | **0.400 m** | $r_{\text{inscribed}} (0.350\text{ m}) + d_{\min} (0.05\text{ m})$ |
+| `turn_clearance` | **0.620 m** | $r_{\text{circumscribed}} (0.570\text{ m}) + d_{\min} (0.05\text{ m})$ |
 | `pitch` | **0.644 m** | $w_{\text{body}} (0.70\text{ m}) \times (1 - \text{overlap} (0.08))$ |
 
 TEBなし(フォールバック`min_obstacle_dist 0.15`): `wall_clearance 0.500 m`、`turn_clearance 0.720 m`。
 
+`lane_edge_clearance`(セル境界からレーン中心までの最小距離)は`auto`(= `wall_clearance`)ではなく、`config/boustrophedon_params.yaml`で**0.35 m**に固定されている。`lane_end_clearance`は`auto`(= `turn_clearance`)のまま。
+
 ### 物理的なジオメトリ上の限界(TEB起動時):
-- **ロボットが進入できる最も狭い通路**: **0.90 m**($2 \times \text{wall\_clearance}$)。
-- **ロボットが180度旋回できる最も狭い通路**: **1.34 m**($2 \times \text{turn\_clearance}$)。
-- **壁沿いの到達不能な境界ストリップ**: **0.10 m**($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$)。
+- **ロボットが進入できる最も狭い通路**: **0.80 m**($2 \times \text{wall\_clearance}$)。
+- **ロボットが180度旋回できる最も狭い通路**: **1.24 m**($2 \times \text{turn\_clearance}$)。
+- **壁沿いの到達不能な境界ストリップ**: **0.05 m**($\text{wall\_clearance} - \frac{w_{\text{body}}}{2}$)。
 
 ::: info Attainmentと生の網羅率
-0.10 mの周辺ストリップは衝突なしには通過できないため、長方形の部屋(例: 3 x 6 m)が達成できる理論上の最大網羅率は約**90%**となる。システム性能は、調整前の生の面積割合ではなく、**Attainment Ratio**(実際に走査された到達可能な床面の割合)によって測定される。
+0.05 mの周辺ストリップは衝突なしには通過できないため、長方形の部屋(例: 3 x 6 m)が達成できる理論上の最大網羅率は約**95%**となる。システム性能は、調整前の生の面積割合ではなく、**Attainment Ratio**(実際に走査された到達可能な床面の割合)によって測定される。
 :::
 
 ---
@@ -64,7 +66,7 @@ TEBなし(フォールバック`min_obstacle_dist 0.15`): `wall_clearance 0.500 
 
 ```mermaid
 flowchart TD
-  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.450 m)"]
+  A["User Polygon Boundary"] --> B["Free-Space Polygon Clipping<br/>Erode perimeter by wall_clearance (0.400 m)"]
   B --> C["Vertical Sweep Line Decomposition<br/>Detect IN, OUT, SPLIT, and MERGE Critical Points"]
   C --> D["Construct Adjacency Reeb Graph<br/>Order cell traversal using Chinese Postman Tour"]
   D --> E["Serpentine Lane Generation<br/>Place parallel sweep lanes at 0.644 m pitch"]
@@ -132,8 +134,8 @@ $$\mathbf{R}(\Delta \theta) = \begin{bmatrix} \cos(\Delta \theta) & -\sin(\Delta
 | 発生源 | 以前 | 現在 |
 | --- | --- | --- |
 | `rotate_recovery` | move_baseのリカバリーラダーの最後の段 | ロードされない。`recovery_behaviors`には2つのコストマップリセットのみが記載され、いずれも動作を指示しない |
-| TEB終端ピボット | 各ウェイポイントでゴールの方位に向かって回転していた | 厳密化。`yaw_goal_tolerance: 0.15`(網羅走行時: `0.10`) — ウェイポイントがクリックドラッグによる実方位を持つようになったため、ピボットはオペレーターが選んだ方位に着地する |
-| TEB初期ピボット | パスがロボットの後方に向かう場合にその場で回転していた | 代わりにバックする。`allow_init_with_backwards_motion: false` |
+| TEB終端ピボット | 各ウェイポイントでゴールの方位に向かって回転していた | 厳密化。`yaw_goal_tolerance: 0.15`(網羅走行時: `0.10`)：ウェイポイントがクリックドラッグによる実方位を持つようになったため、ピボットはオペレーターが選んだ方位に着地する |
+| TEB初期ピボット | パスがロボットの後方に向かう場合にその場で回転していた | バックせずその場で旋回する: `allow_init_with_backwards_motion: false`。VLP-16はロボット後方0.40 m以内を検出できないため |
 | `SYNC`コマンド(`nav_controller`) | 障害物チェックなしの10秒間のオープンループ`0.5 rad/s` | 何もしない。先にスキャンマッチングを行うAuto Alignを使用する |
 
 動作の調停は今では`twist_mux`単独にある。ナビゲーションは`/mux/nav_vel`(優先度10)、キーボードは独自の入力(優先度90)、緊急停止は`/mux/emergency_vel`を占有する(優先度255)。`/cmd_vel`へ直接書き込むノードはこのラダーを迂回し、停止させることができない。

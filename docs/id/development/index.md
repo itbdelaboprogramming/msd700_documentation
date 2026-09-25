@@ -18,12 +18,12 @@ Stack ROS 1 Noetic yang berjalan di unit fisik: paket, algoritma, sensor, dan co
 
 ## ROS Web UI: Platform
 
-Dashboard operator, konsol admin, dan layanan backend/bridge yang menghubungkannya ke robot. Diatur per layar fitur aktual, bukan per lapisan protokol.
+Dashboard operator, konsol admin, dan layanan backend/bridge yang menghubungkannya ke robot. Diatur per halaman fitur aktual, bukan per lapisan protokol.
 
 <LinkCards>
   <LinkCard icon="🧭" title="Navigasi" details="Kendali manual, Autopilot, pinpoint/rute, sinkronisasi & penyelarasan peta, dan coverage cleaning." link="/id/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="Mapping" details="Membangun peta baru: Play/Pause/Stop, eksplorasi manual vs. otonom, dan save-on-stop." link="/id/development/webui/mapping/overview" />
-  <LinkCard icon="🗄️" title="Database" details="Layar Map DB: mendaftar, mencari, mengganti nama, dan menghapus peta yang direkam." link="/id/development/webui/database/overview" />
+  <LinkCard icon="🗄️" title="Database" details="Halaman Map DB: mendaftar, mencari, mengganti nama, dan menghapus peta yang direkam." link="/id/development/webui/database/overview" />
   <LinkCard icon="🛠️" title="Konsol Admin" details="Tab Operators, Units & Fleet, Rentals, Backups, dan Admins khusus superadmin." link="/id/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="Akun & Akses" details="Login/pendaftaran operator, login admin, keyring JWT, dan pendaftaran perangkat keras." link="/id/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="Kamera & Live View" details="Pipeline video WebRTC di balik live feed dashboard." link="/id/development/webui/camera/overview" />

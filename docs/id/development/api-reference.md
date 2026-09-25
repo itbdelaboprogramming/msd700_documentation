@@ -202,6 +202,8 @@ Mengirim heartbeat liveness ke robot lewat MQTT (round-trip) dan menjaga operati
 }
 ```
 
+Di dashboard lokal unit, ping HTTP ini didampingi `heartbeat` MQTT 5 Hz yang membuktikan kehadiran tanpa round trip; dashboard cloud hanya mengandalkan ping ini. Lihat [Safety Watchdog](/id/development/ros/safety-watchdog#dua-sinyal-kehadiran).
+
 Terkait tapi berbeda: `POST /api/unit/heartbeat` adalah keepalive container yang dipakai container relay per-unit. Ia tidak menerima field lease dan hanya mengembalikan `{ "success": true }`.
 
 ### 3. Emergency Stop / Pause

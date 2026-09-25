@@ -13,6 +13,7 @@ Hardware, OS, network ports, and software you need **before** installing the MSD
 ```mermaid
 flowchart LR
   subgraph ServerSpecs["1. Cloud Server"]
+    direction TB
     S_CPU["4 to 8 vCPUs (x86_64)"]
     S_RAM["8 to 16 GB RAM"]
     S_DISK["100 GB NVMe"]
@@ -20,12 +21,17 @@ flowchart LR
   end
 
   subgraph UnitSpecs["2. Robot Unit"]
+    direction TB
     U_SBC["NVIDIA Jetson (ARM64)"]
     U_LIDAR["Velodyne VLP-16 LiDAR (Ethernet)"]
     U_IMU["9-DOF IMU"]
     U_MOTOR["Dual motors + encoders"]
     U_BAT["Battery + E-Stop (check unit BOM)"]
   end
+
+  S_CPU ~~~ S_RAM ~~~ S_DISK ~~~ S_NET
+  U_SBC ~~~ U_LIDAR ~~~ U_IMU ~~~ U_MOTOR ~~~ U_BAT
+  ServerSpecs ~~~ UnitSpecs
 ```
 
 ### 1. Cloud server
@@ -54,8 +60,9 @@ flowchart LR
 Open the **public** ports below. Everything else must stay behind the firewall, reachable only from trusted networks.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph PublicIngress["Public (open in firewall)"]
+    direction TB
     P443["TCP 443: HTTPS / WSS (Apache)"]
     P8883["TCP 8883: MQTTS (HiveMQ)"]
     P3478["UDP/TCP 3478: STUN/TURN (coturn)"]
@@ -63,11 +70,16 @@ flowchart TD
   end
 
   subgraph LocalLoopback["Internal (restrict access)"]
+    direction TB
     P3306["TCP 3307: MySQL"]
     P5000["TCP 5000: Backend API"]
     P9090["TCP 9090: rosbridge"]
     P3003["TCP 3003: Media server"]
   end
+
+  P443 ~~~ P8883 ~~~ P3478 ~~~ PRANGE
+  P3306 ~~~ P5000 ~~~ P9090 ~~~ P3003
+  PublicIngress ~~~ LocalLoopback
 ```
 
 | Port | Protocol | Scope | Service |

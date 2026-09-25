@@ -9,9 +9,9 @@ search: false
 
 Tab Penyewaan (`ProfilesPanel.tsx`) mengelola `rental_profiles`: **siapa yang menyewa sebuah
 robot**, pertanyaan yang sengaja dijaga terpisah dari `users`, **siapa yang mengemudikannya**.
-Akun operator dan profil penyewaan adalah tabel berbeda karena suatu alasan — lihat
+Akun operator dan profil penyewaan adalah tabel berbeda karena suatu alasan (lihat
 [Ikhtisar § Tiga ruang identitas, tiga
-tab](/id/development/webui/admin-console/overview#tiga-ruang-identitas-tiga-tab) — dan tab ini
+tab](/id/development/webui/admin-console/overview#tiga-ruang-identitas-tiga-tab)) dan tab ini
 adalah tempat keduanya, ditambah sebuah unit, sungguhan dihubungkan. Untuk sisi akun-operator,
 lihat [Operator](/id/development/webui/admin-console/operators); untuk sisi unit, lihat
 [Unit & Armada](/id/development/webui/admin-console/units-and-fleet).
@@ -34,12 +34,12 @@ lengkap](/id/development/database-schema#foreign-key-secara-lengkap), `rental_pr
 dengan turunannya dalam tiga cara berbeda, dan hanya satu di antaranya yang benar-benar
 memblokir penghapusan.
 
-- `profile_id RESTRICT` pada `maps_data` — sebuah profil yang memiliki peta apa pun **tidak dapat**
+- `profile_id RESTRICT` pada `maps_data`: sebuah profil yang memiliki peta apa pun **tidak dapat**
   dihapus sampai peta-peta itu ditangani (misalnya, dengan mengarsipkan profil terlebih dahulu;
   lihat [Cadangan](/id/development/webui/admin-console/backups)).
-- `profile_id CASCADE` pada `profile_members` dan `profile_units` — baris keanggotaan dan
+- `profile_id CASCADE` pada `profile_members` dan `profile_units`: baris keanggotaan dan
   penugasan unit hilang secara otomatis bersama profilnya.
-- `profile_id SET NULL` pada `profile_backups` — arsip yang sudah ada dari profil ini tetap
+- `profile_id SET NULL` pada `profile_backups`: arsip yang sudah ada dari profil ini tetap
   bertahan setelah profil itu sendiri dihapus, sesuai aturan "sebuah arsip harus bertahan lebih
   lama dari yang diarsipkannya" yang sama seperti dijelaskan di
   [Skema Basis Data § Backup dan sinkronisasi](/id/development/database-schema#cadangan-dan-sinkronisasi).
@@ -80,7 +80,7 @@ saat ini terlebih dahulu adalah yang membuatnya dapat ditugaskan di tempat lain.
 
 Pintasan ke alur [Cadangan](/id/development/webui/admin-console/backups): membuat arsip
 bercakupan-profil dari profil yang dipilih tanpa meninggalkan tab Penyewaan. Ia menghasilkan arsip
-yang sama seperti dijelaskan di sana — semua yang dimiliki profil tersebut, tidak pernah akun
+yang sama seperti dijelaskan di sana: semua yang dimiliki profil tersebut, tidak pernah akun
 operator yang menjadi anggotanya.
 
 ## Terkait

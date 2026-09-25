@@ -7,11 +7,11 @@ search: false
 
 <RoleBadge role="developer" />
 
-Fitur Navigasi adalah layar `unit/navigation`. `pages/unit/navigation/index.tsx` hanyalah lapisan
+Fitur Navigasi adalah halaman `unit/navigation`. `pages/unit/navigation/index.tsx` hanyalah lapisan
 layout tipis; hampir seluruh fungsionalitas sesungguhnya berada di
 `src/components/navigationMap/mapComponent.tsx` (`MapComponent`) dan sub-komponen yang direndernya,
 yang dijangkau lewat dropdown "Mode List" (`ModeListPanel.tsx`) dan action bar persisten
-(`actionBar.tsx`). Halaman ini membahas mekanisme yang dibagikan di seluruh mode pada layar ini:
+(`actionBar.tsx`). Dokumen ini membahas mekanisme yang dibagikan di seluruh mode pada halaman ini:
 pola pergantian mode itu sendiri, pipeline rendering canvas dan matematika koordinat yang menjadi
 dasar tiap mode, serta bagian-bagian UI pendukung kecil yang muncul terlepas dari mode mana yang
 sedang aktif.
@@ -101,7 +101,7 @@ Untuk menjamin canvas tidak pernah crash dengan cara ini, `ensureStagePrototype(
 `mapComponent.tsx` menerapkan ulang helper tersebut secara idempoten pada prototype saat ini tepat
 sebelum setiap pembuatan viewer. Matematikanya mencerminkan `public/script/ros2d.js` secara persis,
 sehingga perilaku tidak berubah pada jalur normal (`rosScriptLoader.ts` hanyalah sequential script
-loader — patch tidak berada di sana).
+loader: patch tidak berada di sana).
 Lihat [Frontend Canvas](/id/development/frontend-canvas) untuk snippet lengkap.
 
 Penanganan klik setiap mode di halaman ini (penempatan pinpoint, penempatan home base, penggambaran
@@ -112,7 +112,7 @@ semuanya, bukan detail khusus milik satu mode saja.
 
 Ada beberapa komponen yang muncul lintas mode alih-alih menjadi milik satu mode saja:
 
-- **`RobotStuckNotification`**: peringatan di layar yang muncul ketika robot tampak tidak mampu
+- **`RobotStuckNotification`**: peringatan di halaman yang muncul ketika robot tampak tidak mampu
   membuat kemajuan menuju goal-nya saat ini.
 - **`HoverTooltip`**: tooltip kontekstual yang ditampilkan saat operator mengarahkan kursor ke
   elemen di canvas.

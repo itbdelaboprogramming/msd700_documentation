@@ -7,9 +7,9 @@ search: false
 
 <RoleBadge role="developer" />
 
-Batas antara layar Akun & Akses dan robot fisik: bagaimana token dari protokol pendaftaran benar-benar
+Batas antara halaman Akun & Akses dan robot fisik: bagaimana token dari protokol pendaftaran benar-benar
 sampai ke host robot, dan bagaimana robot itu sendiri melindungi diri dari dua operator yang mencoba
-mengendalikannya secara bersamaan. Untuk layar-layar yang memulai rantai ini, lihat
+mengendalikannya secara bersamaan. Untuk halaman-halaman yang memulai rantai ini, lihat
 [Ikhtisar](/id/development/webui/accounts/overview); untuk jabat tangan nonce lengkapnya, lihat
 [Pendaftaran Perangkat Keras](/id/development/webui/accounts/enrolment); untuk mekanisme token dan
 domain kepercayaan, lihat [Keamanan & Token](/id/development/webui/accounts/security-and-tokens).
@@ -62,7 +62,7 @@ robot seputar lease ini, lihat [State & Behavior](/id/development/state-and-beha
 
 ## Terkait
 
-- [Ikhtisar](/id/development/webui/accounts/overview): keempat layar Akun & Akses dan bagaimana
+- [Ikhtisar](/id/development/webui/accounts/overview): keempat halaman Akun & Akses dan bagaimana
   hubungannya.
 - [Keamanan & Token](/id/development/webui/accounts/security-and-tokens): keyring JWT, domain
   kepercayaan, dan terminasi TLS.

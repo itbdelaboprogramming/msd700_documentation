@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-The point-and-go modes on the Navigation screen: Single Pinpoint, Multiple Pinpoint with its
+The point-and-go modes on the Navigation page: Single Pinpoint, Multiple Pinpoint with its
 Save/Load Route and Round Trip/Loop Route controls, Set Home Base, and Delete All Pinpoints. For
 the canvas rendering pipeline and coordinate math these modes sit on top of, and for the
 Mode List/Action Bar pattern they're selected through, see
@@ -55,7 +55,7 @@ controls above.
 ## Set Home Base
 
 Places or updates the robot's home position by clicking the canvas, calling `updateHomebase` in the
-database services layer. This is the same home base position surfaced on the Database screen (the
+database services layer. This is the same home base position surfaced on the Database page (the
 `homebase_x`/`homebase_y` columns; see
 [Database Overview § Map list](/development/webui/database/overview#map-list)), and the destination
 used by the Action Bar's Return to Home Base action

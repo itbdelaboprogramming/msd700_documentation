@@ -75,6 +75,31 @@ Ini menginstal Docker bila belum ada, mengatur akses grup dan `xhost`, membuat s
 Bila script menambahkan user ke grup `docker`, logout dan login ulang, atau jalankan `newgrp docker` (hanya shell saat ini).
 :::
 
+Tidak adanya `DISPLAY` (sesi SSH headless) di sini hanya berupa warning. X11 hanya dibutuhkan untuk RViz atau Gazebo.
+
+::: details Link kabel Velodyne VLP-16 (hanya untuk unit dengan VLP-16)
+VLP-16 mengirim UDP ke IP host tetap di port 2368 tanpa DHCP. Tanpa IP host statis di subnet-nya,
+driver ROS timeout tanpa pesan dan point cloud tidak muncul.
+
+`./setup.sh` (atau `./setup.sh --configure-lidar` saja) membuat profile NetworkManager
+`msd700-velodyne`: statis `192.168.103.100/24`, IPv6 mati, prioritas autoconnect 100, tidak pernah menjadi
+default route. Interface kabel dideteksi otomatis (yang punya carrier, belum punya IP, dan bukan default
+route). Jika kandidatnya 0 atau lebih dari 1, langkah ini dilewati dengan warning, tidak pernah ditebak.
+
+| Variabel (`docker/.env`) | Default | Fungsi |
+| --- | --- | --- |
+| `VELODYNE_IFACE` | deteksi otomatis | NIC kabel yang menghadap sensor (mis. `end0`) |
+| `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | IP statis host |
+| `VELODYNE_SENSOR_IP` | `192.168.103.231` | IP sensor, dipakai untuk validasi |
+| `VELODYNE_CONNECTION_NAME` | `msd700-velodyne` | Nama profile NetworkManager |
+
+`VELODYNE_SENSOR_IP` harus berada di dalam `VELODYNE_HOST_CIDR` dan sama dengan `device_ip` di
+`src/msd700_robot/msd700_hardware/launch/velodyne_scanner.launch`.
+
+Verifikasi: `ping 192.168.103.231` dijawab, dan di dalam container `rostopic list | grep velodyne`
+menampilkan topic point cloud.
+:::
+
 ---
 
 ### Step 3: Cek `docker/.env`
@@ -261,7 +286,7 @@ Menjalankan `up` ulang dengan flag beda menulis ulang unit; `down` menghapus aut
 <details>
 <summary><b>Laptop non-Ubuntu (hanya sim/dev)</b></summary>
 
-Setel `MAPS_FOLDER_LOCAL` di `docker/.env` ke folder writable yang nyata, bukan path gaya Jetson `/home/ubuntu`. Samakan UID/GID image. Lihat `msd700_noetic/docker/docker-compose.yml:219` dan `ros-web-ui/run_msd.sh:606-613`.
+Setel `MAPS_FOLDER_LOCAL` di `docker/.env` ke folder writable yang nyata, bukan path gaya Jetson `/home/ubuntu`. Samakan UID/GID image. `backend_local` mem-bind-mount folder ini di path yang sama (`docker/docker-compose.yml`), dan `run_msd.sh` memeriksa apakah folder bisa ditulisi sebelum launch, jadi path yang salah gagal saat start, bukan saat map disimpan.
 
 </details>
 

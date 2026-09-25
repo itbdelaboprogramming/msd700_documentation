@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Mode point-and-go di layar Navigasi: Single Pinpoint, Multiple Pinpoint beserta kontrol Save/Load
+Mode point-and-go di halaman Navigasi: Single Pinpoint, Multiple Pinpoint beserta kontrol Save/Load
 Route dan Round Trip/Loop Route-nya, Set Home Base, dan Delete All Pinpoints. Untuk pipeline
 rendering canvas dan matematika koordinat yang menjadi dasar mode-mode ini, serta pola Mode
 List/Action Bar tempat mode-mode ini dipilih, lihat
@@ -57,7 +57,7 @@ kontrol Save/Load Route di atas.
 ## Set Home Base
 
 Menempatkan atau memperbarui posisi home robot dengan mengklik canvas, memanggil `updateHomebase`
-di lapisan layanan database. Ini adalah posisi home base yang sama yang ditampilkan di layar
+di lapisan layanan database. Ini adalah posisi home base yang sama yang ditampilkan di halaman
 Database (kolom `homebase_x`/`homebase_y`; lihat
 [Ikhtisar Database § Daftar peta](/id/development/webui/database/overview#daftar-peta)), dan tujuan
 yang dipakai oleh aksi Return to Home Base pada Action Bar

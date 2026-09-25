@@ -9,9 +9,9 @@ search: false
 
 The Rentals tab (`ProfilesPanel.tsx`) manages `rental_profiles`: **who a robot is rented to**, a
 question kept deliberately distinct from `users`, **who drives it**. An operator account and a
-rental profile are different tables for a reason — see
+rental profile are different tables for a reason (see
 [Overview § Three identity spaces, three
-tabs](/development/webui/admin-console/overview#three-identity-spaces-three-tabs) — and this tab is
+tabs](/development/webui/admin-console/overview#three-identity-spaces-three-tabs)) and this tab is
 where the two, plus a unit, actually get connected. For the operator-account side, see
 [Operators](/development/webui/admin-console/operators); for the unit side, see
 [Units & Fleet](/development/webui/admin-console/units-and-fleet).
@@ -33,12 +33,12 @@ per [Database Schema § Foreign keys, in
 full](/development/database-schema#foreign-keys-in-full), `rental_profiles` relates to its
 dependents in three different ways, and only one of them blocks the delete outright.
 
-- `profile_id RESTRICT` on `maps_data` — a profile that owns any maps **cannot** be deleted until
+- `profile_id RESTRICT` on `maps_data`: a profile that owns any maps **cannot** be deleted until
   those maps are dealt with (for example, by archiving the profile first; see
   [Backups](/development/webui/admin-console/backups)).
-- `profile_id CASCADE` on `profile_members` and `profile_units` — membership rows and unit
+- `profile_id CASCADE` on `profile_members` and `profile_units`: membership rows and unit
   assignments disappear automatically with the profile.
-- `profile_id SET NULL` on `profile_backups` — an existing archive of this profile survives the
+- `profile_id SET NULL` on `profile_backups`: an existing archive of this profile survives the
   profile's own deletion, per the same "an archive must outlive what it archived" rule described in
   [Database Schema § Backup and sync](/development/database-schema#backup-and-sync).
 
@@ -78,7 +78,7 @@ it assignable elsewhere.
 
 A shortcut into the [Backups](/development/webui/admin-console/backups) flow: creating a
 profile-scoped archive of the selected profile without leaving the Rentals tab. It produces the
-same archive described there — everything the profile owns, never the operator accounts that are
+same archive described there: everything the profile owns, never the operator accounts that are
 members of it.
 
 ## Related

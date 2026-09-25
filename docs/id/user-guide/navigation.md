@@ -6,20 +6,20 @@ search: false
 
 <RoleBadge role="user" />
 
-Layar Navigasi adalah tempat Anda mengendarai dan mengirim robot pada peta yang sudah Anda buat sebelumnya. Jika belum punya peta, mulai dulu dari [Pemetaan](/id/user-guide/mapping).
+Halaman Navigasi adalah tempat Anda mengemudikan dan mengirim robot pada peta yang sudah Anda buat sebelumnya. Jika belum punya peta, mulai dulu dari [Pemetaan](/id/user-guide/mapping).
 
 ## Membuka Peta
 
-1. Dari menu utama, pilih **Navigasi**.
+1. Dari menu utama, pilih **Navigation**.
 2. Pilih peta tersimpan dari daftar, atau peta yang terakhir digunakan akan otomatis terbuka.
-3. Peta akan tampil di layar dengan posisi robot saat ini ditandai sebagai panah berwarna.
+3. Peta akan tampil dengan posisi robot saat ini ditandai sebagai panah berwarna.
 
 ## Kendali Manual (Joystick / WASD)
 
-Gunakan kendali manual saat Anda ingin mengendarai robot sendiri, langkah demi langkah.
+Gunakan kendali manual saat Anda ingin mengemudikan robot sendiri, langkah demi langkah.
 
 1. Nyalakan toggle **Manual Override** di panel Robot Control.
-2. Gunakan tombol **W A S D** pada keyboard untuk mengendarai:
+2. Gunakan tombol **W A S D** pada keyboard untuk mengemudikan:
    - **W**: maju (`0.40 m/s`)
    - **S**: mundur
    - **A / D**: belok kiri / kanan
@@ -38,7 +38,7 @@ Manual Override selalu memiliki prioritas lebih tinggi dari misi otomatis apa pu
 4. Robot secara otomatis merencanakan jalur dan menghindari rintangan sepanjang perjalanan.
 5. Perhatikan **tampilan status** untuk progres: "On Progress", "Arrived", atau "Robot Stuck" jika ada sesuatu yang menghalangi jalan.
 
-Anda juga bisa mengantrekan beberapa titik henti secara berurutan dan menyimpannya sebagai rute yang bisa dipakai ulang (lihat [Rute & Cakupan](/id/user-guide/routes-coverage)).
+Anda juga bisa mengantrekan beberapa titik henti secara berurutan dan menyimpannya sebagai rute yang bisa dipakai ulang (lihat [Rute & Coverage](/id/user-guide/routes-coverage)).
 
 ### Membaca Kanvas Peta
 
@@ -59,7 +59,7 @@ Jika posisi robot pada peta terlihat sedikit meleset (misalnya setelah dipindahk
 
 ## Autopilot (Misi Tanpa Pengawasan)
 
-Autopilot menjaga operasi tanpa pengawasan yang sedang berjalan tetap hidup di robot bahkan setelah Anda menutup tab browser — baik itu rute yang sedang Anda jalankan maupun sapuan [Operation Playlist](/id/user-guide/routes-coverage).
+Autopilot menjaga operasi tanpa pengawasan yang sedang berjalan tetap hidup di robot bahkan setelah Anda menutup tab browser: baik itu rute yang sedang Anda jalankan maupun sapuan [Operation Playlist](/id/user-guide/routes-coverage).
 
 1. Mulai operasinya: muat rute tersimpan lalu klik **Play**, atau buka **Operation Playlist** dan klik **Run Playlist**.
 2. Nyalakan toggle **Autopilot** di panel Robot Control.
@@ -68,13 +68,13 @@ Autopilot menjaga operasi tanpa pengawasan yang sedang berjalan tetap hidup di r
 
 ## Jeda dan Lanjutkan
 
-- Klik **Jeda (Pause)** untuk menghentikan robot sementara di posisinya saat ini.
-- Klik **Lanjutkan (Resume)** untuk melanjutkan tepat dari titik terakhir.
+- Klik **Pause** untuk menghentikan robot sementara di posisinya saat ini.
+- Klik **Resume** untuk melanjutkan tepat dari titik terakhir.
 - Jika Anda me-refresh browser saat misi sedang berjalan, dashboard akan otomatis tersambung kembali dan menampilkan kondisi terkini: Anda tidak akan kehilangan progres.
 
 ## Pemecahan Masalah
 
-**Robot menampilkan "Terjebak"**
+**Robot menampilkan "Stuck"**
 : Ada sesuatu yang menghalangi jalur yang direncanakan. Periksa kamera langsung, singkirkan rintangan jika memungkinkan, lalu klik Lanjutkan.
 
 **Klik pada peta tidak berpengaruh apa-apa**

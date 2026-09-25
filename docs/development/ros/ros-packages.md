@@ -13,31 +13,48 @@ This document provides a comprehensive registry of all ROS 1 Noetic packages wit
 
 ```mermaid
 flowchart TD
-  subgraph RobotCore["msd700_robot (Physical & Sim Stack)"]
-    BRINGUP["msd700_bringup<br/>Hardware startup & teleop"]
-    CONTROL["msd700_control<br/>EKF fusion & IMU filtering"]
-    DESC["msd700_description<br/>URDF, xacro & 3D meshes"]
-    FIRM["msd700_firmware<br/>MCU firmware (plain directory,<br/>not a ROS package)"]
-    HW["msd700_hardware<br/>Serial motor drivers & battery"]
-     NAV["msd700_navigation<br/>move_base, TEB, SLAM"]
-     COV["msd700_coverage<br/>boustrophedon sweep planner"]
-    SIM["msd700_simulation<br/>Gazebo warehouse & worlds"]
-    TP["third_party/ira_laser_tools<br/>Dual-LiDAR pointcloud merger"]
+  subgraph RobotCore["msd700_robot (physical and sim stack)"]
+    BRINGUP["msd700_bringup<br/>Launch layer, bridger, serial"]
+    CONTROL["msd700_control<br/>raw_sensor_node, EKF, IMU filter, twist_mux"]
+    DESC["msd700_description<br/>URDF/xacro (irbot = physical prototype)"]
+    HW["msd700_hardware<br/>hardware_monitor, Velodyne launch,<br/>C++ hw interface (mode 2)"]
+    PERC["msd700_perception<br/>Velodyne hazard scan"]
+    NAV["msd700_navigation<br/>move_base, TEB, SLAM, explore"]
+    COV["msd700_coverage<br/>Boustrophedon sweep planner"]
+    SIM["msd700_simulation<br/>Gazebo worlds"]
+    MSGS["msd700_msgs<br/>HardwareState / HardwareCommand"]
+    TP["third_party<br/>ira_laser_tools, sensor_pointcloud"]
   end
 
-  subgraph WebUIBridge["ros-web-ui/source (Web & Fleet Bridges)"]
-    W_BRINGUP["msd700_webui_bringup<br/>Top-level orchestrator launch"]
-    W_CTRL["msd700_webui_control<br/>system_command & supervisor"]
-    MQTT["dependencies/aws_mqtt<br/>TLS MQTT bridge (cloud & local)"]
-    T2S["dependencies/topic2string<br/>JSON telemetry serializer"]
+  subgraph WebUIBridge["ros-web-ui/source (web and fleet bridges)"]
+    W_BRINGUP["msd700_webui_bringup<br/>bringup_msd / bringup_cloud"]
+    W_CTRL["msd700_webui_control<br/>system_command, supervisor, switch_mode"]
+    W_UTILS["msd700_webui_utils<br/>idle_detector"]
+    W_MSG["msd700_webui_msg<br/>SwitchMode, SetMapPath"]
+    BACKEND["ros_dashboard_backend<br/>REST API (backend_node)"]
+    T2S["topic2string<br/>telemetry to strings"]
+    MQTT["aws_mqtt<br/>MQTT bridge (cloud and local)"]
+    RPP["robot_pose_publisher<br/>/robot_pose from TF"]
   end
 
-  W_CTRL --> NAV
-  W_CTRL --> CONTROL
+  W_BRINGUP --> W_CTRL
+  W_BRINGUP --> W_UTILS
+  W_BRINGUP --> T2S
+  W_BRINGUP --> BRINGUP
+  W_CTRL --> W_MSG
+  W_CTRL -->|switch_mode| NAV
+  W_CTRL -->|switch_mode| COV
+  BACKEND --> MQTT
   T2S --> MQTT
+  RPP --> T2S
+  COV --> NAV
+  PERC -->|/scan, /scan_hazard| NAV
   NAV --> CONTROL
-  CONTROL --> HW
-  HW --> FIRM
+  BRINGUP --> CONTROL
+  BRINGUP --> HW
+  HW --> PERC
+  CONTROL --> MSGS
+  NAV --> DESC
 ```
 
 ## Package Directory: `msd700_robot`
@@ -78,8 +95,9 @@ The core autonomous movement, SLAM mapping, and area coverage package.
 Manages state estimation, coordinate transform hierarchies, and sensor fusion.
 
 - **Primary Nodes**:
-  - `ekf_localization_node` (`robot_localization`): Extended Kalman Filter fusing wheel encoder odometry (`/wheel/odom`) and filtered IMU data (`/imu/from_filter`) into a stable `/odometry/filtered` topic at 30 Hz.
-  - `imu_filter_node` (`imu_filter_madgwick`, launched by `imu_filter.launch` with `gain 0.01`, magnetometer on, fixed frame `odom`): Madgwick AHRS filter converting raw angular rate and acceleration into orientation quaternions. Its output topic is `/imu/from_filter` (remapped from `/imu/data`), which is what the EKF actually consumes; `/imu/data` itself is published by `hardware_state.py`.
+  - `ekf_localization_node` (`robot_localization`): Extended Kalman Filter fusing wheel odometry (`/wheel/odom`) and the IMU (`/imu/data`) into `/odometry/filtered` at 30 Hz, and broadcasting `odom -> base_footprint`.
+  - `imu_filter_node` (`imu_filter_madgwick`, launched by `imu_filter.launch` with `gain 0.01`, magnetometer on, fixed frame `odom`): Madgwick AHRS filter over `/imu/data_raw` + `/imu/mag`. Its output is remapped to `/imu/from_filter`; `hardware_state.py` (`raw_sensor_node`) reads that and republishes the attitude as `/imu/data`, which is what the EKF consumes.
+  - `raw_sensor_node` (`hardware_state.py`, launched by `hardware_state_sub.launch` in `hardware_mode 1`): turns the STM32's `hardware_state` into `/wheel/odom`, `/imu/data_raw`, `/imu/mag` and `/imu/data`, using the geometry in `config/pose_config.yaml`.
 - **Key Launch Files**:
   - `robot_localization.launch`: Configures and launches EKF fusion with parameter loading from `ekf_localization_config.yaml`.
   - `imu_filter.launch`: Launches Madgwick orientation estimation.
@@ -88,16 +106,17 @@ Manages state estimation, coordinate transform hierarchies, and sensor fusion.
 Defines physical kinematic structures, collision geometries, and sensor placements using URDF and Xacro.
 
 - **Primary URDF Models**:
-  - `urdf/msd700_field.urdf.xacro`: True-scale production robot model (0.90 x 0.70 m body, 4 drive wheels at x = ±0.30 m / y = ±0.30 m, Velodyne mast at 0.50 m above footprint). No casters, no `camera_link`.
+  - `urdf/irbot.urdf.xacro`: The model the **real unit** publishes (via `launch/robot_description.launch.xml`, always on in `bringup_msd.launch`). Fixed chain `base_footprint -> base_link -> laser` and `base_link -> imu`; lidar height from `config/msd700_xacro_irbot.yaml`.
+  - `urdf/msd700_field.urdf.xacro`: True-scale **simulation** model (0.90 x 0.70 m body, 4 drive wheels at x = ±0.30 m / y = ±0.30 m, Velodyne mast at 0.50 m above footprint). No casters, no `camera_link`.
   - `urdf/velodyne/VLP_16.urdf.xacro`: High-fidelity 16-channel 3D LiDAR model and Gazebo sensor plugins.
   - `urdf/turtlebot3_waffle.urdf.xacro`: Legacy small-scale prototype model.
 
 ### 4. `msd700_hardware` & `msd700_firmware`
-Handles low-level hardware interfaces, motor actuation, encoder pulse counting, and battery status.
+Handles low-level hardware interfaces, motor actuation and encoder pulse counting.
 
 - **Hardware Architecture**:
   - `serial_launch.launch` (`msd700_bringup`): Connects the host to the low-level microcontroller over `/dev/stm32` at 57600 baud (via `rosserial_python` `serial_node.py`).
-  - The firmware speaks the rosserial protocol to the `msd700_hardware` interface, which publishes `/wheel/odom` and the raw IMU topics. There is no `/battery_state` topic anywhere in the stack. See [Firmware and Hardware](/development/ros/firmware-and-hardware) for what the firmware actually implements.
+  - The STM32 firmware speaks rosserial (`hardware_state` / `hardware_command`). In the default `hardware_mode 1`, `raw_sensor_node` and `bridger.py` handle both directions; the C++ `msd700_hardware` interface (`msd700_hardware.launch`, `config/odometry_config.yaml`) is only used in `hardware_mode 2`. There is no `/battery_state` topic anywhere in the stack. See [Firmware and Hardware](/development/ros/firmware-and-hardware) for what the firmware actually implements.
 
 ### 5. `msd700_simulation`
 Gazebo simulation environment for testing navigation algorithms in software.
@@ -116,6 +135,25 @@ Robot-internal message contracts (`msd700_robot/msd700_msgs/msg/`):
 - `HardwareState.msg`: 8× `float32 ch_ultrasonic_distance_1…_8`, `int32 right/left_motor_pulse_delta`, `float32 heading/pitch/roll`, `float32 acc/gyr/mag_x/y/z`, `float32 uwb_dist/deviation/rho/theta`.
 - `WebNavCommand.msg`: `string command`, `geometry_msgs/PoseStamped pose`, `string file_path`.
 
+### 8. `msd700_perception`
+Turns the Velodyne point cloud into the 2D scans the rest of the stack uses: `/scan` for SLAM/AMCL, `/scan_hazard` (obstacles plus holes) for the costmaps, `/scan_holes` for the dashboard overlay. See [Perception and Hazard Scan](/development/ros/perception-and-hazard-scan).
+
+- **Nodes**: `hazard_scan_node.py` (the pipeline, library code in `src/msd700_perception/`, C fast path in `src_cpp/fastops.cpp`); `hazard_inspector.py` for stage-by-stage debugging.
+- **Launch files**: `velodyne_hazard.launch` (drop-in replacement for `msd700_hardware/velodyne_scanner.launch`, chosen by `MSD700_HAZARD_SCAN=true`), `cloud_hazard.launch`, `hazard_scan.launch`.
+- **Config**: `config/hazard_scan.yaml`.
+
+### 9. `msd700_coverage`
+The boustrophedon coverage planner behind area sweeps and operation playlists. See [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment).
+
+- **Nodes**: `path_coverage_node.py` (decomposition, lane planning, goal dispatch, pause/resume ownership), `autocover_node.py` (optional automatic start, off by default).
+- **Launch files**: `msd700_boustrophedon.launch` (the `boustrophedon` mode in `switch_mode.yaml`), `coverage.launch`.
+- **Config**: `config/boustrophedon_params.yaml`, `config/robot/field.yaml` / `prototype.yaml`.
+
+### 10. `third_party/sensor_pointcloud`
+Aggregates range messages into a `PointCloud2`. Vendored but not launched by the current stack.
+
+`msd700_movement/` is a leftover directory with no `package.xml` (old navigation scripts, `rplidar_ros`, a second `robot_pose_publisher` copy); catkin does not build it.
+
 ## Package Directory: `ros-web-ui/source`
 
 ### 1. `msd700_webui_control`
@@ -128,12 +166,12 @@ Bridges web commands and dashboard telemetry to physical robot hardware.
   - `hardware_monitor.py`: Background watchdog verifying that critical sensor processes and USB devices remain healthy.
 
 ### 2. `dependencies/topic2string`
-High-performance serialization layer converting heavy ROS message types to JSON strings.
+Serialization layer converting heavy ROS message types to compact strings for MQTT. Since 2026-09-18 the unit runs the **C++ nodes** (`bringup_msd.launch` → `topic2string_impl:=cpp_nodes` → `launch/msd_cpp_nodes.launch`, sources in `src/nodelets/`). The Python scripts in `scripts/` and `launch/msd.launch` stay as a rollback (`topic2string_impl:=python`); node names and topics are identical in both.
 
 - **Key Nodes**:
-  - `robotpose_to_string.py`: pose telemetry serializer, 2 Hz by default (raised to 25 Hz by `topic2string/launch/msd.launch` so the dashboard marker stays smooth during manual drive).
-  - `laserscan_to_string.py`: event-driven compressed laser scan serializer (no fixed rate).
-  - `map_compression_pipeline.py` (node name `map_compression_node`): Base64 zlib compression for live SLAM occupancy grids.
+  - `robotpose_msd` (`robotpose_to_string_node`): pose telemetry serializer at 25 Hz, skipped when the robot has not moved.
+  - `laserscan_to_string` (`laserscan_to_string_node`): compressed laser scan serializer at 2 Hz (`publish_frequency 2.0`), quantised to centimetres.
+  - `map_compression_node` (`map_compression_node`, `src/nodelets/map_compression.cpp`): compresses the live occupancy grid (`base64(zlib(...))`, cells packed as int8), sends on change plus a heartbeat and bursts after a map reset.
 
 ### 3. `dependencies/aws_mqtt`
 Encrypted transport bridge linking local ROS topics to the central HiveMQ broker.
@@ -142,6 +180,27 @@ Encrypted transport bridge linking local ROS topics to the central HiveMQ broker
   - `nakayama_msd.launch`: Robot-side bridge connecting onboard ROS topics to cloud HiveMQ on port 8883 (TLS).
   - `nakayama_cloud.launch`: Server-side bridge translating MQTT topics into per-unit cloud ROS topics.
   - `local_msd.launch`: Unit-side bridge connecting to local Mosquitto broker (`127.0.0.1:1883`).
+
+### 4. `msd700_webui_bringup`
+Top-level launch files that start a whole side of the system.
+
+- `bringup_msd.launch`: the unit. Always-on base (`twist_mux`, `bridger`, robot description, hardware monitor), `topic2string` (C++ by default), MQTT bridge, `system_command`, `switch_mode`, idle detector.
+- `bringup_cloud.launch`: the cloud server. Per-unit or fleet relays (`use_unit_relays`, `use_multi_unit_bridge`), backend, rosbridge.
+- `bringup_local_server.launch`: the unit's local server half (backend, rosbridge, `topic2string/local.launch`) in a separate container sharing the roscore.
+- `debug_local.launch`: cloud + unit on one machine for debugging.
+
+### 5. `msd700_webui_msg`
+Message and service types for mode switching: `SwitchModeMsg.msg`, `SwitchMode.srv`, `SetMapPath.srv`.
+
+### 6. `msd700_webui_utils`
+- `idle_detector.py` (`idle_detector.launch`, started by `bringup_msd.launch`): watches the robot pose on TF and reports whether the robot is actually moving; `system_command.py` uses it for the stuck/idle checks.
+- `string_monitor.py`: debug tool that reports `std_msgs/String` payload sizes on a topic.
+
+### 7. `dependencies/robot_pose_publisher`
+C++ node publishing the robot pose in `map` from TF as `/robot_pose`, which `topic2string` serializes for the dashboard.
+
+### 8. `dependencies/ROS-dashboard-backend` (package `ros_dashboard_backend`)
+The Node.js REST API (`scripts/backend_node`, `admin_api.js`, `enroll_api.js`, `sync_*.js`), launched by `launch/ros_dashboard_backend.launch`. See [API Reference](/development/api-reference).
 
 ## Related Documentation
 

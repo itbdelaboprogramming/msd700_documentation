@@ -14,8 +14,9 @@ search: false
 すべてのトピックはユニット単位でルート化される。`` `${root}/server/…` ``であり、`root = /unit_<ULID>`である。下記の素の`/server/…`名は略記である。
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph rosbridgeWS["Incoming rosbridge WebSocket Streams"]
+    direction TB
     OCC_MSG["/server/slam/map (OccupancyGrid)"]
     POSE_MSG["/server/robot_pose (PoseStamped)"]
     SCAN_MSG["/server/scan (LaserScan, derived<br/>from robot_pose topic name)"]
@@ -24,6 +25,7 @@ flowchart TD
   end
 
   subgraph StagePipeline["EaselJS 2D Canvas Stage (mapComponent.tsx)"]
+    direction TB
     L1["Layer 1: Base Map OccupancyGrid Bitmap<br/>(resolution from map metadata)"]
     L2["Layer 2: Keep-Out Exclusion Zone Red Polygons"]
     L3["Layer 3: Global Path (Pink) & Local Trajectory (Yellow)"]
@@ -33,6 +35,8 @@ flowchart TD
     L7["Layer 7: Robot Footprint Hull & Yaw Heading Arrow"]
   end
 
+  OCC_MSG ~~~ POSE_MSG ~~~ SCAN_MSG ~~~ PATH_MSG ~~~ BOSTRO_MSG
+  L1 ~~~ L2 ~~~ L3 ~~~ L4 ~~~ L5 ~~~ L6 ~~~ L7
   rosbridgeWS --> StagePipeline
   StagePipeline --> HTML5_CANVAS["HTML5 Canvas Display (60 FPS Pan/Zoom)"]
 ```
@@ -104,7 +108,7 @@ const ensureStagePrototype = (): boolean => {
 オペレーターがエリアカバレッジのスイープポリゴンや keep-out ゾーンを定義する際(`customAreaDraw.ts`):
 1. **頂点の配置**: キャンバスをクリックするとメートル座標 $(x_i, y_i)$ が記録されます。
 2. **動的なラバーバンディング**: マウスが動くと、カーソル位置まで動的な仮のエッジラインがレンダリングされます。
-3. **クロージングスナップ**: クリックが最初の頂点から`CLOSE_TOLERANCE_M`(デフォルト$0.5\text{ m}$、`NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`で上書き可能)以内に落ちた場合 — ピクセルではなくメートル距離 — ループは閉じる。Keep-outポリゴンはオーバーレイとして描画され、`areas`/`exclusions`ペイロードとして送られる。カバレッジポリゴンは`/msd700/coverage_polygon`へ送られる。(ロボット側の`/msd700/keepout_grid`自体は空グリッドの初期化子に過ぎない。)
+3. **クロージングスナップ**: クリックが最初の頂点から`CLOSE_TOLERANCE_M`(デフォルト$0.5\text{ m}$、`NEXT_PUBLIC_CUSTOM_AREA_CLOSE_TOLERANCE`で上書き可能)以内に落ちた場合、ピクセルではなくメートル距離、ループは閉じる。Keep-outポリゴンはオーバーレイとして描画され、`areas`/`exclusions`ペイロードとして送られる。カバレッジポリゴンは`/msd700/coverage_polygon`へ送られる。(ロボット側の`/msd700/keepout_grid`自体は空グリッドの初期化子に過ぎない。)
 
 ## 関連ドキュメント
 

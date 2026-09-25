@@ -153,6 +153,41 @@ sequenceDiagram
    robot melaporkan `idle` pada 4 sampel ping ~1 Hz berturut-turut (`PHANTOM_IDLE_SAMPLES = 4`), frontend secara otomatis
    mereset ke `idle` untuk mencegah tampilan eksekusi hantu (phantom).
 
+### Logout mengakhiri sesi, kecuali autopilot menyala
+
+Dua kontrak logout sengaja berlawanan, dan keduanya bergantung pada flag `autopilot` robot seperti
+yang dilaporkan ping pre-flight (peek).
+
+- **Autopilot ON**: logout mempertahankan bridge unit dan operasinya. Tidak ada yang dibongkar; login
+  berikutnya diarahkan kembali dan membangun ulang operasi dari snapshot yang di-latch.
+- **Autopilot OFF**: logout mengakhiri operasi. `shutdownFlow.ts` mengirim `POST /api/hardware/idle`
+  sebelum `/user/logout` (`endRobotOperation`, dilewati untuk operasi otonom dan emergency stop). Ini
+  sign-out yang disengaja, jadi login berikutnya mulai dari nol.
+
+Mengakhiri operasi berarti membersihkan **setiap** state yang dibaca jalur pemulihan, dan dulu tiga
+tempat penyimpanan state ini tidak sepakat:
+
+| Tempat state | Saat logout tanpa autopilot |
+| --- | --- |
+| Batch `operation_supervisor` | `_idle_system` mengirim `{"type":"stop"}` agar snapshot yang di-latch (dan salinannya di disk) tidak lagi menggambarkan operasi aktif. |
+| Mode aktif robot | `_idle_system` harus memanggil `robot_state.set_active_mode(None)`, bukan hanya `update_activity("idle")`. |
+| Operasi yang dimaksud di backend | `POST /api/hardware/idle` harus memanggil `setUnitIntendedState(unit_id, 'idle', null, ...)`. |
+
+::: warning Activity robot saja tidak menentukan routing
+`derive_active_page()` kembali ke `active_mode` yang diingat robot setiap kali activity mentahnya bukan
+label mapping/navigasi. Jadi mengubah activity ke `idle` sambil membiarkan mode tetap terisi tetap
+melaporkan `active_page='mapping'` atau `'navigation'` pada ping berikutnya, dan `resolveActiveRoute()`
+mengirim operator yang kembali langsung ke sesi map yang baru saja diakhiri logout. Handler logout
+eksplisit di `system_command.py` tidak memanggil `set_active_mode(None)`, padahal peralihan idle
+karena ping timeout 10 menit sudah melakukannya.
+:::
+
+Membiarkan `intended_mode`/`map_id` yang tersimpan di backend tetap terisi punya efek yang sama satu
+lapis di atasnya: auto-resume di halaman Navigasi menganggap `intended_map_id` sebagai kandidat map,
+sehingga map lama bisa terbuka lagi meski robot sudah melaporkan `idle`. Membersihkannya sama dengan
+yang sudah dilakukan jalur emergency stop dan deaktivasi navigasi, dan tidak menyentuh retensi
+autopilot, yang tidak pernah mencapai endpoint ini.
+
 ### Apa yang memicu rekonstruksi snapshot
 
 Rekonstruksi ini tidak terbatas pada tab yang benar-benar baru. Ia berjalan setiap kali tab tidak

@@ -16,27 +16,29 @@ function renderDiagram(tokens: any[], idx: number): string {
   const token = tokens[idx]
   const hash = diagramHash(token.content)
   const file = `${DIAGRAM_DIR}${hash}.png`
-  if (!existsSync(file)) {
-    // Not rendered yet: fall back to in-browser mermaid so the page still shows something
-    console.warn(`[diagrams] no image for mermaid block (${hash}); run \`npm run docs:diagrams\``)
-    return `<Mermaid code="${Buffer.from(token.content, 'utf-8').toString('base64')}" />`
-  }
-  // PNG header: width/height as big-endian uint32 at bytes 16 and 20. Rendered at 2x.
-  const png = readFileSync(file)
-  const width = Math.round(png.readUInt32BE(16) / 2)
-  const height = Math.round(png.readUInt32BE(20) / 2)
   // Alt text: the heading the diagram sits under
   let alt = 'Diagram'
   for (let i = idx - 1; i >= 0; i--) {
     if (tokens[i].type === 'heading_open') { alt = tokens[i + 1]?.content || alt; break }
   }
-  // img src is root-relative: VitePress resolves it from public/ and adds the base itself.
-  // The link is plain HTML that nothing rewrites, so it carries the base explicitly.
-  // Shrink to fit the column, but never below 80% of natural size (12px text stays >= ~10px);
-  // anything wider than that scrolls sideways inside the frame instead.
-  const style = `width:min(${width}px, max(100%, ${Math.round(width * 0.8)}px))`
-  return `<figure class="diagram-figure"><a href="${BASE}diagrams/${hash}.png" target="_blank" rel="noopener" title="Open full size">` +
-    `<img src="/diagrams/${hash}.png" alt="${escapeAttr(alt)}" width="${width}" height="${height}" style="${style}" loading="lazy" decoding="async"></a></figure>\n`
+  // Always a static image, never in-browser mermaid. The src is bound (:src) rather than a plain
+  // attribute so Vite does not treat it as an import: a PNG that does not exist yet is then just a
+  // broken image until `npm run docs:diagrams` writes it, instead of a build error or a cached
+  // fallback that `vitepress dev` keeps serving (its markdown cache is keyed by content).
+  const url = `${BASE}diagrams/${hash}.png`
+  let size = ''
+  if (existsSync(file)) {
+    // PNG header: width/height as big-endian uint32 at bytes 16 and 20. Rendered at 2x.
+    const png = readFileSync(file)
+    const width = Math.round(png.readUInt32BE(16) / 2)
+    const height = Math.round(png.readUInt32BE(20) / 2)
+    // Natural size is the upper bound; CSS shrinks it to the column, and a click opens it full size
+    size = ` width="${width}" height="${height}"`
+  } else {
+    console.warn(`[diagrams] no image for mermaid block (${hash}); run \`npm run docs:diagrams\``)
+  }
+  return `<figure class="diagram-figure"><a href="${url}" class="diagram-open" target="_blank" rel="noopener" title="Click to enlarge">` +
+    `<img :src="'${url}'" alt="${escapeAttr(alt)}"${size} loading="lazy" decoding="async"></a></figure>\n`
 }
 
 // ==================== EN SIDEBARS ====================
@@ -266,7 +268,7 @@ const idSidebar = {
         { text: 'Navigasi', link: '/id/user-guide/navigation' },
         { text: 'Pemetaan', link: '/id/user-guide/mapping' },
         { text: 'Peta & Database', link: '/id/user-guide/database' },
-        { text: 'Rute & Cakupan', link: '/id/user-guide/routes-coverage' },
+        { text: 'Rute & Coverage', link: '/id/user-guide/routes-coverage' },
         { text: 'Kamera Langsung', link: '/id/user-guide/camera' },
       ]
     },

@@ -18,6 +18,13 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 - **Recovery Reach over Message Count**: Snapshot rebuild now also triggers on an `Idle` tab with no mode selected (the state left by re-opening a map from the Database page), and the resync prompt reaches 9.4 s instead of 3.4 s. Neither the Navigation page nor the map component overwrites its persisted status or mode on mount.
 - **Self-Join Prevention**: The unit's own hotspot is excluded from its WiFi scan and refused by `connect()`, so an operator reading the list through that hotspot cannot tell the unit to join itself.
 - **Mode-Preserving Boot Autostart**: `msd700.service` now carries the `--dev` and `--simulator` flags of the `up` that armed it. The boot unit previously re-ran a bare `up`, so a robot started against the dev cloud, or as a simulator, silently returned after a reboot as hardware against production.
+- **2-Second Safety Pause and MQTT Heartbeat**: The watchdog's motion pause now fires after 2 s without an operator (was 10 s). The unit's local dashboard proves presence with a 5 Hz MQTT-over-WebSocket `heartbeat` straight to the unit's broker, so a lossy link no longer pauses the robot; the HTTP ping keeps the lease and authority. Autopilot suspends all three watchdog tiers.
+- **Measured Wheel Geometry**: `pose_config.yaml` now uses the measured 26 cm track (was 78 cm, a 3× over-turn on every pivot), and the `rotation_guard` node is deleted.
+- **TEB Narrow-Gap Tuning**: `min_obstacle_dist` 0.10 → 0.05 m and `inflation_dist` 0.75 → 0.35 m, so TEB stops stalling in gaps `navfn` already plans through. Coverage clearances derived from them shrink accordingly.
+- **C++ topic2string on the Unit**: The unit's telemetry converters run as separate C++ nodes (`topic2string_impl:=cpp_nodes`); the Python nodes stay as a rollback.
+- **Faster Hazard Scan**: The perception pipeline's grouped reductions moved into a C library (`fastops`), cutting a frame from about 55 ms to about 37 ms with a numpy fallback.
+- **Hotspot Restart from the Dashboard**: `network_local` restarts the hotspot through the narrow `msd700-hotspot-restart.path` unit instead of NetworkManager.
+- **Auto-Deploy Webhook**: Pushes to the deploy branches rebuild `server_prod` / `server_dev` automatically.
 
 ### August 2026: Documentation Overhaul & Precision Kinematics
 - **Modular Documentation Architecture**: Exhaustive rewrite of all documentation pages with responsive Mermaid SVG diagrams, mathematical formulations, and zero-downtime operations.

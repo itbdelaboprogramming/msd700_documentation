@@ -43,7 +43,7 @@ case, a host candidate is already reachable; there is nothing for a relay to sol
 their ICE server list: unset falls back to the cloud defaults (Google STUN plus the production TURN
 credentials), and the literal string `none` clears the list entirely rather than leaving it unset.
 `LOCAL_STUN_URLS` / `LOCAL_TURN_URL` / `LOCAL_TURN_USERNAME` / `LOCAL_TURN_CREDENTIAL`
-default to the literal string `none` in code (`camera_client.py`) for exactly this reason — in
+default to the literal string `none` in code (`camera_client.py`) for exactly this reason: in
 `msd700_noetic/docker/.env` they are commented out, so the code default is what applies. They are
 only worth setting on a unit whose LAN genuinely needs a relay (a segmented network, a captive
 Wi-Fi bridge between robot and operator).
@@ -118,7 +118,7 @@ Two ports, both mandatory from env (the process exits if either is unset): `PORT
 | `error` | server | Includes `new_login` takeover: a duplicate `userId` kills the old socket |
 | `server_shutdown` | server | Broadcast on SIGTERM/SIGINT before the 5 s force-exit |
 
-`GET /clients` (HTTP, Bearer) lists connected clients. The server logs `Answer SDP` substrings — it does inspect SDP framing, just never media.
+`GET /clients` (HTTP, Bearer) lists connected clients. The server logs `Answer SDP` substrings: it does inspect SDP framing, just never media.
 
 ## Reconnect and retry
 

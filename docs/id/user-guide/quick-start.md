@@ -20,7 +20,7 @@ Sebelum memulai, pastikan Anda memiliki:
 
 ## Langkah 1: Masuk ke Dashboard
 
-1. Buka peramban Anda dan navigasikan ke: `https://msd.nglobal.jp`.
+1. Buka browser Anda dan navigasikan ke: `https://msd.nglobal.jp`.
 2. Masukkan nama pengguna dan kata sandi Anda, lalu klik **Proceed**.
 
 ```mermaid
@@ -52,20 +52,23 @@ Pilih baris berstatus **Ready** dan klik **Start**: dashboard akan membuka [Navi
 Antarmuka operator dibagi menjadi tiga panel operasional utama:
 
 ```mermaid
-flowchart TD
+flowchart TB
   subgraph Workspace["MSD700 Operator Workspace Layout"]
     TOP["Top Header Bar<br/>Robot Status, Battery Level, Connection Status, Emergency Stop"]
     LEFT["Left Panel: Map Canvas<br/>Live 2D Floor Plan, Robot Icon, Sensor Dots, Planned Path"]
     RIGHT_TOP["Top Right Panel: Live Camera Feed<br/>Real-Time Video with Full Screen"]
     RIGHT_BOT["Bottom Right Panel: Robot Control<br/>WASD Keyboard Drive (Shift = slow), Manual/Autopilot Toggles, Goal Sender"]
   end
+
+  TOP ~~~ LEFT
+  TOP ~~~ RIGHT_TOP ~~~ RIGHT_BOT
 ```
 
 ---
 
 ## Langkah 4: Memuat Peta
 
-1. Buka peta dari halaman **Database** (atau pemilih peta di layar Navigasi).
+1. Buka peta dari halaman **Database** (atau pemilih peta di halaman Navigasi).
 2. Pilih peta tersimpan (misalnya `Warehouse_Floor_1`).
 3. Denah lantai 2D ditampilkan pada kanvas beserta posisi robot saat ini (ikon robot dengan panah arah).
 
@@ -75,12 +78,12 @@ Jika tidak ada peta dalam dropdown, lihat [Pemetaan](/id/user-guide/mapping) unt
 
 ---
 
-## Langkah 5: Mengendarai Secara Manual (Teleoperasi)
+## Langkah 5: Mengemudikan Secara Manual (Teleoperasi)
 
-Anda mengendarai robot secara manual dengan keyboard:
+Anda mengemudikan robot secara manual dengan keyboard:
 
 ```mermaid
-flowchart LR
+flowchart TB
   subgraph KeyboardControls["Keyboard Drive Controls"]
     W["W: Drive Forward"]
     S["S: Drive Backward"]
@@ -88,6 +91,8 @@ flowchart LR
     D["D: Rotate Right (Clockwise)"]
     SHIFT["Hold Shift: Slow Mode"]
   end
+
+  W ~~~ A ~~~ S ~~~ D ~~~ SHIFT
 ```
 
 ### Kontrol Teleoperasi:
@@ -127,5 +132,5 @@ Tombol **Emergency Stop** terletak menonjol di bagian kanan atas setiap halaman:
 
 ## Langkah Selanjutnya
 
-- Pelajari cara melakukan cakupan area sistematis di [Rute & Cakupan](/id/user-guide/routes-coverage).
+- Pelajari cara melakukan coverage area sistematis di [Rute & Coverage](/id/user-guide/routes-coverage).
 - Pahami timer keselamatan dan Autopilot di [Bagaimana Robot Berperilaku](/id/user-guide/behavior).

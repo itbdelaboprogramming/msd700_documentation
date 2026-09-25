@@ -37,21 +37,21 @@ ROSログとは別のログがあと2系統あります:
 - `src/ros-web-ui/logs/`下のランチャーログ: `rotatelogs`があればサービスごとに10 MB×5ファイル、なければ無制限`tee`。
 - Docker標準出力/標準エラー: ユニットの全サービスは20 MB×3に制限。サーバー側は`coturn`のみ設定あり、他はデーモンのデフォルトです。
 
-`ROS_LOG_CAP_MB`と`ROS_LOG_SWEEP_SECONDS`は内部ランチャーのみの設定です。ホストや`docker/.env`での指定は無効です。janitorは実ブロック使用量基準で大きい物から切り詰めます(削除しません——ROSがfdを開いたまま保持するため)。`stat` サイズは信用しません(スパースファイルの罠)。ツリーの約96%は通常 `rosout.log` です。
+`ROS_LOG_CAP_MB`と`ROS_LOG_SWEEP_SECONDS`は内部ランチャーのみの設定です。ホストや`docker/.env`での指定は無効です。janitorは実ブロック使用量基準で大きい物から切り詰めます(削除しません。ROSがfdを開いたまま保持するため)。`stat` サイズは信用しません(スパースファイルの罠)。ツリーの約96%は通常 `rosout.log` です。
 
 ## `ros_doctor.sh`: 出力の読み方
 
 `scripts/ros_doctor.sh` は読取専用です。ダッシュボードにステータスはあるがライブトピックがないとき、バックエンドコンテナ内で実行します:
 
-- `OK master answers` —— ROSマスターがそもそも応答している。
-- `stamped as '<role>' owned by <host>` —— `/msd700/stack_role` + `/msd700/stack_host`。話している相手が誰のマスターかを示す。
-- `none: every node advertises a host this machine can resolve` —— 外部ノードなし。それ以外は当マシンが解決できないホストから登録されたノードを名指しする(転送ポートの乗っ取り)。
-- `listening on 9090` 対 `nothing listening on 9090. Dashboards get no live topics at all.` —— rosbridgeが上がっているか。
-- `no rosbridge node on this master (evicted by a duplicate name, or never started)` —— ブリッジが名前登録を失った(重複名で追放、または未起動)。
+- `OK master answers`：ROSマスターがそもそも応答している。
+- `stamped as '<role>' owned by <host>`：`/msd700/stack_role` + `/msd700/stack_host`。話している相手が誰のマスターかを示す。
+- `none: every node advertises a host this machine can resolve`：外部ノードなし。それ以外は当マシンが解決できないホストから登録されたノードを名指しする(転送ポートの乗っ取り)。
+- `listening on 9090` 対 `nothing listening on 9090. Dashboards get no live topics at all.`：rosbridgeが上がっているか。
+- `no rosbridge node on this master (evicted by a duplicate name, or never started)`：ブリッジが名前登録を失った(重複名で追放、または未起動)。
 
 ## `deploy_certs.sh`: 安全コピー、明示的上書き
 
-`ros-web-ui/` から実行します。既定では `Certificates/mqtt` と `Certificates/sql` をバックエンド/mqttソースツリーへ `cp -n` でコピーします——**上書きしません**。上書きは `--force` のみです。`update_ssl.sh`(Let's Encrypt更新+HiveMQキーストア再生成)と混同しないでください。
+`ros-web-ui/` から実行します。既定では `Certificates/mqtt` と `Certificates/sql` をバックエンド/mqttソースツリーへ `cp -n` でコピーします。**上書きしません**。上書きは `--force` のみです。`update_ssl.sh`(Let's Encrypt更新+HiveMQキーストア再生成)と混同しないでください。
 
 ## シークレットのローテーション
 
@@ -108,7 +108,7 @@ docker compose --profile server_prod up -d --no-deps --force-recreate hivemq   #
 ```
 
 ::: danger ブローカー再起動はその配下の全ユニットを切断します
-10秒以上オペレーターピンが途切れると`/emergency_pause`が上がる場合があります。本番に限らず稼働中を避けて再起動します。両プロファイルは**同じキーストアファイル**共有のため、更新は開発分離されません。
+2秒以上オペレーターピンが途切れると`/emergency_pause`が上がる場合があります。本番に限らず稼働中を避けて再起動します。両プロファイルは**同じキーストアファイル**共有のため、更新は開発分離されません。
 :::
 
 `update_ssl.sh`は`msd.nglobal.jp`と`/srv/msd/secrets/hivemq/keystore.p12`に固定です。エクスポートパスワードはブローカー設定と一致させます。診断で表示しないでください。HTTPSとMQTTそれぞれの提示期限を前後で確認します。
@@ -181,7 +181,7 @@ git -C src/msd700_robot submodule update --init --recursive
 - **ローカルサーバースタック**はソースをイメージにコピーします:その編集は`local-build`後に`up`します。
 - 稼働中ロボットコンテナは`build`後も旧イメージのままです。置換は`down`+同フラグの`up -d`を計画します。ロボットとローカルサービスが中断します。起動動作を変えないなら`--no-autostart`を付けます。
 
-Arduinoモーターコントローラーのファームウェア更新手順はここにありません。手動リフラッシュです。
+STM32モーターコントローラーのファームウェア更新手順はここにありません。`firmware-msd700`リポジトリ(`STM32H7_MSD700_Unified_Firmware`、STM32CubeIDE)から手動でリフラッシュします。
 
 ## ディスク管理
 

@@ -99,7 +99,7 @@ Go down this list. Each item clears one channel from the diagram above.
 - [ ] W-A-S-D driving moves the robot, and the dashboard position follows
 - [ ] A click-to-navigate goal is accepted and the robot drives there
 - [ ] Emergency Stop, tested once, stops the robot at once
-- [ ] Closing the browser mid-operation pauses the robot within ~10 seconds
+- [ ] Closing the browser mid-operation pauses the robot within ~2 seconds (cloud dashboard) or at once (local dashboard, whose 5 Hz heartbeat stops with the tab)
 
 ::: warning Do not skip the last four
 A unit can look fully connected (online, video fine) while one command direction is broken. That only shows when something is asked to move. The disconnect test is the safety behavior: trigger it once on purpose, with clear space around the robot.

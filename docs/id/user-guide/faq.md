@@ -22,13 +22,13 @@ Akun pengguna Anda ada, tetapi administrator belum menetapkannya ke **Profil Pen
 ::: details 3. Bisakah dua operator mengendalikan robot yang sama secara bersamaan?
 Tidak. Untuk menjamin keselamatan, setiap robot diatur oleh **lease operasi eksklusif** yang dipegang oleh satu sesi aktif:
 - Jika seorang rekan sedang mengoperasikan robot, unit tersebut menampilkan lencana **In Use** dan perintah diblokir.
-- Jika sesi lain sedang mengendarai (tab kedua, operator lain, atau dashboard lokal unit itu sendiri), dashboard menampilkan dialog berisi **Take over control** yang memungkinkan Anda memindahkan kendali secara eksplisit ke jendela Anda. Sesi lainnya diakhiri secara terlihat.
+- Jika sesi lain sedang mengemudikan (tab kedua, operator lain, atau dashboard lokal unit itu sendiri), dashboard menampilkan dialog berisi **Take over control** yang memungkinkan Anda memindahkan kendali secara eksplisit ke jendela Anda. Sesi lainnya diakhiri secara terlihat.
 :::
 
 ::: details 4. Apa yang terjadi jika laptop saya kehilangan Wi-Fi atau tertutup saat robot sedang bergerak?
 Sistem merespons berdasarkan mode operasi yang aktif:
-- **Mode Manual Standar / Navigasi**: Jika robot kehilangan kontak dengan peramban Anda selama **10 detik**, ia secara otomatis menjalankan **Safety Motion Pause** dan berhenti sambil tetap menyimpan misi di memori. Menyambungkan kembali peramban Anda secara otomatis melanjutkan misi.
-- **Mode Autopilot ON**: Jika Autopilot diaktifkan, robot mengabaikan terputusnya peramban dan menyelesaikan seluruh rute atau playlist-nya secara mandiri sebelum kembali ke homebase-nya.
+- **Mode Manual Standar / Navigasi**: Jika robot kehilangan kontak dengan browser Anda selama **2 detik**, ia secara otomatis menjalankan **Safety Motion Pause** dan berhenti sambil tetap menyimpan misi di memori. Menyambungkan kembali browser Anda secara otomatis melanjutkan misi.
+- **Mode Autopilot ON**: Jika Autopilot diaktifkan, robot mengabaikan terputusnya browser dan menyelesaikan seluruh rute atau playlist-nya secara mandiri sebelum kembali ke homebase-nya.
 :::
 
 ::: details 5. Apa itu titik Homebase dan mengapa penting?
@@ -36,11 +36,11 @@ Di mana pun robot berdiri saat Anda klik Play untuk memulai peta baru, itu menja
 :::
 
 ::: details 6. Bagaimana robot menangani dinding kaca, cermin, atau area terjun (drop-off)?
-Sensor robot dapat menembus kaca bening atau menjadi bingung karena cermin, sehingga dinding kaca bisa hilang dari peta. Untuk melindungi robot, gambar **Avoided Area** di atas semua partisi kaca dan area terjun (lihat [Rute & Cakupan](/id/user-guide/routes-coverage)): robot akan memperlakukan zona itu sebagai area terlarang.
+Sensor robot dapat menembus kaca bening atau menjadi bingung karena cermin, sehingga dinding kaca bisa hilang dari peta. Untuk melindungi robot, gambar **Avoided Area** di atas semua partisi kaca dan area terjun (lihat [Rute & Coverage](/id/user-guide/routes-coverage)): robot akan memperlakukan zona itu sebagai area terlarang.
 :::
 
 ::: details 7. Seberapa cepat robot berjalan?
-Anda mengendarai dengan tombol **W A S D**; ada dua kecepatan tetap:
+Anda mengemudikan dengan tombol **W A S D**; ada dua kecepatan tetap:
 - **Normal**: `0.40 m/s` maju.
 - **Mode lambat**: tahan **Shift** untuk gerakan presisi `0.20 m/s`, misalnya di ruang sempit atau saat pemetaan.
 :::
@@ -52,7 +52,7 @@ Robot ditenagai oleh paket baterai LiFePO4 24V berkapasitas tinggi yang menyedia
 :::
 
 ::: details 9. Bisakah saya mengoperasikan robot jika tidak ada koneksi internet di gedung?
-Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop Anda langsung ke hotspot Wi-Fi robot (tanyakan namanya ke administrator) dan buka `http://<robot-ip>:3000` di Chrome atau Edge. Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan cakupan sepenuhnya secara offline. Perhatikan bahwa dashboard membutuhkan jendela browser berukuran desktop bahkan saat offline: ponsel dan tablet tidak didukung.
+Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop Anda langsung ke hotspot Wi-Fi robot (tanyakan namanya ke administrator) dan buka `http://mymsd.jp` di Chrome atau Edge (jika lewat jaringan lokal lain, `http://<robot-ip>:3000`). Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan coverage sepenuhnya secara offline. Perhatikan bahwa dashboard membutuhkan jendela browser berukuran desktop bahkan saat offline: ponsel dan tablet tidak didukung.
 :::
 
 ::: details 10. Bagaimana cara kerja Emergency Stop?

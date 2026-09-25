@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dokumen ini merinci bagaimana robot MSD700 secara dinamis berpindah antara mode operasional (`navigation`, `slam`, `explore`, `boustrophedon` — idle hanyalah "tidak ada launch stack") saat runtime menggunakan `switch_mode.py`, `system_command.py`, dan `operation_supervisor.py` tanpa me-restart ROS core utama. Nama mode berasal dari `switch_mode.yaml` dan harus cocok dengan string yang dikirim lewat service `/switch_mode`.
+Dokumen ini merinci bagaimana robot MSD700 secara dinamis berpindah antara mode operasional (`navigation`, `slam`, `explore`, `boustrophedon`: idle hanyalah "tidak ada launch stack") saat runtime menggunakan `switch_mode.py`, `system_command.py`, dan `operation_supervisor.py` tanpa me-restart ROS core utama. Nama mode berasal dari `switch_mode.yaml` dan harus cocok dengan string yang dikirim lewat service `/switch_mode`.
 
 ## Topologi Orkestrasi Mode
 
@@ -36,7 +36,7 @@ flowchart TD
 
 | Mode (`switch_mode.yaml`) | Launch file | Catatan |
 | --- | --- | --- |
-| (idle — tanpa stack) | — | Node dasar tetap berjalan (`serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`). |
+| (idle: tanpa stack) | - | Node dasar tetap berjalan (`serial_node`, `imu_filter`, `robot_state_publisher`, `aws_mqtt`, `camera_client`). |
 | **`navigation`** | `msd700_navigation.launch` | `map_server`, `amcl`, `move_base`, costmap. |
 | **`slam`** | `msd700_slam.launch` | Pemetaan live; teleop adalah launch terpisah, bukan bagian dari stack. |
 | **`explore`** | `msd700_explore.launch` | Pencarian frontier `explore_lite`. |
@@ -80,7 +80,7 @@ stateDiagram-v2
 
 ### Kemampuan Kunci Supervisor:
 - **Latched Operation Snapshot**: Mempublikasikan `/string/operation_snapshot` dengan QoS latched. Ketika operator mana pun membuka tab browser, state lengkap dari misi aktif (indeks waypoint aktif, sisa pin rute, dwell timer) dipulihkan dalam hitungan milidetik.
-- **Pengecualian Keselamatan Autopilot**: Ketika Autopilot diaktifkan (ON), supervisor menekan pause disconnect operator 10 detik, memungkinkan misi sapuan jangka panjang berlanjut tanpa pengawasan.
+- **Pengecualian Keselamatan Autopilot**: Ketika Autopilot diaktifkan (ON), watchdog menangguhkan ketiga tingkatan disconnect (pause 2 detik, idle 10 menit, shutdown 30 menit), memungkinkan misi sapuan jangka panjang berlanjut tanpa pengawasan.
 
 ## Dokumentasi Terkait
 

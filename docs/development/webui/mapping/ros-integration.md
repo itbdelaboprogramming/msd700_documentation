@@ -7,10 +7,10 @@ search: false
 
 <RoleBadge role="developer" />
 
-The wire contract behind the [Mapping](/development/webui/mapping/overview) screen: the REST calls
+The wire contract behind the [Mapping](/development/webui/mapping/overview) page: the REST calls
 that start and stop a SLAM session, the MQTT command/feedback envelope carrying that same request to
 `system_command.py`, and what the robot actually does on disk and across the network when a map is
-saved. For the screen's own behavior, see [Overview](/development/webui/mapping/overview) and
+saved. For the page's own behavior, see [Overview](/development/webui/mapping/overview) and
 [Manual Override and Autonomous Exploration](/development/webui/mapping/manual-and-autonomous).
 
 ## Starting and stopping a mapping session
