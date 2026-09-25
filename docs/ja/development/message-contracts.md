@@ -15,6 +15,27 @@ HTTP サーフェスについては [API リファレンス](/ja/development/api
 ペイロードの形は、稼働中のソースコード(`backend_node`、`system_command.py`、`operation_supervisor.py`、`topic2string`、`enroll_api.js`)から直接導出されています。コードベース内でのフィールドの変更は、同じコミットでここも更新しなければなりません。
 :::
 
+## コミュニケーションサーフェス
+
+MSD700 のマシン間インターフェースと、その契約がどこで規定されているかの一覧です。このページが
+すべての正典です。HTTP と rosbridge の詳細は重複を避けるため、下の 2 つのリンク先ページが持ちます。
+
+| サーフェス | トランスポート | 方向 | 契約 |
+| --- | --- | --- | --- |
+| コマンドとフィードバック | MQTT 3.1.1(TLS 8883) | cloud ↔ robot | [コマンド & コントロールチャネル](#コマンド-コントロールチャネル) |
+| テレメトリ、オーバーレイ、ACK | MQTT → cloud ROS → rosbridge | robot → browser | [テレメトリとオーバーレイのトピック](#テレメトリとオーバーレイのトピック) |
+| ウォッチドッグ ping / pong | MQTT(TLS 8883) | robot → cloud | [ウォッチドッグ Ping と Pong](#ウォッチドッグ-ping-と-pong) |
+| Presence と egress プロファイル | robot ローカル ROS | robot 内部 | [Presence と Egress プロファイル](#presence-と-egress-プロファイル) |
+| マップの配送と制御 | MQTT、robot ROS サービス | 双方向 | [マップの配送](#map-delivery) |
+| Operation supervisor | MQTT | 双方向 | [Operation Supervisor 同期](#operation-supervisor-同期) |
+| ロボット登録 | HTTPS(device secret) | robot → cloud | [ロボット登録ハンドシェイク](#ロボット登録ハンドシェイク) |
+| ハードウェアリンク | rosserial(USB シリアル) | STM32 ↔ Jetson | [ファームウェアリンク(rosserial)](#ファームウェアリンク-rosserial) |
+| WebRTC シグナリング | WSS | browser ↔ signalling_server | [WebRTC シグナリング](#webrtc-シグナリング) |
+| カメラ映像 | WebRTC(SRTP) | robot → browser | [WebRTC シグナリング](#webrtc-シグナリング) |
+| フリート HTTP API | HTTPS(REST) | browser / robot → cloud | [API リファレンス](/ja/development/api-reference) |
+| rosbridge WebSocket | WSS | browser ↔ cloud ROS | [rosbridge プロトコル](/ja/development/rosbridge-protocol) |
+| メディア資産 | HTTPS | browser ↔ media-server | [メディアサーバーリファレンス](/ja/development/webui/database/media-server-reference) |
+
 ## フリートアドレス指定方式
 
 すべての物理ロボットは一意のプレフィックス `/unit_<ULID>/...` でアドレス指定されます。ULID(Universally Unique Lexicographically Sortable Identifier)は、登録時に中央の `units` データベーステーブルでそのロボットに割り当てられる主キーです。
@@ -191,6 +212,15 @@ ROS のグラフリソース名は、アルファベット文字、チルダ、�
 }
 ```
 
+マッピングのコマンド動詞:
+
+| コマンド動詞 | ペイロード | 目的 |
+| --- | --- | --- |
+| `start` | なし(`metadata` のみ) | マップを保存できるかを確認したうえで SLAM 実行を開始する。 |
+| `pause` | なし | モーションロックを保持する。SLAM セッションは開いたまま。 |
+| `stop` | 上の `config.resource` ブロック | マップをローカルに保存し、クラウドへ送り、下の進捗ストリームで報告する。 |
+| `discard` | なし | 保存せずにロボットを `idle` へ切り替え、SLAM セッションを破棄する。 |
+
 SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長い時間がかかります。そのため `mapping stop` は、`{ request_id, map_ulid }` を伴う HTTP 200 を即座に返します。フロントエンドは進捗を監視するために `GET /api/mapping/progress/:request_id` の SSE ストリームへ接続します。
 
 #### マッピング進捗フィードバック(`header: "mapping_progress"`)
@@ -248,6 +278,41 @@ SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長�
 - `exclusions`: カバレッジスイープから差し引かれる keep-out 障害物ゾーン。
 - `command: "pause"`: `{ "pause": true }` または `{ "pause": false }` を受け取る。
 - `command: "deactivate"`: カバレッジプランニングを停止する。
+
+### 5. オートアライン(`header: "autoalign"`)
+
+ペイロードなし(`metadata` のみ)のコマンドで、それぞれ `data.status` / `data.message` を返します。
+
+| コマンド動詞 | 目的 |
+| --- | --- |
+| `start` | `/alignment/start` サービスを呼び、マップに対するロボット姿勢を求める。アクティビティを `auto_aligning` にする。 |
+| `reset` | `/alignment/reset` を呼び、解を破棄してナビゲーションへ戻る。 |
+| `status` | `/check_alignment` を呼ぶ読み取り専用クエリ。アクティビティは変わらない。 |
+
+### 6. 緊急停止(`header: "emergency_stop"`)
+
+| コマンド動詞 | ペイロード | 目的 |
+| --- | --- | --- |
+| `activate` | なし | 緊急停止トピックへ `std_msgs/Bool(true)` を publish し、スタックを `idle` へ切り替え、`/map/reset` を呼ぶ。 |
+| `deactivate` | なし | `std_msgs/Bool(false)` を publish して停止を解除する。モーションスタックは再起動しない。 |
+
+### 7. マニュアルオーバーライド(`header: "manual"`)
+
+テレオペは非破壊の制御オーバーレイです。`/switch_mode` を **呼ばない** ため、ナビゲーションスタックは
+生きたままです。ブラウザーは `/unit_<ULID>/string/key_vel` で `Twist` を送ります
+([テレメトリとオーバーレイのトピック](#テレメトリとオーバーレイのトピック) を参照)。
+
+| コマンド動詞 | ペイロード | 目的 |
+| --- | --- | --- |
+| `enable` | なし | 自律移動をキャンセルし(カバレッジは独自サービスで一時停止)、緊急一時停止ロックを解除し、マニュアル mux チャネルを開く。 |
+| `disable` | なし | マニュアル mux チャネルをゼロにして解放するため制御を手放した瞬間にロボットが止まり、その後、以前のアクティビティへ戻す。 |
+
+### 8. オートパイロット(`header: "autopilot"`)
+
+| コマンド動詞 | ペイロード | 目的 |
+| --- | --- | --- |
+| `enable` | なし | ウェイポイントの順序制御を `operation_supervisor` へ渡し、ping-loss ウォッチドッグを一時停止する。解放するのはウォッチドッグ自身の保持のみで、オペレーターの一時停止は決して解放しない。 |
+| `disable` | なし | 順序制御をブラウザーループへ戻し、ping-loss ウォッチドッグを再び有効にする。 |
 
 ## ハートビート Ping とリース契約
 
@@ -309,9 +374,12 @@ SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長�
 | `in_use` | アカウントレベルのロック: 別のユーザーアカウントがリースを保持していることを示す。 |
 | `origin_conflict` | セッションレベルの競合: 同じアカウントの別のタブがアクティブであることを示す。 |
 
-## ストリーミングテレメトリトピック
+## テレメトリとオーバーレイのトピック
 
-ストリーミングテレメトリは、ユニット上で `topic2string` によって JSON 文字列にシリアライズされ、MQTT 経由でルーティングされ、サーバー上で `rosbridge` 向けに型付き ROS メッセージへ変換し戻されます。
+テレメトリは、ユニット上で `topic2string` によって JSON 文字列にシリアライズされ、MQTT 経由で
+ルーティングされ、サーバー上で `rosbridge` 向けに型付き ROS メッセージへ変換し戻されます。
+ブラウザーがこれらのために MQTT を話すことはありません。`rosbridge` 経由で購読します
+([rosbridge プロトコル](/ja/development/rosbridge-protocol) を参照)。
 
 ![ストリーミングテレメトリトピック](../../development/diagrams/message-contracts-streaming-telemetry-topics.drawio)
 
@@ -326,6 +394,70 @@ SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長�
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | 継続的 | ローカル軌跡(`nav_msgs/Path`)。 |
 | `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | プラン時 | カバレッジスイープラインの座標(`nav_msgs/Path`)。 |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | ラッチ | 再接続時の復旧のための、完全なアクティブミッションのスナップショット。 |
+
+レートはノードの既定値です。いくつかは `topic2string/config/egress.yaml` の egress プロファイル
+(idle / watching / driving)ごとにゲートされます。[Presence と Egress プロファイル](#presence-と-egress-プロファイル)を参照。
+
+### ブリッジトピックの全体マップ
+
+クラウドリレー(`gen_bridge_params.py` / `nakayama_cloud_multi.launch`)は、下のトピックをフリート
+内のすべてのユニットへ、per-unit ブリッジと同じ名前で運びます。特に断りのない限り、ペイロードは
+`std_msgs/String` 内の JSON 文字列です。
+
+ロボット → クラウド:
+
+| トピック(`/unit_<ULID>/...`) | 内容 | リレーでラッチ |
+| --- | --- | --- |
+| `string/robotpose` | `map` フレームの姿勢。 | いいえ |
+| `string/map` | 圧縮された占有グリッド([マップの配送](#map-delivery)を参照)。 | はい |
+| `string/laserscan` | 圧縮された2Dレーザースキャン。 | いいえ |
+| `string/laserscan_holes` | スキャン上に描く穴 / 段差オーバーレイ。 | いいえ |
+| `string/hazard_cells` | 今回の実行の累積的な穴の軌跡。 | はい |
+| `string/move_base/NavfnROS/plan` | グローバルプランのオーバーレイ。 | はい |
+| `string/move_base/TebLocalPlannerROS/local_plan` | ローカル軌跡のオーバーレイ。 | はい |
+| `string/boustrophedon_path` | カバレッジパスのオーバーレイ(累積)。 | はい |
+| `string/coverage_debug` | カバレッジプランナーの診断。 | はい |
+| `string/uncovered_regions` | 未スイープ領域。 | はい |
+| `string/coverage_status` | カバレッジのライフサイクルイベント。 | はい |
+| `string/move_base/status` | ゴールステータスのストリーム(`actionlib_msgs/GoalStatusArray`)。 | いいえ |
+| `string/move_base/result` | ゴール結果。信頼配送は `result_ack` で閉じる。 | いいえ |
+| `string/operation_progress` | Operation supervisor の進捗。 | いいえ |
+| `string/operation_snapshot` | ラッチされた完全な操作スナップショット。 | はい |
+| `string/skipped_waypoints` | 実行が到達できなかったウェイポイント。 | いいえ |
+| `server/pong` | ウォッチドッグの応答([ウォッチドッグ Ping と Pong](#ウォッチドッグ-ping-と-pong) を参照)。 | いいえ |
+
+クラウド → ロボット:
+
+| トピック(`/unit_<ULID>/...`) | 内容 | 備考 |
+| --- | --- | --- |
+| `server/ping`(MQTT `msd/ping`) | ウォッチドッグ ping。唯一の非対称ペアで、ROS 名は `server/ping`、MQTT 名は `msd/ping`。 | 下記参照 |
+| `string/move_base/goal` | ナビゲーションゴール。 | |
+| `string/move_base/cancel` | アクティブなゴールをキャンセル。 | |
+| `string/initialpose` | AMCL の初期姿勢をリセット。 | |
+| `string/move_base/result_ack` | `move_base/result` の信頼性 ACK。 | |
+| `string/boustrophedon_path_ack` | カバレッジパスの信頼性 ACK。 | |
+| `string/key_vel` | 手動テレオペの `Twist`(JSON、WASD)。 | 0.5 秒のタイムアウトでロボットをゼロにする |
+| `string/operation_sync` | Operation supervisor の batch/progress/takeover。 | [Operation Supervisor 同期](#operation-supervisor-同期)を参照 |
+| `string/map_request` | 「マップがないので送ってほしい」(プルチャネル)。 | ロボット側でレート制限 |
+
+## ウォッチドッグ Ping と Pong
+
+`hardware.ping` コマンドとは別に、ロボットはクラウドがユニットをオンラインと判定するための
+presence ping を定期的に publish します。ロボット側では ROS `/msd/ping`、クラウド側のブリッジは
+ROS `/unit_<ULID>/server/ping` を MQTT `/unit_<ULID>/msd/ping` へマップし(ブリッジで唯一の非対称
+ペア)、応答は `/unit_<ULID>/server/pong` として戻ります。per-unit の正確なマッピングは
+`aws_mqtt/launch/nakayama_msd.launch` と `nakayama_cloud.launch` にあり、フリートリレーは
+`gen_bridge_params.py` でそれを再現します。
+
+## Presence と Egress プロファイル
+
+アイドル状態のロボットが帯域を浪費しないよう、`system_command.py` はロボットローカルの
+`/msd700/viewers` トピックへ、`idle` / `watching` / `driving` のいずれかのプロファイルを持つ
+ラッチされた `std_msgs/String` を毎秒 1 回 publish します。これはユニットから出ません。
+`topic2string` の `presence_gate.py` がこれを読み、`topic2string/config/egress.yaml` に従って
+egress を絞ります(例えば `laserscan` はアイドル時 0 Hz、マップのハートビートは 300 秒へ延び、
+プランナーのオーバーレイは完全に止まります)。信号がない、または古い場合、すべてのゲートは
+フルレートで fail-open します。
 
 ### マップの配送 {#map-delivery}
 
@@ -411,6 +543,41 @@ SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長�
 | `stop` | ミッションを停止し、ウェイポイントバッチをクリアする。 |
 | `resync` | ミッションスナップショットの即時再ブロードキャストを要求する。 |
 
+## WebRTC シグナリング
+
+シグナリングサーバー(`signalling_server`、`wss://<host>/services/signalling`)は、ブラウザーピアと
+カメラピア(`camera_client.py`)の間の WebRTC ネゴシエーションを中継します。クライアントは認証後、
+各メッセージに `type` と `target`(ピア id)を付けて送り、サーバーはそのピアへ転送します。この
+チャネルにメディアは流れません - SDP と ICE のみです。
+
+| `type` | 方向 | ペイロード | 目的 |
+| --- | --- | --- | --- |
+| `authenticate` | client → server | `{ type, token }` | 最初のメッセージ。サーバーは JWT を検証し、`auth_success`(`userId`)または `auth_error` を返す。 |
+| `offer` | peer → target | `{ type, target, offer }` | SDP オファー。 |
+| `answer` | peer → target | `{ type, target, answer }` | SDP アンサー。 |
+| `candidate` | peer → target | `{ type, target, candidate }` | ICE 候補。 |
+| `client_ready` | peer → target | `{ type, target, ... }` | 準備完了のビーコン。target へ転送される。 |
+| `ping` | client → server | `{ type }` | キープアライブ。サーバーは `{ type: "pong" }` を返す。 |
+| `error` | server → client | `{ type, message }` | 中継または検証のエラー。 |
+| `server_shutdown` | server → all | `{ type, message }` | シャットダウンの通知。 |
+
+カメラピアは `offer` に対し、ロボットのカメラから SRTP でローカル映像を返します。デバイスと
+ビットレートの挙動は [Camera Streaming](/ja/development/webui/camera/overview) を参照してください。
+
+## ファームウェアリンク(rosserial)
+
+STM32H7 ファームウェア(`firmware-msd700`)は、USB シリアル上の rosserial で Jetson と通信します。
+トピックは 2 つで、どちらも `msd700_msgs` です:
+
+| トピック | 方向 | 型 | 内容 |
+| --- | --- | --- | --- |
+| `/hardware_state` | STM32 → Jetson | `msd700_msgs/HardwareState` | 8 つの超音波距離、左右モーターのパルス差分、heading/pitch/roll、加速度/ジャイロ/磁気の三軸、UWB の distance/deviation/rho/theta。 |
+| `/hardware_command` | Jetson → STM32 | `msd700_msgs/HardwareCommand` | `movement_command`、`cam_angle_command`、`right_motor_speed`、`left_motor_speed`。 |
+
+これは `hardware` コマンドハンドラの低レベル側です。`hardware.check`、`hardware.init`、
+`hardware.stop` がこのリンクを駆動し、`hardware_state` がロボットのオドメトリとセンサーフュージョン
+へ供給します。
+
 ## ロボット登録ハンドシェイク
 
 未登録のロボットは、安全な3段階の暗号学的ハンドシェイクを経てクラウドサーバーへ自己登録します。
@@ -423,6 +590,9 @@ SLAM マップの保存には、標準の30秒 HTTP タイムアウトより長�
 
 ## 関連ドキュメント
 
-- [API リファレンス](/ja/development/api-reference): REST API エンドポイントとデータスキーマ。
-- [State and Behavior](/ja/development/state-and-behavior): 詳細なステートマシンと障害時の遷移。
-- [アーキテクチャ](/ja/development/architecture): 高レベルのシステムトポロジーとトラスト境界。
+- [API リファレンス](/ja/development/api-reference): フリート HTTP/REST サーフェス。
+- [rosbridge プロトコル](/ja/development/rosbridge-protocol): WebSocket JSON プロトコルとキャンバス描画。
+- [メディアサーバーリファレンス](/ja/development/webui/database/media-server-reference): マップ資産の HTTP ルート。
+- [Camera Streaming](/ja/development/webui/camera/overview): WebRTC 映像パイプライン。
+- [State and Behavior](/ja/development/state-and-behavior): ステートマシンと障害時の遷移。
+- [アーキテクチャ](/ja/development/architecture): システムトポロジーとトラスト境界。

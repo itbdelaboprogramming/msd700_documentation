@@ -101,7 +101,7 @@ For Navigation specifically:
 The Navigation canvas is built entirely from topics serialized on the unit via `topic2string`,
 carried over MQTT, and rehydrated to typed ROS messages on the cloud server for `rosbridge`. Full
 hop-by-hop detail is in
-[Message Contracts § Streaming Telemetry Topics](/development/message-contracts#streaming-telemetry-topics);
+[Message Contracts § Telemetry and Overlay Topics](/development/message-contracts#telemetry-and-overlay-topics);
 the topics that feed the Navigation canvas specifically:
 
 | Robot Topic | Cloud Server Topic | Rate | Canvas role |

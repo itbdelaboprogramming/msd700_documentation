@@ -106,7 +106,7 @@ const enSidebar = {
         { text: 'Overview', link: '/development/' },
         { text: 'System Architecture', link: '/development/architecture' },
         { text: 'Repository Structure', link: '/development/repository-structure' },
-        { text: 'Message Contracts (MQTT)', link: '/development/message-contracts' },
+        { text: 'Message Contracts', link: '/development/message-contracts' },
       ]
     },
     {
@@ -315,7 +315,7 @@ const idSidebar = {
         { text: 'Ikhtisar', link: '/id/development/' },
         { text: 'Arsitektur Sistem', link: '/id/development/architecture' },
         { text: 'Struktur Repositori', link: '/id/development/repository-structure' },
-        { text: 'Kontrak Pesan (MQTT)', link: '/id/development/message-contracts' },
+        { text: 'Kontrak Pesan', link: '/id/development/message-contracts' },
       ]
     },
     {
@@ -524,7 +524,7 @@ const jaSidebar = {
         { text: '開発概要', link: '/ja/development/' },
         { text: 'システムアーキテクチャ', link: '/ja/development/architecture' },
         { text: 'リポジトリ構成', link: '/ja/development/repository-structure' },
-        { text: 'メッセージ仕様 (MQTT)', link: '/ja/development/message-contracts' },
+        { text: 'メッセージ仕様', link: '/ja/development/message-contracts' },
       ]
     },
     {

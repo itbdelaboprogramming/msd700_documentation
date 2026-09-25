@@ -106,7 +106,7 @@ Khusus untuk Navigasi:
 Canvas Navigasi dibangun sepenuhnya dari topic yang diserialisasi di unit lewat `topic2string`,
 dibawa lewat MQTT, dan dihidrasi ulang menjadi pesan ROS bertipe di server cloud untuk
 `rosbridge`. Detail lengkap hop-demi-hop ada di
-[Kontrak Pesan § Topic Telemetri Streaming](/id/development/message-contracts#topik-telemetri-streaming);
+[Kontrak Pesan § Topik Telemetri dan Overlay](/id/development/message-contracts#topik-telemetri-dan-overlay);
 topic yang memasok canvas Navigasi secara spesifik:
 
 | Topic Robot | Topic Server Cloud | Rate | Peran di canvas |

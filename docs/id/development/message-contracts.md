@@ -15,6 +15,28 @@ Untuk permukaan HTTP, lihat [Referensi API](/id/development/api-reference). Untu
 Bentuk payload diturunkan langsung dari kode sumber aktif (`backend_node`, `system_command.py`, `operation_supervisor.py`, `topic2string`, `enroll_api.js`). Setiap perubahan field di codebase harus diperbarui di sini pada commit yang sama.
 :::
 
+## Permukaan Komunikasi
+
+Setiap antarmuka machine-to-machine di MSD700, dan di mana kontraknya ditentukan. Halaman ini
+adalah rujukan otoritatif untuk semuanya; dua tautan di bawah menunjuk ke halaman yang memiliki
+detail HTTP dan rosbridge agar tidak diduplikasi di sini.
+
+| Permukaan | Transport | Arah | Kontrak |
+| --- | --- | --- | --- |
+| Perintah dan feedback | MQTT 3.1.1 via TLS 8883 | cloud ↔ robot | [Kanal Command and Control](#kanal-command-and-control) |
+| Telemetri, overlay, dan ACK | MQTT → ROS cloud → rosbridge | robot → browser | [Topik Telemetri dan Overlay](#topik-telemetri-dan-overlay) |
+| Watchdog ping / pong | MQTT via TLS 8883 | robot → cloud | [Watchdog Ping dan Pong](#watchdog-ping-dan-pong) |
+| Presence dan profil egress | ROS lokal robot | internal robot | [Presence dan Profil Egress](#presence-dan-profil-egress) |
+| Pengiriman dan kontrol map | MQTT, service ROS robot | dua arah | [Pengiriman map](#map-delivery) |
+| Operation supervisor | MQTT | dua arah | [Sinkronisasi Operation Supervisor](#sinkronisasi-operation-supervisor) |
+| Pendaftaran robot | HTTPS (device secret) | robot → cloud | [Handshake Pendaftaran Robot](#handshake-pendaftaran-robot) |
+| Tautan hardware | rosserial via serial USB | STM32 ↔ Jetson | [Tautan Firmware (rosserial)](#tautan-firmware-rosserial) |
+| Signalling WebRTC | WSS | browser ↔ signalling_server | [Sinyal WebRTC](#sinyal-webrtc) |
+| Video kamera | WebRTC (SRTP) | robot → browser | [Sinyal WebRTC](#sinyal-webrtc) |
+| API HTTP fleet | HTTPS (REST) | browser / robot → cloud | [Referensi API](/id/development/api-reference) |
+| WebSocket rosbridge | WSS | browser ↔ ROS cloud | [Protokol rosbridge](/id/development/rosbridge-protocol) |
+| Aset media | HTTPS | browser ↔ media-server | [Referensi Media Server](/id/development/webui/database/media-server-reference) |
+
 ## Skema Pengalamatan Fleet
 
 Setiap robot fisik dialamati dengan sebuah prefix unik: `/unit_<ULID>/...`. ULID (Universally Unique Lexicographically Sortable Identifier) adalah primary key yang ditetapkan untuk robot tersebut di tabel database `units` pusat saat pendaftaran.
@@ -191,6 +213,15 @@ Dua topik MQTT khusus menangani semua interaksi permintaan dan respons dua arah 
 }
 ```
 
+Verb perintah mapping:
+
+| Verb Perintah | Payload | Tujuan |
+| --- | --- | --- |
+| `start` | tidak ada (hanya `metadata`) | Memulai sesi SLAM, setelah memeriksa robot memang bisa menyimpan map. |
+| `pause` | tidak ada | Menahan motion lock; sesi SLAM tetap terbuka. |
+| `stop` | blok `config.resource` di atas | Menyimpan map secara lokal, mendorongnya ke cloud, lalu melapor lewat stream progres di bawah. |
+| `discard` | tidak ada | Mengalihkan robot ke `idle` tanpa menyimpan, membuang sesi SLAM. |
+
 Menyimpan sebuah peta SLAM memakan waktu lebih lama dari timeout HTTP standar 30 detik. Oleh karena itu, `mapping stop` segera mengembalikan HTTP 200 dengan `{ request_id, map_ulid }`. Frontend terhubung ke sebuah stream SSE pada `GET /api/mapping/progress/:request_id` untuk memantau progres.
 
 #### Feedback Progres Mapping (`header: "mapping_progress"`)
@@ -248,6 +279,39 @@ Menyimpan sebuah peta SLAM memakan waktu lebih lama dari timeout HTTP standar 30
 - `exclusions`: Zona obstacle keep-out yang dikurangkan dari sweep coverage.
 - `command: "pause"`: Menerima `{ "pause": true }` atau `{ "pause": false }`.
 - `command: "deactivate"`: Menghentikan perencanaan coverage.
+
+### 5. Auto-Align (`header: "autoalign"`)
+
+Perintah tanpa payload (hanya `metadata`); masing-masing menjawab dengan `data.status` / `data.message`.
+
+| Verb Perintah | Tujuan |
+| --- | --- |
+| `start` | Memanggil service `/alignment/start` untuk menyelesaikan pose robot terhadap map. Mengatur activity `auto_aligning`. |
+| `reset` | Memanggil `/alignment/reset`, membuang hasil solve dan kembali ke navigasi. |
+| `status` | Memanggil `/check_alignment`; kueri baca saja, tidak mengubah activity. |
+
+### 6. Emergency Stop (`header: "emergency_stop"`)
+
+| Verb Perintah | Payload | Tujuan |
+| --- | --- | --- |
+| `activate` | tidak ada | Mem-publish `std_msgs/Bool(true)` ke topik emergency-stop, mengalihkan stack ke `idle`, dan memanggil `/map/reset`. |
+| `deactivate` | tidak ada | Mem-publish `std_msgs/Bool(false)` dan menghapus stop; motion stack tidak dinyalakan ulang. |
+
+### 7. Manual Override (`header: "manual"`)
+
+Teleop adalah overlay kontrol non-destruktif: **tidak** memanggil `/switch_mode`, jadi stack navigasi tetap hidup. Browser mengirim `Twist` lewat `/unit_<ULID>/string/key_vel` (lihat [Topik Telemetri dan Overlay](#topik-telemetri-dan-overlay)).
+
+| Verb Perintah | Payload | Tujuan |
+| --- | --- | --- |
+| `enable` | tidak ada | Membatalkan gerak otonom (menjeda coverage lewat service-nya sendiri), melepas emergency-pause lock, dan membuka kanal mux manual. |
+| `disable` | tidak ada | Menolkan dan melepas kanal mux manual, sehingga robot berhenti begitu kontrol dilepas, lalu memulihkan activity sebelumnya. |
+
+### 8. Autopilot (`header: "autopilot"`)
+
+| Verb Perintah | Payload | Tujuan |
+| --- | --- | --- |
+| `enable` | tidak ada | Menyerahkan urutan waypoint ke `operation_supervisor` dan menangguhkan watchdog ping-loss; hanya melepas hold milik watchdog, tidak pernah pause operator. |
+| `disable` | tidak ada | Mengembalikan urutan ke loop browser dan mengaktifkan lagi watchdog ping-loss. |
 
 ## Kontrak Ping Heartbeat dan Lease
 
@@ -309,9 +373,11 @@ Pesan heartbeat ping mengelola operating lease robot, timer safety watchdog, dan
 | `in_use` | Kunci level akun: menandakan akun pengguna lain memegang lease. |
 | `origin_conflict` | Konflik level sesi: menandakan tab lain dari akun yang sama sedang aktif. |
 
-## Topik Telemetri Streaming
+## Topik Telemetri dan Overlay
 
-Telemetri streaming diserialisasi menjadi string JSON pada unit lewat `topic2string`, dirutekan lewat MQTT, dan dikonversi kembali menjadi pesan ROS bertipe pada server untuk `rosbridge`.
+Telemetri diserialisasi menjadi string JSON pada unit lewat `topic2string`, dirutekan lewat MQTT,
+dan dikonversi kembali menjadi pesan ROS bertipe pada server untuk `rosbridge`. Browser tidak
+pernah berbicara MQTT untuk ini: ia berlangganan lewat `rosbridge` (lihat [Protokol rosbridge](/id/development/rosbridge-protocol)).
 
 ![Topik Telemetri Streaming](../../development/diagrams/message-contracts-streaming-telemetry-topics.drawio)
 
@@ -326,6 +392,69 @@ Telemetri streaming diserialisasi menjadi string JSON pada unit lewat `topic2str
 | `/string/move_base/TebLocalPlannerROS/local_plan` | `/unit_<ULID>/server/move_base/TebLocalPlannerROS/local_plan` | Kontinu | Trajektori lokal (`nav_msgs/Path`). |
 | `/string/boustrophedon_path` | `/unit_<ULID>/server/boustrophedon_path` | Saat plan | Koordinat garis sweep coverage (`nav_msgs/Path`). |
 | `/string/operation_snapshot` | `/unit_<ULID>/string/operation_snapshot` | Latched | Snapshot misi aktif lengkap untuk pemulihan reconnect. |
+
+Laju di atas adalah default node. Beberapa digerbangi per profil egress (idle / watching / driving)
+di `topic2string/config/egress.yaml`; lihat [Presence dan Profil Egress](#presence-dan-profil-egress).
+
+### Peta Topik Bridge Lengkap
+
+Relay cloud (`gen_bridge_params.py` / `nakayama_cloud_multi.launch`) membawa topik di bawah untuk
+setiap unit di fleet, memakai nama yang sama seperti bridge per-unit. Semua payload adalah string
+JSON di dalam `std_msgs/String` kecuali disebut lain.
+
+Robot ke cloud:
+
+| Topik (`/unit_<ULID>/...`) | Konten | Latched di relay |
+| --- | --- | --- |
+| `string/robotpose` | Pose di frame `map`. | tidak |
+| `string/map` | Occupancy grid terkompresi (lihat [Pengiriman map](#map-delivery)). | ya |
+| `string/laserscan` | Laser scan 2D terkompresi. | tidak |
+| `string/laserscan_holes` | Overlay lubang / drop-off di atas scan. | tidak |
+| `string/hazard_cells` | Jejak lubang kumulatif untuk run saat ini. | ya |
+| `string/move_base/NavfnROS/plan` | Overlay plan global. | ya |
+| `string/move_base/TebLocalPlannerROS/local_plan` | Overlay trajektori lokal. | ya |
+| `string/boustrophedon_path` | Overlay path coverage (terakumulasi). | ya |
+| `string/coverage_debug` | Diagnostik planner coverage. | ya |
+| `string/uncovered_regions` | Region yang belum tersapu. | ya |
+| `string/coverage_status` | Peristiwa siklus hidup coverage. | ya |
+| `string/move_base/status` | Stream status goal (`actionlib_msgs/GoalStatusArray`). | tidak |
+| `string/move_base/result` | Hasil goal; pengiriman andal ditutup oleh `result_ack`. | tidak |
+| `string/operation_progress` | Progres operation supervisor. | tidak |
+| `string/operation_snapshot` | Snapshot operasi lengkap yang latched. | ya |
+| `string/skipped_waypoints` | Waypoint yang tidak bisa dicapai run. | tidak |
+| `server/pong` | Balasan watchdog (lihat [Watchdog Ping dan Pong](#watchdog-ping-dan-pong)). | tidak |
+
+Cloud ke robot:
+
+| Topik (`/unit_<ULID>/...`) | Konten | Catatan |
+| --- | --- | --- |
+| `server/ping` (MQTT `msd/ping`) | Ping watchdog. Satu-satunya pasangan asimetris: nama ROS `server/ping`, nama MQTT `msd/ping`. | lihat di bawah |
+| `string/move_base/goal` | Goal navigasi. | |
+| `string/move_base/cancel` | Membatalkan goal aktif. | |
+| `string/initialpose` | Mengatur ulang initial pose AMCL. | |
+| `string/move_base/result_ack` | ACK keandalan untuk `move_base/result`. | |
+| `string/boustrophedon_path_ack` | ACK keandalan untuk path coverage. | |
+| `string/key_vel` | `Twist` teleop manual sebagai JSON (WASD). | timeout 0.5 s menolkan robot |
+| `string/operation_sync` | Batch/progress/takeover operation supervisor. | lihat [Sinkronisasi Operation Supervisor](#sinkronisasi-operation-supervisor) |
+| `string/map_request` | "Saya tidak punya map, kirimkan satu" (kanal pull). | dibatasi rate di robot |
+
+## Watchdog Ping dan Pong
+
+Terpisah dari perintah `hardware.ping`, robot mem-publish ping presence berkala yang dipakai cloud
+untuk menandai unit online. Di robot ini ROS `/msd/ping`; di sisi cloud bridge memetakan ROS
+`/unit_<ULID>/server/ping` ke MQTT `/unit_<ULID>/msd/ping` (satu-satunya pasangan asimetris di
+bridge), dan balasannya kembali sebagai `/unit_<ULID>/server/pong`. Pemetaan per-unit persisnya ada
+di `aws_mqtt/launch/nakayama_msd.launch` dan `nakayama_cloud.launch`; relay fleet mereproduksinya di
+`gen_bridge_params.py`.
+
+## Presence dan Profil Egress
+
+Agar robot yang idle tidak membuang bandwidth, `system_command.py` mem-publish `std_msgs/String`
+latched di topik lokal robot `/msd700/viewers` sekali per detik dengan salah satu dari tiga profil:
+`idle`, `watching`, atau `driving`. Topik ini tidak pernah keluar dari unit. `presence_gate.py` di
+`topic2string` membacanya untuk menggerbangi egress sesuai `topic2string/config/egress.yaml`
+(misalnya `laserscan` turun ke 0 Hz saat idle, heartbeat map memanjang ke 300 s, dan overlay planner
+berhenti total); saat sinyal hilang atau basi, semua gate fail-open pada laju penuh.
 
 ### Pengiriman map {#map-delivery}
 
@@ -411,6 +540,41 @@ yang melewatkan satu pengiriman menunggu ~52 detik terukur untuk pengiriman beri
 | `stop` | Menghentikan misi dan membersihkan batch waypoint. |
 | `resync` | Meminta re-broadcast segera dari snapshot misi. |
 
+## Sinyal WebRTC
+
+Signalling server (`signalling_server`, `wss://<host>/services/signalling`) me-relay negosiasi
+WebRTC antara peer browser dan peer kamera (`camera_client.py`). Klien melakukan autentikasi, lalu
+setiap pesan membawa `type` dan `target` (id peer); server meneruskannya ke peer tersebut. Tidak ada
+media lewat kanal ini - hanya SDP dan ICE.
+
+| `type` | Arah | Payload | Tujuan |
+| --- | --- | --- | --- |
+| `authenticate` | klien → server | `{ type, token }` | Pesan pertama. Server memverifikasi JWT lalu menjawab `auth_success` (`userId`) atau `auth_error`. |
+| `offer` | peer → target | `{ type, target, offer }` | SDP offer. |
+| `answer` | peer → target | `{ type, target, answer }` | SDP answer. |
+| `candidate` | peer → target | `{ type, target, candidate }` | ICE candidate. |
+| `client_ready` | peer → target | `{ type, target, ... }` | Beacon kesiapan, diteruskan ke target. |
+| `ping` | klien → server | `{ type }` | Keepalive; server menjawab `{ type: "pong" }`. |
+| `error` | server → klien | `{ type, message }` | Galat relay atau validasi. |
+| `server_shutdown` | server → semua | `{ type, message }` | Pemberitahuan shutdown. |
+
+Peer kamera menjawab `offer` dengan video lokal dari kamera robot lewat SRTP; lihat
+[Camera Streaming](/id/development/webui/camera/overview) untuk perilaku perangkat dan bitrate.
+
+## Tautan Firmware (rosserial)
+
+Firmware STM32H7 (`firmware-msd700`) berbicara dengan Jetson lewat rosserial pada tautan serial USB.
+Dua topik, keduanya di `msd700_msgs`:
+
+| Topik | Arah | Tipe | Konten |
+| --- | --- | --- | --- |
+| `/hardware_state` | STM32 → Jetson | `msd700_msgs/HardwareState` | Delapan jarak ultrasonik, delta pulsa motor kiri/kanan, heading/pitch/roll, triples accelerometer/gyro/magnetometer, dan UWB distance/deviation/rho/theta. |
+| `/hardware_command` | Jetson → STM32 | `msd700_msgs/HardwareCommand` | `movement_command`, `cam_angle_command`, `right_motor_speed`, `left_motor_speed`. |
+
+Ini adalah separuh tingkat rendah dari handler perintah `hardware`: `hardware.check`, `hardware.init`
+dan `hardware.stop` menggerakkan tautan ini, dan `hardware_state` memasok odometri serta sensor
+fusion robot.
+
 ## Handshake Pendaftaran Robot
 
 Robot yang belum terdaftar mendaftarkan diri mereka sendiri ke server cloud lewat handshake kriptografis tiga tahap yang aman.
@@ -423,6 +587,9 @@ Nonce secret 32-byte menjamin bahwa spoofing alamat MAC tidak bisa membajak sebu
 
 ## Dokumentasi Terkait
 
-- [Referensi API](/id/development/api-reference): Endpoint REST API dan skema data.
-- [State and Behavior](/id/development/state-and-behavior): State machine terperinci dan transisi kegagalan.
-- [Arsitektur](/id/development/architecture): Topologi sistem level tinggi dan batas trust.
+- [Referensi API](/id/development/api-reference): permukaan HTTP/REST fleet.
+- [Protokol rosbridge](/id/development/rosbridge-protocol): protokol JSON WebSocket dan rendering canvas.
+- [Referensi Media Server](/id/development/webui/database/media-server-reference): rute HTTP aset map.
+- [Camera Streaming](/id/development/webui/camera/overview): pipeline video WebRTC.
+- [State and Behavior](/id/development/state-and-behavior): state machine dan transisi kegagalan.
+- [Arsitektur](/id/development/architecture): topologi sistem dan batas trust.
