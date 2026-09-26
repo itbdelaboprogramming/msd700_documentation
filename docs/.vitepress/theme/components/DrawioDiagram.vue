@@ -48,20 +48,55 @@ const waitFor = async (fn: () => unknown, ms = 15000) => {
   return true
 }
 
-// Give the stage the diagram's aspect ratio (so there is no letterboxing) and re-fit the graph.
+// Give the stage the diagram's aspect ratio (so there is little letterboxing), then fit and centre.
 function sizeToAspect() {
   const graph = gv?.editor?.graph
   const box = stage.value
   if (!graph || !box) return
-  const b = graph.getGraphBounds()
-  if (!b?.width || !b?.height) return
+  const m = modelBounds(graph)
+  if (!m) return
   const width = box.clientWidth || box.parentElement?.clientWidth || 0
   if (!width) return
-  const want = Math.round((width * b.height) / b.width) + 16 // + drawing border
+  const want = Math.round((width * m.height) / m.width) + 2 * PAD
   box.style.height = `${Math.max(180, Math.min(want, Math.round(window.innerHeight * 0.82)))}px`
-  graph.sizeDidChange()
-  if (typeof gv.fitGraph === 'function') gv.fitGraph()
+  fitCenter()
 }
+
+const PAD = 8
+
+// Drawing bounds in model units (independent of the current zoom and pan).
+function modelBounds(graph: any) {
+  const view = graph.view
+  const b = graph.getGraphBounds()
+  if (!b?.width || !b?.height) return null
+  const s = view.scale
+  return { x: b.x / s - view.translate.x, y: b.y / s - view.translate.y, width: b.width / s, height: b.height / s }
+}
+
+// draw.io's own fitGraph anchors the drawing to the top-left corner, so a drawing that is limited
+// by the stage height (or by the 180 px minimum) was left-aligned with empty space on the right.
+// Fit it to both sides ourselves and centre it in the stage.
+function fitCenter() {
+  const graph = gv?.editor?.graph
+  const box = stage.value
+  if (!graph || !box) return
+  const m = modelBounds(graph)
+  const W = box.clientWidth
+  const H = box.clientHeight
+  if (!m || !W || !H) return
+  const s = Math.min((W - 2 * PAD) / m.width, (H - 2 * PAD) / m.height)
+  graph.view.scaleAndTranslate(s, (W / s - m.width) / 2 - m.x, (H / s - m.height) / 2 - m.y)
+  const svg = render.value?.querySelector('svg') as SVGElement | null
+  if (svg) {
+    svg.style.width = `${W}px`
+    svg.style.height = `${H}px`
+    svg.style.minWidth = ''
+    svg.style.minHeight = ''
+  }
+}
+
+let resizeObserver: ResizeObserver | null = null
+let lastWidth = 0
 
 async function init() {
   if (status.value !== 'idle') return
@@ -92,6 +127,15 @@ async function init() {
     }
     sizeToAspect()
     status.value = 'ready'
+    lastWidth = stage.value?.clientWidth || 0
+    resizeObserver = new ResizeObserver(() => {
+      const w = stage.value?.clientWidth || 0
+      if (w && w !== lastWidth) {
+        lastWidth = w
+        sizeToAspect()
+      }
+    })
+    resizeObserver.observe(stage.value!)
   } catch {
     status.value = 'error'
   }
@@ -100,18 +144,25 @@ async function init() {
 function open() {
   if (status.value !== 'ready') return
   const svg = render.value?.querySelector('svg')
-  if (!svg) return
-  const r = svg.getBoundingClientRect()
+  const graph = gv?.editor?.graph
+  if (!svg || !graph) return
+  // Crop the pop up to the drawing itself, not the letterboxed stage.
+  const b = graph.getGraphBounds()
+  const x = Math.floor(b.x - PAD)
+  const y = Math.floor(b.y - PAD)
+  const width = Math.ceil(b.width + 2 * PAD)
+  const height = Math.ceil(b.height + 2 * PAD)
   const clone = svg.cloneNode(true) as SVGElement
   clone.removeAttribute('style')
-  clone.style.width = `${Math.round(r.width)}px`
-  clone.style.height = `${Math.round(r.height)}px`
+  clone.setAttribute('viewBox', `${x} ${y} ${width} ${height}`)
+  clone.style.width = `${width}px`
+  clone.style.height = `${height}px`
   clone.style.display = 'block'
   clone.style.background = '#fff'
   openZoomViewer({
     el: clone,
-    width: Math.round(r.width),
-    height: Math.round(r.height),
+    width,
+    height,
     alt: props.alt,
     href: props.src
   })
@@ -128,6 +179,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
   try { gv?.editor?.destroy?.() } catch { /* already gone */ }
 })
 
@@ -144,7 +196,7 @@ defineExpose({ open })
       :aria-label="alt || 'Diagram'"
       :disabled="status !== 'ready'"
       :title="status === 'ready' ? 'Click to zoom' : undefined"
-      @click="open"
+      @click.capture="open"
     >
       <span class="drawio-render" ref="render" />
       <span v-if="status !== 'ready'" class="drawio-status" aria-hidden="true">
