@@ -21,20 +21,12 @@ npm run docs:dev
 
 Secara default, VitePress akan membuka dokumentasi di `http://localhost:5173/itbdelabo/docs/` (atau port custom yang ditentukan).
 
-### 2. Memperbarui dan Menyinkronkan Terjemahan (i18n)
+### 2. Terjemahan (i18n)
 
-Jika Anda menambah atau mengubah halaman dokumentasi:
-1. Cukup edit atau tulis file Markdown dalam bahasa Inggris di direktori `docs/`.
-2. Jalankan skrip sinkronisasi otomatis:
-
-```bash
-npm run docs:i18n
-```
-
-Perintah ini akan secara otomatis:
-- Menerjemahkan konten baru ke Bahasa Indonesia (`docs/id/`) dan Bahasa Jepang (`docs/ja/`).
-- Mempertahankan integritas blok kode, rujukan diagram, kontainer VitePress, dan tag Vue.
-- Menyesuaikan rute tautan Markdown internal ke direktori bahasa yang sesuai.
+Terjemahan ditulis dan dirawat manual, tidak ada skrip terjemahan mesin. Setiap perubahan pada
+halaman bahasa Inggris di `docs/` harus diikuti perubahan yang sama di `docs/id/` dan `docs/ja/`
+dalam commit yang sama. Rujukan diagram di halaman terjemahan menunjuk ke `.drawio` milik halaman
+bahasa Inggris (`../../../development/.../diagrams/...`), tidak diduplikasi.
 
 ### 3. Membangun Bundle Produksi (Build)
 
@@ -64,11 +56,10 @@ msd700_documentation/
 │   ├── getting-started/      # Panduan pengenalan, arsitektur, dan fitur
 │   ├── setup/                # Prosedur penyiapan server dan robot Jetson
 │   ├── development/          # Spesifikasi teknis, skema DB, dan protokol ROS
-│   ├── id/                   # Terjemahan Bahasa Indonesia (dihasilkan otomatis)
-│   └── ja/                   # Terjemahan Bahasa Jepang (dihasilkan otomatis)
+│   ├── id/                   # Terjemahan Bahasa Indonesia (dirawat manual)
+│   └── ja/                   # Terjemahan Bahasa Jepang (dirawat manual)
 ├── scripts/
-│   ├── drawio-viewer.mjs     # Viewer draw.io terkunci yang dikirim ke browser
-│   └── sync_i18n.mjs         # Mesin sinkronisasi otomatis multi-bahasa
+│   └── drawio-viewer.mjs     # Viewer draw.io terkunci yang dikirim ke browser
 ├── package.json
 └── README.md
 ```
@@ -78,5 +69,5 @@ msd700_documentation/
 ## 📝 Aturan Penulisan Dokumentasi
 
 1. **Sumber Kebenaran**: Semua dokumen baru atau pembaruan teknis harus ditulis terlebih dahulu pada file bahasa Inggris di folder root `docs/`.
-2. **Sinkronisasi**: Selalu jalankan `npm run docs:i18n` sebelum melakukan commit agar file terjemahan di `docs/id/` dan `docs/ja/` selalu sinkron.
+2. **Sinkronisasi**: Perbarui `docs/id/` dan `docs/ja/` secara manual dalam commit yang sama dengan perubahan bahasa Inggris.
 3. **Validasi**: Pastikan `npm run docs:build` berhasil sebelum melakukan rilis.

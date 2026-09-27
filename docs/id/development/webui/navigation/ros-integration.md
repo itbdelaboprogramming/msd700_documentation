@@ -130,7 +130,7 @@ memilih robot.
 | `<root>/server/robot_pose` | `geometry_msgs/Pose` | Ikon robot, dan stream pose di balik [Show/Hide Trace](/id/development/webui/navigation/coverage-cleaning) |
 | `<root>/server/slam/map` | `nav_msgs/OccupancyGrid` | Peta. Diminta saat mount lewat `string/map_request` alih-alih menunggu pengiriman berikutnya; "Loading map from robot..." sampai tergambar. Lihat [Topik Bridge § Pengiriman peta](/id/development/message-contracts/bridge-topics#map-delivery). |
 | `<root>/server/scan`, `<root>/server/scan_holes` | `sensor_msgs/LaserScan` | Titik lidar, lubang live |
-| `<root>/server/hazard_cells` | `nav_msgs/Path` | Jejak lubang dalam run |
+| `<root>/server/hazard_cells` | `nav_msgs/Path` | Jejak lubang dalam run: setiap sel lubang terkonfirmasi, digambar sebagai titik merah tua seukuran mark live di bawah mark live `scan_holes` yang merah terang |
 | `<root>/server/move_base/NavfnROS/plan`, `.../TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Garis plan global dan lokal |
 | `<root>/server/boustrophedon_path` | `nav_msgs/Path` | Overlay path coverage, di-ACK per revisi |
 | `<root>/server/skipped_waypoints`, `<root>/string/uncovered_regions` | `nav_msgs/Path`, `std_msgs/String` | Sisa coverage |

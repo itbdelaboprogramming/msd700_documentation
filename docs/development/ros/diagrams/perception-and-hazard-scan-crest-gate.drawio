@@ -1,0 +1,64 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="Hole marks through the gates">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="m" value="Overshoot marks&lt;br&gt;negative.detect" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="250" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="Continuity gate&lt;br&gt;(noise)" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="100" width="250" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="descent_run&lt;br&gt;(gentle real descents)" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="174" width="250" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="g" value="&lt;b&gt;Crest gate&lt;/b&gt; (crest.py), per 2 deg sector:&lt;br&gt;1. a ray landed just short of the mark (the lip)&lt;br&gt;2. no ray lands again further out (a hole&#x27;s far lip)&lt;br&gt;3. one far plane under the overshooting rays, &amp;plusmn;15 deg;&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;nothing below it&lt;br&gt;4. that plane meets the ground at the lip: no step down&lt;br&gt;5. its grade in the gravity frame &amp;le; 8 deg&lt;br&gt;6. the body&#x27;s tilt explains the fall (&amp;ge; 3 deg)&lt;br&gt;All six: the sector&#x27;s marks are dropped" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="20" y="248" width="360" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="imu" value="/imu/data&lt;br&gt;sample nearest the cloud stamp&lt;br&gt;(&amp;le; 0.5 s), times the TF&lt;br&gt;base_footprint &amp;rarr; imu mounting" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;fillColor=#f2f2f2;" vertex="1" parent="1">
+          <mxGeometry x="430" y="283" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="na" value="No valid attitude:&lt;br&gt;the gate stands down,&lt;br&gt;every mark is kept" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;text;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="430" y="395" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="x" value="Dilate, min_bins_run" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="448" width="250" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="o1" value="/scan_hazard (costmaps)" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="520" width="170" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="o2" value="/scan_holes (live overlay)" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="200" y="520" width="170" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="o3" value="odom latch &amp;rarr; /msd700/hazard_cells&lt;br&gt;(dashboard hole trail)" style="html=1;whiteSpace=wrap;fontFamily=Helvetica;fontSize=12;fontColor=#000000;fillColor=#ffffff;strokeColor=#000000;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="380" y="520" width="270" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="m" target="c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="c" target="d">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="d" target="g">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="attitude" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="imu" target="g">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;exitX=0.35;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g" target="x">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="x" target="o1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="x" target="o2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;endArrow=block;endFill=1;endSize=6;" edge="1" parent="1" source="x" target="o3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

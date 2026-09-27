@@ -129,7 +129,7 @@ the robot.
 | `<root>/server/robot_pose` | `geometry_msgs/Pose` | Robot icon, and the pose stream behind [Show/Hide Trace](/development/webui/navigation/coverage-cleaning#show-hide-trace) |
 | `<root>/server/slam/map` | `nav_msgs/OccupancyGrid` | The map. Requested on mount over `string/map_request` instead of waiting for the next send; "Loading map from robot..." until one is drawn. See [Bridge Topics § Map delivery](/development/message-contracts/bridge-topics#map-delivery). |
 | `<root>/server/scan`, `<root>/server/scan_holes` | `sensor_msgs/LaserScan` | Lidar points, live holes |
-| `<root>/server/hazard_cells` | `nav_msgs/Path` | Hole trail of the run |
+| `<root>/server/hazard_cells` | `nav_msgs/Path` | Hole trail of the run: every confirmed hole cell, drawn as dark-red discs the size of a live mark under the bright-red live `scan_holes` marks |
 | `<root>/server/move_base/NavfnROS/plan`, `.../TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | Global and local plan lines |
 | `<root>/server/boustrophedon_path` | `nav_msgs/Path` | The [coverage-path overlay](/development/webui/navigation/coverage-cleaning#the-coverage-path-overlay), ACKed per revision |
 | `<root>/server/skipped_waypoints`, `<root>/string/uncovered_regions` | `nav_msgs/Path`, `std_msgs/String` | Coverage leftovers |
