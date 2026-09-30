@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat unit fisik MSD700 bergerak, merasakan lingkungan, dan membersihkan. Bagian ini tidak memiliki UI operator sendiri: untuk bagaimana subsistem ini muncul sebagai fitur yang dilihat operator di dashboard, lihat [ROS Web UI](/id/development/webui/).
+Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat unit fisik MSD700 bergerak, merasakan lingkungan, dan membersihkan. Bagian ini tidak memiliki UI operator sendiri: untuk bagaimana subsistem ini muncul sebagai fitur yang dilihat operator di dashboard, lihat [ROS Web UI](/id/development/webui/). Robot yang dibangun dari workspace ROS 2 Jazzy `msd_system` dibahas terpisah di [ROS 2 (msd_system)](#ros-2-msd-system).
 
 ## Paket Inti Robot
 
@@ -45,4 +45,10 @@ Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat u
 
 <LinkCards>
   <LinkCard icon="🏭" title="Simulasi" details="Simulasi Gazebo berskala nyata, dunia AWS Small Warehouse, dan pengujian clearance." link="/id/development/ros/simulation" />
+</LinkCards>
+
+## ROS 2 (msd_system)
+
+<LinkCards>
+  <LinkCard icon="🌉" title="Bridge ROS Web UI untuk ROS 2" details="Bagaimana robot msd_system menjadi unit dashboard: command, motion guard, dan stream peta, scan, dan lubang." link="/id/development/ros/ros2-web-ui-bridge" />
 </LinkCards>

@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops that make the physical MSD700 unit move, sense, and clean. This section has no operator-facing UI of its own: for how these subsystems surface as features an operator sees in the dashboard, see [ROS Web UI](/development/webui/).
+The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops that make the physical MSD700 unit move, sense, and clean. This section has no operator-facing UI of its own: for how these subsystems surface as features an operator sees in the dashboard, see [ROS Web UI](/development/webui/). A robot built from the ROS 2 Jazzy `msd_system` workspace is covered separately, in [ROS 2 (msd_system)](#ros-2-msd-system).
 
 ## Core Robot Packages
 
@@ -45,4 +45,10 @@ The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops t
 
 <LinkCards>
   <LinkCard icon="🏭" title="Simulation" details="True-scale Gazebo simulation, AWS Small Warehouse world, and clearance testing." link="/development/ros/simulation" />
+</LinkCards>
+
+## ROS 2 (msd_system)
+
+<LinkCards>
+  <LinkCard icon="🌉" title="ROS 2 Web UI Bridge" details="How an msd_system robot becomes a dashboard unit: commands, motion guard, and the map, scan and hole streams." link="/development/ros/ros2-web-ui-bridge" />
 </LinkCards>

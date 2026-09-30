@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Dokumen ini menyediakan daftar komprehensif seluruh paket ROS 1 Noetic dalam workspace MSD700, mencakup `msd700_robot` dan `ros-web-ui/source`, dengan rincian peran paket, launch file kunci, node aktif, topic yang dipublikasikan/disubscribe, dan parameter.
+Dokumen ini menyediakan daftar komprehensif seluruh paket ROS 1 Noetic dalam workspace MSD700, mencakup `msd700_robot` dan `ros-web-ui/source`, dengan rincian peran paket, launch file kunci, node aktif, topic yang dipublikasikan/disubscribe, dan parameter. Workspace ROS 2 `msd_system` punya paket sendiri (`msd_webui_bridge`, `msd_webui_views`); paket itu dijelaskan di [Bridge ROS Web UI untuk ROS 2](/id/development/ros/ros2-web-ui-bridge).
 
 ## Tata Letak Paket Workspace
 

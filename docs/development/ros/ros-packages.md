@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-This document provides a comprehensive registry of all ROS 1 Noetic packages within the MSD700 workspace across `msd700_robot` and `ros-web-ui/source`, detailing package roles, key launch files, active nodes, published/subscribed topics, and parameters.
+This document provides a comprehensive registry of all ROS 1 Noetic packages within the MSD700 workspace across `msd700_robot` and `ros-web-ui/source`, detailing package roles, key launch files, active nodes, published/subscribed topics, and parameters. The ROS 2 `msd_system` workspace has its own packages (`msd_webui_bridge`, `msd_webui_views`); they are described in [ROS 2 Web UI Bridge](/development/ros/ros2-web-ui-bridge).
 
 ## Workspace Package Layout
 

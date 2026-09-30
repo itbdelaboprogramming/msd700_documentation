@@ -148,6 +148,12 @@ const enSidebar = {
           items: [
             { text: 'Simulation (Gazebo)', link: '/development/ros/simulation' },
           ]
+        },
+        {
+          text: 'ROS 2 (msd_system)',
+          items: [
+            { text: 'ROS 2 Web UI Bridge', link: '/development/ros/ros2-web-ui-bridge' },
+          ]
         }
       ]
     },
@@ -370,6 +376,12 @@ const idSidebar = {
           items: [
             { text: 'Simulasi (Gazebo)', link: '/id/development/ros/simulation' },
           ]
+        },
+        {
+          text: 'ROS 2 (msd_system)',
+          items: [
+            { text: 'Bridge ROS Web UI untuk ROS 2', link: '/id/development/ros/ros2-web-ui-bridge' },
+          ]
         }
       ]
     },
@@ -591,6 +603,12 @@ const jaSidebar = {
           text: 'シミュレーション & テスト',
           items: [
             { text: 'シミュレーション (Gazebo)', link: '/ja/development/ros/simulation' },
+          ]
+        },
+        {
+          text: 'ROS 2 (msd_system)',
+          items: [
+            { text: 'ROS 2 Web UIブリッジ', link: '/ja/development/ros/ros2-web-ui-bridge' },
           ]
         }
       ]

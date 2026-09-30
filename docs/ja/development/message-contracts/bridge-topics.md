@@ -220,6 +220,21 @@ latched の `std_msgs/String` を毎秒 publish します: `idle`、`watching`�
 15 秒間信号がなければ視聴者はいなくなったとみなします。信号がない、または 8 秒より古い場合、すべての
 ゲートは `driving` 側に開きます(fail open)。
 
+## ROS 2ユニット (msd_system) {#ros2-units}
+
+ROS 2の`msd_system`ワークスペースのロボットには`topic2string`も`aws_mqtt`もない。`webui_bridge`が同じ`string/...`トピックをローカルとクラウドのブローカーへ直接配信し、ペイロードもゲーティングも同じである。異なるのはロボット側のソースだけである。
+
+| MQTT (`/unit_<ULID>/...`) | ROS 2のソースまたは送り先 |
+| --- | --- |
+| `string/robotpose` | TFの`map`から`base_link` |
+| `string/laserscan`、`string/laserscan_holes` | `webui/scan`、`webui/scan_holes` |
+| `string/hazard_cells` | `webui/hazard_cells`(latched) |
+| `string/map`、`string/map_request` | `webui/map`(latched) |
+| `string/key_vel` | `webui/manual_vel`(`twist_mux`優先度90) |
+| `string/move_base/*`、`string/initialpose`、プラン、カバレッジオーバーレイ、`operation_*` | 未対応(マイルストーンM3〜M5) |
+
+背後のノードは[ROS 2 Web UIブリッジ](/ja/development/ros/ros2-web-ui-bridge)で説明する。
+
 ## 関連ドキュメント
 
 - [rosbridge (WebSocket)](/ja/development/message-contracts/rosbridge): これらのトピックのブラウザ側。

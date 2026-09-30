@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、`msd700_robot`と`ros-web-ui/source`にまたがるMSD700ワークスペース内の全ROS 1 Noeticパッケージの包括的な一覧を提供し、各パッケージの役割、主要なLaunchファイル、稼働ノード、パブリッシュ/サブスクライブされるTopic、パラメータを詳述する。
+本ドキュメントは、`msd700_robot`と`ros-web-ui/source`にまたがるMSD700ワークスペース内の全ROS 1 Noeticパッケージの包括的な一覧を提供し、各パッケージの役割、主要なLaunchファイル、稼働ノード、パブリッシュ/サブスクライブされるTopic、パラメータを詳述する。ROS 2の`msd_system`ワークスペースには独自のパッケージ(`msd_webui_bridge`、`msd_webui_views`)があり、[ROS 2 Web UIブリッジ](/ja/development/ros/ros2-web-ui-bridge)で説明する。
 
 ## ワークスペースパッケージ構成
 

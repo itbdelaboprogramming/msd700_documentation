@@ -228,6 +228,21 @@ dan menerapkan `topic2string/config/egress.yaml`:
 Viewer dianggap pergi setelah diam 15 detik. Bila sinyal tidak ada atau lebih tua dari 8 detik, semua
 gate fail open ke `driving`.
 
+## Unit ROS 2 (msd_system) {#ros2-units}
+
+Robot dari workspace ROS 2 `msd_system` tidak punya `topic2string` maupun `aws_mqtt`: `webui_bridge` menerbitkan topik `string/...` yang sama langsung ke broker lokal dan cloud, dengan payload dan gating yang sama. Hanya sumber di sisi robot yang berbeda.
+
+| MQTT (`/unit_<ULID>/...`) | Sumber atau tujuan ROS 2 |
+| --- | --- |
+| `string/robotpose` | TF `map` ke `base_link` |
+| `string/laserscan`, `string/laserscan_holes` | `webui/scan`, `webui/scan_holes` |
+| `string/hazard_cells` | `webui/hazard_cells` (latched) |
+| `string/map`, `string/map_request` | `webui/map` (latched) |
+| `string/key_vel` | `webui/manual_vel` (`twist_mux` prioritas 90) |
+| `string/move_base/*`, `string/initialpose`, plan, overlay coverage, `operation_*` | belum dilayani (milestone M3 sampai M5) |
+
+Node di baliknya dijelaskan di [Bridge ROS Web UI untuk ROS 2](/id/development/ros/ros2-web-ui-bridge).
+
 ## Dokumentasi terkait
 
 - [rosbridge (WebSocket)](/id/development/message-contracts/rosbridge): ujung browser dari topik-topik ini.

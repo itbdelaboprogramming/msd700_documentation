@@ -6,7 +6,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-ロボット側のROS 1 Noeticスタック、MSD700実機を動かし、センシングし、清掃させるパッケージ、アルゴリズム、制御ループ群。このセクション自体にはオペレーター向けUIはない。これらのサブシステムがダッシュボード上でオペレーターに見える機能としてどう現れるかについては、[ROS Web UI](/ja/development/webui/)を参照。
+ロボット側のROS 1 Noeticスタック、MSD700実機を動かし、センシングし、清掃させるパッケージ、アルゴリズム、制御ループ群。このセクション自体にはオペレーター向けUIはない。これらのサブシステムがダッシュボード上でオペレーターに見える機能としてどう現れるかについては、[ROS Web UI](/ja/development/webui/)を参照。ROS 2 Jazzyの`msd_system`ワークスペースから作られたロボットは、[ROS 2 (msd_system)](#ros-2-msd-system)で別に扱う。
 
 ## コアロボットパッケージ
 
@@ -45,4 +45,10 @@ search: false
 
 <LinkCards>
   <LinkCard icon="🏭" title="シミュレーション (Gazebo)" details="実寸スケールのGazeboシミュレーション、AWS Small Warehouseワールド、クリアランステスト。" link="/ja/development/ros/simulation" />
+</LinkCards>
+
+## ROS 2 (msd_system)
+
+<LinkCards>
+  <LinkCard icon="🌉" title="ROS 2 Web UIブリッジ" details="msd_systemロボットがダッシュボードのユニットになる仕組み: コマンド、モーションガード、マップ・スキャン・穴のストリーム。" link="/ja/development/ros/ros2-web-ui-bridge" />
 </LinkCards>

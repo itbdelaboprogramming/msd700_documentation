@@ -226,6 +226,21 @@ It never leaves the unit. `topic2string`'s `presence_gate.py` reads it and appli
 A viewer counts as gone after 15 s of silence. When the signal is missing or older than 8 s every gate
 fails open to `driving`.
 
+## ROS 2 units (msd_system) {#ros2-units}
+
+A robot from the ROS 2 `msd_system` workspace has no `topic2string` or `aws_mqtt`: `webui_bridge` publishes the same `string/...` topics straight to the local and cloud brokers, with the same payloads and the same gating. Only the robot-side source differs.
+
+| MQTT (`/unit_<ULID>/...`) | ROS 2 source or sink |
+| --- | --- |
+| `string/robotpose` | TF `map` to `base_link` |
+| `string/laserscan`, `string/laserscan_holes` | `webui/scan`, `webui/scan_holes` |
+| `string/hazard_cells` | `webui/hazard_cells` (latched) |
+| `string/map`, `string/map_request` | `webui/map` (latched) |
+| `string/key_vel` | `webui/manual_vel` (`twist_mux` priority 90) |
+| `string/move_base/*`, `string/initialpose`, plans, coverage overlays, `operation_*` | not served yet (milestones M3 to M5) |
+
+See [ROS 2 Web UI Bridge](/development/ros/ros2-web-ui-bridge) for the nodes behind them.
+
 ## Related documentation
 
 - [rosbridge (WebSocket)](/development/message-contracts/rosbridge): the browser end of these topics.
