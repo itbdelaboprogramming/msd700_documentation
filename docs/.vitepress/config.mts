@@ -248,6 +248,35 @@ const enSidebar = {
         { text: 'Changelog', link: '/development/changelog' },
       ]
     }
+  ],
+  '/ros2-msd-system/': [
+    {
+      text: 'MSD System',
+      items: [
+        { text: 'Overview', link: '/ros2-msd-system/' },
+      ]
+    },
+    {
+      text: 'Getting Started',
+      items: [
+        { text: 'Installation', link: '/ros2-msd-system/getting-started/installation' },
+        { text: 'Quick Demo', link: '/ros2-msd-system/getting-started/quick-demo' },
+      ]
+    },
+    {
+      text: 'Setup',
+      items: [
+        { text: 'Simulation', link: '/ros2-msd-system/setup/simulation' },
+        { text: 'Real Robot', link: '/ros2-msd-system/setup/real-robot' },
+      ]
+    },
+    {
+      text: 'Features',
+      items: [
+        { text: 'Navigation', link: '/ros2-msd-system/features/navigation' },
+        { text: 'Follower', link: '/ros2-msd-system/features/follower' },
+      ]
+    }
   ]
 }
 
