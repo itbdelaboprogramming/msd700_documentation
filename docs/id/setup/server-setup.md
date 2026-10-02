@@ -26,7 +26,7 @@ Satu container `unit_relays` melayani semua unit. Container per-unit `rosweb_uni
 
 ```
 ~/ (mis. /home/ubuntu)
-└── ros-web-ui/                      # Repo server (branch: v2)
+└── ros-web-ui/                      # Repo server (branch: main)
     ├── docker-compose.yml
     ├── .env                         # Config per-host, TRACKED di git (lihat Step 4)
     ├── Docker/
@@ -38,7 +38,7 @@ Satu container `unit_relays` melayani semua unit. Container per-unit `rosweb_uni
     └── source/
         └── dependencies/
             ├── ROS-dashboard-backend/
-            ├── ROS-dashboard-next-ts/  # Frontend (clone nested, branch v2, gitignored)
+            ├── ROS-dashboard-next-ts/  # Frontend (clone nested, branch main, gitignored)
             ├── media-server/
             ├── signalling_server/
             ├── aws_mqtt/               # Bridge MQTT + helper unit relay
@@ -60,11 +60,11 @@ Kerjakan 6 langkah ini berurutan.
 ### Step 1: Clone repo
 
 ```bash
-# 1. Repo server utama, branch v2
-git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
+# 1. Repo server utama, branch main
+git clone -b main git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
 
-# 2. Repo frontend, ke dalam dependencies, branch v2
-git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
+# 2. Repo frontend, ke dalam dependencies, branch main
+git clone -b main git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 

@@ -14,7 +14,7 @@ Three troubleshooting pages share symptoms by role: the [User Guide](/user-guide
 
 ## Diagnostic checklist
 
-Pick the environment and machine first. The V2 checkout on the cloud server is not a physical unit; do not run robot launchers there to diagnose a Jetson. A running container alone proves nothing about its ROS nodes, MQTT bridge, or browser connection.
+Pick the environment and machine first. The `ros-web-ui` checkout on the cloud server is not a physical unit; do not run robot launchers there to diagnose a Jetson. A running container alone proves nothing about its ROS nodes, MQTT bridge, or browser connection.
 
 1. **Server stack running?** From `ros-web-ui`: `docker compose --profile server_prod ps` (or `server_dev` + `_dev` names for dev). Long-running services should be `Up`/`healthy`; `fix_perms_*` is a one-shot that normally exits `0`.
 2. **Unit container running?** `./scripts/docker-manager.sh status` on the unit.

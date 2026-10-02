@@ -54,7 +54,7 @@ search: false
 行単位のコミットログについては、それぞれの GitHub リポジトリを参照してください。
 
 - [msd700_documentation のコミット](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui のコミット](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
-- [msd700_robot のコミット](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
-- [ROS-dashboard-next-ts のコミット](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
-- [msd700_noetic のコミット](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)
+- [ros-web-ui のコミット](https://github.com/itbdelaboprogramming/ros-web-ui/commits/main)
+- [msd700_robot のコミット](https://github.com/itbdelaboprogramming/msd700_robot/commits/master)
+- [ROS-dashboard-next-ts のコミット](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/main)
+- [msd700_noetic のコミット](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)

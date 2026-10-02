@@ -47,13 +47,13 @@ Do Steps 1-4, then Step 6 (hotspot provisioning), then Step 5 (start). The hotsp
 
 ```bash
 # 1. Orchestration workspace
-git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
+git clone -b master git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
 
-# 2. Source repos into src/, branch v2
-git clone --recurse-submodules -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
-git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
-git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
+# 2. Source repos into src/ (msd700_robot on master, the others on main)
+git clone --recurse-submodules -b master git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+git clone -b main git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
+git clone -b main git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
 ::: tip Why clone by hand into `src/`?

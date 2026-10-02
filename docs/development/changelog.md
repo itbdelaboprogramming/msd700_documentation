@@ -54,7 +54,7 @@ This changelog summarizes key architectural milestones, platform overhauls, and 
 For line-by-line commit logs, refer to the respective GitHub repositories:
 
 - [msd700_documentation Commits](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
-- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
-- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
-- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)
+- [ros-web-ui Commits](https://github.com/itbdelaboprogramming/ros-web-ui/commits/main)
+- [msd700_robot Commits](https://github.com/itbdelaboprogramming/msd700_robot/commits/master)
+- [ROS-dashboard-next-ts Commits](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/main)
+- [msd700_noetic Commits](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)

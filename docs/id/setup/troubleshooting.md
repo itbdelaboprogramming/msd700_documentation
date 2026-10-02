@@ -14,7 +14,7 @@ Tiga halaman troubleshooting berbagi gejala per peran: [User Guide](/id/user-gui
 
 ## Checklist diagnostik
 
-Pilih environment dan mesin dulu. Checkout V2 di cloud server bukan unit fisik; jangan jalankan launcher robot di sana untuk mendiagnosis Jetson. Container jalan saja tidak membuktikan node ROS, bridge MQTT, atau koneksi browser-nya bekerja.
+Pilih environment dan mesin dulu. Checkout `ros-web-ui` di cloud server bukan unit fisik; jangan jalankan launcher robot di sana untuk mendiagnosis Jetson. Container jalan saja tidak membuktikan node ROS, bridge MQTT, atau koneksi browser-nya bekerja.
 
 1. **Stack server jalan?** Dari `ros-web-ui`: `docker compose --profile server_prod ps` (atau `server_dev` + nama `_dev` untuk dev). Service jangka panjang harus `Up`/`healthy`; `fix_perms_*` one-shot yang normalnya exit `0`.
 2. **Container unit jalan?** `./scripts/docker-manager.sh status` di unit.

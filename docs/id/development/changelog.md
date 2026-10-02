@@ -54,7 +54,7 @@ Changelog ini merangkum tonggak arsitektur utama, overhaul platform, dan kemajua
 Untuk log commit baris demi baris, lihat repositori GitHub masing-masing:
 
 - [Commit msd700_documentation](https://github.com/itbdelaboprogramming/msd700_documentation/commits/main)
-- [Commit ros-web-ui](https://github.com/itbdelaboprogramming/ros-web-ui/commits/v2-optimization)
-- [Commit msd700_robot](https://github.com/itbdelaboprogramming/msd700_robot/commits/v2-optimization)
-- [Commit ROS-dashboard-next-ts](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/v2-optimization)
-- [Commit msd700_noetic](https://github.com/itbdelaboprogramming/msd700_noetic/commits/v2-optimization)
+- [Commit ros-web-ui](https://github.com/itbdelaboprogramming/ros-web-ui/commits/main)
+- [Commit msd700_robot](https://github.com/itbdelaboprogramming/msd700_robot/commits/master)
+- [Commit ROS-dashboard-next-ts](https://github.com/itbdelaboprogramming/ROS-dashboard-next-ts/commits/main)
+- [Commit msd700_noetic](https://github.com/itbdelaboprogramming/msd700_noetic/commits/master)

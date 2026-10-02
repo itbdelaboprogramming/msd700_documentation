@@ -47,13 +47,13 @@ Step 1〜4、次にStep 6(ホットスポットプロビジョニング)、最�
 
 ```bash
 # 1. オーケストレーションワークスペース
-git clone git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
+git clone -b master git@github.com:itbdelaboprogramming/msd700_noetic.git ~/msd700_noetic
 cd ~/msd700_noetic
 
-# 2. ソースリポジトリをsrc/へ、ブランチv2
-git clone --recurse-submodules -b v2 git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
-git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
-git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
+# 2. ソースリポジトリをsrc/へ (msd700_robotはmaster、他はmain)
+git clone --recurse-submodules -b master git@github.com:itbdelaboprogramming/msd700_robot.git src/msd700_robot
+git clone -b main git@github.com:itbdelaboprogramming/ros-web-ui.git src/ros-web-ui
+git clone -b main git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git src/ROS-dashboard-next-ts
 ```
 
 ::: tip なぜ手動で`src/`へクローンするのか?

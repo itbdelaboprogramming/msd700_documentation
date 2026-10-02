@@ -26,7 +26,7 @@ outline: deep
 
 ```
 ~/ (例 /home/ubuntu)
-└── ros-web-ui/                      # サーバーリポジトリ (ブランチ: v2)
+└── ros-web-ui/                      # サーバーリポジトリ (ブランチ: main)
     ├── docker-compose.yml
     ├── .env                         # ホスト別設定、git管理下 (Step 4参照)
     ├── Docker/
@@ -38,7 +38,7 @@ outline: deep
     └── source/
         └── dependencies/
             ├── ROS-dashboard-backend/
-            ├── ROS-dashboard-next-ts/  # フロントエンド (ネストしたクローン、ブランチv2、gitignore)
+            ├── ROS-dashboard-next-ts/  # フロントエンド (ネストしたクローン、ブランチmain、gitignore)
             ├── media-server/
             ├── signalling_server/
             ├── aws_mqtt/               # MQTTブリッジ+ユニットリレーヘルパー
@@ -60,11 +60,11 @@ outline: deep
 ### Step 1: リポジトリのクローン
 
 ```bash
-# 1. メインサーバーリポジトリ、ブランチv2
-git clone -b v2 git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
+# 1. メインサーバーリポジトリ、ブランチmain
+git clone -b main git@github.com:itbdelaboprogramming/ros-web-ui.git ~/ros-web-ui
 
-# 2. フロントエンドリポジトリをdependenciesへ、ブランチv2
-git clone -b v2 git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
+# 2. フロントエンドリポジトリをdependenciesへ、ブランチmain
+git clone -b main git@github.com:itbdelaboprogramming/ROS-dashboard-next-ts.git \
   ~/ros-web-ui/source/dependencies/ROS-dashboard-next-ts
 ```
 
