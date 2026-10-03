@@ -20,6 +20,17 @@ Konfigurasi bridge: robot `aws_mqtt/launch/nakayama_msd.launch`; cloud
 `nakayama_cloud.launch` (container per-unit legacy). Relay: robot `topic2string/launch/msd.launch`,
 cloud `topic2string/launch/cloud_multi.launch`.
 
+Topik stream di kedua tabel di bawah juga didaftar sekali di `shared/unit_topics.json`: nama, arah,
+format payload, apakah subscriber yang datang belakangan butuh nilai terakhir, dan apakah browser yang
+lambat boleh melompat ke pesan terbaru. [Gateway live link](/id/development/message-contracts/rosbridge#gateway)
+membaca allowlist-nya dari sana. `aws_mqtt/scripts/test/test_unit_topics.py` gagal bila tabel itu,
+`gen_bridge_params.py`, dan `nakayama_msd.launch` tidak sama.
+
+Entri ping dan pong di kedua bridge (`server/ping`, `msd/ping`, `msd/pong`, `server/pong`) tidak
+membawa apa pun: tidak ada node yang publish atau subscribe ke sana, dan kedua sisi bahkan tidak sepakat
+soal namanya. Ping watchdog adalah perintah `ping` di
+[`system_command`](/id/development/message-contracts/mqtt-commands#command-envelope).
+
 ## Peta topik {#topic-map}
 
 ### Robot → cloud {#robot-to-cloud}
@@ -161,6 +172,10 @@ membuat robot berhenti.
 | Path (`plan`, `local_plan`, `boustrophedon_path`, `hazard_cells`, `skipped_waypoints`) | `base64(zlib(JSON))`, JSON = `{ header, poses: [{ header, pose }] }` |
 | Laser scan (`laserscan`, `laserscan_holes`) | `base64(zlib(Q1))`, scan yang dikuantisasi (`q1_encode`); bila kuantisasi mati, `LaserScan` hasil serialisasi ROS |
 | Peta | `base64(zlib(M1))`, sel dikemas sebagai int8 mentah; decoder masih menerima bentuk lama `base64(zlib(JSON))` |
+
+Contoh payload untuk setiap format, dibuat oleh codec robot sendiri beserta hasil decode-nya di cloud,
+ada di `topic2string/test/fixtures/` (buat ulang dengan `python3 test/gen_fixtures.py`). Decoder yang
+ditulis di tempat lain, seperti decoder browser yang dibutuhkan gateway live link, diuji terhadapnya.
 
 ## ACK keandalan {#acks}
 

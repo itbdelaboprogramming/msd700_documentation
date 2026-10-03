@@ -8,8 +8,9 @@ search: false
 <RoleBadge role="developer" />
 
 Ujung browser dari kanal streaming ([jalur B](/id/development/message-contracts/#two-control-paths)).
-Dashboard memegang satu WebSocket rosbridge v2 ke ROS master cloud (atau milik unit sendiri, di
-dashboard lokal) dan memakai roslibjs di atasnya. Dashboard **tidak** memakai panggilan service
+Dashboard memegang satu WebSocket rosbridge v2 dan memakai roslibjs di atasnya: ke
+[gateway live link](#gateway) cloud (server tidak lagi menjalankan ROS sejak 2026-10-03), atau ke
+rosbridge milik unit sendiri di dashboard lokal. Dashboard **tidak** memakai panggilan service
 rosbridge: semua yang butuh jawaban lewat [HTTP API](/id/development/message-contracts/http-api).
 
 ![Ikhtisar Arsitektur rosbridge](../../../development/message-contracts/diagrams/rosbridge-protocol-rosbridge-architecture-overview.drawio)
@@ -18,8 +19,8 @@ rosbridge: semua yang butuh jawaban lewat [HTTP API](/id/development/message-con
 
 | Environment | URL | Backend |
 | --- | --- | --- |
-| Cloud produksi | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
-| Cloud development | `ws://<server-ip>:9091` | rosbridge dev |
+| Cloud produksi | `wss://msd.nglobal.jp/services/rosbridge?ticket=<ticket>` | Apache → `localhost:9090`, [gateway live link](#gateway) di `backend_node` |
+| Cloud development | `ws://<server-ip>:9091/?ticket=<ticket>` | [gateway live link](#gateway) di `backend_node` |
 | Dashboard lokal unit | `ws://<unit-ip>:9090` | `rosbridge_suite` milik unit |
 
 Dikonfigurasi saat build sebagai `NEXT_PUBLIC_WS_ROSBRIDGE_URL`. Semua nama topik di bawah diawali
@@ -137,6 +138,71 @@ dan [`/cancel`](/id/development/message-contracts/bridge-topics#json-cancel), la
 
 Penggambaran canvas di atas topik-topik ini: [Frontend Canvas](/id/development/frontend-canvas) dan
 [Ikhtisar Navigasi](/id/development/webui/navigation/overview).
+
+## Gateway live link {#gateway}
+
+Server sedang dipindahkan dari ROS. Pengganti rosbridge dan relay cloud adalah `unit_gateway.js`,
+modul di dalam `backend_node` yang berbicara protokol rosbridge v2 yang sama, sehingga roslibjs tetap
+menjadi library klien. Sejak maintenance 2026-10-03 gateway ini satu-satunya live link di kedua cloud,
+production dan development, yang servernya sama sekali tidak menjalankan ROS (tanpa roscore,
+rosbridge, maupun relay), dan kedua dashboard cloud di-build untuknya (lihat
+[di bawah](#gateway-dashboard)). Dashboard lokal unit masih memakai rosbridge milik unit, seperti
+dijelaskan di atas.
+
+| | rosbridge (sekarang) | Gateway live link |
+| --- | --- | --- |
+| Topik | `<root>/server/*`, bertipe, di-decode di server | hanya `<root>/string/*`, semuanya `std_msgs/String` |
+| Payload | di-encode ulang dari pesan ROS hasil decode | payload MQTT apa adanya, byte demi byte; browser yang men-decode ([format](/id/development/message-contracts/bridge-topics#compressed-formats)) |
+| Siapa boleh tersambung | siapa pun yang menjangkau port | satu [tiket](/id/development/message-contracts/http-api#link-ticket) per koneksi, terikat ke satu akun dan satu unit |
+| Apa yang dijangkau satu koneksi | semua topik semua unit | topik unit itu dari `shared/unit_topics.json`, masing-masing hanya ke arahnya sendiri |
+| Operasi | rosbridge v2 lengkap | `subscribe`, `unsubscribe`, `advertise`, `unadvertise`, `publish`; selain itu dijawab error `status` dan koneksi tetap terbuka |
+
+Aturan yang bisa diandalkan klien:
+
+| Perilaku | Aturan |
+| --- | --- |
+| Arah | Browser subscribe ke topik yang dikirim robot dan publish ke topik yang dibaca robot. Subscribe ke topik tujuan robot, atau publish ke topik kiriman robot, ditolak dengan `{"op":"status","level":"error"}`. |
+| Tipe | `type` harus `std_msgs/String` atau dikosongkan. Subscribe bertipe seperti `nav_msgs/OccupancyGrid` ditolak. |
+| Topik latched | `map`, `move_base/NavfnROS/plan`, `move_base/TebLocalPlannerROS/local_plan`, `boustrophedon_path`, `hazard_cells`, `coverage_debug`, `uncovered_regions`, `coverage_status`, `operation_snapshot`: nilai terakhir dikirim pada setiap subscribe. Gateway menerima topik ini untuk semua unit setiap saat, jadi unit yang baru di-enroll semenit lalu langsung tercakup tanpa restart. |
+| `throttle_rate` | Dihormati pada topik stream, dengan pengiriman di akhir jendela: di dalam jendela hanya pesan terbaru yang disimpan, lalu dikirim saat jendela berakhir, sehingga pose terakhir robot yang berhenti tidak pernah hilang. Diabaikan pada topik reliable. |
+| Browser lambat | Topik stream (`robotpose`, `move_base/status`, `map`, `laserscan`, `laserscan_holes`, `hazard_cells`, kedua plan) melompat ke pesan terbaru selama socket tersendat. Topik lain (result, pesan coverage dan operation) dikirim lengkap dan berurutan. Browser yang tertinggal 16 MB ditutup dengan kode `4008`. |
+| Akses | Dicek ulang tiap menit; begitu unit keluar dari rental pemanggil, koneksi ditutup dengan kode `4403`, dalam sekitar dua menit. |
+| Upgrade ditolak | Tiket yang tidak ada, tidak dikenal, kedaluwarsa, atau dipakai ulang mendapat HTTP `401`. |
+| Keepalive | Ping WebSocket tiap 10 detik; browser yang tidak menjawab diputus, sama seperti `websocket_ping_interval` di rosbridge. |
+| Kompresi | `permessage-deflate`, seperti rosbridge dengan `use_compression`. Field `compression` pada subscribe diabaikan. |
+| Health | `GET /health` di port yang sama: jumlah sesi dan topik serta total per topik, tanpa unit id. |
+
+Diaktifkan oleh `LINK_GATEWAY_PORT`; `LINK_GATEWAY_HOST` default-nya `0.0.0.0`. Compose mengisinya
+dengan port yang dulu dipakai rosbridge, `9090` di production (di belakang `/services/rosbridge`
+Apache, yang meneruskan query string `?ticket=`) dan `9091` di development, sehingga tidak ada URL
+dashboard yang berubah saat server melepas ROS.
+
+Setiap [ping](/id/development/message-contracts/http-api#hardware-ping) mengirim pesan priming
+`DUMMY_INIT_DATA_` langsung ke MQTT, di semua server, ada gateway atau tidak. Robot membuangnya;
+menerimanya itulah yang membuat publisher ROS untuk topik goal, cancel, dan initial pose tercipta
+sebelum pesan sungguhan pertama.
+
+### Di dashboard {#gateway-dashboard}
+
+Dashboard membuka semua topik lewat satu adapter, `src/services/unitLink`, sehingga satu basis kode
+bisa berbicara ke kedua sisi. Build arg `NEXT_PUBLIC_UNIT_LINK` menentukan yang mana:
+
+| Nilai | Berbicara ke | Efek |
+| --- | --- | --- |
+| tidak diisi atau `typed` (default; dashboard lokal unit) | rosbridge | tidak ada: adapter sama dengan `new ROSLIB.Topic(...)` dan `new ROSLIB.ActionClient(...)` |
+| `string` (kedua dashboard cloud, `frontend_prod` dan `frontend_dev`) | gateway | nama bertipe seperti `<root>/server/robot_pose` dibawa lewat topik `<root>/string/*`-nya dan di-decode di browser; setiap connect, termasuk reconnect, mengambil [tiket](/id/development/message-contracts/http-api#link-ticket) lebih dulu |
+
+Kode yang membuka topik memakai `unitTopic()` dan `unitActionClient()` dari `@/services/unitLink`;
+skrip vendor `public/script/ros2d.js` dan `Nav2D.js` memakai `ROS2D.topic()`, `NAV2D.topic()`, dan
+`NAV2D.actionClient()`. `new ROSLIB.Topic` langsung akan melewati adapter dan merusak build `string`.
+Di mode `string`, nama bertipe yang tidak dibawa gateway (plan planner lain, `move_base/feedback`)
+menjadi topik yang tidak pernah memancarkan pesan, sama seperti sebelumnya: memang tidak ada yang
+mem-publish-nya.
+
+Decoder browser diuji terhadap contoh payload yang disebut di
+[Topik Bridge § Format terkompresi](/id/development/message-contracts/bridge-topics#compressed-formats):
+`npm run unit-link:sync` menyalinnya beserta `shared/unit_topics.json` ke dashboard, dan `npm test`
+menjalankan ujinya.
 
 ## Dokumentasi terkait
 

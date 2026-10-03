@@ -269,7 +269,7 @@ sudo systemctl restart apache2
 | `/services/signalling` | `ws://localhost:3001` | WebRTCシグナリングWS |
 | `/services/media` | `http://localhost:3003` | マップアセット |
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
-| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`、`Host: localhost:9090` |
+| `/services/rosbridge` | `ws://localhost:9090`、2026-10-03 以降は[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway)(パス名はそのまま。`?ticket=` のクエリ文字列も転送されます) | `timeout=86400 keepalive=On flushpackets=on`、`Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | ドキュメント配備フック(主ブロックでなく `apache-snippet.conf` 内) |
 | `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | ros-web-ui 自動デプロイフック。[自動デプロイ](#auto-deploy-on-push)参照 |
 | `/itbdelabo/docs` | 除外 + `dist/` への `Alias` | キャッチオールより上に維持必須 |

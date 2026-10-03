@@ -255,7 +255,7 @@ satu event progres terminal (`100`/`completed` atau `-1`/`error`).
 | --- | --- | --- |
 | `init` | `use_autocover`, dan untuk coverage custom `areas` + `exclusions` (playlist, diprioritaskan) atau `polygon` (satu area) | Melepas manual override dan motion lock, aktivitas `boustrophedon_initializing`, `/switch_mode(mode=boustrophedon, use_autocover)`. Playlist dikirim sebagai JSON `{ areas, exclusions }` di `/msd700/coverage_plan` (`std_msgs/String`, latched); satu area sebagai `geometry_msgs/Polygon` di `/msd700/coverage_polygon`. Polygon dengan kurang dari 3 titik dibuang. |
 | `pause` | `config.pause` (`true` jeda, `false` lanjut) | `/path_coverage/pause` atau `/path_coverage/resume` (`Empty`); node coverage lama tanpa service itu fallback ke motion lock `operator_pause`. Aktivitas `paused` selama dijeda. |
-| `deactivate` | `config.use_autocover` (harus sama dengan `init`) | Cancel goal di `/move_base/cancel`, menghapus plan dan polygon, `/path_coverage/cancel`, `/switch_mode(mode=stop_additional_feature)`. |
+| `deactivate` | `config.use_autocover` (harus sama dengan `init`) | Cancel goal di `/move_base/cancel`, menghapus plan dan polygon, `/path_coverage/cancel`, `/switch_mode(mode=stop_additional_feature)`. Activity `navigation_ready` selama map masih termuat (`move_base` tetap hidup), selain itu `idle`. |
 
 Path yang dihasilkan kembali sebagai overlay di
 [`string/boustrophedon_path`](/id/development/message-contracts/bridge-topics#topic-map) dan di-ACK
@@ -317,7 +317,8 @@ diatur oleh handler di atas. Nilai yang paling sering dilihat dashboard:
 | Nilai | Diatur oleh |
 | --- | --- |
 | `idle` | `hardware.idle`, `navigation.deactivate`, `mapping.discard` |
-| `navigation_ready`, `navigation_point_published` | `navigation.init`, `navigation.pointstamped` |
+| `navigation_ready`, `navigation_point_published` | `navigation.init`, `navigation.pointstamped`; juga `boustrophedon.deactivate` dan run supervisor yang berhenti, selama map masih termuat |
+| `supervisor_navigating` | `operation_supervisor` yang menjalankan batch (autopilot) |
 | `mapping_active`, `mapping_paused` | `mapping.start`, `mapping.pause` |
 | `boustrophedon_initializing`, `paused` | `boustrophedon.init`, `boustrophedon.pause` |
 | `auto_aligning` | `autoalign.start` |

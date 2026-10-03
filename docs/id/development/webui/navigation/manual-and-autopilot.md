@@ -188,6 +188,25 @@ sehingga map lama bisa terbuka lagi meski robot sudah melaporkan `idle`. Members
 yang sudah dilakukan jalur emergency stop dan deaktivasi navigasi, dan tidak menyentuh retensi
 autopilot, yang tidak pernah mencapai endpoint ini.
 
+Kesalahan sebaliknya merusak recovery autopilot sampai 2026-10-03. Menghentikan run coverage dan run
+supervisor yang berhenti sama-sama membiarkan stack navigasi dan map-nya tetap hidup, tetapi keduanya
+melaporkan `idle`: `update_activity("idle")` menghapus `active_map_id`, dan
+`POST /api/boustrophedon/deactivate` menulis intent `idle`. Run autopilot yang dimulai sesudahnya di map
+yang sama (dikirim sebagai `operation_batch`, yang tidak pernah sampai ke backend) jadi tidak punya map
+di kedua sisi, dan operator yang login lagi mendarat di halaman Navigasi kosong dengan
+`[Nav auto-resume] no map candidates yet` di console, padahal robot masih berjalan. Sekarang keduanya
+kembali ke `navigation_ready` dengan map tetap tersimpan, dan backend mempertahankan intent `navigation`
+beserta map-nya:
+
+| Kejadian | Aktivitas robot | Intended mode backend |
+| --- | --- | --- |
+| `boustrophedon.deactivate` | `navigation_ready` selama map termuat, selain itu `idle` | `navigation` dengan map yang sama, selain itu `idle` |
+| Supervisor berhenti tanpa sampai | `navigation_ready` selama map termuat, selain itu `idle` | tidak berubah |
+| Supervisor sampai | `arrived` | tidak berubah |
+
+Backend juga menganggap `supervisor_navigating` selaras dengan intent `navigation`, sehingga run
+autopilot tidak lagi melaporkan `sync_status: out_of_sync`.
+
 **Kontrak:** [`POST /api/hardware/idle`](/id/development/message-contracts/http-api#hardware-commands) →
 [`hardware.idle`](/id/development/message-contracts/mqtt-commands#hardware), lalu [`POST /user/logout`](/id/development/message-contracts/http-api#user-logout).
 

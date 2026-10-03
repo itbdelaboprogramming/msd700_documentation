@@ -10,6 +10,14 @@ search: false
 
 ## アーキテクチャ上のマイルストーン
 
+### 2026年10月: ROS を使わないサーバー(進行中)
+- **ROS を使わないサーバー**: 2026-10-03 のメンテナンス以降、本番と開発の両クラウドは ROS をまったく動かしていません。roscore、rosbridge、`catkin_make`、リレーコンテナはありません。`backend_node`、メディア、シグナリングは 269 MB のイメージ(`Docker/Dockerfile` のターゲット `server`)から素の Node として動き、両方のクラウドダッシュボードは `NEXT_PUBLIC_UNIT_LINK=string` でビルドされます。ライブリンクゲートウェイは rosbridge のポート(Apache 背後の 9090、開発の 9091)を引き継いだため、ダッシュボードの URL はどれも変わりません。ユニットとそのローカルダッシュボードは変更なしです。[Docker リファレンス](/ja/setup/docker-reference#service-and-port-map) を参照。
+- **`backend_node` は ROS ノードではなくなりました**: ログは素のコンソールロガーで出し、`DUMMY_INIT_DATA_` のプライミングはどのサーバーでも MQTT へ直接送り、`rosnodejs` と `ps-tree` を外しました。ROS が残る環境では `roslaunch` が普通のプロセスとして起動します。`UNIT_MANAGER_DOCKER=false` はリースとオートパイロット保持の管理を Docker なしで続けます。
+- **カバレッジ停止後のオートパイロット復旧**: カバレッジの停止や、待機に戻るスーパーバイザー実行が、ナビゲーションスタックが動いたまま `idle` を報告しなくなりました。以前は `active_map_id` とバックエンドの intended マップが消え、同じマップで後から始めたオートパイロット実行に再ログインすると空のナビゲーションページに着いていました。[手動操作 & オートパイロット](/ja/development/webui/navigation/manual-and-autopilot) を参照。
+- **ライブリンクゲートウェイ**: `backend_node` がダッシュボードのライブリンクを自分で提供できます(`unit_gateway.js`)。各ユニットの MQTT ストリームトピックを、rosbridge プロトコルでそのままブラウザへ転送します。接続にはアカウントとユニットごとの使い捨てチケット([`POST /api/link/ticket`](/ja/development/message-contracts/http-api#link-ticket))が必要です。rosbridge と違い、1 つの接続が届くのは自分のユニットのトピックだけで、それぞれ本来の方向に限られます。[rosbridge § ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway) を参照。
+- **トピック表を 1 つに**: ユニットとダッシュボードの間のストリームトピックを `shared/unit_topics.json` に 1 か所でまとめ、クラウドブリッジ、ロボットブリッジ、この表が食い違うとテストが失敗するようにしました。`server/ping` と `server/pong` のブリッジエントリは何も運んでいないことが分かりました。[ブリッジトピック](/ja/development/message-contracts/bridge-topics) を参照。
+- **ダッシュボードのリンクアダプター**: ダッシュボードのすべての ROS トピックは `src/services/unitLink` 経由で開くようになりました。既定のビルドは以前とまったく同じに振る舞います。`NEXT_PUBLIC_UNIT_LINK=string` でビルドするとゲートウェイと話し、ロボットのワイヤー形式をブラウザでデコードします。デコーダーはロボット自身のコーデックで作ったペイロードで検証済みです。[rosbridge § ダッシュボード側](/ja/development/message-contracts/rosbridge#gateway-dashboard) を参照。
+
 ### 2026年9月: 帯域幅最適化 & ユニット単位のデータスコープ
 - **視聴者数に応じたエグレス制御**: ロボットからクラウドへのテレメトリは、現在 `/msd700/viewers` を読み取り、誰かが見ているかどうかに応じた頻度で送信するようになりました。オーバーレイと占有グリッドはタイマーベースではなく変更時に送信され、4つのオーバーレイトピックはクラウドブリッジ上でラッチされるため、再接続したタブでも自分の描画をすぐに取得できます。
 - **マップ配送の保証**: 変更時送信にしたことで、マップはハートビートごとに 1 通だけの投げっぱなしメッセージになっていました。これはオペレーターがそれなしでは作業できない唯一のペイロードにとって誤った保証です。マップトピックはクラウドリレーでラッチされるようになり、リセット後のマップは短いバーストとして繰り返し送られ、ダッシュボードは実測約 52 秒のハートビートを待つ代わりに `/string/map_request` で必要なときに要求できるようになりました。Database からマップを開く操作も、「準備完了のポーリング」と誤ってラベル付けされていた固定 5 秒の待ち時間の後ろに座らなくなりました。[ブリッジトピック § マップ配信](/ja/development/message-contracts/bridge-topics#map-delivery)を参照。

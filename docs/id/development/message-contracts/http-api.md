@@ -186,6 +186,33 @@ Body `{ unit_id }`, jawaban `{ success: true }`. Menjaga container cloud legacy 
 dan mereset idle timer-nya. Tidak menyentuh MQTT, jadi langsung dijawab. Dashboard mengirimnya tiap
 15 detik selama halaman operasional terbuka.
 
+### `POST /api/link/ticket` {#link-ticket}
+
+Body `{ unit_id }`. Mengembalikan tiket sekali pakai yang membuka satu WebSocket ke
+[gateway live link](/id/development/message-contracts/rosbridge#gateway), terikat ke akun ini dan unit
+ini.
+
+```json
+{ "success": true, "ticket": "Jt2v9cQx0kq3...", "expires_in_ms": 30000 }
+```
+
+| Situasi | Status |
+| --- | --- |
+| Gateway tidak aktif di backend ini (`LINK_GATEWAY_PORT` tidak diisi) | `503` |
+| Tidak ada `unit_id` di body | `400` |
+| Unit tidak ada di rental aktif milik pemanggil | `403`, dari [`attachUnit`](#attach-unit) |
+| Lebih dari 30 tiket dalam satu menit untuk akun ini | `429` |
+
+Yang masuk ke URL WebSocket sebagai `?ticket=` adalah tiket, bukan JWT: browser tidak bisa memasang
+header pada WebSocket, dan URL tercatat di access log proxy. Tiket berlaku 30 detik dan membuka satu
+koneksi, berhasil atau tidak.
+
+::: info Masih dalam pengembangan
+Gateway hanya berjalan di cloud development, berdampingan dengan rosbridge. Hanya dashboard yang
+di-build dengan [`NEXT_PUBLIC_UNIT_LINK=string`](/id/development/message-contracts/rosbridge#gateway-dashboard)
+yang meminta tiket, dan belum ada deployment yang di-build seperti itu. Backend lain menjawab `503`.
+:::
+
 ### Perintah hardware {#hardware-commands}
 
 Body `{ unit_id }` untuk masing-masing; jawabannya [bentuk respons perintah](#envelopes).
@@ -294,7 +321,9 @@ Body `{ unit_id, pause }`, `pause` boolean (`true` menjeda, `false` melanjutkan)
 ### `POST /api/boustrophedon/deactivate` {#boustrophedon-deactivate}
 
 Body `{ unit_id, use_autocover }`. `use_autocover` harus sama dengan nilai saat run dimulai, supaya robot
-menghentikan fitur yang benar. Menghapus intended mode.
+menghentikan fitur yang benar. Intended mode kembali ke `navigation` dengan map yang sama, karena
+coverage berjalan di dalam sesi navigasi yang masih hidup; baru jatuh ke `idle` bila tidak ada map yang
+tercatat.
 
 ## Auto Align {#autoalign}
 

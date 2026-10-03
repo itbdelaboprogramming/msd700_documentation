@@ -269,7 +269,7 @@ The live host has extra blocks not shown here (MQTT WebSocket, webhook, legacy d
 | `/services/signalling` | `ws://localhost:3001` | WebRTC signalling WS |
 | `/services/media` | `http://localhost:3003` | Map assets |
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
-| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
+| `/services/rosbridge` | `ws://localhost:9090`, the [live link gateway](/development/message-contracts/rosbridge#gateway) since 2026-10-03 (the path kept its name; the `?ticket=` query string passes through) | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | Docs deploy hook (in `apache-snippet.conf`, not the main block) |
 | `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | ros-web-ui auto-deploy hook, see [Auto-deploy](#auto-deploy-on-push) |
 | `/itbdelabo/docs` | exclusion + `Alias` to `dist/` | Must stay above the catch-all |

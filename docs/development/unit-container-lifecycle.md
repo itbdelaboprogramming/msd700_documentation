@@ -116,7 +116,7 @@ docker compose --profile server_prod up -d   # or --profile server_dev
 
 | | Dev | Prod |
 | --- | --- | --- |
-| Relay container | `ros_web_ui_v2_unit_relays_dev` | `ros_web_ui_v2_unit_relays` |
+| Relay container | none since 2026-10-03 (no ROS on the servers; the live link gateway reads MQTT itself) | none since 2026-10-03 |
 | Image | `ros-noetic-webui-app-v2:dev` | `ros-noetic-webui-app-v2:latest` |
 | Roster override (optional) | `MULTI_UNIT_LIST_DEV` | `MULTI_UNIT_LIST_PROD` |
 

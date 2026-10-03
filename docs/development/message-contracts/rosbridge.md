@@ -8,8 +8,9 @@ search: false
 <RoleBadge role="developer" />
 
 The browser end of the streaming channel ([path B](/development/message-contracts/#two-control-paths)).
-The dashboard holds one rosbridge v2 WebSocket to the cloud's ROS master (or the unit's own, on the
-local dashboard) and uses roslibjs over it. It makes **no** rosbridge service calls: everything that
+The dashboard holds one rosbridge v2 WebSocket and uses roslibjs over it: to the cloud's
+[live link gateway](#gateway) (no ROS on the server since 2026-10-03), or to the unit's own rosbridge
+on the local dashboard. It makes **no** rosbridge service calls: everything that
 needs an answer goes through the [HTTP API](/development/message-contracts/http-api) instead.
 
 ![rosbridge Architecture Overview](./diagrams/rosbridge-protocol-rosbridge-architecture-overview.drawio)
@@ -18,8 +19,8 @@ needs an answer goes through the [HTTP API](/development/message-contracts/http-
 
 | Environment | URL | Backend |
 | --- | --- | --- |
-| Production cloud | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
-| Development cloud | `ws://<server-ip>:9091` | dev rosbridge |
+| Production cloud | `wss://msd.nglobal.jp/services/rosbridge?ticket=<ticket>` | Apache → `localhost:9090`, the [live link gateway](#gateway) in `backend_node` |
+| Development cloud | `ws://<server-ip>:9091/?ticket=<ticket>` | the [live link gateway](#gateway) in `backend_node` |
 | Unit local dashboard | `ws://<unit-ip>:9090` | the unit's `rosbridge_suite` |
 
 Configured at build time as `NEXT_PUBLIC_WS_ROSBRIDGE_URL`. All topic names below are prefixed with the
@@ -137,6 +138,70 @@ and [`/cancel`](/development/message-contracts/bridge-topics#json-cancel), then 
 
 Canvas drawing on top of these topics: [Frontend Canvas](/development/frontend-canvas) and
 [Navigation Overview](/development/webui/navigation/overview#canvas-rendering-pipeline).
+
+## Live link gateway {#gateway}
+
+The server is moving off ROS. The replacement for rosbridge and the cloud relays is
+`unit_gateway.js`, a module inside `backend_node` that speaks the same rosbridge v2 protocol, so
+roslibjs stays the client library. Since the 2026-10-03 maintenance it is the only live link of both
+clouds, production and development, whose servers run no ROS at all (no roscore, rosbridge or relay),
+and both cloud dashboards are built for it (see [below](#gateway-dashboard)). The unit local
+dashboards still use the unit's rosbridge, as described above.
+
+| | rosbridge (today) | Live link gateway |
+| --- | --- | --- |
+| Topics | `<root>/server/*`, typed, decoded on the server | `<root>/string/*` only, every one a `std_msgs/String` |
+| Payload | re-encoded from the decoded ROS message | the MQTT payload byte for byte; the browser decodes it ([formats](/development/message-contracts/bridge-topics#compressed-formats)) |
+| Who may connect | anyone who reaches the port | one [ticket](/development/message-contracts/http-api#link-ticket) per connection, bound to one account and one unit |
+| What a connection reaches | every topic of every unit | that unit's topics from `shared/unit_topics.json`, each in its own direction only |
+| Operations | full rosbridge v2 | `subscribe`, `unsubscribe`, `advertise`, `unadvertise`, `publish`; anything else gets a `status` error and the connection stays open |
+
+Rules a client can rely on:
+
+| Behaviour | Rule |
+| --- | --- |
+| Direction | A browser subscribes to topics the robot sends and publishes topics the robot reads. A subscribe to a robot-bound topic, or a publish to a robot-sent one, is refused with `{"op":"status","level":"error"}`. |
+| Type | `type` must be `std_msgs/String` or absent. A typed subscribe such as `nav_msgs/OccupancyGrid` is refused. |
+| Latched topics | `map`, `move_base/NavfnROS/plan`, `move_base/TebLocalPlannerROS/local_plan`, `boustrophedon_path`, `hazard_cells`, `coverage_debug`, `uncovered_regions`, `coverage_status`, `operation_snapshot`: the last value is sent on every subscribe. The gateway receives these for every unit at all times, so a unit enrolled a minute ago is covered without a restart. |
+| `throttle_rate` | Honoured on stream topics, with a trailing send: inside the window only the newest message is kept, and it goes out when the window ends, so the last pose of a robot that stopped is never lost. Ignored on reliable topics. |
+| Slow browser | Stream topics (`robotpose`, `move_base/status`, `map`, `laserscan`, `laserscan_holes`, `hazard_cells`, the two plans) skip to the newest message while the socket is backed up. Every other topic (results, coverage and operation messages) is delivered in full and in order. A browser 16 MB behind is closed with code `4008`. |
+| Access | Re-checked every minute; once the unit has left the caller's rentals the connection closes with code `4403`, within about two minutes. |
+| Refused upgrade | A missing, unknown, expired or reused ticket gets HTTP `401`. |
+| Keepalive | A WebSocket ping every 10 s; a browser that does not answer is dropped, as with rosbridge's `websocket_ping_interval`. |
+| Compression | `permessage-deflate`, as rosbridge had with `use_compression`. A `compression` field on subscribe is ignored. |
+| Health | `GET /health` on the same port: session and topic counts and per-topic totals, with no unit ids. |
+
+Enabled by `LINK_GATEWAY_PORT`; `LINK_GATEWAY_HOST` defaults to `0.0.0.0`. The compose sets it to the
+port rosbridge used, `9090` in production (behind Apache's `/services/rosbridge`, which forwards the
+`?ticket=` query string) and `9091` in development, so no dashboard URL changed when the servers
+dropped ROS.
+
+Every [ping](/development/message-contracts/http-api#hardware-ping) sends the `DUMMY_INIT_DATA_`
+priming messages straight to MQTT, on every server, gateway or not. The robot discards them;
+receiving them is what creates its ROS publisher for the goal, cancel and initial pose topics before
+the first real message.
+
+### In the dashboard {#gateway-dashboard}
+
+The dashboard opens every topic through one adapter, `src/services/unitLink`, so one code base can
+talk to either end. The build arg `NEXT_PUBLIC_UNIT_LINK` picks which:
+
+| Value | Talks to | Effect |
+| --- | --- | --- |
+| unset or `typed` (default; unit local dashboards) | rosbridge | none: the adapter is `new ROSLIB.Topic(...)` and `new ROSLIB.ActionClient(...)` |
+| `string` (both cloud dashboards, `frontend_prod` and `frontend_dev`) | the gateway | a typed name such as `<root>/server/robot_pose` is carried on its `<root>/string/*` topic and decoded in the browser; every connect, reconnects included, first fetches a [ticket](/development/message-contracts/http-api#link-ticket) |
+
+Code that opens a topic uses `unitTopic()` and `unitActionClient()` from `@/services/unitLink`; the
+vendored `public/script/ros2d.js` and `Nav2D.js` use `ROS2D.topic()`, `NAV2D.topic()` and
+`NAV2D.actionClient()`. A bare `new ROSLIB.Topic` bypasses the adapter and would break a `string`
+build. In `string` mode a typed name the gateway does not carry (another planner's plan,
+`move_base/feedback`) becomes a topic that never fires, which is what it did before: nothing
+published it.
+
+The browser decoders are checked against the payload examples listed in
+[Bridge Topics § Compressed formats](/development/message-contracts/bridge-topics#compressed-formats):
+`npm run unit-link:sync` copies them and `shared/unit_topics.json` into the dashboard, and `npm test`
+runs the check.
 
 ## Related documentation
 
