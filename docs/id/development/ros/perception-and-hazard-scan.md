@@ -9,7 +9,7 @@ search: false
 
 Bagaimana awan Velodyne menjadi dua scan 2D yang dikonsumsi sisa stack: `/scan` untuk SLAM dan lokalisasi, `/scan_hazard` untuk costmap. Satu awan 3D masuk, dua scan 2D keluar: simulasi dan robot nyata berbagi pipeline yang persis sama.
 
-## Kedua scan
+## Kedua scan {#the-two-scans}
 
 | Topic | Isi | Dikonsumsi oleh |
 | --- | --- | --- |
@@ -19,6 +19,8 @@ Bagaimana awan Velodyne menjadi dua scan 2D yang dikonsumsi sisa stack: `/scan` 
 | `/msd700/hazard_cells` | Jejak kumulatif sel hazard (`nav_msgs/Path`) | Jejak lubang di dashboard, di-relay sebagai `<root>/server/hazard_cells` |
 
 Memanggang tepi lubang ke peta statis akan menghantui lokalisasi selamanya, sehingga pemisahannya struktural: SLAM mendapat scan bersih, costmap mendapat yang berbahaya. Height gating dimatikan di costmap (`min/max_obstacle_height ∓100.0`) karena sudah terjadi di hulu, di sini.
+
+Jejak lubang bukan latch milik costmap. Jejak mempertahankan sel setelah robot menjauh dan selama sel itu berada di blind zone, lalu membuangnya begitu detektor melihatnya lagi dan mendapati lantai: `memory.clear_hits` (3) frame ketika return lantai pada bearing sel itu menjangkau melewatinya, tidak ada apa pun di depannya, dan jaraknya dalam `expected_max_range` (3.5 m), tanpa deteksi baru sel itu di antaranya. Jadi salah deteksi hilang dari dashboard seperti hilang dari costmap di RViz. Sel yang sudah dibantah baru kembali setelah `confirm_frames` (3) deteksi baru.
 
 ## Pipeline (`msd700_perception/launch/cloud_hazard.launch`)
 

@@ -124,7 +124,7 @@ HTTP ボディの `map_id` と MQTT ペイロードの `map_name` は同じマ�
 | `<root>/server/robot_pose` | `geometry_msgs/Pose` | ロボットのアイコン、および [Show/Hide Trace](/ja/development/webui/navigation/coverage-cleaning) の元になる姿勢ストリーム |
 | `<root>/server/slam/map` | `nav_msgs/OccupancyGrid` | マップ。次の送信を待たずマウント時に `string/map_request` で要求し、描画されるまで "Loading map from robot..." を表示。[ブリッジトピック § マップ配信](/ja/development/message-contracts/bridge-topics#map-delivery) 参照。 |
 | `<root>/server/scan`、`<root>/server/scan_holes` | `sensor_msgs/LaserScan` | LiDAR の点、ライブの穴 |
-| `<root>/server/hazard_cells` | `nav_msgs/Path` | 走行中の穴の軌跡。確認済みの穴セルすべてを、明るい赤のライブ `scan_holes` マークの下に、RViz のグローバルコストマップと同じ方法で描く（セルごとに紫の lethal マーク、内接半径 0.36 m までのシアンの帯、0.45 m までの赤から青への減衰、alpha 0.7） |
+| `<root>/server/hazard_cells` | `nav_msgs/Path` | 走行中の穴の軌跡。確認済みの穴セルすべてを(検出器がそこを床と見るまで、[知覚](/ja/development/ros/perception-and-hazard-scan#the-two-scans))、明るい赤のライブ `scan_holes` マークの下に、RViz のグローバルコストマップと同じ方法で描く（セルごとに紫の lethal マーク、内接半径 0.36 m までのシアンの帯、0.45 m までの赤から青への減衰、alpha 0.7） |
 | `<root>/server/move_base/NavfnROS/plan`、`.../TebLocalPlannerROS/local_plan` | `nav_msgs/Path` | グローバル・ローカル計画の線 |
 | `<root>/server/boustrophedon_path` | `nav_msgs/Path` | カバレッジパスのオーバーレイ。リビジョンごとに ACK |
 | `<root>/server/skipped_waypoints`、`<root>/string/uncovered_regions` | `nav_msgs/Path`、`std_msgs/String` | カバレッジの取り残し |

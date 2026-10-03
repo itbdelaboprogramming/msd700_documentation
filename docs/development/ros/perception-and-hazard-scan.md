@@ -20,6 +20,8 @@ How the Velodyne cloud becomes the two 2D scans the rest of the stack consumes: 
 
 Baking a hole edge into the static map would haunt localization forever, so the split is structural: SLAM gets the clean scan, the costmaps get the dangerous one. Height gating is disabled in the costmaps (`min/max_obstacle_height ∓100.0`) because it already happened upstream, here.
 
+The hole trail is not the costmap's latch. It keeps a cell after the robot drives away and while the cell sits in the blind zone, and drops it once the detector looks again and sees floor: `memory.clear_hits` (3) frames in which floor returns on the cell's bearing reach past it, nothing stands in front of it, and it lies within `expected_max_range` (3.5 m), with no fresh detection of the cell in between. A misdetection therefore leaves the dashboard as it leaves the costmap in RViz. A disproved cell comes back only after `confirm_frames` (3) fresh detections.
+
 ## Pipeline (`msd700_perception/launch/cloud_hazard.launch`)
 
 ![Pipeline (msd700perception/launch/cloudhazard.launch)](./diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
