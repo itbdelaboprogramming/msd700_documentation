@@ -14,7 +14,7 @@ Three files, three different jobs. They are not interchangeable.
 
 | File | Runs on | Brings up |
 | --- | --- | --- |
-| `ros-web-ui/docker-compose.yml` | the **Server** | whole cloud stack: MySQL, HiveMQ, backend (+ rosbridge in prod; the live link gateway in dev), media, signalling, dashboard, coturn |
+| `ros-web-ui/docker-compose.yml` | the **Server** | whole cloud stack: MySQL, HiveMQ, backend with the live link gateway (no ROS), media, signalling, dashboard, coturn |
 | `msd700_noetic/docker/docker-compose.yml` | a **Unit** | the `msd700` robot container + the unit's own `local_dev` server stack |
 | `ros-web-ui/docker-compose.robot.yml` | a dev laptop | robot half alone, standalone, no unit orchestration |
 
@@ -26,7 +26,7 @@ Compose runs a service when **any** of its profiles is active. Nothing starts wi
 
 | Profile | Services | Purpose |
 | --- | --- | --- |
-| `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `unit_relays`, `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | Live deployment |
+| `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `unit_relays` (retired, exits at once), `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | Live deployment, **no ROS** since the 2026-10-03 maintenance |
 | `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `unit_relays_dev` (retired, exits at once), `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | Parallel stack: different ports, different database, **no ROS** since 2026-10-03 |
 | `turn` | `coturn` only | Relay alone, without touching the rest of prod |
 | `manual` | `dev`, `aws`, `hive`, `hive_serverless`, `nakayama_msd`, `nakayama_msd_sim` | Interactive shell + legacy services. Pick one explicitly; never start the whole profile |
@@ -41,9 +41,8 @@ Compose runs a service when **any** of its profiles is active. Nothing starts wi
 | --- | --- | --- | --- | --- |
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend waits on it |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Inside the container both use `8883` |
-| `nakayama_cloud` | `ros_web_ui_v2_nakayama_ros` | **host** | `5000` API, `9090` rosbridge, `11311` ROS master | The prod ROS graph, image `ros-noetic-webui-app-v2:latest` |
-| `nakayama_cloud_dev` | `ros_web_ui_v2_nakayama_ros_dev` | **host** | `5001` API, `9091` [live link gateway](/development/message-contracts/rosbridge#gateway) | Plain `node scripts/backend_node` in the ROS-free image `ros-web-ui-server:dev` (target `server`); healthcheck on the gateway's `/health`; `restart: always` |
-| `unit_relays` | `ros_web_ui_v2_unit_relays` | **host** | none (relay) | Prod: one data plane shared by all units. `unit_relays_dev` is a tombstone (`busybox`, exits at once) that retires the old dev relay, since the autodeploy never removes orphans |
+| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` [live link gateway](/development/message-contracts/rosbridge#gateway) | Plain `node scripts/backend_node` in the ROS-free image `ros-web-ui-server:latest`/`:dev` (target `server`); healthcheck on the gateway's `/health`; `restart: always` |
+| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | none | none | Tombstones (`busybox`, exit at once) that retired the old ROS relays, since the autodeploy never removes orphans. Removed once every server has deployed them |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache catch-all points at `3000` |
@@ -191,7 +190,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` puts the container user in the host's `docker` group so `backend_node` can use the mounted `/var/run/docker.sock`: multi-unit mode keeps the shared relay in step with the roster; legacy mode manages per-unit containers. Get the value with `getent group docker | cut -d: -f3` on the host. Prod only: the dev backend has no relay to manage, gets no socket and runs with `UNIT_MANAGER_DOCKER=false`.
+`group_add` puts the container user in the host's `docker` group so `backend_node` can use the mounted `/var/run/docker.sock`: multi-unit mode keeps the shared relay in step with the roster; legacy mode manages per-unit containers. Get the value with `getent group docker | cut -d: -f3` on the host. Since the 2026-10-03 maintenance neither server backend uses it: there is no relay to manage, so they get no socket and run with `UNIT_MANAGER_DOCKER=false`.
 
 HiveMQ uses `user: "1001:0"` instead, and both halves matter: uid `1001` owns the `0600` keystore (the container must *be* that user to read its key); gid `0` satisfies the image's writability check on `/opt/hivemq` without chowning anything.
 
@@ -515,7 +514,7 @@ The dashboard JS takes its **host** from whatever address the browser used to op
 
 ## Unit relay (default) vs per-unit containers (legacy)
 
-Production only. The dev server has no relay since 2026-10-03: the [live link gateway](/development/message-contracts/rosbridge#gateway) in `backend_node` reads the robots' MQTT topics itself.
+Retired on both servers in the 2026-10-03 maintenance: the [live link gateway](/development/message-contracts/rosbridge#gateway) in `backend_node` reads the robots' MQTT topics itself. The rest of this section describes the relay as it ran until then, for a rollback.
 
 Every robot's cloud data plane runs in ONE shared container: `ros_web_ui_v2_unit_relays`. It shares the backend's ROS master and rosbridge: one ROS graph per environment. It holds one `mqtt_client` nodelet/TLS connection for all units plus the multi-unit topic relays. Its start command builds the bridge map from the database roster (or `MULTI_UNIT_LIST` override). Empty roster or unreachable database: it waits and retries. Adding a robot creates no per-unit container.
 

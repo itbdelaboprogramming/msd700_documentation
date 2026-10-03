@@ -269,7 +269,7 @@ Host live punya blok tambahan yang tidak ditampilkan (MQTT WebSocket, webhook, d
 | `/services/signalling` | `ws://localhost:3001` | Signalling WebRTC WS |
 | `/services/media` | `http://localhost:3003` | Aset peta |
 | `/services/rosbackend` | `http://localhost:5000` | REST API |
-| `/services/rosbridge` | `ws://localhost:9090` | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
+| `/services/rosbridge` | `ws://localhost:9090`, [gateway live link](/id/development/message-contracts/rosbridge#gateway) sejak 2026-10-03 (nama path tidak diubah; query string `?ticket=` ikut diteruskan) | `timeout=86400 keepalive=On flushpackets=on`, `Host: localhost:9090` |
 | `/services/msd700-webhook` | `localhost:4701/webhook` | Hook deploy docs (di `apache-snippet.conf`, bukan blok utama) |
 | `/services/rosweb-deploy-webhook` | `localhost:4702/webhook` | Hook auto-deploy ros-web-ui, lihat [Auto-deploy](#auto-deploy-on-push) |
 | `/itbdelabo/docs` | exclusion + `Alias` ke `dist/` | Harus tetap di atas catch-all |

@@ -116,7 +116,7 @@ docker compose --profile server_prod up -d   # or --profile server_dev
 
 | | Dev | Prod |
 | --- | --- | --- |
-| リレーコンテナ | 2026-10-03 以降なし(開発用サーバーは ROS を動かさず、ライブリンクゲートウェイが MQTT を直接読みます) | `ros_web_ui_v2_unit_relays` |
+| リレーコンテナ | 2026-10-03 以降なし(サーバーは ROS を動かさず、ライブリンクゲートウェイが MQTT を直接読みます) | 2026-10-03 以降なし |
 | イメージ | `ros-noetic-webui-app-v2:dev` | `ros-noetic-webui-app-v2:latest` |
 | ロスターオーバーライド(任意) | `MULTI_UNIT_LIST_DEV` | `MULTI_UNIT_LIST_PROD` |
 

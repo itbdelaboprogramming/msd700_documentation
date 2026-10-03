@@ -8,8 +8,9 @@ search: false
 <RoleBadge role="developer" />
 
 Ujung browser dari kanal streaming ([jalur B](/id/development/message-contracts/#two-control-paths)).
-Dashboard memegang satu WebSocket rosbridge v2 ke ROS master cloud (atau milik unit sendiri, di
-dashboard lokal) dan memakai roslibjs di atasnya. Dashboard **tidak** memakai panggilan service
+Dashboard memegang satu WebSocket rosbridge v2 dan memakai roslibjs di atasnya: ke
+[gateway live link](#gateway) cloud (server tidak lagi menjalankan ROS sejak 2026-10-03), atau ke
+rosbridge milik unit sendiri di dashboard lokal. Dashboard **tidak** memakai panggilan service
 rosbridge: semua yang butuh jawaban lewat [HTTP API](/id/development/message-contracts/http-api).
 
 ![Ikhtisar Arsitektur rosbridge](../../../development/message-contracts/diagrams/rosbridge-protocol-rosbridge-architecture-overview.drawio)
@@ -18,8 +19,8 @@ rosbridge: semua yang butuh jawaban lewat [HTTP API](/id/development/message-con
 
 | Environment | URL | Backend |
 | --- | --- | --- |
-| Cloud produksi | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
-| Cloud development | `ws://<server-ip>:9091/?ticket=<ticket>` | [gateway live link](#gateway) di `backend_node`; server dev tidak lagi menjalankan ROS sejak 2026-10-03 |
+| Cloud produksi | `wss://msd.nglobal.jp/services/rosbridge?ticket=<ticket>` | Apache → `localhost:9090`, [gateway live link](#gateway) di `backend_node` |
+| Cloud development | `ws://<server-ip>:9091/?ticket=<ticket>` | [gateway live link](#gateway) di `backend_node` |
 | Dashboard lokal unit | `ws://<unit-ip>:9090` | `rosbridge_suite` milik unit |
 
 Dikonfigurasi saat build sebagai `NEXT_PUBLIC_WS_ROSBRIDGE_URL`. Semua nama topik di bawah diawali
@@ -142,10 +143,11 @@ Penggambaran canvas di atas topik-topik ini: [Frontend Canvas](/id/development/f
 
 Server sedang dipindahkan dari ROS. Pengganti rosbridge dan relay cloud adalah `unit_gateway.js`,
 modul di dalam `backend_node` yang berbicara protokol rosbridge v2 yang sama, sehingga roslibjs tetap
-menjadi library klien. Sejak 2026-10-03 gateway ini satu-satunya live link di cloud development, yang
-servernya sama sekali tidak menjalankan ROS (tanpa roscore, rosbridge, maupun relay), dan dashboard
-dev di-build untuknya (lihat [di bawah](#gateway-dashboard)). Production dan dashboard lokal unit
-masih memakai rosbridge, yang dijelaskan semua bagian di atas.
+menjadi library klien. Sejak maintenance 2026-10-03 gateway ini satu-satunya live link di kedua cloud,
+production dan development, yang servernya sama sekali tidak menjalankan ROS (tanpa roscore,
+rosbridge, maupun relay), dan kedua dashboard cloud di-build untuknya (lihat
+[di bawah](#gateway-dashboard)). Dashboard lokal unit masih memakai rosbridge milik unit, seperti
+dijelaskan di atas.
 
 | | rosbridge (sekarang) | Gateway live link |
 | --- | --- | --- |
@@ -170,9 +172,10 @@ Aturan yang bisa diandalkan klien:
 | Kompresi | `permessage-deflate`, seperti rosbridge dengan `use_compression`. Field `compression` pada subscribe diabaikan. |
 | Health | `GET /health` di port yang sama: jumlah sesi dan topik serta total per topik, tanpa unit id. |
 
-Diaktifkan oleh `LINK_GATEWAY_PORT`; `LINK_GATEWAY_HOST` default-nya `0.0.0.0`. Compose dev mengisinya
-`9091`, port yang dulu dipakai rosbridge, sehingga URL dashboard tidak berubah saat server dev
-melepas ROS. Production belum mengisinya.
+Diaktifkan oleh `LINK_GATEWAY_PORT`; `LINK_GATEWAY_HOST` default-nya `0.0.0.0`. Compose mengisinya
+dengan port yang dulu dipakai rosbridge, `9090` di production (di belakang `/services/rosbridge`
+Apache, yang meneruskan query string `?ticket=`) dan `9091` di development, sehingga tidak ada URL
+dashboard yang berubah saat server melepas ROS.
 
 Setiap [ping](/id/development/message-contracts/http-api#hardware-ping) mengirim pesan priming
 `DUMMY_INIT_DATA_` langsung ke MQTT, di semua server, ada gateway atau tidak. Robot membuangnya;
@@ -186,8 +189,8 @@ bisa berbicara ke kedua sisi. Build arg `NEXT_PUBLIC_UNIT_LINK` menentukan yang 
 
 | Nilai | Berbicara ke | Efek |
 | --- | --- | --- |
-| tidak diisi atau `typed` (default; production dan dashboard lokal unit) | rosbridge | tidak ada: adapter sama dengan `new ROSLIB.Topic(...)` dan `new ROSLIB.ActionClient(...)` |
-| `string` (cloud development, `frontend_dev`) | gateway | nama bertipe seperti `<root>/server/robot_pose` dibawa lewat topik `<root>/string/*`-nya dan di-decode di browser; setiap connect, termasuk reconnect, mengambil [tiket](/id/development/message-contracts/http-api#link-ticket) lebih dulu |
+| tidak diisi atau `typed` (default; dashboard lokal unit) | rosbridge | tidak ada: adapter sama dengan `new ROSLIB.Topic(...)` dan `new ROSLIB.ActionClient(...)` |
+| `string` (kedua dashboard cloud, `frontend_prod` dan `frontend_dev`) | gateway | nama bertipe seperti `<root>/server/robot_pose` dibawa lewat topik `<root>/string/*`-nya dan di-decode di browser; setiap connect, termasuk reconnect, mengambil [tiket](/id/development/message-contracts/http-api#link-ticket) lebih dulu |
 
 Kode yang membuka topik memakai `unitTopic()` dan `unitActionClient()` dari `@/services/unitLink`;
 skrip vendor `public/script/ros2d.js` dan `Nav2D.js` memakai `ROS2D.topic()`, `NAV2D.topic()`, dan
