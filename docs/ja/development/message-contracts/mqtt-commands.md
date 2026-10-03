@@ -253,7 +253,7 @@ HTTP の入口: [`/api/mapping`](/ja/development/message-contracts/http-api#mapp
 | --- | --- | --- |
 | `init` | `use_autocover`。カスタムカバレッジでは `areas` + `exclusions`(プレイリスト、優先)または `polygon`(エリア 1 つ) | 手動操作とモーションロックを解除し、アクティビティ `boustrophedon_initializing`、`/switch_mode(mode=boustrophedon, use_autocover)`。プレイリストは JSON `{ areas, exclusions }` として `/msd700/coverage_plan` (`std_msgs/String`、latched) に、単一エリアは `geometry_msgs/Polygon` として `/msd700/coverage_polygon` に送られます。3 点未満のポリゴンは捨てられます。 |
 | `pause` | `config.pause` (`true` で一時停止、`false` で再開) | `/path_coverage/pause` または `/path_coverage/resume` (`Empty`)。それらを持たない古いカバレッジノードでは `operator_pause` モーションロックにフォールバック。一時停止中のアクティビティは `paused`。 |
-| `deactivate` | `config.use_autocover` (`init` と一致が必要) | `/move_base/cancel` でゴールをキャンセルし、計画とポリゴンを消去、`/path_coverage/cancel`、`/switch_mode(mode=stop_additional_feature)`。 |
+| `deactivate` | `config.use_autocover` (`init` と一致が必要) | `/move_base/cancel` でゴールをキャンセルし、計画とポリゴンを消去、`/path_coverage/cancel`、`/switch_mode(mode=stop_additional_feature)`。マップが読み込まれている間(`move_base` は動いたまま)はアクティビティ `navigation_ready`、それ以外は `idle`。 |
 
 生成されたパスは [`string/boustrophedon_path`](/ja/development/message-contracts/bridge-topics#topic-map) の
 オーバーレイとして戻り、ブラウザが ACK します。ライフサイクルは `string/coverage_status` のプレーン文字列
@@ -313,7 +313,8 @@ HTTP の入口: [`/api/autopilot`](/ja/development/message-contracts/http-api#au
 | 値 | 設定元 |
 | --- | --- |
 | `idle` | `hardware.idle`、`navigation.deactivate`、`mapping.discard` |
-| `navigation_ready`、`navigation_point_published` | `navigation.init`、`navigation.pointstamped` |
+| `navigation_ready`、`navigation_point_published` | `navigation.init`、`navigation.pointstamped`。マップが読み込まれている間は `boustrophedon.deactivate` と、待機に戻ったスーパーバイザーの実行も |
+| `supervisor_navigating` | バッチ(オートパイロット)を走らせている `operation_supervisor` |
 | `mapping_active`、`mapping_paused` | `mapping.start`、`mapping.pause` |
 | `boustrophedon_initializing`、`paused` | `boustrophedon.init`、`boustrophedon.pause` |
 | `auto_aligning` | `autoalign.start` |

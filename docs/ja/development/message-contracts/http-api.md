@@ -319,7 +319,8 @@ intended mode を消去します。
 ### `POST /api/boustrophedon/deactivate` {#boustrophedon-deactivate}
 
 ボディ `{ unit_id, use_autocover }`。ロボットが正しい機能を停止できるよう、`use_autocover` は開始時の値と
-一致させる必要があります。intended mode を消去します。
+一致させる必要があります。カバレッジはまだ動いているナビゲーションセッションの中で走るため、intended mode は
+同じマップのまま `navigation` に戻ります。マップが記録されていない場合のみ `idle` になります。
 
 ## Auto Align {#autoalign}
 

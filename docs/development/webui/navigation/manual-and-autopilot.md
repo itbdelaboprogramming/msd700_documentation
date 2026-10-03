@@ -191,6 +191,24 @@ even after the robot has reported `idle`. Clearing it matches what the emergency
 deactivate paths already do, and it does not touch autopilot retention, which never reaches this
 endpoint.
 
+The opposite mistake broke autopilot recovery until 2026-10-03. Stopping a coverage run and a
+supervisor run standing down both left the navigation stack and its map up, yet both reported `idle`:
+`update_activity("idle")` wipes `active_map_id`, and `POST /api/boustrophedon/deactivate` wrote an
+`idle` intent. An autopilot run started afterwards on the same map (sent as an `operation_batch`,
+which never reaches the backend) therefore had no map on either side, and an operator who signed back
+in landed on an empty Navigation page with `[Nav auto-resume] no map candidates yet` in the console,
+while the robot kept driving. Both now return to `navigation_ready` with the map kept, and the backend
+keeps the `navigation` intent and its map:
+
+| Event | Robot activity | Backend intended mode |
+| --- | --- | --- |
+| `boustrophedon.deactivate` | `navigation_ready` while a map is loaded, else `idle` | `navigation` with the same map, else `idle` |
+| Supervisor stands down without arriving | `navigation_ready` while a map is loaded, else `idle` | unchanged |
+| Supervisor arrives | `arrived` | unchanged |
+
+The backend also counts `supervisor_navigating` as in step with a `navigation` intent, so an
+autopilot run no longer reports `sync_status: out_of_sync`.
+
 ### What triggers a snapshot rebuild
 
 The rebuild is not limited to a brand-new tab. It runs whenever the tab has no local session worth

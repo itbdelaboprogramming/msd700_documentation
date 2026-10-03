@@ -19,9 +19,8 @@ needs an answer goes through the [HTTP API](/development/message-contracts/http-
 | Environment | URL | Backend |
 | --- | --- | --- |
 | Production cloud | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
-| Development cloud | `ws://<server-ip>:9091` | dev rosbridge |
+| Development cloud | `ws://<server-ip>:9091/?ticket=<ticket>` | the [live link gateway](#gateway) in `backend_node`; the dev server runs no ROS since 2026-10-03 |
 | Unit local dashboard | `ws://<unit-ip>:9090` | the unit's `rosbridge_suite` |
-| Development cloud, live link gateway | `ws://<server-ip>:9191/?ticket=<ticket>` | [`unit_gateway.js`](#gateway) in `backend_node`; not used by the dashboard yet |
 
 Configured at build time as `NEXT_PUBLIC_WS_ROSBRIDGE_URL`. All topic names below are prefixed with the
 unit's `topic_root` from [`GET /unit/all`](/development/message-contracts/http-api#unit-list); written
@@ -139,13 +138,14 @@ and [`/cancel`](/development/message-contracts/bridge-topics#json-cancel), then 
 Canvas drawing on top of these topics: [Frontend Canvas](/development/frontend-canvas) and
 [Navigation Overview](/development/webui/navigation/overview#canvas-rendering-pipeline).
 
-## Live link gateway (in development) {#gateway}
+## Live link gateway {#gateway}
 
 The server is moving off ROS. The replacement for rosbridge and the cloud relays is
 `unit_gateway.js`, a module inside `backend_node` that speaks the same rosbridge v2 protocol, so
-roslibjs stays the client library. It runs only in the development cloud, beside rosbridge. No
-deployment of the dashboard uses it yet (it can be built for it, see [below](#gateway-dashboard)), so
-everything above still describes the live link.
+roslibjs stays the client library. Since 2026-10-03 it is the only live link of the development
+cloud, whose server runs no ROS at all (no roscore, rosbridge or relay), and the dev dashboard is
+built for it (see [below](#gateway-dashboard)). Production and the unit local dashboards still use
+rosbridge, which everything above describes.
 
 | | rosbridge (today) | Live link gateway |
 | --- | --- | --- |
@@ -170,11 +170,14 @@ Rules a client can rely on:
 | Compression | `permessage-deflate`, as rosbridge had with `use_compression`. A `compression` field on subscribe is ignored. |
 | Health | `GET /health` on the same port: session and topic counts and per-topic totals, with no unit ids. |
 
-Enabled by `LINK_GATEWAY_PORT` (dev compose: `9191`); `LINK_GATEWAY_HOST` defaults to `0.0.0.0`.
-While it is enabled, each [ping](/development/message-contracts/http-api#hardware-ping) also sends
-the `DUMMY_INIT_DATA_` priming messages straight to MQTT, beside the existing ROS copy. The robot
-discards both; receiving them is what creates its ROS publisher for the goal, cancel and initial
-pose topics before the first real message.
+Enabled by `LINK_GATEWAY_PORT`; `LINK_GATEWAY_HOST` defaults to `0.0.0.0`. The dev compose sets it
+to `9091`, the port rosbridge used, so the dashboard URL did not change when the dev server dropped
+ROS. Production does not set it yet.
+
+Every [ping](/development/message-contracts/http-api#hardware-ping) sends the `DUMMY_INIT_DATA_`
+priming messages straight to MQTT, on every server, gateway or not. The robot discards them;
+receiving them is what creates its ROS publisher for the goal, cancel and initial pose topics before
+the first real message.
 
 ### In the dashboard {#gateway-dashboard}
 
@@ -183,8 +186,8 @@ talk to either end. The build arg `NEXT_PUBLIC_UNIT_LINK` picks which:
 
 | Value | Talks to | Effect |
 | --- | --- | --- |
-| unset or `typed` (default; every deployment today) | rosbridge | none: the adapter is `new ROSLIB.Topic(...)` and `new ROSLIB.ActionClient(...)` |
-| `string` | the gateway | a typed name such as `<root>/server/robot_pose` is carried on its `<root>/string/*` topic and decoded in the browser; every connect, reconnects included, first fetches a [ticket](/development/message-contracts/http-api#link-ticket) |
+| unset or `typed` (default; production and unit local dashboards) | rosbridge | none: the adapter is `new ROSLIB.Topic(...)` and `new ROSLIB.ActionClient(...)` |
+| `string` (development cloud, `frontend_dev`) | the gateway | a typed name such as `<root>/server/robot_pose` is carried on its `<root>/string/*` topic and decoded in the browser; every connect, reconnects included, first fetches a [ticket](/development/message-contracts/http-api#link-ticket) |
 
 Code that opens a topic uses `unitTopic()` and `unitActionClient()` from `@/services/unitLink`; the
 vendored `public/script/ros2d.js` and `Nav2D.js` use `ROS2D.topic()`, `NAV2D.topic()` and

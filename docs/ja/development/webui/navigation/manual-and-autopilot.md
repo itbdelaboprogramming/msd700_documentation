@@ -162,6 +162,23 @@ Cancel Coverage は [`POST /api/boustrophedon/deactivate`](/ja/development/messa
 開かれうる。これをクリアする動作は緊急停止とナビゲーション無効化の経路が既に行っていることと同じであり、
 このエンドポイントに到達しないautopilotの保持には影響しない。
 
+逆方向の誤りが 2026-10-03 までautopilotの復旧を壊していた。カバレッジ実行の停止と、待機に戻るスーパーバイザー
+実行は、どちらもナビゲーションスタックとマップを残したまま`idle`を報告していた。`update_activity("idle")`は
+`active_map_id`を消し、`POST /api/boustrophedon/deactivate`は`idle`の意図を書き込んでいた。そのため同じマップで
+その後に始めたautopilot実行(`operation_batch`として送られ、バックエンドには届かない)は両側ともマップを持たず、
+再ログインしたオペレーターはロボットが走り続けているのに空のナビゲーションページに着き、コンソールには
+`[Nav auto-resume] no map candidates yet`が出ていた。現在は両方ともマップを保ったまま`navigation_ready`に戻り、
+バックエンドも`navigation`の意図とマップを保持する:
+
+| 出来事 | ロボットのアクティビティ | バックエンドの intended mode |
+| --- | --- | --- |
+| `boustrophedon.deactivate` | マップ読み込み中は`navigation_ready`、それ以外は`idle` | 同じマップのまま`navigation`、それ以外は`idle` |
+| スーパーバイザーが到着せずに待機へ戻る | マップ読み込み中は`navigation_ready`、それ以外は`idle` | 変更なし |
+| スーパーバイザーが到着 | `arrived` | 変更なし |
+
+バックエンドは`supervisor_navigating`も`navigation`の意図と一致しているとみなすため、autopilot実行が
+`sync_status: out_of_sync`を報告することはなくなった。
+
 **メッセージ仕様:** [`POST /api/hardware/idle`](/ja/development/message-contracts/http-api#hardware-commands) →
 [`hardware.idle`](/ja/development/message-contracts/mqtt-commands#hardware)、続いて [`POST /user/logout`](/ja/development/message-contracts/http-api#user-logout)。
 

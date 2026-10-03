@@ -254,7 +254,7 @@ into one terminal progress event (`100`/`completed` or `-1`/`error`).
 | --- | --- | --- |
 | `init` | `use_autocover`, and for custom coverage either `areas` + `exclusions` (playlist, takes precedence) or `polygon` (one area) | Releases manual override and motion locks, activity `boustrophedon_initializing`, `/switch_mode(mode=boustrophedon, use_autocover)`. A playlist goes out as JSON `{ areas, exclusions }` on `/msd700/coverage_plan` (`std_msgs/String`, latched); a single area as `geometry_msgs/Polygon` on `/msd700/coverage_polygon`. Polygons with fewer than 3 points are dropped. |
 | `pause` | `config.pause` (`true` pause, `false` resume) | `/path_coverage/pause` or `/path_coverage/resume` (`Empty`); an older coverage node without them falls back to the `operator_pause` motion lock. Activity `paused` while paused. |
-| `deactivate` | `config.use_autocover` (must match `init`) | Cancels the goal on `/move_base/cancel`, clears plan and polygon, `/path_coverage/cancel`, `/switch_mode(mode=stop_additional_feature)`. |
+| `deactivate` | `config.use_autocover` (must match `init`) | Cancels the goal on `/move_base/cancel`, clears plan and polygon, `/path_coverage/cancel`, `/switch_mode(mode=stop_additional_feature)`. Activity `navigation_ready` while a map is loaded (`move_base` stays up), else `idle`. |
 
 The generated path comes back as an overlay on
 [`string/boustrophedon_path`](/development/message-contracts/bridge-topics#topic-map) and is ACKed by the
@@ -315,7 +315,8 @@ is set by the handlers above. The values a dashboard sees most:
 | Value | Set by |
 | --- | --- |
 | `idle` | `hardware.idle`, `navigation.deactivate`, `mapping.discard` |
-| `navigation_ready`, `navigation_point_published` | `navigation.init`, `navigation.pointstamped` |
+| `navigation_ready`, `navigation_point_published` | `navigation.init`, `navigation.pointstamped`; also `boustrophedon.deactivate` and a supervisor run standing down, while a map is loaded |
+| `supervisor_navigating` | `operation_supervisor` driving a batch (autopilot) |
 | `mapping_active`, `mapping_paused` | `mapping.start`, `mapping.pause` |
 | `boustrophedon_initializing`, `paused` | `boustrophedon.init`, `boustrophedon.pause` |
 | `auto_aligning` | `autoalign.start` |

@@ -321,7 +321,9 @@ Body `{ unit_id, pause }`, `pause` boolean (`true` menjeda, `false` melanjutkan)
 ### `POST /api/boustrophedon/deactivate` {#boustrophedon-deactivate}
 
 Body `{ unit_id, use_autocover }`. `use_autocover` harus sama dengan nilai saat run dimulai, supaya robot
-menghentikan fitur yang benar. Menghapus intended mode.
+menghentikan fitur yang benar. Intended mode kembali ke `navigation` dengan map yang sama, karena
+coverage berjalan di dalam sesi navigasi yang masih hidup; baru jatuh ke `idle` bila tidak ada map yang
+tercatat.
 
 ## Auto Align {#autoalign}
 

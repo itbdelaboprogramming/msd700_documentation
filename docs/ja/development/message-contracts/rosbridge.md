@@ -19,9 +19,8 @@ WebSocket を 1 本保持し、その上で roslibjs を使います。rosbridge
 | 環境 | URL | バックエンド |
 | --- | --- | --- |
 | 本番クラウド | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
-| 開発クラウド | `ws://<server-ip>:9091` | 開発用 rosbridge |
+| 開発クラウド | `ws://<server-ip>:9091/?ticket=<ticket>` | `backend_node` 内の[ライブリンクゲートウェイ](#gateway)。2026-10-03 以降、開発用サーバーは ROS を動かしていません |
 | ユニットのローカルダッシュボード | `ws://<unit-ip>:9090` | ユニットの `rosbridge_suite` |
-| 開発用クラウド、ライブリンクゲートウェイ | `ws://<server-ip>:9191/?ticket=<ticket>` | `backend_node` 内の [`unit_gateway.js`](#gateway)。ダッシュボードはまだ使っていません |
 
 ビルド時に `NEXT_PUBLIC_WS_ROSBRIDGE_URL` として設定します。以下のトピック名はすべて
 [`GET /unit/all`](/ja/development/message-contracts/http-api#unit-list) で得たユニットの `topic_root` で始まり、
@@ -137,13 +136,14 @@ rosbridge はグリッドを PNG エンコードしたペイロードで送り�
 これらのトピックを使ったキャンバス描画: [フロントエンドキャンバス](/ja/development/frontend-canvas)、
 [ナビゲーション概要](/ja/development/webui/navigation/overview)。
 
-## ライブリンクゲートウェイ(開発中) {#gateway}
+## ライブリンクゲートウェイ {#gateway}
 
 サーバーから ROS を外す作業を進めています。rosbridge とクラウドリレーの置き換えは `unit_gateway.js` です。
 `backend_node` 内のモジュールで、同じ rosbridge v2 プロトコルを話すため、クライアントライブラリは roslibjs の
-ままです。開発用クラウドでのみ rosbridge と並んで動いています。これを使うダッシュボードのデプロイはまだ
-ありません(ビルドは可能です。[下記](#gateway-dashboard) を参照)。そのため上の各節は引き続き現行の
-ライブリンクの説明です。
+ままです。2026-10-03 以降、開発用クラウドのライブリンクはこれだけです。開発用サーバーは ROS をまったく
+動かしておらず(roscore、rosbridge、リレーなし)、開発用ダッシュボードはこのゲートウェイ向けにビルドされて
+います([下記](#gateway-dashboard) を参照)。本番環境とユニットのローカルダッシュボードは引き続き rosbridge を
+使っており、上の各節はそちらの説明です。
 
 | | rosbridge(現行) | ライブリンクゲートウェイ |
 | --- | --- | --- |
@@ -168,10 +168,13 @@ rosbridge はグリッドを PNG エンコードしたペイロードで送り�
 | 圧縮 | `permessage-deflate`。rosbridge の `use_compression` と同じです。subscribe の `compression` フィールドは無視します。 |
 | ヘルス | 同じポートの `GET /health`: セッション数とトピック数、トピックごとの合計。ユニット ID は含みません。 |
 
-`LINK_GATEWAY_PORT` で有効になります(開発用 compose では `9191`)。`LINK_GATEWAY_HOST` の既定値は `0.0.0.0` です。
-有効な間は、各 [ping](/ja/development/message-contracts/http-api#hardware-ping) が `DUMMY_INIT_DATA_` の
-プライミングメッセージを、既存の ROS 経由の分とは別に MQTT へ直接送ります。ロボットはどちらも捨てますが、
-受け取ることで goal、cancel、initial pose トピックの ROS publisher が最初の本物のメッセージより先に作られます。
+`LINK_GATEWAY_PORT` で有効になります。`LINK_GATEWAY_HOST` の既定値は `0.0.0.0` です。開発用 compose では
+rosbridge が使っていた `9091` を設定しているため、開発用サーバーが ROS を外してもダッシュボードの URL は
+変わりませんでした。本番環境ではまだ設定していません。
+
+各 [ping](/ja/development/message-contracts/http-api#hardware-ping) は、ゲートウェイの有無にかかわらずどのサーバーでも
+`DUMMY_INIT_DATA_` のプライミングメッセージを MQTT へ直接送ります。ロボットはこれを捨てますが、受け取ることで
+goal、cancel、initial pose トピックの ROS publisher が最初の本物のメッセージより先に作られます。
 
 ### ダッシュボード側 {#gateway-dashboard}
 
@@ -180,8 +183,8 @@ rosbridge はグリッドを PNG エンコードしたペイロードで送り�
 
 | 値 | 接続先 | 効果 |
 | --- | --- | --- |
-| 未設定または `typed`(既定。現在のすべてのデプロイ) | rosbridge | なし。アダプターは `new ROSLIB.Topic(...)` と `new ROSLIB.ActionClient(...)` そのものです |
-| `string` | ゲートウェイ | `<root>/server/robot_pose` のような型付きの名前は対応する `<root>/string/*` トピックで運ばれ、ブラウザでデコードされます。接続のたびに(再接続も含めて)先に[チケット](/ja/development/message-contracts/http-api#link-ticket)を取得します |
+| 未設定または `typed`(既定。本番環境とユニットのローカルダッシュボード) | rosbridge | なし。アダプターは `new ROSLIB.Topic(...)` と `new ROSLIB.ActionClient(...)` そのものです |
+| `string`(開発用クラウド、`frontend_dev`) | ゲートウェイ | `<root>/server/robot_pose` のような型付きの名前は対応する `<root>/string/*` トピックで運ばれ、ブラウザでデコードされます。接続のたびに(再接続も含めて)先に[チケット](/ja/development/message-contracts/http-api#link-ticket)を取得します |
 
 トピックを開くコードは `@/services/unitLink` の `unitTopic()` と `unitActionClient()` を使います。
 同梱スクリプト `public/script/ros2d.js` と `Nav2D.js` は `ROS2D.topic()`、`NAV2D.topic()`、

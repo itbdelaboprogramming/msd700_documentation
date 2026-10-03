@@ -14,7 +14,7 @@ Tiga file, tiga pekerjaan beda. Tidak bisa dipertukarkan.
 
 | File | Jalan di | Menyalakan |
 | --- | --- | --- |
-| `ros-web-ui/docker-compose.yml` | **Server** | seluruh stack cloud: MySQL, HiveMQ, backend + rosbridge, media, signalling, dashboard, coturn |
+| `ros-web-ui/docker-compose.yml` | **Server** | seluruh stack cloud: MySQL, HiveMQ, backend (+ rosbridge di prod; gateway live link di dev), media, signalling, dashboard, coturn |
 | `msd700_noetic/docker/docker-compose.yml` | **Unit** | container robot `msd700` + stack server `local_dev` milik unit |
 | `ros-web-ui/docker-compose.robot.yml` | laptop dev | separuh robot saja, standalone, tanpa orkestrasi unit |
 
@@ -27,7 +27,7 @@ Compose menjalankan service bila **salah satu** profile-nya aktif. Tanpa profile
 | Profile | Service | Tujuan |
 | --- | --- | --- |
 | `server_prod` | `db`, `hivemq`, `fix_perms_prod`, `nakayama_cloud`, `unit_relays`, `nakayama_media`, `nakayama_signalling`, `frontend_prod`, `coturn` | Deployment live |
-| `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `unit_relays_dev`, `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | Stack paralel: port beda, database beda |
+| `server_dev` | `db_dev`, `hivemq_dev`, `fix_perms_dev`, `nakayama_cloud_dev`, `unit_relays_dev` (sudah pensiun, langsung exit), `nakayama_media_dev`, `nakayama_signalling_dev`, `frontend_dev` | Stack paralel: port beda, database beda, **tanpa ROS** sejak 2026-10-03 |
 | `turn` | `coturn` saja | Relay saja, tanpa menyentuh sisa prod |
 | `manual` | `dev`, `aws`, `hive`, `hive_serverless`, `nakayama_msd`, `nakayama_msd_sim` | Shell interaktif + service legacy. Pilih satu eksplisit; jangan start seluruh profile |
 
@@ -35,14 +35,15 @@ Compose menjalankan service bila **salah satu** profile-nya aktif. Tanpa profile
 `profiles: ["server_prod", "turn"]` berarti `up` prod membawa relay, **dan** bisa start sendiri dengan `--profile turn`. Relay **tidak** di `server_dev`: satu instance relay, milik prod. Sharing aman karena relay tidak menyimpan state; peer bertemu lewat server signalling yang **dipisah** (3001 prod, 4001 dev).
 :::
 
-### Peta service dan port
+### Peta service dan port {#service-and-port-map}
 
 | Service | Container | Network | Port host | Catatan |
 | --- | --- | --- | --- | --- |
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend menunggu |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Di dalam container keduanya `8883` |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master; khusus dev: `9191` gateway live link | Satu ROS graph bersama per environment. [Gateway live link](/id/development/message-contracts/rosbridge#gateway) (`LINK_GATEWAY_PORT`, diisi dari `LINK_GATEWAY_PORT_DEV`) berjalan berdampingan dengan rosbridge hanya di dev; belum ada yang memakainya |
-| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | tidak ada (relay) | Satu data plane yang dipakai bersama semua unit (default) |
+| `nakayama_cloud` | `ros_web_ui_v2_nakayama_ros` | **host** | `5000` API, `9090` rosbridge, `11311` ROS master | ROS graph prod, image `ros-noetic-webui-app-v2:latest` |
+| `nakayama_cloud_dev` | `ros_web_ui_v2_nakayama_ros_dev` | **host** | `5001` API, `9091` [gateway live link](/id/development/message-contracts/rosbridge#gateway) | `node scripts/backend_node` biasa di image tanpa ROS `ros-web-ui-server:dev` (target `server`); healthcheck ke `/health` gateway; `restart: always` |
+| `unit_relays` | `ros_web_ui_v2_unit_relays` | **host** | tidak ada (relay) | Prod: satu data plane yang dipakai bersama semua unit. `unit_relays_dev` hanya penanda (`busybox`, langsung exit) yang memensiunkan relay dev lama, karena autodeploy tidak pernah menghapus orphan |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Catch-all Apache menunjuk `3000` |
@@ -190,7 +191,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add` memasukkan user container ke grup `docker` host agar `backend_node` bisa memakai `/var/run/docker.sock` yang di-mount: mode multi-unit menjaga relay bersama selaras roster; mode legacy mengelola container per-unit. Cari nilainya dengan `getent group docker | cut -d: -f3` di host.
+`group_add` memasukkan user container ke grup `docker` host agar `backend_node` bisa memakai `/var/run/docker.sock` yang di-mount: mode multi-unit menjaga relay bersama selaras roster; mode legacy mengelola container per-unit. Cari nilainya dengan `getent group docker | cut -d: -f3` di host. Hanya prod: backend dev tidak punya relay untuk dikelola, tidak mendapat socket, dan berjalan dengan `UNIT_MANAGER_DOCKER=false`.
 
 HiveMQ memakai `user: "1001:0"`, dan keduanya penting: uid `1001` memiliki keystore `0600` (container harus *menjadi* user itu untuk membaca key-nya); gid `0` memenuhi cek writability image atas `/opt/hivemq` tanpa chown.
 
@@ -514,7 +515,9 @@ JS dashboard mengambil **host**-nya dari alamat yang dipakai browser membuka hal
 
 ## Unit relay (default) vs container per-unit (legacy)
 
-Data plane cloud tiap robot jalan di SATU container bersama: `ros_web_ui_v2_unit_relays` (prod) atau `..._dev` (dev). Berbagi ROS master dan rosbridge backend: satu ROS graph per environment. Memegang satu koneksi `mqtt_client` nodelet/TLS untuk semua unit plus relay topik multi-unit. Perintah start-nya membangun peta bridge dari roster database (atau override `MULTI_UNIT_LIST`). Roster kosong atau database tak terjangkau: menunggu dan retry. Menambah robot tidak membuat container per-unit.
+Hanya production. Server dev tidak punya relay sejak 2026-10-03: [gateway live link](/id/development/message-contracts/rosbridge#gateway) di `backend_node` membaca topik MQTT robot sendiri.
+
+Data plane cloud tiap robot jalan di SATU container bersama: `ros_web_ui_v2_unit_relays`. Berbagi ROS master dan rosbridge backend: satu ROS graph per environment. Memegang satu koneksi `mqtt_client` nodelet/TLS untuk semua unit plus relay topik multi-unit. Perintah start-nya membangun peta bridge dari roster database (atau override `MULTI_UNIT_LIST`). Roster kosong atau database tak terjangkau: menunggu dan retry. Menambah robot tidak membuat container per-unit.
 
 Default karena `UNIT_CONTAINERS_ENABLED` default `false`: `unit_manager.js` jalan mode **Multi-unit**, melacak pemakaian unit dan menjaga satu relay selaras roster, tidak pernah spawn per-unit.
 

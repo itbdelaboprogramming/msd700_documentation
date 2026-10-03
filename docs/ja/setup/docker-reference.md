@@ -14,7 +14,7 @@ MSD700のDockerコマンド・フラグ・compose構造とその意味です。�
 
 | ファイル | 実行場所 | 起動内容 |
 | --- | --- | --- |
-| `ros-web-ui/docker-compose.yml` | **サーバー** | クラウド全体:MySQL、HiveMQ、バックエンド+rosbridge、メディア、シグナリング、ダッシュボード、coturn |
+| `ros-web-ui/docker-compose.yml` | **サーバー** | クラウド全体:MySQL、HiveMQ、バックエンド(本番は+rosbridge、開発はライブリンクゲートウェイ)、メディア、シグナリング、ダッシュボード、coturn |
 | `msd700_noetic/docker/docker-compose.yml` | **ユニット** | `msd700`ロボットコンテナ+ユニット独自の`local_dev`サーバースタック |
 | `ros-web-ui/docker-compose.robot.yml` | 開発PC | ロボット半分のみ単独、ユニット管理なし |
 
@@ -27,7 +27,7 @@ Composeは宣言プロファイルの**いずれか**が有効だとサービス
 | プロファイル | サービス | 用途 |
 | --- | --- | --- |
 | `server_prod` | `db`、`hivemq`、`fix_perms_prod`、`nakayama_cloud`、`unit_relays`、`nakayama_media`、`nakayama_signalling`、`frontend_prod`、`coturn` | 本番デプロイ |
-| `server_dev` | `db_dev`、`hivemq_dev`、`fix_perms_dev`、`nakayama_cloud_dev`、`unit_relays_dev`、`nakayama_media_dev`、`nakayama_signalling_dev`、`frontend_dev` | 並行スタック:ポート別、DB別 |
+| `server_dev` | `db_dev`、`hivemq_dev`、`fix_perms_dev`、`nakayama_cloud_dev`、`unit_relays_dev`(廃止済み、即終了)、`nakayama_media_dev`、`nakayama_signalling_dev`、`frontend_dev` | 並行スタック:ポート別、DB別、2026-10-03 以降 **ROSなし** |
 | `turn` | `coturn`のみ | 本番の他に触れずリレーのみ |
 | `manual` | `dev`、`aws`、`hive`、`hive_serverless`、`nakayama_msd`、`nakayama_msd_sim` | 対話シェル+レガシーサービス。1つ明示選択。全体起動禁止 |
 
@@ -35,14 +35,15 @@ Composeは宣言プロファイルの**いずれか**が有効だとサービス
 `profiles: ["server_prod", "turn"]`により本番`up`でリレー同伴、**かつ**`--profile turn`で単独起動できます。`server_dev`には**属しません**:リレーは1インスタンスで本番の物です。共有は安全です。リレーは無状態で、相手探索は分離されたシグナリングサーバー(本番3001、開発4001)経由だからです。
 :::
 
-### サービス・ポート表
+### サービス・ポート表 {#service-and-port-map}
 
 | サービス | コンテナ | ネットワーク | ホストポート | 備考 |
 | --- | --- | --- | --- | --- |
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | ヘルスチェック付き。バックエンドは待機します |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | コンテナ内は両方`8883` |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API、`9090`/`9091` rosbridge、`11311`/`11312` ROSマスター。開発のみ: `9191` ライブリンクゲートウェイ | 環境ごとに共有ROSグラフ1つ。[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway)(`LINK_GATEWAY_PORT`、`LINK_GATEWAY_PORT_DEV` から設定)は開発環境でのみ rosbridge と並んで動きます。まだ何も使っていません |
-| `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | なし(リレー) | 全ユニット共有データプレーン1つ(デフォルト) |
+| `nakayama_cloud` | `ros_web_ui_v2_nakayama_ros` | **host** | `5000` API、`9090` rosbridge、`11311` ROSマスター | 本番のROSグラフ。イメージ`ros-noetic-webui-app-v2:latest` |
+| `nakayama_cloud_dev` | `ros_web_ui_v2_nakayama_ros_dev` | **host** | `5001` API、`9091` [ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway) | ROSなしイメージ`ros-web-ui-server:dev`(ターゲット`server`)で`node scripts/backend_node`を直接実行。ヘルスチェックはゲートウェイの`/health`。`restart: always` |
+| `unit_relays` | `ros_web_ui_v2_unit_relays` | **host** | なし(リレー) | 本番:全ユニット共有データプレーン1つ。`unit_relays_dev`は旧開発リレーを止めるための墓標(`busybox`、即終了)です。自動デプロイは孤立コンテナを削除しないためです |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS、`3002`/`4002` HTTP | |
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apacheキャッチオールは`3000`向き |
@@ -190,7 +191,7 @@ group_add:
   - "${DOCKER_GID:-998}"
 ```
 
-`group_add`はコンテナユーザーをホスト`docker`グループに入れ、マウント済み`/var/run/docker.sock`を`backend_node`が使えるようにします。マルチユニットモードは共有リレーを名簿に追従させ、レガシーはユニット単位コンテナを管理します。値はホストの`getent group docker | cut -d: -f3`で取得します。
+`group_add`はコンテナユーザーをホスト`docker`グループに入れ、マウント済み`/var/run/docker.sock`を`backend_node`が使えるようにします。マルチユニットモードは共有リレーを名簿に追従させ、レガシーはユニット単位コンテナを管理します。値はホストの`getent group docker | cut -d: -f3`で取得します。本番のみです。開発のバックエンドには管理するリレーがなく、ソケットも渡さず`UNIT_MANAGER_DOCKER=false`で動きます。
 
 HiveMQは代わりに`user: "1001:0"`を使い、両方に意味があります:uid `1001`が`0600`キーストアの所有者(コンテナが*そのユーザー*でないと鍵を読めません)。gid `0`はイメージの`/opt/hivemq`書込チェックをchownなしで満たします。
 
@@ -514,7 +515,9 @@ docker exec -it msd700 tmux list-windows -t robot_services
 
 ## ユニットリレー (デフォルト)とユニット単位コンテナ (レガシー)
 
-各ロボットのクラウドデータプレーンは共有コンテナ1台で動作します。本番`ros_web_ui_v2_unit_relays`・開発`..._dev`です。バックエンドのROSマスターとrosbridgeを共有します。環境ごとにROSグラフ1つです。全ユニット用`mqtt_client` nodelet/TLS接続1つと複数ユニットトピックリレーを持ちます。起動コマンドはDB名簿(または`MULTI_UNIT_LIST`上書き)からブリッジ表を生成します。空名簿やDB到達不能では待機再試行します。ロボット追加でユニット単位コンテナは生まれません。
+本番のみです。開発サーバーには 2026-10-03 以降リレーがありません。`backend_node` 内の[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway)がロボットのMQTTトピックを直接読みます。
+
+各ロボットのクラウドデータプレーンは共有コンテナ1台で動作します。本番`ros_web_ui_v2_unit_relays`です。バックエンドのROSマスターとrosbridgeを共有します。環境ごとにROSグラフ1つです。全ユニット用`mqtt_client` nodelet/TLS接続1つと複数ユニットトピックリレーを持ちます。起動コマンドはDB名簿(または`MULTI_UNIT_LIST`上書き)からブリッジ表を生成します。空名簿やDB到達不能では待機再試行します。ロボット追加でユニット単位コンテナは生まれません。
 
 `UNIT_CONTAINERS_ENABLED`既定`false`のためデフォルトです。`unit_manager.js`は**マルチユニットモード**で動作し、ユニット利用を追跡して単一リレーを名簿に追従させ、ユニット単位生成はしません。
 

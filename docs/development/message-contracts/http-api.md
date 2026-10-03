@@ -321,7 +321,9 @@ Body `{ unit_id, pause }`, `pause` a boolean (`true` pauses, `false` resumes). T
 ### `POST /api/boustrophedon/deactivate` {#boustrophedon-deactivate}
 
 Body `{ unit_id, use_autocover }`. `use_autocover` must match the value the run was started with, so
-the robot stops the right feature. Clears the intended mode.
+the robot stops the right feature. The intended mode goes back to `navigation` with the same map,
+because coverage runs inside the navigation session that is still up; it falls to `idle` only when no
+map was recorded.
 
 ## Auto Align {#autoalign}
 
