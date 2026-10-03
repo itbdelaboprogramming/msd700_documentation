@@ -19,6 +19,17 @@ Bridge configuration: robot `aws_mqtt/launch/nakayama_msd.launch`; cloud
 `nakayama_cloud.launch` (legacy per-unit container). Relays: robot `topic2string/launch/msd.launch`,
 cloud `topic2string/launch/cloud_multi.launch`.
 
+The stream topics in the two tables below are also listed once in `shared/unit_topics.json`: name,
+direction, payload format, whether a late subscriber needs the last value, and whether a slow browser
+may skip to the newest message. The [live link gateway](/development/message-contracts/rosbridge#gateway)
+reads its allowlist from it. `aws_mqtt/scripts/test/test_unit_topics.py` fails when that table,
+`gen_bridge_params.py` and `nakayama_msd.launch` disagree.
+
+The ping and pong entries in both bridges (`server/ping`, `msd/ping`, `msd/pong`, `server/pong`) carry
+nothing: no node publishes or subscribes them, and the two sides do not even agree on the names. The
+watchdog ping is the `ping` command on
+[`system_command`](/development/message-contracts/mqtt-commands#command-envelope).
+
 ## Topic map {#topic-map}
 
 ### Robot → cloud {#robot-to-cloud}
@@ -159,6 +170,11 @@ the robot.
 | Paths (`plan`, `local_plan`, `boustrophedon_path`, `hazard_cells`, `skipped_waypoints`) | `base64(zlib(JSON))`, JSON = `{ header, poses: [{ header, pose }] }` |
 | Laser scans (`laserscan`, `laserscan_holes`) | `base64(zlib(Q1))`, a quantised scan (`q1_encode`); with quantising off, the ROS-serialized `LaserScan` |
 | Map | `base64(zlib(M1))`, cells packed as raw int8; the decoder still accepts the older `base64(zlib(JSON))` |
+
+Example payloads of every format, made by the robot's own codecs together with what the cloud decoder
+turns each into, are in `topic2string/test/fixtures/` (regenerate with
+`python3 test/gen_fixtures.py`). A decoder written anywhere else, such as the browser one the live
+link gateway needs, is checked against them.
 
 ## Reliability ACKs {#acks}
 

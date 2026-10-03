@@ -186,6 +186,33 @@ Body `{ unit_id }`, answer `{ success: true }`. Keeps the unit's legacy cloud co
 resets its idle timer. Does not touch MQTT, so it answers at once. The dashboard sends it every 15 s
 while an operating page is open.
 
+### `POST /api/link/ticket` {#link-ticket}
+
+Body `{ unit_id }`. Returns a single-use ticket that opens one WebSocket on the
+[live link gateway](/development/message-contracts/rosbridge#gateway), bound to this account and this
+unit.
+
+```json
+{ "success": true, "ticket": "Jt2v9cQx0kq3...", "expires_in_ms": 30000 }
+```
+
+| Situation | Status |
+| --- | --- |
+| The gateway is not enabled on this backend (`LINK_GATEWAY_PORT` unset) | `503` |
+| No `unit_id` in the body | `400` |
+| The unit is not on an active rental of the caller | `403`, from [`attachUnit`](#attach-unit) |
+| More than 30 tickets in one minute for this account | `429` |
+
+The ticket goes in the WebSocket URL as `?ticket=`, not the JWT: a browser cannot set headers on a
+WebSocket, and a URL ends up in proxy access logs. A ticket is valid for 30 s and opens one
+connection, whether or not that connection succeeds.
+
+::: info In development
+The gateway runs only in the development cloud, beside rosbridge. Only a dashboard built with
+[`NEXT_PUBLIC_UNIT_LINK=string`](/development/message-contracts/rosbridge#gateway-dashboard) requests
+tickets, and no deployment is built that way yet. Every other backend answers `503`.
+:::
+
 ### Hardware commands {#hardware-commands}
 
 Body `{ unit_id }` for each; the answer is the [command shape](#envelopes).

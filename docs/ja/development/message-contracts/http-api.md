@@ -184,6 +184,33 @@ MQTT の [`hardware.ping`](/ja/development/message-contracts/heartbeat-and-lease
 タイマーをリセットします。MQTT には触れないので即座に応答します。操作ページが開いている間、ダッシュボードは
 15 秒ごとに送ります。
 
+### `POST /api/link/ticket` {#link-ticket}
+
+ボディ `{ unit_id }`。[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway) への
+WebSocket を 1 本だけ開ける使い捨てチケットを返します。チケットはこのアカウントとこのユニットに紐づきます。
+
+```json
+{ "success": true, "ticket": "Jt2v9cQx0kq3...", "expires_in_ms": 30000 }
+```
+
+| 状況 | ステータス |
+| --- | --- |
+| このバックエンドでゲートウェイが有効でない(`LINK_GATEWAY_PORT` 未設定) | `503` |
+| ボディに `unit_id` がない | `400` |
+| 呼び出し元の有効なレンタルにそのユニットが含まれない | `403`([`attachUnit`](#attach-unit) による) |
+| このアカウントで 1 分間に 30 枚を超えるチケット | `429` |
+
+WebSocket の URL に `?ticket=` として入れるのは JWT ではなくチケットです。ブラウザは WebSocket にヘッダーを
+付けられず、URL はプロキシのアクセスログに残るためです。チケットの有効期間は 30 秒で、接続の成否にかかわらず
+1 本の接続にしか使えません。
+
+::: info 開発中
+ゲートウェイは開発用クラウドでのみ、rosbridge と並んで動いています。チケットを要求するのは
+[`NEXT_PUBLIC_UNIT_LINK=string`](/ja/development/message-contracts/rosbridge#gateway-dashboard) で
+ビルドしたダッシュボードだけで、そのようにビルドしたデプロイはまだありません。それ以外のバックエンドは
+`503` を返します。
+:::
+
 ### ハードウェアコマンド {#hardware-commands}
 
 いずれもボディは `{ unit_id }`、応答は [コマンド応答の形](#envelopes) です。

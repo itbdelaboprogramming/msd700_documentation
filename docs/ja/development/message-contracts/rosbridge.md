@@ -21,6 +21,7 @@ WebSocket を 1 本保持し、その上で roslibjs を使います。rosbridge
 | 本番クラウド | `wss://msd.nglobal.jp/services/rosbridge` | Apache → `localhost:9090` |
 | 開発クラウド | `ws://<server-ip>:9091` | 開発用 rosbridge |
 | ユニットのローカルダッシュボード | `ws://<unit-ip>:9090` | ユニットの `rosbridge_suite` |
+| 開発用クラウド、ライブリンクゲートウェイ | `ws://<server-ip>:9191/?ticket=<ticket>` | `backend_node` 内の [`unit_gateway.js`](#gateway)。ダッシュボードはまだ使っていません |
 
 ビルド時に `NEXT_PUBLIC_WS_ROSBRIDGE_URL` として設定します。以下のトピック名はすべて
 [`GET /unit/all`](/ja/development/message-contracts/http-api#unit-list) で得たユニットの `topic_root` で始まり、
@@ -135,6 +136,63 @@ rosbridge はグリッドを PNG エンコードしたペイロードで送り�
 
 これらのトピックを使ったキャンバス描画: [フロントエンドキャンバス](/ja/development/frontend-canvas)、
 [ナビゲーション概要](/ja/development/webui/navigation/overview)。
+
+## ライブリンクゲートウェイ(開発中) {#gateway}
+
+サーバーから ROS を外す作業を進めています。rosbridge とクラウドリレーの置き換えは `unit_gateway.js` です。
+`backend_node` 内のモジュールで、同じ rosbridge v2 プロトコルを話すため、クライアントライブラリは roslibjs の
+ままです。開発用クラウドでのみ rosbridge と並んで動いています。これを使うダッシュボードのデプロイはまだ
+ありません(ビルドは可能です。[下記](#gateway-dashboard) を参照)。そのため上の各節は引き続き現行の
+ライブリンクの説明です。
+
+| | rosbridge(現行) | ライブリンクゲートウェイ |
+| --- | --- | --- |
+| トピック | `<root>/server/*`、型付き、サーバーでデコード | `<root>/string/*` のみ、すべて `std_msgs/String` |
+| ペイロード | デコードした ROS メッセージから再エンコード | MQTT のペイロードをバイト単位でそのまま。デコードはブラウザが行います([形式](/ja/development/message-contracts/bridge-topics#compressed-formats)) |
+| 接続できる相手 | ポートに届く誰でも | 接続ごとに 1 枚の[チケット](/ja/development/message-contracts/http-api#link-ticket)。1 アカウントと 1 ユニットに紐づく |
+| 1 接続で届く範囲 | 全ユニットの全トピック | そのユニットの `shared/unit_topics.json` 上のトピックのみ、それぞれ本来の方向だけ |
+| 操作 | rosbridge v2 のすべて | `subscribe`、`unsubscribe`、`advertise`、`unadvertise`、`publish`。それ以外は `status` エラーを返し、接続は維持します |
+
+クライアントが前提にできる規則:
+
+| 振る舞い | 規則 |
+| --- | --- |
+| 方向 | ブラウザはロボットが送るトピックを subscribe し、ロボットが読むトピックに publish します。ロボット宛てトピックへの subscribe や、ロボット発トピックへの publish は `{"op":"status","level":"error"}` で拒否されます。 |
+| 型 | `type` は `std_msgs/String` か省略のみ。`nav_msgs/OccupancyGrid` のような型付き subscribe は拒否されます。 |
+| ラッチされたトピック | `map`、`move_base/NavfnROS/plan`、`move_base/TebLocalPlannerROS/local_plan`、`boustrophedon_path`、`hazard_cells`、`coverage_debug`、`uncovered_regions`、`coverage_status`、`operation_snapshot`: subscribe のたびに最後の値を送ります。ゲートウェイはこれらを全ユニット分つねに受信しているため、1 分前に登録したユニットも再起動なしで対象になります。 |
+| `throttle_rate` | stream トピックで有効で、窓の終わりに送信します。窓の中では最新のメッセージだけを保持し、窓が終わった時点で送るため、停止したロボットの最後の pose が失われることはありません。reliable トピックでは無視します。 |
+| 遅いブラウザ | stream トピック(`robotpose`、`move_base/status`、`map`、`laserscan`、`laserscan_holes`、`hazard_cells`、2 つの plan)は、ソケットが詰まっている間は最新のメッセージへ飛ばします。それ以外(result、coverage と operation のメッセージ)は全件を順番どおりに届けます。16 MB 遅れたブラウザはコード `4008` で切断します。 |
+| アクセス | 1 分ごとに再確認し、ユニットが呼び出し元のレンタルから外れると約 2 分以内にコード `4403` で切断します。 |
+| アップグレードの拒否 | チケットがない、不明、期限切れ、再利用のいずれかなら HTTP `401` です。 |
+| キープアライブ | 10 秒ごとに WebSocket ping を送り、応答しないブラウザは切断します。rosbridge の `websocket_ping_interval` と同じです。 |
+| 圧縮 | `permessage-deflate`。rosbridge の `use_compression` と同じです。subscribe の `compression` フィールドは無視します。 |
+| ヘルス | 同じポートの `GET /health`: セッション数とトピック数、トピックごとの合計。ユニット ID は含みません。 |
+
+`LINK_GATEWAY_PORT` で有効になります(開発用 compose では `9191`)。`LINK_GATEWAY_HOST` の既定値は `0.0.0.0` です。
+有効な間は、各 [ping](/ja/development/message-contracts/http-api#hardware-ping) が `DUMMY_INIT_DATA_` の
+プライミングメッセージを、既存の ROS 経由の分とは別に MQTT へ直接送ります。ロボットはどちらも捨てますが、
+受け取ることで goal、cancel、initial pose トピックの ROS publisher が最初の本物のメッセージより先に作られます。
+
+### ダッシュボード側 {#gateway-dashboard}
+
+ダッシュボードはすべてのトピックを 1 つのアダプター `src/services/unitLink` 経由で開くため、同じコードで
+どちらの相手とも話せます。どちらにするかはビルド引数 `NEXT_PUBLIC_UNIT_LINK` で決まります:
+
+| 値 | 接続先 | 効果 |
+| --- | --- | --- |
+| 未設定または `typed`(既定。現在のすべてのデプロイ) | rosbridge | なし。アダプターは `new ROSLIB.Topic(...)` と `new ROSLIB.ActionClient(...)` そのものです |
+| `string` | ゲートウェイ | `<root>/server/robot_pose` のような型付きの名前は対応する `<root>/string/*` トピックで運ばれ、ブラウザでデコードされます。接続のたびに(再接続も含めて)先に[チケット](/ja/development/message-contracts/http-api#link-ticket)を取得します |
+
+トピックを開くコードは `@/services/unitLink` の `unitTopic()` と `unitActionClient()` を使います。
+同梱スクリプト `public/script/ros2d.js` と `Nav2D.js` は `ROS2D.topic()`、`NAV2D.topic()`、
+`NAV2D.actionClient()` を使います。`new ROSLIB.Topic` を直接書くとアダプターを経由せず、`string` ビルドを
+壊します。`string` モードでは、ゲートウェイが運ばない型付きの名前(他のプランナーの plan、
+`move_base/feedback`)は決して発火しないトピックになります。以前も publish する者がいなかったので、
+振る舞いは同じです。
+
+ブラウザ側デコーダーは [ブリッジトピック § 圧縮形式](/ja/development/message-contracts/bridge-topics#compressed-formats)
+にあるペイロード例で検証します。`npm run unit-link:sync` がそれらと `shared/unit_topics.json` を
+ダッシュボードへコピーし、`npm test` が検証を実行します。
 
 ## 関連ドキュメント
 

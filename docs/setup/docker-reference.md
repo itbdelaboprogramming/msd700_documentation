@@ -41,7 +41,7 @@ Compose runs a service when **any** of its profiles is active. Nothing starts wi
 | --- | --- | --- | --- | --- |
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | Healthchecked; backend waits on it |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | Inside the container both use `8883` |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master | One shared ROS graph per environment |
+| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API, `9090`/`9091` rosbridge, `11311`/`11312` ROS master; dev only: `9191` live link gateway | One shared ROS graph per environment. The [live link gateway](/development/message-contracts/rosbridge#gateway) (`LINK_GATEWAY_PORT`, set from `LINK_GATEWAY_PORT_DEV`) runs beside rosbridge in dev only; nothing uses it yet |
 | `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | none (relay) | One data plane shared by all units (default) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS, `3002`/`4002` HTTP | |

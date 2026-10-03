@@ -41,7 +41,7 @@ Composeは宣言プロファイルの**いずれか**が有効だとサービス
 | --- | --- | --- | --- | --- |
 | `db` / `db_dev` | `ros_web_ui_v2_db[_dev]` | bridge | `3307` / `3308` | ヘルスチェック付き。バックエンドは待機します |
 | `hivemq` / `hivemq_dev` | `ros_web_ui_v2_hivemq[_dev]` | bridge | `8883` / `8884` | コンテナ内は両方`8883` |
-| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API、`9090`/`9091` rosbridge、`11311`/`11312` ROSマスター | 環境ごとに共有ROSグラフ1つ |
+| `nakayama_cloud[_dev]` | `ros_web_ui_v2_nakayama_ros[_dev]` | **host** | `5000`/`5001` API、`9090`/`9091` rosbridge、`11311`/`11312` ROSマスター。開発のみ: `9191` ライブリンクゲートウェイ | 環境ごとに共有ROSグラフ1つ。[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway)(`LINK_GATEWAY_PORT`、`LINK_GATEWAY_PORT_DEV` から設定)は開発環境でのみ rosbridge と並んで動きます。まだ何も使っていません |
 | `unit_relays[_dev]` | `ros_web_ui_v2_unit_relays[_dev]` | **host** | なし(リレー) | 全ユニット共有データプレーン1つ(デフォルト) |
 | `nakayama_media[_dev]` | `ros_web_ui_v2_nakayama_media[_dev]` | **host** | `3003` / `4003` | |
 | `nakayama_signalling[_dev]` | `ros_web_ui_v2_nakayama_signalling[_dev]` | **host** | `3001`/`4001` WS、`3002`/`4002` HTTP | |

@@ -18,6 +18,16 @@ search: false
 (ユニットリレー、ロスターのユニットごとに 1 エントリ)または `nakayama_cloud.launch`(レガシーなユニット単位
 コンテナ)。リレー: ロボット `topic2string/launch/msd.launch`、クラウド `topic2string/launch/cloud_multi.launch`。
 
+下の 2 つの表のストリームトピックは `shared/unit_topics.json` にも 1 か所でまとめてあります。名前、方向、
+ペイロード形式、遅れて subscribe した側に最後の値が必要か、遅いブラウザが最新メッセージへ飛ばしてよいか、を
+持ちます。[ライブリンクゲートウェイ](/ja/development/message-contracts/rosbridge#gateway) は許可リストを
+ここから読みます。この表、`gen_bridge_params.py`、`nakayama_msd.launch` が食い違うと
+`aws_mqtt/scripts/test/test_unit_topics.py` が失敗します。
+
+両ブリッジにある ping と pong のエントリ(`server/ping`、`msd/ping`、`msd/pong`、`server/pong`)は何も運んで
+いません。publish も subscribe もするノードがなく、両側で名前すら一致していません。ウォッチドッグの ping は
+[`system_command`](/ja/development/message-contracts/mqtt-commands#command-envelope) の `ping` コマンドです。
+
 ## トピックマップ {#topic-map}
 
 ### ロボット → クラウド {#robot-to-cloud}
@@ -157,6 +167,10 @@ search: false
 | パス (`plan`、`local_plan`、`boustrophedon_path`、`hazard_cells`、`skipped_waypoints`) | `base64(zlib(JSON))`、JSON = `{ header, poses: [{ header, pose }] }` |
 | レーザースキャン (`laserscan`、`laserscan_holes`) | `base64(zlib(Q1))`、量子化したスキャン(`q1_encode`)。量子化が無効なら ROS でシリアライズした `LaserScan` |
 | マップ | `base64(zlib(M1))`、セルは生の int8 で詰めたもの。デコーダーは旧形式 `base64(zlib(JSON))` も受け付けます |
+
+各形式のペイロード例は、ロボット自身のコーデックで作ったものと、それをクラウドのデコーダーが変換した結果を
+組にして `topic2string/test/fixtures/` に置いてあります(`python3 test/gen_fixtures.py` で再生成)。
+ライブリンクゲートウェイが必要とするブラウザ側デコーダーのように、別の場所で書いたデコーダーはこれで検証します。
 
 ## 信頼性のための ACK {#acks}
 
