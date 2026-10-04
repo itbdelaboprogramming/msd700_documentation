@@ -40,6 +40,25 @@ docker compose --profile server_dev up -d --build
 ### ロボット側の開発ワークフロー:
 `msd700_noetic` では、`src/` ディレクトリがロボットランタイムコンテナに直接バインドマウントされています。launch ファイル、Python ノード、URDF モデルへの変更は、イメージの再ビルドなしに次回の launch から反映されます。イメージの再ビルド(`docker-manager.sh build`)が必要になるのは、C++ の catkin パッケージや基盤となるシステム依存関係が変更された場合のみです。
 
+
+### 継続的インテグレーション(develop):
+各製品リポジトリは、**`develop`へのすべてのpushと`develop`へのすべてのプルリクエスト**でのみGitHub Actionsのビルドとテストを実行します(`main`やその他のブランチでは何も実行しません)。新しいpushは実行中のrunをキャンセルし、各ワークフローは手動実行(**Run workflow**)もできます。
+
+| リポジトリ | ワークフロー | チェック内容 |
+| --- | --- | --- |
+| `ros-web-ui` | `ci-develop.yml` | `ros:noetic`での`source/`の`catkin_make`、Pythonテストスクリプト12本(`*/scripts/test/test_*.py`)、4つのNodeサービスの`npm ci`と`node --check` |
+| `msd700_robot` | `ci-develop.yml` | ロボットイメージの依存関係(`noetic_dep.sh`、rosdep)、`catkin build`、`*/test/test_*.py`のPythonテスト |
+| `ROS-dashboard-next-ts` | `CI-CD.yml` | `next build`、ESLintとPrettier(自動修正コミット)、`tsc --noEmit`、`vitest`(Node 20) |
+| `msd700_noetic` | `ci-develop.yml` | `bash -n`、`docker compose config`、Dockerfileチェック、その後`develop`の`ros-web-ui`と`msd700_robot`でロボットとwebui-localのイメージをビルドしスモークテスト |
+
+`msd700_noetic`は2つの非公開リポジトリをcloneするため、リポジトリシークレット`CI_REPO_TOKEN`が必要です。`ros-web-ui`と`msd700_robot`への読み取り専用**Contents**権限を持つfine-grainedトークンです。未設定の場合、ビルドジョブはその旨のメッセージで失敗します。
+
+ROSのチェックは`.github/ci/build_and_test.sh`にあるため、push前にローカルで再現できます:
+
+```bash
+docker run --rm -v "$PWD":/repo:ro ros:noetic bash /repo/.github/ci/build_and_test.sh
+```
+
 ---
 
 ## このドキュメントサイトの作業

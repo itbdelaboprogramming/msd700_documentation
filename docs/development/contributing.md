@@ -40,6 +40,25 @@ A physical or simulated robot connects to the dev cloud peer by passing `--dev`:
 ### Robot-Side Development Workflow:
 In `msd700_noetic`, the `src/` directory is bind-mounted directly into the robot runtime container. Changes to launch files, Python nodes, or URDF models take effect on the next launch without requiring an image rebuild. Image rebuilds (`docker-manager.sh build`) are only necessary when C++ catkin packages or base system dependencies are modified.
 
+
+### Continuous Integration (develop):
+Each product repo runs a GitHub Actions build and test on **every push to `develop` and every pull request into `develop`**, and nowhere else (`main` and other branches run nothing). A newer push cancels the run in progress, and every workflow can also be started by hand (**Run workflow**).
+
+| Repo | Workflow | Checks |
+| --- | --- | --- |
+| `ros-web-ui` | `ci-develop.yml` | `catkin_make` of `source/` in `ros:noetic`, the 12 Python test scripts (`*/scripts/test/test_*.py`), `npm ci` and `node --check` for the four Node services |
+| `msd700_robot` | `ci-develop.yml` | the robot image's dependencies (`noetic_dep.sh`, rosdep), `catkin build`, the Python tests under `*/test/test_*.py` |
+| `ROS-dashboard-next-ts` | `CI-CD.yml` | `next build`, ESLint and Prettier (auto-fix commit), `tsc --noEmit`, `vitest` (Node 20) |
+| `msd700_noetic` | `ci-develop.yml` | `bash -n`, `docker compose config`, Dockerfile checks, then builds and smoke-tests the robot and webui-local images against `ros-web-ui` and `msd700_robot` at `develop` |
+
+`msd700_noetic` clones the two private repos, so it needs the repository secret `CI_REPO_TOKEN`: a fine-grained token with read-only **Contents** access to `ros-web-ui` and `msd700_robot`. Without it the build job fails with a message saying so.
+
+The ROS checks live in `.github/ci/build_and_test.sh`, so a run can be reproduced locally before pushing:
+
+```bash
+docker run --rm -v "$PWD":/repo:ro ros:noetic bash /repo/.github/ci/build_and_test.sh
+```
+
 ---
 
 ## Working on this Documentation Site

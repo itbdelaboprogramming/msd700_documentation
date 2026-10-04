@@ -40,6 +40,25 @@ Robot fisik atau simulasi terhubung ke peer cloud dev dengan meneruskan `--dev`:
 ### Alur Kerja Pengembangan Sisi Robot:
 Di `msd700_noetic`, direktori `src/` di-bind-mount langsung ke dalam kontainer runtime robot. Perubahan pada launch file, node Python, atau model URDF berlaku pada launch berikutnya tanpa memerlukan rebuild image. Rebuild image (`docker-manager.sh build`) hanya diperlukan ketika paket catkin C++ atau dependensi sistem dasar dimodifikasi.
 
+
+### Continuous Integration (develop):
+Setiap repo produk menjalankan build dan test GitHub Actions pada **setiap push ke `develop` dan setiap pull request ke `develop`**, dan tidak di tempat lain (`main` dan branch lain tidak menjalankan apa pun). Push yang lebih baru membatalkan run yang sedang berjalan, dan setiap workflow juga bisa dijalankan manual (**Run workflow**).
+
+| Repo | Workflow | Pengecekan |
+| --- | --- | --- |
+| `ros-web-ui` | `ci-develop.yml` | `catkin_make` untuk `source/` di `ros:noetic`, 12 skrip test Python (`*/scripts/test/test_*.py`), `npm ci` dan `node --check` untuk empat service Node |
+| `msd700_robot` | `ci-develop.yml` | dependency image robot (`noetic_dep.sh`, rosdep), `catkin build`, test Python di `*/test/test_*.py` |
+| `ROS-dashboard-next-ts` | `CI-CD.yml` | `next build`, ESLint dan Prettier (commit auto-fix), `tsc --noEmit`, `vitest` (Node 20) |
+| `msd700_noetic` | `ci-develop.yml` | `bash -n`, `docker compose config`, cek Dockerfile, lalu build dan smoke test image robot dan webui-local terhadap `ros-web-ui` dan `msd700_robot` di `develop` |
+
+`msd700_noetic` meng-clone dua repo private, jadi butuh secret repository `CI_REPO_TOKEN`: token fine-grained dengan akses baca **Contents** ke `ros-web-ui` dan `msd700_robot`. Tanpa secret itu, job build gagal dengan pesan yang menyebutkannya.
+
+Pengecekan ROS ada di `.github/ci/build_and_test.sh`, jadi run bisa direproduksi lokal sebelum push:
+
+```bash
+docker run --rm -v "$PWD":/repo:ro ros:noetic bash /repo/.github/ci/build_and_test.sh
+```
+
 ---
 
 ## Mengerjakan Situs Dokumentasi Ini
