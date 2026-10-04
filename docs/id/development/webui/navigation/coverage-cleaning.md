@@ -165,22 +165,52 @@ JSON di `/msd700/coverage_plan`; dicatat dengan [`batch`](/id/development/messag
 
 ## Overlay inisialisasi {#initialization-overlay}
 
-Ketiga cara memulai menampilkan overlay semi-transparan yang sama di atas halaman selama robot
-berpindah ke mode cakupan, sehingga start kedua tidak bisa dipicu selama perpindahan itu. Berapa
-lama overlay bertahan bergantung pada apakah areanya sudah diketahui:
+Ketiga cara memulai menampilkan overlay semi-transparan yang sama di atas halaman sejak start diklik
+sampai robot mulai berjalan, sehingga start kedua tidak bisa dipicu selama robot berpindah mode dan
+merencanakan lintasan pertamanya.
 
-| Start | Pesan | Turun saat |
-| --- | --- | --- |
-| Auto Coverage | `Please wait while system is setting the map area boundary` | robot mempublikasikan jalur cakupan non-kosong pertama dari run itu, setelah jalur kosong yang ia publikasikan saat init (batasnya sudah diketahui), atau setelah 30 detik |
-| Custom Area, Operation Playlist | `Initializing Auto Coverage...` | `POST /api/boustrophedon/init` berhasil: robot sudah berpindah mode dan menerima areanya |
+| Start | Pesan |
+| --- | --- |
+| Auto Coverage | `Please wait while system is setting the map area boundary` |
+| Custom Area, Operation Playlist | `Initializing Auto Coverage...` |
 
-Area custom dan area playlist digambar saat start diklik, di bawah overlay, sehingga sudah ada di
-peta sebelum robot menjawab dan terlihat penuh begitu overlay turun. Overlay ini dulu menunggu robot
-bergerak (relokalisasi saat perpindahan mode bisa memalsukannya), lalu menunggu jalur cakupan
-pertamanya, yang membuat area yang sudah diketahui tetap redup selama robot merencanakan dan
-menjalankan lintasan pertamanya. Sebuah revisi pada 2026-10-04 menghapus overlay dari kedua cara
-start itu sama sekali; overlay dikembalikan pada 2026-10-05. Start yang ditolak menurunkan overlay
-dan areanya lagi.
+Play di action bar juga memulai run bila mode coverage punya sesuatu untuk dijalankan, misalnya
+custom area yang loop-nya sudah tertutup, dan run itu mendapat overlay yang sama. Play pada run yang
+di-pause hanya melanjutkannya, tanpa overlay. Sampai 2026-10-05 run yang dimulai dari Play sama
+sekali tidak menampilkan overlay, karena Play mengirim request start sendiri, tidak lewat handler
+yang dipakai tombol di sub-menu.
+
+Overlay turun pada mana pun yang terjadi lebih dulu:
+
+- **Jalur cakupan pertama dari run itu.** Node cakupan mempublikasikan jalur sebuah run untuk pertama
+  kalinya tepat sebelum menjalankan lintasan pertama, sehingga jalur itu sekaligus menjadi sinyal
+  "mulai berjalan" dari robot dan tidak perlu topic sendiri.
+- **Akhir run** (Finished atau Failed), untuk run yang gagal atau selesai saat masih merencanakan.
+- **Start yang ditolak**, yang juga menurunkan areanya lagi.
+- **120 detik tanpa jalur**, sebagai fallback.
+
+Keberhasilan `POST /api/boustrophedon/init` bukan sinyalnya: request itu dijawab begitu robot
+berpindah mode, sebelum node cakupan bahkan menerima areanya. Pemotongan area dan perencanaan
+lintasan pertama terjadi setelahnya; untuk area custom 18 m² di simulator, robot mulai berjalan
+sekitar 20 detik setelah POST dijawab.
+
+Jalur run sebelumnya masih bisa tiba setelah start, sehingga `coverageStartPath.ts` membedakan jalur
+pertama run ini dari geometrinya. Converter di sisi robot (`navplan_to_string.py`) hanya mengirim
+jalur saat geometrinya berubah, ditambah heartbeat dengan geometri yang sama, sehingga jalur lama
+terus datang, dan reset kosong run baru tidak terkirim sebagai perubahan bila run sebelumnya juga
+berakhir kosong. `header.seq` tidak membantu: rospy menomori ulang nilai itu di setiap publisher,
+sehingga nilainya mulai lagi dari awal saat node cakupan dijalankan ulang dan, lewat server, ikut
+menghitung heartbeat. Karena itu jalur non-kosong dihitung setelah ada jalur kosong yang tiba sejak
+start, atau bila geometrinya berbeda dari jalur terakhir yang dilihat tab sebelum start.
+
+Area custom dan area playlist digambar saat start diklik, di bawah overlay. Versi sebelumnya menunggu
+robot bergerak (relokalisasi saat perpindahan mode bisa memalsukannya), dan pada 2026-10-05 Custom
+Area dan Operation Playlist sempat menurunkan overlay begitu POST init dijawab, sehingga sweep tampak
+berjalan tanpa jalur dan dengan robot yang masih diam.
+
+**Kontrak:** jalur pertama tiba di [`server/boustrophedon_path`](/id/development/message-contracts/rosbridge#subscriptions);
+akhir run adalah `robot_activity` `arrived` atau `coverage_failed` di
+[respons ping](/id/development/message-contracts/heartbeat-and-lease#ping-response).
 
 ## Show/Hide Trace
 

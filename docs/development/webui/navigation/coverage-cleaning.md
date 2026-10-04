@@ -158,21 +158,51 @@ coverage node as JSON on `/msd700/coverage_plan`; recorded with a
 
 ## Initialization overlay
 
-All three starts put the same semi-transparent overlay over the page while the robot switches into
-coverage mode, so a second start cannot be fired during the switch. How long it stays depends on
-whether the area is already known:
+All three starts put the same semi-transparent overlay over the page from the click until the robot
+starts driving, so a second start cannot be fired while the robot switches mode and plans its first
+lane.
 
-| Start | Message | Comes down when |
-| --- | --- | --- |
-| Auto Coverage | `Please wait while system is setting the map area boundary` | the robot publishes the run's first non-empty coverage path, after the empty one it publishes at init (the boundary is known), or after 30 s |
-| Custom Area, Operation Playlist | `Initializing Auto Coverage...` | `POST /api/boustrophedon/init` succeeds: the robot has switched mode and accepted the area |
+| Start | Message |
+| --- | --- |
+| Auto Coverage | `Please wait while system is setting the map area boundary` |
+| Custom Area, Operation Playlist | `Initializing Auto Coverage...` |
 
-The custom area and the playlist areas are drawn when the start is clicked, underneath the overlay,
-so they are on the map before the robot answers and fully visible the moment the overlay comes
-down. The overlay used to wait for the robot to move (a mode-switch relocalization could fake that),
-then for its first coverage path, which kept a known area dimmed while the robot planned and drove
-its first lane. A revision on 2026-10-04 removed the overlay from those two starts altogether; it was
-restored on 2026-10-05. A refused start takes the overlay and the area down again.
+Play in the action bar also starts a run when a coverage mode has something to run, such as a
+closed custom area, and that run gets the same overlay. Play on a paused run only resumes it, with
+no overlay. Until 2026-10-05 a run started from Play had no overlay at all, because Play sent the
+start request itself instead of going through the handlers the sub-menu buttons use.
+
+The overlay comes down on whichever happens first:
+
+- **The run's first coverage path.** The coverage node publishes a run's path for the first time
+  right before it drives the first lane, so the path doubles as the robot's "driving now" signal and
+  needs no topic of its own.
+- **The end of the run** (Finished or Failed), for a run that fails or finishes while still planning.
+- **A refused start**, which also takes the area down again.
+- **120 s without a path**, as a fallback.
+
+`POST /api/boustrophedon/init` succeeding is not the signal: it answers once the robot has switched
+mode, before the coverage node has even received the area. Clipping the area and planning the first
+lane come after that; for an 18 m² custom area in the simulator the robot started driving about 20 s
+after the POST answered.
+
+The previous run's path can still arrive after a start, so `coverageStartPath.ts` tells the run's
+first path apart by geometry. The robot-side converter (`navplan_to_string.py`) ships a path only
+when its geometry changes, plus a heartbeat of the same geometry, so the old path keeps coming, and
+the new run's empty reset is not shipped as a change when the previous run also ended empty.
+`header.seq` does not help: rospy renumbers it at every publisher, so it restarts with the coverage
+node and, through the server, counts heartbeats too. A non-empty path therefore counts once an empty
+one has arrived since the start, or when its geometry differs from the last path the tab saw before
+the start.
+
+The custom area and the playlist areas are drawn when the start is clicked, underneath the overlay.
+Earlier versions waited for the robot to move (a mode-switch relocalization could fake that), and on
+2026-10-05 Custom Area and Operation Playlist briefly lifted the overlay as soon as the init POST
+answered, which showed a running sweep with no path and a robot standing still.
+
+**Contracts:** the first path arrives on [`server/boustrophedon_path`](/development/message-contracts/rosbridge#subscriptions);
+the run's end is `robot_activity` `arrived` or `coverage_failed` in the
+[ping response](/development/message-contracts/heartbeat-and-lease#ping-response).
 
 ## Show/Hide Trace
 
