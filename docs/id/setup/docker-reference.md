@@ -333,8 +333,8 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | --- | --- | --- |
 | `up` | Start container robot **dan** stack `local_dev`, jalankan `run_msd.sh` di dalam. Pasang/aktifkan `msd700.service` untuk reboot |
 | `down` / `stop` | Stop dan hapus container robot + stack lokal, nonaktifkan `msd700.service` |
-| `build` | Build image robot + image stack lokal, pull MySQL/Mosquitto, agar `up` berikutnya tak butuh internet |
-| `build-clean` | Sama, tanpa cache layer Docker |
+| `build` | Build image robot + image stack lokal secara paralel (`BUILD_PARALLEL=false`: satu per satu), pull MySQL/Mosquitto, agar `up` berikutnya tak butuh internet |
+| `build-clean` | Sama, tanpa cache layer Docker. Cache unduhan apt, pip, npm, ccache dan Next.js tetap disimpan |
 | `shell` | Shell login bash di container jalan (nyalakan bila perlu) |
 | `logs` | Follow log container robot |
 | `status` | `docker compose ps` untuk container robot |
@@ -393,13 +393,25 @@ Ia error dengan penjelasan. Robot tanpa identitas cached enrol mandiri dan mence
 
 ![Apa yang dilakukan up, berurutan](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
-Tanpa `--build`, image lokal yang ada dipakai ulang dan yang basi hanya warning (`[WARN] ... is OUT OF DATE`). Image hilang, asset simulator, dan enrolment pertama tetap bisa butuh internet. Rebuild dengan sengaja (`build`, `local-build`, atau `up --build`); `build-clean` membuang cache. Robot yang jalan tidak pernah recreated oleh `up`, bahkan setelah build: recreate saat stop terencana dengan flag `--dev`/`--simulator` yang sama.
+Tanpa `--build`, image lokal yang ada dipakai ulang dan yang basi hanya warning (`[WARN] ... is OUT OF DATE`). Image hilang, asset simulator, dan enrolment pertama tetap bisa butuh internet. Rebuild dengan sengaja (`build`, `local-build`, atau `up --build`); `build-clean` membuang cache layer. Robot yang jalan tidak pernah recreated oleh `up`, bahkan setelah build: recreate saat stop terencana dengan flag `--dev`/`--simulator` yang sama.
 
 Tiga langkah ada karena failure diam-diam:
 
 - **File token dulu.** Empat service me-mount `Certificates/robot/token.cred`. Di robot yang belum pernah enrol Docker membuat **direktori** kosong milik root di sana, `enroll.py` tak bisa menulis token yang baru didapat, dan robot re-enrol tiap boot.
 - **Refresher tak pernah menghapus identitas.** Saat `401 reenroll` ia log dan berhenti, mempertahankan `device.json`. Hanya boot nyata boleh menghapusnya. Menghapusnya saat refresh gagal pernah memaksa re-approval admin penuh hampir tiap restart.
-- **Cek image basi.** Image web lokal meng-**COPY** source masuk (tanpa bind mount). Mtime source dibandingkan waktu build image, sehingga unit bisa sadar ia menyajikan backend minggu lalu (klasik "endpoint baru 404 padahal source punya").
+- **Cek image basi.** Service web lokal me-bind-mount `ros-web-ui/source` di atas salinan di image, jadi edit kode langsung jalan pada `up` berikutnya. Mount tidak bisa membawa apa yang di-install image, jadi image dianggap basi hanya bila `package.json`, `package-lock.json`, `package.xml` atau `docker/Dockerfile.webui-local` lebih baru dari image. Sebelum ada mount, image basi menyajikan backend minggu lalu (klasik "endpoint baru 404 padahal source punya").
+
+### Apa yang butuh rebuild
+
+| Yang diubah | Jalankan |
+| --- | --- |
+| Node Python, launch atau file config di `src/` | Tidak perlu build. `src/` di-bind-mount ke container robot; restart node-nya atau `up` |
+| Node C++ atau message di `src/` | `up --build` (`catkin build` di dalam container, dengan ccache di volume `msd700_ccache`) |
+| backend_node, media, signalling atau network server (`ros-web-ui/source`) | `up`. Keempat service me-bind-mount `source/`; `backend_local` menjalankan `catkin_make` saat start |
+| Dashboard (`ROS-dashboard-next-ts`) | `local-build` atau `build` |
+| `package.xml`, `package.json`, `package-lock.json`, `noetic_dep.sh` atau Dockerfile | `build` |
+
+Kedua Dockerfile unit meng-install dependency hanya dari manifest paket dan meng-copy source paling akhir, jadi edit source hanya menjalankan ulang `COPY` terakhir dan langkah kompilasi. apt, pip, npm, ccache dan Next.js menyimpan unduhan dan object-nya di cache mount BuildKit, di luar image. Cache itu bertahan melewati `build-clean` (`--no-cache`) dan hanya hilang dengan `docker builder prune`. Build context tidak lagi memuat `node_modules`, `.next`, `.git` bersarang, `build/`, `devel/`, log, dashboard dan `Certificates/`, sehingga turun dari sekitar 1 GB ke sekitar 220 MB.
 
 ### Boot autostart (`msd700.service`)
 
@@ -553,7 +565,7 @@ Mode legacy: `adoptExisting()` mengadopsi container jalan untuk lifecycle manage
 | `port is already allocated` | Proses lain memegangnya (service systemd, atau profile lain) | `sudo ss -lptn 'sport = :3478'` untuk menemukan |
 | Backend `Connection lost` setelah `up` | Start sebelum healthcheck MySQL | Retry; bila tidak `docker compose up -d <backend>` setelah DB `healthy` |
 | Build sukses tapi perubahan hilang | Cached layer | `docker compose build --no-cache <service>` |
-| Disk penuh | Image lama + build cache | `docker system df`, `docker image prune -a`, `docker builder prune` |
+| Disk penuh | Image lama + build cache (termasuk cache mount apt, npm dan ccache) | `docker system df`, `docker image prune -a`, `docker builder prune` |
 | `the input device is not a TTY` | `docker exec -t` tanpa TTY | Wajar di script; `docker-manager.sh` sudah melepas `-t` tanpa stdin TTY |
 
 ## Terkait

@@ -333,8 +333,8 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | --- | --- | --- |
 | `up` | Start robot container **and** `local_dev` stack, run `run_msd.sh` inside. Installs/enables `msd700.service` for reboot |
 | `down` / `stop` | Stop and remove robot container + local stack, disable `msd700.service` |
-| `build` | Build robot image + local stack images, pull MySQL/Mosquitto, so next `up` needs no internet |
-| `build-clean` | Same, no Docker layer cache |
+| `build` | Build robot image + local stack images in parallel (`BUILD_PARALLEL=false`: one at a time), pull MySQL/Mosquitto, so next `up` needs no internet |
+| `build-clean` | Same, no Docker layer cache. The apt, pip, npm, ccache and Next.js download caches are kept |
 | `shell` | Bash login shell in the running container (starts it if needed) |
 | `logs` | Follow robot container logs |
 | `status` | `docker compose ps` for the robot container |
@@ -393,13 +393,25 @@ It errors with an explanation. A robot with no cached identity self-enrols and p
 
 ![What up does, in order](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
-Without `--build`, existing local images are reused and stale ones only warn (`[WARN] ... is OUT OF DATE`). Missing images, simulator assets, and first enrolment can still need internet. Rebuild on purpose (`build`, `local-build`, or `up --build`); `build-clean` drops the cache. A running robot is never recreated by `up`, even after a build: recreate it during a planned stop with the same `--dev`/`--simulator` flags.
+Without `--build`, existing local images are reused and stale ones only warn (`[WARN] ... is OUT OF DATE`). Missing images, simulator assets, and first enrolment can still need internet. Rebuild on purpose (`build`, `local-build`, or `up --build`); `build-clean` drops the layer cache. A running robot is never recreated by `up`, even after a build: recreate it during a planned stop with the same `--dev`/`--simulator` flags.
 
 Three steps exist because of silent failures:
 
 - **Token file first.** Four services bind-mount `Certificates/robot/token.cred`. On a never-enrolled robot Docker creates a root-owned empty **directory** there, `enroll.py` can't write the earned token, and the robot re-enrols every boot.
 - **Refresher never deletes identity.** On `401 reenroll` it logs and stops, keeping `device.json`. Only a real boot may clear it. Deleting it on any refresh failure once forced full admin re-approval nearly every restart.
-- **Staleness check.** Local web images **COPY** source in (no bind mount). Source mtimes are compared against image build time, so the unit can notice it serves last week's backend (the classic "new endpoint 404s though source has it").
+- **Staleness check.** The local web services bind-mount `ros-web-ui/source` over the copy in the image, so a code edit runs on the next `up`. A mount cannot bring along what the image installed, so only a `package.json`, `package-lock.json`, `package.xml` or `docker/Dockerfile.webui-local` newer than the image marks it stale. Before the mount, a stale image served last week's backend (the classic "new endpoint 404s though source has it").
+
+### What needs a rebuild
+
+| You changed | Run |
+| --- | --- |
+| Python node, launch or config file under `src/` | Nothing to build. `src/` is bind-mounted into the robot container; restart the node or `up` |
+| C++ node or message under `src/` | `up --build` (in-container `catkin build`, with ccache on the `msd700_ccache` volume) |
+| backend_node, media, signalling or network server (`ros-web-ui/source`) | `up`. The four services bind-mount `source/`; `backend_local` runs `catkin_make` as it starts |
+| Dashboard (`ROS-dashboard-next-ts`) | `local-build` or `build` |
+| `package.xml`, `package.json`, `package-lock.json`, `noetic_dep.sh` or a Dockerfile | `build` |
+
+Both unit Dockerfiles install dependencies from the package manifests alone and copy the source last, so a source edit reruns only the final `COPY` and the compile step. apt, pip, npm, ccache and Next.js keep their downloads and objects in BuildKit cache mounts, outside the image. Those survive `build-clean` (`--no-cache`) and go only with `docker builder prune`. The build context excludes `node_modules`, `.next`, nested `.git`, `build/`, `devel/`, logs, the dashboard and `Certificates/`, which took it from about 1 GB to about 220 MB.
 
 ### Boot autostart (`msd700.service`)
 
@@ -553,7 +565,7 @@ Legacy mode: `adoptExisting()` adopts running containers for lifecycle managemen
 | `port is already allocated` | Another process holds it (systemd service, or the other profile) | `sudo ss -lptn 'sport = :3478'` to find it |
 | Backend `Connection lost` after `up` | Started before MySQL healthcheck | Retries; else `docker compose up -d <backend>` once DB is `healthy` |
 | Build succeeds but change missing | Cached layer | `docker compose build --no-cache <service>` |
-| Disk filling up | Old images + build cache | `docker system df`, `docker image prune -a`, `docker builder prune` |
+| Disk filling up | Old images + build cache (including the apt, npm and ccache cache mounts) | `docker system df`, `docker image prune -a`, `docker builder prune` |
 | `the input device is not a TTY` | `docker exec -t` without a TTY | Expected in scripts; `docker-manager.sh` already drops `-t` without stdin TTY |
 
 ## Related

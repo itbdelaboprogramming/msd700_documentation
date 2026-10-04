@@ -333,8 +333,8 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | --- | --- | --- |
 | `up` | ロボットコンテナ**と**`local_dev`スタックを起動し、内部で`run_msd.sh`実行。再起動用`msd700.service`を導入/有効化 |
 | `down` / `stop` | ロボットコンテナ+ローカルスタックを停止削除し`msd700.service`無効化 |
-| `build` | ロボットイメージ+ローカルスタックイメージをビルドしMySQL/Mosquittoをpull。次回`up`はネット不要に |
-| `build-clean` | 同上、Docker層キャッシュなし |
+| `build` | ロボットイメージ+ローカルスタックイメージを並列ビルド(`BUILD_PARALLEL=false`で1つずつ)しMySQL/Mosquittoをpull。次回`up`はネット不要に |
+| `build-clean` | 同上、Docker層キャッシュなし。apt・pip・npm・ccache・Next.jsのダウンロードキャッシュは保持 |
 | `shell` | 稼働中コンテナへのbashログインシェル(必要なら起動) |
 | `logs` | ロボットコンテナのログ追跡 |
 | `status` | ロボットコンテナの`docker compose ps` |
@@ -393,13 +393,25 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ![upの動作順](./diagrams/docker-reference-what-up-does-in-order.drawio)
 
-`--build`なしでは既存ローカルイメージ再利用で旧版は警告のみ(`[WARN] ... is OUT OF DATE`)です。欠落イメージ・シミュレーター資産・初回登録はネットが必要な場合があります。意図的リビルド(`build`・`local-build`・`up --build`)を使います。`build-clean`はキャッシュ無効です。稼働中ロボットは`up`で再作成されません。ビルド後も同`--dev`/`--simulator`フラグでの計画停止時に再作成します。
+`--build`なしでは既存ローカルイメージ再利用で旧版は警告のみ(`[WARN] ... is OUT OF DATE`)です。欠落イメージ・シミュレーター資産・初回登録はネットが必要な場合があります。意図的リビルド(`build`・`local-build`・`up --build`)を使います。`build-clean`は層キャッシュ無効です。稼働中ロボットは`up`で再作成されません。ビルド後も同`--dev`/`--simulator`フラグでの計画停止時に再作成します。
 
 無言失敗由来の3ステップ:
 
 - **トークンファイル優先。** 4サービスが`Certificates/robot/token.cred`をバインドマウントします。未登録ロボットでDockerはroot所有の空**ディレクトリ**をそこに作り、`enroll.py`は得たトークンを書けず、毎起動再登録します。
 - **更新器はIDを消しません。** `401 reenroll`時はログ記録して停止し`device.json`保持します。消去は実起動時のみです。更新失敗での削除は、ほぼ毎再起動の完全再承認を強制しました。
-- **旧版検出。** ローカルWebイメージはソースを**COPY**します(バインドマウントなし)。ソースmtimeとイメージビルド時刻の比較で、先週バックエンド提供に気付けます(典型「ソースにある新エンドポイント404」)。
+- **旧版検出。** ローカルWebサービスは`ros-web-ui/source`をイメージ内のコピーの上にバインドマウントするため、コード編集は次の`up`で反映されます。マウントではイメージがインストールしたものは運べないため、イメージより新しい`package.json`・`package-lock.json`・`package.xml`・`docker/Dockerfile.webui-local`がある場合だけ旧版と判定します。マウント導入前は旧版イメージが先週のバックエンドを提供していました(典型「ソースにある新エンドポイント404」)。
+
+### リビルドが必要な変更
+
+| 変更内容 | 実行 |
+| --- | --- |
+| `src/`配下のPythonノード・launch・設定ファイル | ビルド不要。`src/`はロボットコンテナにバインドマウント済み。ノード再起動または`up` |
+| `src/`配下のC++ノード・メッセージ | `up --build`(コンテナ内`catkin build`、`msd700_ccache`ボリュームのccache使用) |
+| backend_node・media・signalling・networkサーバー(`ros-web-ui/source`) | `up`。4サービスが`source/`をバインドマウントし、`backend_local`は起動時に`catkin_make`を実行 |
+| ダッシュボード(`ROS-dashboard-next-ts`) | `local-build`または`build` |
+| `package.xml`・`package.json`・`package-lock.json`・`noetic_dep.sh`・Dockerfile | `build` |
+
+ユニットの両Dockerfileは依存関係をパッケージのマニフェストだけからインストールし、ソースを最後にコピーするため、ソース編集で再実行されるのは最後の`COPY`とコンパイル工程だけです。apt・pip・npm・ccache・Next.jsはダウンロードとオブジェクトをイメージ外のBuildKitキャッシュマウントに保持します。これは`build-clean`(`--no-cache`)でも残り、`docker builder prune`でのみ消えます。ビルドコンテキストから`node_modules`・`.next`・入れ子の`.git`・`build/`・`devel/`・ログ・ダッシュボード・`Certificates/`を除外し、約1 GBから約220 MBになりました。
 
 ### 起動時自動起動(`msd700.service`)
 
@@ -553,7 +565,7 @@ docker stop rosweb_unit_<ULID>_nakayama          # 停止。次回利用時に�
 | `port is already allocated` | 他プロセスが保持(systemdサービスや他プロファイル) | `sudo ss -lptn 'sport = :3478'`で特定 |
 | `up`直後バックエンド`Connection lost` | MySQLヘルスチェック前に起動 | 再試行します。DB `healthy`後に`docker compose up -d <backend>` |
 | ビルド成功だが変更欠落 | キャッシュ層 | `docker compose build --no-cache <service>` |
-| ディスク逼迫 | 旧イメージ+ビルドキャッシュ | `docker system df`、`docker image prune -a`、`docker builder prune` |
+| ディスク逼迫 | 旧イメージ+ビルドキャッシュ(apt・npm・ccacheのキャッシュマウントを含む) | `docker system df`、`docker image prune -a`、`docker builder prune` |
 | `the input device is not a TTY` | TTYなし`docker exec -t` | スクリプトでは想定内。`docker-manager.sh`はstdin非TTYで`-t`を外します |
 
 ## 関連
