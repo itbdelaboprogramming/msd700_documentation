@@ -36,7 +36,8 @@ search: false
 
 `homebase_*` はマッピング開始時に自動取得した姿勢であり([概要 § マップの保存](/ja/development/webui/mapping/overview)
 参照)、オペレーターが入力する値ではない。バックエンドはマップ ULID を発行し、`map_name` を表示名とし、姿勢を
-ロボットへ渡して、マップ行を作る同じアップロードで保存させる。
+ロボットへ渡して、マップ行を作る同じアップロードで保存させる。ロボット自身も同じ開始姿勢を記録し、記録があれば
+そちらを保存するため、ブラウザの値は予備にすぎない([`mapping.stop`](/ja/development/message-contracts/mqtt-commands#mapping) 参照)。
 
 ::: info 保存は非同期
 保存は他のコマンドで使う HTTP の 30 秒の予算より長くかかる

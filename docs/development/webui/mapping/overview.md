@@ -76,9 +76,19 @@ answers at once with `{ request_id, map_ulid }`; the overlay then follows
 [`POST /api/mapping/discard`](/development/message-contracts/http-api#mapping-discard).
 
 ::: info Homebase pose is captured automatically, not entered by hand
-The map's homebase pose is captured automatically from the robot's first reported pose after mapping
-starts. The operator is not asked to set it manually as part of the save dialog; it simply travels
-along with the rest of the map's metadata once Stop is confirmed.
+The map's homebase pose is captured automatically from the robot's first reported pose after a new
+mapping run starts. The operator is not asked to set it manually as part of the save dialog; it simply
+travels along with the rest of the map's metadata once Stop is confirmed.
+
+Only a new run captures it. Play on a run that is already open (resume after Pause, Cancel on the save
+dialog, or a run recovered after signing back in) keeps the pose from the start. The robot records the
+start pose too, in `system_command`, and that copy wins at Save: the browser's copy lives in
+`sessionStorage`, which sign-out clears.
+
+Position is about (0, 0) in the map frame, because a new run relaunches the EKF and gmapping and the
+map frame starts on the robot. The heading is not zero: it comes from the IMU (magnetometer on the
+prototype, the spawn yaw in Gazebo), so the pose is read rather than assumed. It matters because the
+home base is published on `/initialpose` when the map is opened for navigation.
 :::
 
 ## Emergency stop

@@ -10,7 +10,7 @@ Sebelum robot bisa bernavigasi di suatu ruangan, robot membutuhkan **peta** dari
 
 ## Memulai Peta Baru
 
-1. Bawa robot ke posisi pengisian daya atau parkir yang dituju terlebih dahulu: di mana pun robot berdiri saat Anda klik Play, itu akan menjadi **home base** peta ini, dipakai nanti untuk mengirimnya kembali ke sana secara otomatis.
+1. Bawa robot ke posisi pengisian daya atau parkir yang dituju terlebih dahulu: di mana pun robot berdiri saat Anda klik Play untuk memulai peta, itu akan menjadi **home base** peta ini, dipakai nanti untuk mengirimnya kembali ke sana secara otomatis. Pause lalu lanjutkan, atau sign out lalu masuk lagi di tengah run, tidak memindahkannya.
 2. Dari menu utama, pilih **Mapping**.
 3. Klik **Create a New Map** dan beri nama (contoh: "Lantai 2 Gudang").
 4. Klik **Play** untuk mulai merekam.

@@ -32,7 +32,7 @@ The system responds based on the active operating mode:
 :::
 
 ::: details 5. What is the Homebase point and why is it important?
-Wherever the robot is standing when you click Play to start a new map becomes that map's home base (position zero). So park it at its charging or docking spot first. Future playlists use this point to send the robot back to its charging station automatically when a mission finishes. If you forget, you can correct it later from [Navigation](/user-guide/navigation) with **Set Home Base**.
+Wherever the robot is standing when you click Play to start a new map becomes that map's home base (position zero). Pausing and resuming, or signing out and back in, does not move it. So park it at its charging or docking spot first. Future playlists use this point to send the robot back to its charging station automatically when a mission finishes. If you forget, you can correct it later from [Navigation](/user-guide/navigation) with **Set Home Base**.
 :::
 
 ::: details 6. How does the robot handle glass walls, mirrors, or drop-offs?

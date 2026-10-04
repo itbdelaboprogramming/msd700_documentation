@@ -175,9 +175,9 @@ HTTP の入口: [`/api/navigation/init`](/ja/development/message-contracts/http-
 
 | コマンド | パラメーター | ロボット側 |
 | --- | --- | --- |
-| `start` | なし | ロボットがマップを保存できるか確認し、`/switch_mode(mode=explore)`。アクティビティ `mapping_active`。 |
+| `start` | なし | ロボットがマップを保存できるか確認し、`/switch_mode(mode=explore)` を呼び、`/client/robotpose` の最初の姿勢をこの実行のホームベースとして記録。すでに開いている実行への `start`(`pause` 後の再開)は両方を省くため、ホームベースは実行の開始地点のまま。explore の起動が別の経路(E-Stop、idle への切り替え、ナビゲーションの `init`)で停止された実行は終了済みとみなし、次の `start` は "Already in mapping mode" と答えずに SLAM を再起動する。アクティビティ `mapping_active`。 |
 | `pause` | なし | `operator_pause` モーションロック(`/emergency_pause`)を保持。SLAM セッションは開いたまま。アクティビティ `mapping_paused`。 |
-| `stop` | 上のブロック | `/mapsaver/full_path` が `<map_name>.pgm/.yaml` を書き、[`/api/media/uploadMap`](/ja/development/message-contracts/http-api#media-server) でユニットのメディアサーバー(必須)とクラウド(ベストエフォート)にアップロードし、idle に切り替え。通常のフィードバックではなく [`mapping_progress`](#mapping-progress) で報告します。 |
+| `stop` | 上のブロック | `/mapsaver/full_path` が `<map_name>.pgm/.yaml` を書き、[`/api/media/uploadMap`](/ja/development/message-contracts/http-api#media-server) でユニットのメディアサーバー(必須)とクラウド(ベストエフォート)にアップロードし、idle に切り替え。マップと一緒に保存されるホームベースは `start` 時にロボットが記録した姿勢で、コマンドの `homebase_*` はロボットに記録がない場合(実行途中で `system_command` が再起動した場合など)にだけ使う。通常のフィードバックではなく [`mapping_progress`](#mapping-progress) で報告します。 |
 | `discard` | なし | `mapping_teardown` ロックを保持、`/switch_mode(mode=idle)`、`/map/reset`。アクティビティ `idle`。 |
 
 `map_name` と `map_ulid` は同じ ULID(ファイル名)で、`display_map_name` はオペレーターが入力した名前です。

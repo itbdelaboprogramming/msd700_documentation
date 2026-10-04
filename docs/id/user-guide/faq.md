@@ -32,7 +32,7 @@ Sistem merespons berdasarkan mode operasi yang aktif:
 :::
 
 ::: details 5. Apa itu titik Homebase dan mengapa penting?
-Di mana pun robot berdiri saat Anda klik Play untuk memulai peta baru, itu menjadi home base peta tersebut (posisi nol). Jadi parkirkan dulu di titik pengisian daya atau docking-nya. Playlist di masa mendatang menggunakan titik ini untuk secara otomatis mengirim robot kembali ke stasiun pengisian dayanya saat sebuah misi selesai. Jika lupa, Anda bisa memperbaikinya nanti dari [Navigasi](/id/user-guide/navigation) dengan **Set Home Base**.
+Di mana pun robot berdiri saat Anda klik Play untuk memulai peta baru, itu menjadi home base peta tersebut (posisi nol). Pause lalu lanjutkan, atau sign out lalu masuk lagi, tidak memindahkannya. Jadi parkirkan dulu di titik pengisian daya atau docking-nya. Playlist di masa mendatang menggunakan titik ini untuk secara otomatis mengirim robot kembali ke stasiun pengisian dayanya saat sebuah misi selesai. Jika lupa, Anda bisa memperbaikinya nanti dari [Navigasi](/id/user-guide/navigation) dengan **Set Home Base**.
 :::
 
 ::: details 6. Bagaimana robot menangani dinding kaca, cermin, atau area terjun (drop-off)?

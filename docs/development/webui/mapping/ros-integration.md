@@ -40,7 +40,9 @@ The save request the `ConfirmSaving` dialog sends once the operator names the ma
 The `homebase_*` pose is the one captured automatically when mapping started (see
 [Overview § Saving the map](/development/webui/mapping/overview#saving-the-map-stop-flow)), not a value
 the operator enters. The backend mints the map ULID, keeps `map_name` as the display name, and passes
-the pose through to the robot so it is stored in the same upload that creates the map row.
+the pose through to the robot so it is stored in the same upload that creates the map row. The robot
+records the same start pose itself and stores its own copy when it has one, so the browser's value is
+only a fallback (see [`mapping.stop`](/development/message-contracts/mqtt-commands#mapping)).
 
 ::: info Save is asynchronous
 Saving takes longer than the 30-second HTTP budget used for other commands (see

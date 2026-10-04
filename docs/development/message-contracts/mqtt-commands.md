@@ -176,9 +176,9 @@ HTTP entry points: [`/api/navigation/init`](/development/message-contracts/http-
 
 | Command | Parameters | Robot side |
 | --- | --- | --- |
-| `start` | none | Checks the robot can store a map, then `/switch_mode(mode=explore)`. Activity `mapping_active`. |
+| `start` | none | Checks the robot can store a map, then `/switch_mode(mode=explore)` and records the first pose on `/client/robotpose` as the run's home base. A `start` on a run that is already open (resume after `pause`) skips both, so the home base stays where the run began. A run whose explore launch was torn down some other way (E-Stop, an idle switch, a navigation `init`) counts as closed, so the next `start` relaunches SLAM instead of answering "Already in mapping mode". Activity `mapping_active`. |
 | `pause` | none | Holds the `operator_pause` motion lock (`/emergency_pause`); the SLAM session stays open. Activity `mapping_paused`. |
-| `stop` | the block above | `/mapsaver/full_path` writes `<map_name>.pgm/.yaml`, uploads them to the unit's media server (required) and the cloud's (best effort) through [`/api/media/uploadMap`](/development/message-contracts/http-api#media-server), switches to idle. Reports through [`mapping_progress`](#mapping-progress), not through plain feedback. |
+| `stop` | the block above | `/mapsaver/full_path` writes `<map_name>.pgm/.yaml`, uploads them to the unit's media server (required) and the cloud's (best effort) through [`/api/media/uploadMap`](/development/message-contracts/http-api#media-server), switches to idle. The home base stored with the map is the pose the robot recorded at `start`; the `homebase_*` fields in the command are used only when the robot has none, for example after `system_command` restarted mid-run. Reports through [`mapping_progress`](#mapping-progress), not through plain feedback. |
 | `discard` | none | Holds the `mapping_teardown` lock, `/switch_mode(mode=idle)`, `/map/reset`. Activity `idle`. |
 
 `map_name` and `map_ulid` are the same ULID (the file name); `display_map_name` is what the operator

@@ -71,9 +71,19 @@ dalam satu request/response HTTP tunggal).
 
 ::: info Pose homebase ditangkap otomatis, bukan dimasukkan secara manual
 Pose homebase milik peta ditangkap secara otomatis dari pose pertama yang dilaporkan robot
-setelah pemetaan dimulai. Operator tidak diminta menetapkannya secara manual sebagai bagian dari
-dialog penyimpanan; pose tersebut hanya ikut serta bersama metadata peta lainnya begitu Stop
+setelah run pemetaan baru dimulai. Operator tidak diminta menetapkannya secara manual sebagai bagian
+dari dialog penyimpanan; pose tersebut hanya ikut serta bersama metadata peta lainnya begitu Stop
 dikonfirmasi.
+
+Hanya run baru yang menangkapnya. Play pada run yang masih terbuka (resume setelah Pause, Cancel di
+dialog simpan, atau run yang dipulihkan setelah login kembali) mempertahankan pose dari awal run. Robot
+juga mencatat pose awal ini di `system_command`, dan salinan itulah yang dipakai saat Save: salinan
+browser disimpan di `sessionStorage`, yang dihapus saat sign out.
+
+Posisinya sekitar (0, 0) di frame map, karena run baru meluncurkan ulang EKF dan gmapping dan frame map
+dimulai di robot. Arah hadapnya tidak nol: berasal dari IMU (magnetometer di prototype, yaw spawn di
+Gazebo), jadi pose dibaca, bukan diasumsikan. Ini penting karena home base dipublikasikan ke
+`/initialpose` saat peta dibuka untuk navigasi.
 :::
 
 **Kontrak:** cek nama adalah [`GET /api/media/checkMapName`](/id/development/message-contracts/http-api#media-server). Menyimpan

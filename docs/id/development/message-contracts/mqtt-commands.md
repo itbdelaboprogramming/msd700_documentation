@@ -177,9 +177,9 @@ Titik masuk HTTP: [`/api/navigation/init`](/id/development/message-contracts/htt
 
 | Perintah | Parameter | Sisi robot |
 | --- | --- | --- |
-| `start` | tidak ada | Mengecek robot bisa menyimpan peta, lalu `/switch_mode(mode=explore)`. Aktivitas `mapping_active`. |
+| `start` | tidak ada | Mengecek robot bisa menyimpan peta, lalu `/switch_mode(mode=explore)` dan mencatat pose pertama di `/client/robotpose` sebagai home base run ini. `start` pada run yang masih terbuka (resume setelah `pause`) melewati keduanya, sehingga home base tetap di titik awal run. Run yang launch explore-nya sudah diturunkan lewat jalur lain (E-Stop, switch idle, `init` navigasi) dianggap tertutup, sehingga `start` berikutnya meluncurkan ulang SLAM, bukan menjawab "Already in mapping mode". Aktivitas `mapping_active`. |
 | `pause` | tidak ada | Menahan motion lock `operator_pause` (`/emergency_pause`); sesi SLAM tetap terbuka. Aktivitas `mapping_paused`. |
-| `stop` | blok di atas | `/mapsaver/full_path` menulis `<map_name>.pgm/.yaml`, mengunggahnya ke media server unit (wajib) dan cloud (best effort) lewat [`/api/media/uploadMap`](/id/development/message-contracts/http-api#media-server), beralih ke idle. Melapor lewat [`mapping_progress`](#mapping-progress), bukan feedback biasa. |
+| `stop` | blok di atas | `/mapsaver/full_path` menulis `<map_name>.pgm/.yaml`, mengunggahnya ke media server unit (wajib) dan cloud (best effort) lewat [`/api/media/uploadMap`](/id/development/message-contracts/http-api#media-server), beralih ke idle. Home base yang disimpan bersama peta adalah pose yang dicatat robot saat `start`; field `homebase_*` di perintah hanya dipakai kalau robot tidak punya catatan, misalnya setelah `system_command` restart di tengah run. Melapor lewat [`mapping_progress`](#mapping-progress), bukan feedback biasa. |
 | `discard` | tidak ada | Menahan lock `mapping_teardown`, `/switch_mode(mode=idle)`, `/map/reset`. Aktivitas `idle`. |
 
 `map_name` dan `map_ulid` adalah ULID yang sama (nama file); `display_map_name` adalah yang diketik

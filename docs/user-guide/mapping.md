@@ -10,7 +10,7 @@ Before the robot can navigate a space, it needs a **map** of that space. Mapping
 
 ## Starting a New Map
 
-1. Move the robot to its intended charging or parking spot first: wherever it's standing when you click Play becomes the map's **home base**, used later to send it back here automatically.
+1. Move the robot to its intended charging or parking spot first: wherever it's standing when you click Play to start the map becomes the map's **home base**, used later to send it back here automatically. Pausing and resuming, or signing out and back in during the run, does not move it.
 2. From the main menu, select **Mapping**.
 3. Click **Create a New Map** and give it a name (for example, "Warehouse Floor 2").
 4. Click **Play** to begin recording.

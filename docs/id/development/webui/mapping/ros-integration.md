@@ -41,7 +41,9 @@ Request simpan yang dikirim dialog `ConfirmSaving` setelah operator memberi nama
 Pose `homebase_*` adalah pose yang ditangkap otomatis saat mapping dimulai (lihat
 [Ikhtisar § Menyimpan peta](/id/development/webui/mapping/overview)), bukan nilai yang diisi operator.
 Backend membuat ULID peta, memakai `map_name` sebagai nama tampilan, dan meneruskan pose ke robot agar
-tersimpan dalam upload yang sama yang membuat baris peta.
+tersimpan dalam upload yang sama yang membuat baris peta. Robot juga mencatat pose awal yang sama dan
+menyimpan salinannya sendiri kalau ada, jadi nilai dari browser hanya cadangan (lihat
+[`mapping.stop`](/id/development/message-contracts/mqtt-commands#mapping)).
 
 ::: info Penyimpanan bersifat asinkron
 Penyimpanan butuh waktu lebih lama dari batas HTTP 30 detik yang dipakai perintah lain (lihat
