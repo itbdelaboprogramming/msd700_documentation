@@ -113,6 +113,16 @@ memperbarui canvas akan membuat peta terlihat idle selama beberapa detik. Jika p
 polygon dikembalikan ke drawer sehingga operator bisa mencoba lagi alih-alih harus menggambar
 ulang.
 
+Overlay hijau adalah layer 2 pada pipeline canvas di halaman
+[Navigasi](/id/development/webui/navigation/overview): tepat di atas bitmap peta dan di bawah jalur,
+lajur sapuan, robot, dan pin, serta tidak menangkap klik. Overlay ini menandai seluruh area yang
+digambar, baik yang tersapu maupun tidak; bagian yang tidak bisa disapu robot digambar terpisah di
+atasnya setelah robot melaporkannya. Penempatannya diterapkan ulang pada setiap penggambaran dan
+setiap pesan peta, karena setiap pesan peta mengganti bitmap di bawahnya (`placeAboveGrid` di
+`coverageOverlayLayer.ts`). Sebelumnya area jatuh ke bawah peta setiap kali run dimulai dan baru
+muncul setelah pesan peta berikutnya mengubah urutan layer; lihat
+[EaselJS 0.7.1 tidak punya `numChildren`](/id/development/webui/navigation/overview#easeljs-numchildren).
+
 ## Save Area
 
 Save Area (`src/components/save-area/SaveAreaModal.tsx`) menyimpan batas yang digambar ke dalam

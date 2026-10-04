@@ -106,6 +106,16 @@ long enough that waiting for the response before updating the canvas would leave
 idle for several seconds. If the start is refused, the polygon is restored to the drawer so the
 operator can retry rather than having to redraw it.
 
+The green overlay is layer 2 of the
+[canvas pipeline](/development/webui/navigation/overview#canvas-rendering-pipeline): directly above
+the map bitmap and under the path, the sweep lanes, the robot and the pins, and it takes no clicks.
+It marks the whole drawn area, swept or not; patches the robot could not sweep are drawn over it
+separately once it reports them. The placement is applied again on every draw and every map
+message, since each map message replaces the bitmap underneath (`placeAboveGrid` in
+`coverageOverlayLayer.ts`). Before this, the area landed under the map on every start and only
+appeared once a later map message reordered the layers; see
+[EaselJS 0.7.1 has no `numChildren`](/development/webui/navigation/overview#easeljs-numchildren).
+
 ## Save Area
 
 Save Area (`src/components/save-area/SaveAreaModal.tsx`) persists a drawn boundary into a reusable

@@ -33,7 +33,7 @@
         <mxCell id="Eu8g419hlHJxKJDU-B2n-8" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=9;" value="Layer 1: Base Map OccupancyGrid Bitmap (0.05 m/px)" vertex="1">
           <mxGeometry height="45" width="170" x="475" y="165" as="geometry" />
         </mxCell>
-        <mxCell id="Eu8g419hlHJxKJDU-B2n-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=9;" value="Layer 2: Keep-Out Exclusion Zone&amp;nbsp;&lt;div&gt;Red Polygons&lt;/div&gt;" vertex="1">
+        <mxCell id="Eu8g419hlHJxKJDU-B2n-9" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=9;" value="Layer 2: Coverage Area Overlay&amp;nbsp;&lt;div&gt;Green Cover, Red Keep-Out&lt;/div&gt;" vertex="1">
           <mxGeometry height="45" width="170" x="475" y="225" as="geometry" />
         </mxCell>
         <mxCell id="Eu8g419hlHJxKJDU-B2n-10" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=9;" value="Layer 3: Global Path (Blue Line) &amp;amp;&amp;nbsp;&lt;div&gt;Local Trajectory (Green)&lt;/div&gt;" vertex="1">

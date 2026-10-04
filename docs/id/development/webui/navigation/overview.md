@@ -56,7 +56,8 @@ Canvas, yang dipasok oleh topic WebSocket rosbridge:
 Layer 6, overlay vertex interaktif, adalah tempat Single Pinpoint, Multiple Pinpoint, dan Set Home
 Base menggambar saat operator mengklik canvas; lihat
 [Pinpoint & Rute](/id/development/webui/navigation/pinpoint-and-routes) untuk cara overlay itu
-dikendalikan. Layer 2 dan 4 (polygon keep-out dan jalur sapu boustrophedon) adalah milik mode yang
+dikendalikan. Layer 2 dan 4 (overlay area coverage, hijau untuk area yang disapu dan merah untuk
+zona keep-out, serta jalur sapu boustrophedon) adalah milik mode yang
 dibahas di halaman-halaman sejenis lainnya.
 
 **Kontrak:** setiap layer adalah satu subscription rosbridge, didaftar beserta tipe pesannya di
@@ -116,6 +117,20 @@ Lihat [Frontend Canvas](/id/development/frontend-canvas) untuk snippet lengkap.
 Penanganan klik setiap mode di halaman ini (penempatan pinpoint, penempatan home base, penggambaran
 polygon) pada akhirnya memanggil `stage.globalToRos`, sehingga patch ini menjadi prasyarat untuk
 semuanya, bukan detail khusus milik satu mode saja.
+
+## EaselJS 0.7.1 tidak punya `numChildren` {#easeljs-numchildren}
+
+EaselJS yang di-vendor (`public/script/easeljs.js`) adalah versi 0.7.1. Container-nya punya
+`getNumChildren()`, `getChildIndex()`, dan `setChildIndex()`, tetapi tidak punya properti
+`numChildren`, yang baru ada sejak 0.8. Membacanya di sini menghasilkan `undefined` tanpa error,
+dan `setChildIndex()` versi 0.7.1 tidak menolak `NaN` hasil `numChildren - 1`: child justru
+dipindah ke indeks 0, di bawah bitmap peta.
+
+Itulah yang membuat overlay area coverage (layer 2) tidak terlihat setiap kali run dimulai, sampai
+pesan peta berikutnya kebetulan memindahkan grid kembali ke indeks 0. Hal yang sama membuat
+penantian pin pada pemulihan sesi selalu menunggu sampai timeout penuh. Hitung child dengan
+`getNumChildren()`. Penempatan overlay sekarang ada di `coverageOverlayLayer.ts` (`placeAboveGrid`),
+dengan unit test yang memakai salinan `setChildIndex()` versi 0.7.1.
 
 ## UI pendukung
 

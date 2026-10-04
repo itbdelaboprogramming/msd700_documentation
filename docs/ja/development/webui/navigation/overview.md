@@ -36,7 +36,7 @@ canvas自体はオペレーターがモードを切り替えても再マウン�
 
 ![Map Canvas Pipeline](../../../../development/webui/navigation/diagrams/msd700-draw-map-pipeline.drawio)
 
-レイヤー6、インタラクティブな頂点オーバーレイは、オペレーターがcanvasをクリックしたときにSingle Pinpoint、Multiple Pinpoint、Set Home Baseが描画する場所である。このオーバーレイがどう駆動されるかは[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)を参照。レイヤー2と4(keep-outポリゴンとboustrophedonの掃引レーン)は、兄弟ページが扱うモードに属する。
+レイヤー6、インタラクティブな頂点オーバーレイは、オペレーターがcanvasをクリックしたときにSingle Pinpoint、Multiple Pinpoint、Set Home Baseが描画する場所である。このオーバーレイがどう駆動されるかは[ピンポイント & ルート](/ja/development/webui/navigation/pinpoint-and-routes)を参照。レイヤー2と4(カバレッジエリアのオーバーレイ(掃引するエリアは緑、keep-outゾーンは赤)とboustrophedonの掃引レーン)は、兄弟ページが扱うモードに属する。
 
 **メッセージ仕様:** 各レイヤーは rosbridge の subscribe 1 つで、メッセージ型とともに
 [rosbridge § Subscribe](/ja/development/message-contracts/rosbridge#subscriptions) に一覧がある。マップ自体はマウント時に
@@ -79,6 +79,12 @@ $$y = y_0 + ((H - p_y) \cdot r)$$
 canvasがこの形で決してクラッシュしないことを保証するため、`mapComponent.tsx`内の`ensureStagePrototype()`はビューア生成の直前に、現在のプロトタイプへヘルパーを冪等に再適用する。計算は`public/script/ros2d.js`とまったく同じであり、ハッピーパスでの挙動は不変である(`rosScriptLoader.ts`は単なる逐次スクリプトローダーであり、パッチはそこには存在しない)。完全なスニペットについては[フロントエンド Canvas](/ja/development/frontend-canvas)を参照。
 
 本ページの各モードのクリック処理(ピンポイント配置、ホームベース配置、ポリゴン描画)は最終的にすべて`stage.globalToRos`を呼び出すため、このパッチは特定の1モードだけの詳細ではなく、そのすべての前提条件となる。
+
+## EaselJS 0.7.1には`numChildren`がない {#easeljs-numchildren}
+
+同梱しているEaselJS(`public/script/easeljs.js`)はバージョン0.7.1である。そのコンテナには`getNumChildren()`、`getChildIndex()`、`setChildIndex()`はあるが、`numChildren`プロパティはない(0.8で追加された)。ここで読むとエラーなしで`undefined`が返り、0.7.1の`setChildIndex()`は`numChildren - 1`が生む`NaN`を拒否しない。子はインデックス0、つまりマップのビットマップの下に移動する。
+
+これが、カバレッジエリアのオーバーレイ(レイヤー2)が開始のたびに見えなくなり、後のマップメッセージがたまたまグリッドをインデックス0に戻すまで表示されなかった原因である。同じ理由で、セッション復旧時のピン待ちも毎回タイムアウトまで待っていた。子の数は`getNumChildren()`で数えること。オーバーレイの配置は現在`coverageOverlayLayer.ts`(`placeAboveGrid`)にあり、0.7.1の`setChildIndex()`の複製を使ったユニットテストがある。
 
 ## 補助UI
 

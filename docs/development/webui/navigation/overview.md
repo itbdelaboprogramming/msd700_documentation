@@ -59,7 +59,8 @@ by rosbridge WebSocket topics:
 Layer 6, the interactive vertex overlay, is what Single Pinpoint, Multiple Pinpoint, and Set Home
 Base draw onto when the operator clicks the canvas; see
 [Pinpoint & Routes](/development/webui/navigation/pinpoint-and-routes) for how that overlay is
-driven. Layers 2 and 4 (keep-out polygons and boustrophedon sweep lanes) belong to the modes the
+driven. Layers 2 and 4 (the coverage area overlay, green for areas to cover and red for keep-out
+zones, and the boustrophedon sweep lanes) belong to the modes the
 sibling pages cover.
 
 ## Coordinate transforms: metric space to screen pixels
@@ -113,6 +114,20 @@ See [Frontend Canvas](/development/frontend-canvas) for the full snippet.
 Every mode's click handling on this page (pinpoint placement, home base placement, polygon
 drawing) ultimately calls through `stage.globalToRos`, so this patch is a prerequisite for all of
 them rather than a detail specific to any one mode.
+
+## EaselJS 0.7.1 has no `numChildren` {#easeljs-numchildren}
+
+The vendored EaselJS (`public/script/easeljs.js`) is 0.7.1. Its containers have
+`getNumChildren()`, `getChildIndex()` and `setChildIndex()`, but no `numChildren` property, which
+only arrived in 0.8. Reading it here returns `undefined` without an error, and 0.7.1's
+`setChildIndex()` does not reject the `NaN` that `numChildren - 1` produces: it moves the child to
+index 0, under the map bitmap.
+
+That is what kept the coverage area overlay (layer 2) invisible after every start, until a later
+map message happened to move the grid back to index 0. It also made the pin wait in the session
+recovery run out its full timeout every time. Count children with `getNumChildren()`. The overlay's
+placement now lives in `coverageOverlayLayer.ts` (`placeAboveGrid`), with a unit test built on a
+copy of 0.7.1's `setChildIndex()`.
 
 ## Supporting UI
 
