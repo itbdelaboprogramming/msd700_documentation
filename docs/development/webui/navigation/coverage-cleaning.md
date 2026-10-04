@@ -34,6 +34,18 @@ cleared on entry. An instruction popup is shown every time the operator enters t
 Map Sync's instruction, which is shown only once per session, because a mis-drawn or misunderstood
 coverage area is more consequential to redo than a mis-set pose.
 
+A Single or Multiple Pinpoint route that is still **paused** when Coverage Area is opened is ended
+first: its goal is cancelled, the supervisor gets a
+[`stop`](/development/message-contracts/operation-sync#stop-complete), and the status returns to `Idle`.
+Entering coverage wipes the route's pins, so it could never be resumed anyway. The mode-switch rule
+only compared against the selected mode, and finishing pins leaves no mode selected, so until
+2026-10-05 the route kept its `Paused`. The coverage sub-menu read that as a paused **coverage** run
+(Cancel Coverage and Resume offered, Custom Area and Operation Playlist hidden), and a few seconds
+later the phantom-run guard saw the robot was not sweeping, reset the page to `Idle` and closed the
+menu. A paused coverage run whose menu was closed is left alone: its cached plan marks it as
+coverage, and re-opening Coverage Area still offers Resume. The rule is
+`previousRunEndedBy()` in `src/components/navigationMap/modeSwitch.ts`.
+
 ## Auto Coverage
 
 Auto Coverage sweeps the whole loaded map with no operator-drawn boundary: the robot's own boundary
@@ -133,6 +145,24 @@ Running is [`POST /api/boustrophedon/init`](/development/message-contracts/http-
 `exclusions` → [`boustrophedon.init`](/development/message-contracts/mqtt-commands#boustrophedon), which the robot passes to the
 coverage node as JSON on `/msd700/coverage_plan`; recorded with a
 [`batch`](/development/message-contracts/operation-sync#batch) of operation `playlist`.
+
+## Initialization overlay
+
+All three starts put the same semi-transparent overlay over the page while the robot switches into
+coverage mode, so a second start cannot be fired during the switch. How long it stays depends on
+whether the area is already known:
+
+| Start | Message | Comes down when |
+| --- | --- | --- |
+| Auto Coverage | `Please wait while system is setting the map area boundary` | the robot publishes the run's first non-empty coverage path, after the empty one it publishes at init (the boundary is known), or after 30 s |
+| Custom Area, Operation Playlist | `Initializing Auto Coverage...` | `POST /api/boustrophedon/init` succeeds: the robot has switched mode and accepted the area |
+
+The custom area and the playlist areas are drawn when the start is clicked, underneath the overlay,
+so they are on the map before the robot answers and fully visible the moment the overlay comes
+down. The overlay used to wait for the robot to move (a mode-switch relocalization could fake that),
+then for its first coverage path, which kept a known area dimmed while the robot planned and drove
+its first lane. A revision on 2026-10-04 removed the overlay from those two starts altogether; it was
+restored on 2026-10-05. A refused start takes the overlay and the area down again.
 
 ## Show/Hide Trace
 

@@ -25,6 +25,8 @@ Area`とラベルが変わり、`ModeListPanel.tsx`内では`NAV_MODE.COVERAGE` 
 `NAV_MODE.COVERAGE_ACTIVATE`)、ピンポイント/ルートのエントリに代わってカバレッジ専用コントロールのサブメニューが開く。Coverageはポイントベースのピンを使わないため、未完了セッションから残っていたsingle/multiピンポイントのマーカーは、このモードに入ると消去される。指示ポップアップは、このモードに入るたびに表示される。これはセッションごとに1回しか表示されないMap
 Syncの指示とは異なる。描画ミスや誤解のあるカバレッジエリアは、やり直すことによる影響がより大きいためである。
 
+Coverage Areaを開いた時点でSingleまたはMultiple Pinpointのルートがまだ**一時停止中**であれば、そのルートは先に終了される。goalはキャンセルされ、supervisorには[`stop`](/ja/development/message-contracts/operation-sync#stop-complete)が送られ、ステータスは`Idle`に戻る。カバレッジに入るとそのルートのピンは消去されるため、いずれにしても再開はできない。モード切り替えのルールは選択中のモードとしか比較しておらず、ピンを確定するとモードは何も選択されていない状態になるため、2026-10-05まではルートが`Paused`のまま残っていた。カバレッジのサブメニューはそれを一時停止中の**カバレッジ**runとして解釈し(Cancel CoverageとResumeを表示し、Custom AreaとOperation Playlistを隠す)、数秒後にphantom-run guardがロボットは掃引していないと判断してページを`Idle`にリセットし、メニューを閉じていた。メニューを閉じた状態の一時停止中のカバレッジrunには影響しない。キャッシュされたプランがそれをカバレッジとして示しており、Coverage Areaを開き直せば引き続きResumeが表示される。このルールは`src/components/navigationMap/modeSwitch.ts`の`previousRunEndedBy()`にある。
+
 ## Auto Coverage
 
 Auto
@@ -89,6 +91,17 @@ Coverageと同じcustom-coverage(`use_autocover: false`)経路にルーティン
 実行は `areas` と `exclusions` を付けた [`POST /api/boustrophedon/init`](/ja/development/message-contracts/http-api#boustrophedon-init) →
 [`boustrophedon.init`](/ja/development/message-contracts/mqtt-commands#boustrophedon) で、ロボットはそれを `/msd700/coverage_plan` の JSON として
 カバレッジノードに渡す。操作 `playlist` の [`batch`](/ja/development/message-contracts/operation-sync#batch) で記録。
+
+## 初期化オーバーレイ {#initialization-overlay}
+
+3つの開始方法はいずれも、ロボットがカバレッジモードに切り替わる間、同じ半透明のオーバーレイをページ全体に表示する。これにより切り替え中に2回目の開始が発行されることはない。オーバーレイが表示される時間は、エリアがすでに分かっているかどうかで異なる。
+
+| 開始方法 | メッセージ | 消えるタイミング |
+| --- | --- | --- |
+| Auto Coverage | `Please wait while system is setting the map area boundary` | ロボットがinit時に配信する空のパスの後に、そのrunの最初の空でないカバレッジパスを配信したとき(境界が判明した時点)、または30秒後 |
+| Custom Area、Operation Playlist | `Initializing Auto Coverage...` | `POST /api/boustrophedon/init`が成功したとき。つまりロボットがモードを切り替え、エリアを受け付けた時点 |
+
+カスタムエリアとプレイリストのエリアは開始をクリックした時点でオーバーレイの下に描画されるため、ロボットが応答する前からマップ上にあり、オーバーレイが消えた瞬間に完全に見えるようになる。以前のオーバーレイはロボットが動くのを待っており(モード切り替え時の再自己位置推定でこれが誤検知されることがあった)、その後は最初のカバレッジパスを待つようになったため、ロボットが最初のレーンを計画して走行する間、既知のエリアが暗いままになっていた。2026-10-04の修正ではこの2つの開始方法からオーバーレイ自体が削除されたが、2026-10-05に元に戻された。開始が拒否された場合は、オーバーレイとエリアの両方が再び消去される。
 
 ## Show/Hide Trace
 

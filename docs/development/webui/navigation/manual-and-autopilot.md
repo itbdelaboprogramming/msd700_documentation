@@ -229,14 +229,28 @@ only the restore path seeds those keys.
 
 A snapshot naming a **different** map than the one the tab has open is ignored rather than applied.
 The rebuild re-selects the map the run belongs to, which is correct for a tab that arrived with no
-map and wrong for an operator who just picked one by hand.
+map and wrong for an operator who just picked one by hand. Both sides of that comparison are the
+open map's name (`selectedMapName`). Batches used to record the legacy `mapName` key, which only the
+mapping save and the rebuild itself write, so a run started on a map opened from the Database could
+be recorded under an earlier map's name, and the returning tab then ignored its own run.
 
 Because the latched value cannot be relied on to reach a brand-new MQTT subscriber, the dashboard
 also prompts the supervisor to republish, at 0, 0.9, 3.4 and 9.4 s. The count is kept small since an
 idle robot answers none of them, but the **reach** matters more than the count: this is a
 browser to rosbridge to MQTT to unit round trip, and a schedule that gave up after a few seconds
 abandoned live runs on exactly the weak links the rest of the bandwidth work exists to survive. The
-subscription outlives the schedule, so a later snapshot is still applied.
+subscription outlives the schedule, so a later snapshot is still applied, but only until the tab
+sends a [`batch`](/development/message-contracts/operation-sync#batch) of its own.
+
+::: warning The rebuild must not recover the tab's own run
+The supervisor answers every batch with a fresh snapshot, and a map opened from the Database
+qualifies for the rebuild (third condition above). Until 2026-10-05 the subscription stayed up for
+the life of the page, so the operator's first Play on that map came back as an active snapshot and
+was "recovered": the `Recovering Session...` overlay went up on a run that had just started, and the
+restore appended the route's pins to the ones already on the map. The rebuild now stands down and
+unsubscribes as soon as a snapshot arrives after the tab's own `sendOperationBatch`, and a point-nav
+restore clears the navigator's pins before adding the snapshot's.
+:::
 
 ### What the rebuild paints first
 
@@ -248,11 +262,21 @@ carries the plan. It now goes up first, and the stage-scale wait is skipped enti
 run, which has no pins to size. Pin restoration still waits for it, because a marker added to an
 unscaled stage renders at an invisible 0.01 scale.
 
+A returning tab does not even wait for the snapshot. Each coverage start also writes its plan to
+`localStorage` (`nav_coverage_state_persisted`, scoped to user and unit), which survives the logout
+that wipes `sessionStorage`, so the area is painted from it as soon as the map is built. The
+snapshot repaints over it when it lands, and an inactive snapshot takes it down again: that run
+ended while the browser was away. A coverage rebuild raises no `Recovering Session...` overlay, and
+the area layer is re-attached on every scene rebuild and map update, because a reconnect or a map
+re-selection wipes the scene and the layer used to stay off it until the next explicit draw.
+
 The same rule applies when a run **starts**: the areas are painted as the plan is dispatched, not
 when the robot acknowledges it. `POST /api/boustrophedon/init` answers only once `switch_mode` has
 brought the coverage stack up on the robot, which is seconds of the operator watching a map with
 nothing on it. A refused run clears the overlay again, and a refused single custom area redraws the
-cyan drawer polygon so the operator still has an area to retry with.
+cyan drawer polygon so the operator still has an area to retry with. See
+[Coverage Cleaning § Initialization overlay](/development/webui/navigation/coverage-cleaning#initialization-overlay)
+for what covers the map while that switch runs.
 
 ## Related
 

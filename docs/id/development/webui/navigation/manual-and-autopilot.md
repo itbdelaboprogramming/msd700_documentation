@@ -234,6 +234,10 @@ yang menyemai kunci-kunci tersebut.
 Snapshot yang menyebutkan peta **berbeda** dari peta yang sedang dibuka tab diabaikan alih-alih
 diterapkan. Rekonstruksi ini memilih ulang peta tempat run tersebut berasal, yang benar untuk tab
 yang datang tanpa peta dan salah untuk operator yang baru saja memilih satu peta secara manual.
+Kedua sisi perbandingan itu adalah nama peta yang sedang dibuka (`selectedMapName`). Batch dulu
+mencatat kunci lama `mapName`, yang hanya ditulis oleh penyimpanan mapping dan oleh rekonstruksi
+itu sendiri, sehingga run yang dimulai pada peta yang dibuka dari Database bisa tercatat dengan nama
+peta sebelumnya, dan tab yang kembali lalu mengabaikan run miliknya sendiri.
 
 Karena nilai ter-latch tidak bisa diandalkan untuk sampai ke subscriber MQTT yang benar-benar
 baru, dashboard juga meminta supervisor untuk mempublikasikan ulang, pada detik ke-0, 0.9, 3.4,
@@ -242,7 +246,18 @@ tetapi **jangkauan** lebih penting daripada jumlahnya: ini adalah perjalanan pul
 ke rosbridge ke MQTT ke unit, dan jadwal yang menyerah setelah beberapa detik akan meninggalkan
 run yang sedang berjalan justru pada titik-titik lemah yang menjadi alasan kerja bandwidth
 lainnya ada. Subscription bertahan lebih lama daripada jadwalnya, sehingga snapshot yang datang
-belakangan tetap diterapkan.
+belakangan tetap diterapkan, tetapi hanya sampai tab mengirim
+[`batch`](/id/development/message-contracts/operation-sync#batch) miliknya sendiri.
+
+::: warning Rekonstruksi tidak boleh memulihkan run milik tab itu sendiri
+Supervisor menjawab setiap batch dengan snapshot baru, dan peta yang dibuka dari Database memenuhi
+syarat rekonstruksi (kondisi ketiga di atas). Sampai 2026-10-05 subscription tetap hidup sepanjang
+umur halaman, sehingga Play pertama operator pada peta itu kembali sebagai snapshot aktif dan
+"dipulihkan": overlay `Recovering Session...` muncul pada run yang baru saja dimulai, dan pemulihan
+menambahkan pin rute ke pin yang sudah ada di peta. Kini rekonstruksi mundur dan berhenti
+berlangganan begitu ada snapshot yang datang setelah `sendOperationBatch` milik tab itu sendiri, dan
+pemulihan point-nav menghapus pin navigator sebelum menambahkan pin dari snapshot.
+:::
 
 ### Apa yang digambar lebih dulu oleh rekonstruksi
 
@@ -256,12 +271,23 @@ tidak memiliki pin untuk diskalakan. Pemulihan pin tetap menunggu penskalaan itu
 yang ditambahkan ke stage yang belum diskalakan akan dirender pada skala 0.01 yang tak kasat
 mata.
 
+Tab yang kembali bahkan tidak menunggu snapshot. Setiap start cakupan juga menulis rencananya ke
+`localStorage` (`nav_coverage_state_persisted`, dibatasi per user dan unit), yang bertahan dari
+logout yang menghapus `sessionStorage`, sehingga area langsung digambar darinya begitu peta
+dibangun. Snapshot menggambar ulang di atasnya saat tiba, dan snapshot yang tidak aktif menurunkannya
+lagi: run itu sudah berakhir selama browser tidak terbuka. Rekonstruksi cakupan tidak memunculkan
+overlay `Recovering Session...`, dan layer area dipasang ulang pada setiap pembangunan ulang scene
+dan pembaruan peta, karena reconnect atau pemilihan ulang peta mengosongkan scene dan layer itu
+dulu tetap tidak terpasang sampai penggambaran eksplisit berikutnya.
+
 Aturan yang sama berlaku saat sebuah run **dimulai**: area-area digambar saat rencana dikirim,
 bukan saat robot mengakuinya. `POST /api/boustrophedon/init` baru merespons setelah `switch_mode`
 berhasil menyalakan stack cakupan di robot, yang berarti operator menatap peta tanpa apa pun
 selama beberapa detik. Run yang ditolak akan menghapus overlay lagi, dan satu area custom tunggal
 yang ditolak akan menggambar ulang polygon drawer cyan sehingga operator tetap memiliki area
-untuk dicoba ulang.
+untuk dicoba ulang. Lihat
+[Pembersihan Cakupan § Overlay inisialisasi](/id/development/webui/navigation/coverage-cleaning#initialization-overlay)
+untuk apa yang menutupi peta selama perpindahan mode itu berjalan.
 
 ## Terkait
 

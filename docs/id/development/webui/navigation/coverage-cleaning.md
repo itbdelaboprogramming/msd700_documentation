@@ -35,6 +35,19 @@ saat masuk mode ini. Popup instruksi ditampilkan setiap kali operator masuk ke m
 dari instruksi Map Sync yang hanya ditampilkan sekali per sesi, karena area cakupan yang salah
 digambar atau salah dipahami jauh lebih berkonsekuensi untuk diulang.
 
+Rute Single atau Multiple Pinpoint yang masih **dijeda** saat Coverage Area dibuka diakhiri lebih
+dulu: goal-nya dibatalkan, supervisor menerima
+[`stop`](/id/development/message-contracts/operation-sync#stop-complete), dan status kembali ke
+`Idle`. Masuk ke mode cakupan menghapus pin rute itu, jadi rute itu memang tidak akan pernah bisa
+dilanjutkan. Aturan pergantian mode hanya membandingkan dengan mode yang sedang dipilih, sedangkan
+menyelesaikan pin tidak menyisakan mode yang dipilih, sehingga sampai 2026-10-05 rute itu tetap
+`Paused`. Sub-menu cakupan membacanya sebagai run **cakupan** yang dijeda (Cancel Coverage dan
+Resume ditawarkan, Custom Area dan Operation Playlist disembunyikan), lalu beberapa detik kemudian
+phantom-run guard melihat robot tidak sedang menyapu, me-reset halaman ke `Idle`, dan menutup
+menunya. Run cakupan yang dijeda dengan menu yang sudah ditutup tidak tersentuh: rencananya yang
+tersimpan di cache menandainya sebagai cakupan, dan membuka Coverage Area lagi tetap menawarkan
+Resume. Aturannya ada di `previousRunEndedBy()` pada `src/components/navigationMap/modeSwitch.ts`.
+
 ## Auto Coverage
 
 Auto Coverage menyapu seluruh peta yang dimuat tanpa batas yang digambar operator: deteksi batas
@@ -139,6 +152,25 @@ multi-polygon yang terbatas, bukan urutan sapuan terpisah.
 polygon). Menjalankan adalah [`POST /api/boustrophedon/init`](/id/development/message-contracts/http-api#boustrophedon-init) dengan `areas` dan
 `exclusions` → [`boustrophedon.init`](/id/development/message-contracts/mqtt-commands#boustrophedon), yang diteruskan robot ke node coverage sebagai
 JSON di `/msd700/coverage_plan`; dicatat dengan [`batch`](/id/development/message-contracts/operation-sync#batch) operasi `playlist`.
+
+## Overlay inisialisasi {#initialization-overlay}
+
+Ketiga cara memulai menampilkan overlay semi-transparan yang sama di atas halaman selama robot
+berpindah ke mode cakupan, sehingga start kedua tidak bisa dipicu selama perpindahan itu. Berapa
+lama overlay bertahan bergantung pada apakah areanya sudah diketahui:
+
+| Start | Pesan | Turun saat |
+| --- | --- | --- |
+| Auto Coverage | `Please wait while system is setting the map area boundary` | robot mempublikasikan jalur cakupan non-kosong pertama dari run itu, setelah jalur kosong yang ia publikasikan saat init (batasnya sudah diketahui), atau setelah 30 detik |
+| Custom Area, Operation Playlist | `Initializing Auto Coverage...` | `POST /api/boustrophedon/init` berhasil: robot sudah berpindah mode dan menerima areanya |
+
+Area custom dan area playlist digambar saat start diklik, di bawah overlay, sehingga sudah ada di
+peta sebelum robot menjawab dan terlihat penuh begitu overlay turun. Overlay ini dulu menunggu robot
+bergerak (relokalisasi saat perpindahan mode bisa memalsukannya), lalu menunggu jalur cakupan
+pertamanya, yang membuat area yang sudah diketahui tetap redup selama robot merencanakan dan
+menjalankan lintasan pertamanya. Sebuah revisi pada 2026-10-04 menghapus overlay dari kedua cara
+start itu sama sekali; overlay dikembalikan pada 2026-10-05. Start yang ditolak menurunkan overlay
+dan areanya lagi.
 
 ## Show/Hide Trace
 
