@@ -48,6 +48,10 @@ Compose runs a service when **any** of its profiles is active. Nothing starts wi
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apache catch-all points at `3000` |
 | `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + relay range | Prod only |
 
+The Admin Console's System Health tab checks these ports from `nakayama_cloud[_dev]`. Its targets
+default to the production ports; `nakayama_cloud_dev` sets `WEBUI_URL`, `MEDIA_PORT` and an empty
+`PUBLIC_SITE_URL`. See [System Health § Configuration](/development/webui/admin-console/system-health#configuration).
+
 ## Compose command reference
 
 ### Starting services

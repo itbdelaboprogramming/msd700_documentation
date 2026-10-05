@@ -27,6 +27,37 @@ entirely on the [Rentals](/development/webui/admin-console/rentals) tab, by whic
 
 ## Registered Units view
 
+### Unit Status: asked live {#unit-status}
+
+The **Unit Status** column asks each robot directly. While the Registered Units view is open the
+panel polls [`GET /admin/api/units/live`](/development/message-contracts/http-api#admin-api) every
+5 seconds, and the backend sends every unit with a bound device the same ping the operator unit
+list sends, then waits up to 3 seconds for its answer.
+
+| Shown | Meaning |
+| --- | --- |
+| **On**, `Ready` | The robot answered and can take a task |
+| **On**, `In use by <operator>` | Another operator holds its [lease](/development/message-contracts/heartbeat-and-lease); the holder's user ULID is resolved to a username |
+| **On**, `Starting up` | It answered with `status: false`: its stack is not ready yet |
+| **Off** | No answer in the last 12 seconds |
+
+The figure after the state is the round trip of that ping (server to robot and back); battery,
+uptime and the time of the last answer are in the tooltip.
+
+The probe is a pure reader: `page: "admin"` is neither a presence nor an operation page, so it holds
+off no watchdog tier and cannot lift a ping-loss pause, and it carries no `claim`, no `release`, and
+an empty `session_id` and `user_id` (see
+[Heartbeat & Lease](/development/message-contracts/heartbeat-and-lease)). One answer
+is remembered for 12 seconds, so a single lost ping does not flip a unit to Off between polls, and
+polls arriving while a round is under 2 seconds old share it.
+
+The column used to read `online` from `GET /units`, which is true only when the unit's last
+[cloud sync](/development/data-sync) is under 11 minutes old. Sync runs every
+5 minutes, so a robot switched on read **Off** for up to 5 minutes while the operator unit list
+already showed it Ready, and a robot switched off read **On** for up to 11 minutes. That value is
+now only the fallback: before the first live answer arrives, and when the backend has no broker
+connection (`available: false`), in which case the tooltip says the live check is unavailable.
+
 ### Register a unit manually
 
 **Contract:** `POST /admin/api/units`; see [HTTP API § Admin API](/development/message-contracts/http-api#admin-api).
@@ -153,7 +184,7 @@ this page only covers what an admin does with a row once it is here.
 ## Related
 
 - [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): every endpoint this tab calls.
-- [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
+- [Overview](/development/webui/admin-console/overview): the six-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
 - [Rentals](/development/webui/admin-console/rentals): who a registered unit is actually rented to, and who can drive it.
 - [Backups](/development/webui/admin-console/backups): archiving and restoring whole rental profiles.

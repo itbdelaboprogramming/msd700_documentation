@@ -29,6 +29,37 @@ search: false
 
 ## 登録済みユニット ビュー
 
+### ユニットステータス: ライブで問い合わせる {#unit-status}
+
+**Unit Status** 列は各ロボットに直接問い合わせる。登録済みユニット ビューを開いている間、パネルは
+5秒ごとに [`GET /admin/api/units/live`](/ja/development/message-contracts/http-api#admin-api) を
+呼び出し、バックエンドはデバイスが紐付いた各ユニットに、オペレーターのユニット一覧と同じ ping を
+送り、最大3秒応答を待つ。
+
+| 表示 | 意味 |
+| --- | --- |
+| **On**、`Ready` | ロボットが応答し、タスクを受け付けられる |
+| **On**、`In use by <operator>` | 別のオペレーターが[リース](/ja/development/message-contracts/heartbeat-and-lease)を保持している。保持者のユーザー ULID はユーザー名に変換される |
+| **On**、`Starting up` | `status: false` で応答した: スタックがまだ準備できていない |
+| **Off** | 直近12秒間に応答がない |
+
+状態の後ろの数値はその ping の往復時間（サーバーからロボットへ、そして戻り）である。バッテリー、
+稼働時間、最後の応答時刻はツールチップに表示される。
+
+このプローブは読むだけである。`page: "admin"` はプレゼンスページでも操作ページでもないため、
+どのウォッチドッグ段階も保持せず、ping 喪失による一時停止を解除することもできない。`claim` も
+`release` も持たず、`session_id` と `user_id` は空である
+（[Heartbeat & Lease](/ja/development/message-contracts/heartbeat-and-lease) 参照）。1回の応答は
+12秒間記憶されるので、ping が1回失われてもポーリングの合間にユニットが Off に変わることはない。
+また、ラウンド開始から2秒以内に来たポーリングはそのラウンドを共有する。
+
+以前この列は `GET /units` の `online` を読んでいた。これはユニットの最後の
+[クラウド同期](/ja/development/data-sync)が11分以内のときだけ真になる。同期は5分ごとなので、
+電源を入れたばかりのロボットは、オペレーターのユニット一覧で Ready と表示されている間も最大5分
+**Off** と表示され、電源を切ったロボットは最大11分 **On** と表示されていた。この値は現在は
+フォールバックのみである。最初のライブ応答が届く前と、バックエンドにブローカー接続がないとき
+（`available: false`）で、その場合ツールチップにライブチェックが利用できない旨が表示される。
+
 ### ユニットを手動で登録する
 
 物理ロボットがクラウドに接続するよりも前に、`units` の行を直接作成する(新しい ULID と
@@ -161,7 +192,7 @@ nonce プロトコルの「hello」段階(`POST /enroll/claim`)を完了した�
 ## 関連
 
 - [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): このタブが呼ぶ全エンドポイント。
-- [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
+- [概要](/ja/development/webui/admin-console/overview): 6タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
 - [レンタル](/ja/development/webui/admin-console/rentals): 登録済みユニットが実際に誰にレンタルされているか、そして誰がそれを操縦できるか。
 - [バックアップ](/ja/development/webui/admin-console/backups): レンタルプロファイル全体のアーカイブと復元。

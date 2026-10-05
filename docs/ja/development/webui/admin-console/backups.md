@@ -87,7 +87,7 @@ search: false
 ## 関連
 
 - [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`、`POST /admin/api/profiles/:id/backups`、`GET /admin/api/backups/:id/download`、`POST /admin/api/backups/upload`、`POST /admin/api/backups/:id/plan`、`POST /admin/api/backups/:id/restore`、`DELETE /admin/api/backups/:id`。
-- [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
+- [概要](/ja/development/webui/admin-console/overview): 6タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
 - [ユニット](/ja/development/webui/admin-console/units): 登録済みユニット ビューから到達できるユニットスコープバックアップの入口。
 - [レンタル](/ja/development/webui/admin-console/rentals): このタブへのワンクリックバックアップショートカット、そしてこのアーカイブが属するプロファイル。

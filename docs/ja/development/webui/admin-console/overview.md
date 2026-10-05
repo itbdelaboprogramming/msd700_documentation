@@ -9,18 +9,19 @@ search: false
 
 MSD700 のバックオフィス側であり、Accounts & Access で説明されている別の
 [管理者ログイン](/ja/development/webui/accounts/overview#管理者ログイン-admin) からアクセスする。
-5つのタブを持つシェル（`admin/dashboard.tsx`、`src/components/admin/` 以下にタブごとの
+6つのタブを持つシェル（`admin/dashboard.tsx`、`src/components/admin/` 以下にタブごとの
 `*Panel.tsx` コンポーネント）で、1台のロボットを操縦するのではなくユニットを管理するスタッフ
 向けである。このページでは、シェル自体、そこにサービスされる2つの管理者ロール、すべてのタブで
 共有されるアカウントメニューを紹介する。各タブにはそれぞれ独自のページがある:
 [オペレーター](/ja/development/webui/admin-console/operators)、
 [ユニット](/ja/development/webui/admin-console/units)、
 [レンタル](/ja/development/webui/admin-console/rentals)、
-[バックアップ](/ja/development/webui/admin-console/backups)。コンソールのアクションを、その下に
+[バックアップ](/ja/development/webui/admin-console/backups)、
+[システムヘルス](/ja/development/webui/admin-console/system-health)。コンソールのアクションを、その下に
 あるロボットとユニットリレーコンテナに結び付けているのが
 [ROS連携](/ja/development/webui/admin-console/ros-integration) である。
 
-## 5つのタブ
+## 6つのタブ
 
 | タブ | コンポーネント | 表示対象 | 管理対象 |
 | --- | --- | --- | --- |
@@ -28,10 +29,11 @@ MSD700 のバックオフィス側であり、Accounts & Access で説明され�
 | ユニット | `UnitsPanel.tsx` | admin, superadmin | `units`: 存在する物理ロボット、登録済みと保留中 |
 | レンタル | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: ユニットが誰にレンタルされているか |
 | バックアップ | `BackupsPanel.tsx` | admin, superadmin | レンタルプロファイル全体のアーカイブ |
+| システムヘルス | `SystemHealthPanel.tsx` | admin, superadmin | なし: サーバーのサービス、ポート、SSL 証明書が動作しているかを読むだけ |
 | 管理者 | `AdminsPanel.tsx` | superadmin のみ | `admin_accounts`: バックオフィススタッフ自身 |
 
 最初の4つのタブは*オペレーター向け*の側面、すなわち操縦する人、操縦されるロボット、両者を
-つなぐレンタル関係を管理する。5番目のタブはコンソール自身のオペレーターを管理する。この非対称性
+つなぐレンタル関係を管理する。システムヘルスは読むだけである。最後のタブはコンソール自身のオペレーターを管理する。この非対称性
 は意図的なものであり見落としではない。管理者は、他のバックオフィスアカウントを作成したり削除
 したりすることは一切できないまま、テナントとロボットを日常的に運用するために必要なことをすべて
 行える。

@@ -88,7 +88,7 @@ user_id)` によって同じオペレーターが1つのプロファイルに二
 ## 関連
 
 - [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/profiles`、`GET/PATCH/DELETE /admin/api/profiles/:id`、`POST/DELETE /admin/api/profiles/:id/members`、`POST/DELETE /admin/api/profiles/:id/units`。
-- [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
+- [概要](/ja/development/webui/admin-console/overview): 6タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
 - [ユニット](/ja/development/webui/admin-console/units): このタブが割り当てるユニットの登録、名前変更、削除。
 - [バックアップ](/ja/development/webui/admin-console/backups): このタブのショートカットが導く完全なアーカイブと復元フロー。

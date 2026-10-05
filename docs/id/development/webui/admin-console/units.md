@@ -29,6 +29,37 @@ oleh profil penyewaan mana (jika ada) yang ditugaskan ke unit tersebut: lihat `p
 
 ## Tampilan Unit Terdaftar
 
+### Status Unit: ditanyakan langsung {#unit-status}
+
+Kolom **Unit Status** menanyakan langsung ke setiap robot. Selama tampilan Unit Terdaftar terbuka,
+panel memanggil [`GET /admin/api/units/live`](/id/development/message-contracts/http-api#admin-api)
+setiap 5 detik, dan backend mengirim ke setiap unit yang punya perangkat terikat ping yang sama
+dengan yang dikirim daftar unit operator, lalu menunggu jawabannya paling lama 3 detik.
+
+| Tampilan | Arti |
+| --- | --- |
+| **On**, `Ready` | Robot menjawab dan bisa menerima tugas |
+| **On**, `In use by <operator>` | Operator lain memegang [lease](/id/development/message-contracts/heartbeat-and-lease)-nya; ULID user pemegang diterjemahkan ke username |
+| **On**, `Starting up` | Menjawab dengan `status: false`: stack-nya belum siap |
+| **Off** | Tidak ada jawaban dalam 12 detik terakhir |
+
+Angka setelah status adalah waktu pulang-pergi ping itu (server ke robot dan kembali); baterai,
+uptime dan waktu jawaban terakhir ada di tooltip.
+
+Probe ini murni pembaca: `page: "admin"` bukan halaman presence maupun operasi, jadi tidak menahan
+tier watchdog mana pun dan tidak bisa melepas pause karena ping hilang, dan tidak membawa `claim`,
+`release`, serta `session_id` dan `user_id` kosong (lihat
+[Heartbeat & Lease](/id/development/message-contracts/heartbeat-and-lease)). Satu jawaban diingat
+12 detik, sehingga satu ping yang hilang tidak membalik unit menjadi Off di antara dua polling, dan
+polling yang datang saat sebuah ronde berumur kurang dari 2 detik ikut memakai ronde itu.
+
+Dulu kolom ini membaca `online` dari `GET /units`, yang bernilai benar hanya bila
+[cloud sync](/id/development/data-sync) terakhir unit berumur kurang dari 11 menit. Sync berjalan
+setiap 5 menit, jadi robot yang baru dinyalakan terbaca **Off** sampai 5 menit padahal daftar unit
+operator sudah menampilkannya Ready, dan robot yang dimatikan terbaca **On** sampai 11 menit. Nilai
+itu kini hanya cadangan: sebelum jawaban live pertama tiba, dan saat backend tidak punya koneksi
+broker (`available: false`), dan tooltip lalu menyebut pemeriksaan live sedang tidak tersedia.
+
 ### Mendaftarkan unit secara manual
 
 Membuat baris `units` langsung (ULID baru dan `unit_name`), lebih dulu dari robot fisik mana pun
@@ -160,7 +191,7 @@ halaman ini hanya mencakup apa yang dilakukan admin terhadap sebuah baris setela
 ## Terkait
 
 - [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): semua endpoint yang dipanggil tab ini.
-- [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
+- [Ikhtisar](/id/development/webui/admin-console/overview): shell enam-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
 - [Penyewaan](/id/development/webui/admin-console/rentals): sungguhan disewa kepada siapa sebuah unit terdaftar, dan siapa yang dapat mengemudikannya.
 - [Cadangan](/id/development/webui/admin-console/backups): mengarsipkan dan memulihkan profil penyewaan secara utuh.

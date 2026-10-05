@@ -46,7 +46,7 @@ search: false
 | `user_id` | バックエンド、JWT から | リースの識別子。ボディからは取らないので、クライアントが他人として claim することはできません。ユーザー名ではなく ULID なので、名前変更でリースが移ることはありません。 |
 | `claim` | ブラウザ | 操作ページ(Navigation、Mapping)からは `true`。状態を読むだけのユニット一覧からは `false` |
 | `release` | ブラウザ | 操作ページを離れるときに `true` (`page: "other"`、`keepalive` 付きで送信) |
-| `page` | ブラウザ | `dashboard`、`navigation`、`mapping`、`other`。ping が更新するウォッチドッグ段階を決めます。 |
+| `page` | ブラウザ | `dashboard`、`navigation`、`mapping`、`other`。ping が更新するウォッチドッグ段階を決めます。バックエンド自身の管理コンソール用プローブは `admin` を送ります。`dashboard` と同じくどの段階も更新せず、一時停止も解除できません（[ユニット § ユニットステータス](/ja/development/webui/admin-console/units#unit-status)）。`session_id` と `user_id` も空で送るため、ロボットは匿名の読み手として応答します。 |
 | `origin` | バックエンド、`DEPLOYMENT_MODE` から | `cloud` または `local`。ボディからは取りません。 |
 | `force_takeover` | ブラウザ | オペレーターが引き継ぎ確認に同意したときだけ `true` |
 

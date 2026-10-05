@@ -48,6 +48,8 @@ Composeは宣言プロファイルの**いずれか**が有効だとサービス
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Apacheキャッチオールは`3000`向き |
 | `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478`+リレー範囲 | 本番のみ |
 
+管理コンソールのSystem Healthタブは、`nakayama_cloud[_dev]`からこれらのポートを確認します。対象の既定値は本番のポートで、`nakayama_cloud_dev`は`WEBUI_URL`、`MEDIA_PORT`、空の`PUBLIC_SITE_URL`を設定します。[システムヘルス § 設定](/ja/development/webui/admin-console/system-health#configuration)を参照してください。
+
 ## Composeコマンドリファレンス
 
 ### サービスの起動

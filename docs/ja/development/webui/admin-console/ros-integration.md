@@ -103,7 +103,7 @@ pending` の `pending_units` 行を、特定の `units` 行に紐づけて `appr
 
 ## 関連
 
-- [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
+- [概要](/ja/development/webui/admin-console/overview): 6タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [オペレーター](/ja/development/webui/admin-console/operators): オペレーターアカウントの登録、検索、停止/再有効化、パスワードリセット。
 - [ユニット](/ja/development/webui/admin-console/units): これらのメカニズムの土台となる 登録済みユニット と Pending のサブビュー。
 - [レンタル](/ja/development/webui/admin-console/rentals): レンタルプロファイルの CRUD、メンバーシップ、ユニット割り当て。

@@ -58,7 +58,7 @@ is setting the password on someone else's account, not their own.
 ## Related
 
 - [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`, `PATCH /admin/api/users/:id/status`, `PATCH /admin/api/users/:id/password`.
-- [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
+- [Overview](/development/webui/admin-console/overview): the six-tab shell, admin vs superadmin roles, and the account menu.
 - [Units](/development/webui/admin-console/units): Registered Units and Pending sub-views over the robot roster.
 - [Rentals](/development/webui/admin-console/rentals): where an operator account actually gets access to a robot.
 - [Backups](/development/webui/admin-console/backups): archiving and restoring whole rental profiles.

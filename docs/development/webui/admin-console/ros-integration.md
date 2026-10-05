@@ -104,7 +104,7 @@ above) goes through that same restricted surface, never a general-purpose Docker
 
 ## Related
 
-- [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
+- [Overview](/development/webui/admin-console/overview): the six-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
 - [Units](/development/webui/admin-console/units): Registered Units and Pending sub-views these mechanics sit underneath.
 - [Rentals](/development/webui/admin-console/rentals): rental profile CRUD, membership, and unit assignment.

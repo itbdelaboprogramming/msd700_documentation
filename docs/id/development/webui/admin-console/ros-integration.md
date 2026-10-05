@@ -112,7 +112,7 @@ perintah Docker serba-guna.
 
 ## Terkait
 
-- [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
+- [Ikhtisar](/id/development/webui/admin-console/overview): shell enam-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
 - [Unit](/id/development/webui/admin-console/units): sub-tampilan Unit Terdaftar dan Tertunda yang menjadi dasar mekanisme ini.
 - [Penyewaan](/id/development/webui/admin-console/rentals): CRUD profil penyewaan, keanggotaan, dan penugasan unit.

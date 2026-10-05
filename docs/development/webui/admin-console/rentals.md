@@ -84,7 +84,7 @@ members of it.
 ## Related
 
 - [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/profiles`, `GET/PATCH/DELETE /admin/api/profiles/:id`, `POST/DELETE /admin/api/profiles/:id/members`, `POST/DELETE /admin/api/profiles/:id/units`.
-- [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
+- [Overview](/development/webui/admin-console/overview): the six-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
 - [Units](/development/webui/admin-console/units): registering, renaming, and deleting the units this tab assigns.
 - [Backups](/development/webui/admin-console/backups): the full archive and restore flow this tab's shortcut leads into.

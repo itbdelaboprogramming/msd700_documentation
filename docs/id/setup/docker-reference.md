@@ -48,6 +48,10 @@ Compose menjalankan service bila **salah satu** profile-nya aktif. Tanpa profile
 | `frontend_prod` / `frontend_dev` | `ros_web_ui_v2_frontend[_dev]` | bridge | `3000` / `3100` | Catch-all Apache menunjuk `3000` |
 | `coturn` | `ros_web_ui_v2_coturn` | **host** | `3478` + range relay | Hanya prod |
 
+Tab System Health di Konsol Admin memeriksa port-port ini dari `nakayama_cloud[_dev]`. Targetnya
+default ke port produksi; `nakayama_cloud_dev` mengatur `WEBUI_URL`, `MEDIA_PORT` dan
+`PUBLIC_SITE_URL` kosong. Lihat [Kesehatan Sistem § Konfigurasi](/id/development/webui/admin-console/system-health#configuration).
+
 ## Referensi perintah compose
 
 ### Menyalakan service

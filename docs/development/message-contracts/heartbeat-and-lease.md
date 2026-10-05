@@ -46,7 +46,7 @@ The browser calls [`POST /api/hardware/ping`](/development/message-contracts/htt
 | `user_id` | backend, from the JWT | Lease identity. Never taken from the body, so a client cannot claim as someone else. The ULID, not the username, so a rename does not move a lease. |
 | `claim` | browser | `true` from the operating pages (Navigation, Mapping); `false` from the unit list, which only reads status |
 | `release` | browser | `true` on the way out of an operating page (sent with `page: "other"`, `keepalive`) |
-| `page` | browser | `dashboard`, `navigation`, `mapping`, `other`. Decides which watchdog tiers the ping refreshes. |
+| `page` | browser | `dashboard`, `navigation`, `mapping`, `other`. Decides which watchdog tiers the ping refreshes. The backend's own admin-console probe sends `admin`, which, like `dashboard`, refreshes no tier and cannot lift a pause ([Units § Unit Status](/development/webui/admin-console/units#unit-status)); it also sends an empty `session_id` and `user_id`, so the robot answers as to an anonymous reader. |
 | `origin` | backend, from `DEPLOYMENT_MODE` | `cloud` or `local`. Never from the body. |
 | `force_takeover` | browser | `true` only after the operator confirms the takeover prompt |
 

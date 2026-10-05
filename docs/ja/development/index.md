@@ -24,7 +24,7 @@ MSD700 プラットフォームに携わるソフトウェアエンジニア、�
   <LinkCard icon="🧭" title="ナビゲーション" details="手動操作、Autopilot、ピンポイント/ルート、マップ同期&アライメント、カバレッジクリーニング。" link="/ja/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="マッピング" details="新しいマップの構築: Play/Pause/Stop、手動 vs 自律探索、save-on-stop。" link="/ja/development/webui/mapping/overview" />
   <LinkCard icon="🗄️" title="データベース" details="マップDB画面: 記録済みマップの一覧表示、検索、リネーム、削除。" link="/ja/development/webui/database/overview" />
-  <LinkCard icon="🛠️" title="管理コンソール" details="Operators、Units、Rentals、Backups、そしてスーパー管理者専用の Admins タブ。" link="/ja/development/webui/admin-console/overview" />
+  <LinkCard icon="🛠️" title="管理コンソール" details="Operators、Units、Rentals、Backups、System Health、そしてスーパー管理者専用の Admins タブ。" link="/ja/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="アカウント & アクセス" details="オペレーターのログイン/サインアップ、管理者ログイン、JWT キーリング、ハードウェア登録。" link="/ja/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="カメラ & ライブビュー" details="ダッシュボードのライブフィードを支える WebRTC 映像パイプライン。" link="/ja/development/webui/camera/overview" />
 </LinkCards>

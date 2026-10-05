@@ -8,17 +8,18 @@ search: false
 <RoleBadge role="developer" />
 
 The back-office side of MSD700, reached through the separate [admin login](/development/webui/accounts/overview#admin-login-admin)
-described in Accounts & Access: a five-tab shell (`admin/dashboard.tsx`, one `*Panel.tsx` component
+described in Accounts & Access: a six-tab shell (`admin/dashboard.tsx`, one `*Panel.tsx` component
 per tab under `src/components/admin/`) for the staff who manage the units rather than drive any
 one robot. This page introduces the shell itself, the two admin roles it serves, and the account
 menu shared across every tab. Each tab gets its own page: [Operators](/development/webui/admin-console/operators),
 [Units](/development/webui/admin-console/units),
-[Rentals](/development/webui/admin-console/rentals), and
-[Backups](/development/webui/admin-console/backups). What ties the console's actions back to the
+[Rentals](/development/webui/admin-console/rentals),
+[Backups](/development/webui/admin-console/backups), and
+[System Health](/development/webui/admin-console/system-health). What ties the console's actions back to the
 robot and the unit relay container underneath it is
 [ROS Integration](/development/webui/admin-console/ros-integration).
 
-## The five tabs
+## The six tabs
 
 | Tab | Component | Visible to | Manages |
 | --- | --- | --- | --- |
@@ -26,11 +27,12 @@ robot and the unit relay container underneath it is
 | Units | `UnitsPanel.tsx` | admin, superadmin | `units`: which physical robots exist, registered and pending |
 | Rentals | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: who a unit is rented to |
 | Backups | `BackupsPanel.tsx` | admin, superadmin | Archives of whole rental profiles |
+| System Health | `SystemHealthPanel.tsx` | admin, superadmin | Nothing: it reads whether the server's services, ports and SSL certificates work |
 | Admins | `AdminsPanel.tsx` | superadmin only | `admin_accounts`: back-office staff themselves |
 
 The first four tabs manage the *operator-facing* side of the units: the people who drive, the robots they
-drive, and the rental relationship that connects the two. The fifth tab manages the console's own
-operators. That asymmetry is deliberate, not an oversight: an admin can do everything needed to run
+drive, and the rental relationship that connects the two. System Health only reads. The last tab
+manages the console's own operators. That asymmetry is deliberate, not an oversight: an admin can do everything needed to run
 tenants and robots day to day without ever being able to create or remove another back-office
 account.
 

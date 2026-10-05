@@ -94,7 +94,7 @@ those run against the database directly and are out of scope for `BackupsPanel.t
 ## Related
 
 - [Message Contracts: HTTP API § Admin API](/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`, `POST /admin/api/profiles/:id/backups`, `GET /admin/api/backups/:id/download`, `POST /admin/api/backups/upload`, `POST /admin/api/backups/:id/plan`, `POST /admin/api/backups/:id/restore`, `DELETE /admin/api/backups/:id`.
-- [Overview](/development/webui/admin-console/overview): the five-tab shell, admin vs superadmin roles, and the account menu.
+- [Overview](/development/webui/admin-console/overview): the six-tab shell, admin vs superadmin roles, and the account menu.
 - [Operators](/development/webui/admin-console/operators): register, search, suspend/reactivate, and reset passwords for operator accounts.
 - [Units](/development/webui/admin-console/units): the unit-scoped backup entry point reached from the Registered Units view.
 - [Rentals](/development/webui/admin-console/rentals): the one-click backup shortcut into this tab, and the profile this archive belongs to.

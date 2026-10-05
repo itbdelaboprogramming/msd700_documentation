@@ -86,7 +86,7 @@ operator yang menjadi anggotanya.
 ## Terkait
 
 - [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/profiles`, `GET/PATCH/DELETE /admin/api/profiles/:id`, `POST/DELETE /admin/api/profiles/:id/members`, `POST/DELETE /admin/api/profiles/:id/units`.
-- [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
+- [Ikhtisar](/id/development/webui/admin-console/overview): shell enam-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
 - [Unit](/id/development/webui/admin-console/units): mendaftarkan, mengganti nama, dan menghapus unit yang ditugaskan tab ini.
 - [Cadangan](/id/development/webui/admin-console/backups): alur arsip dan restore lengkap yang dituju pintasan tab ini.

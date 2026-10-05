@@ -13,7 +13,7 @@ Routine care for a deployed MSD700 system. Each task says which machine it runs 
 | Task | How often | Where | Notes |
 | --- | --- | --- | --- |
 | Rotate the JWT keyring | Every few months, or right after a suspected leak | Server | [Rotating secrets](#rotating-secrets) |
-| Renew the TLS certificate | Before expiry | Server | [Certificates](#certificates). Plain `certbot renew` does **not** update HiveMQ |
+| Renew the TLS certificate | Before expiry | Server | [Certificates](#certificates). Plain `certbot renew` does **not** update HiveMQ. Admin Console **System Health** shows both expiry dates |
 | Check the unit relay runs | Now and then | Server | `docker ps --filter name=unit_relays`. In multi-unit mode (default) one stopped relay drops all units |
 | Prune expired keys | After a rotation's grace window | Server | `./scripts/secrets.sh prune --dev` |
 | Check Docker disk use | Monthly | Both | `docker system df`, then prune images/build cache |
@@ -104,6 +104,8 @@ Losing operator pings for over 2 seconds can raise `/emergency_pause`. Schedule 
 :::
 
 `update_ssl.sh` is fixed to `msd.nglobal.jp` and `/srv/msd/secrets/hivemq/keystore.p12`. Its export password must match the broker config. Never print it in diagnostics. Check served expiry separately for HTTPS and MQTT before and after.
+
+The Admin Console's **System Health** tab reads both served certificates and shows the days left, the last renewal and certbot's next one (expiry minus 30 days). It flags the broker as **Needs attention** when the broker still presents an older certificate than the website, which is exactly a renewal whose keystore was not rebuilt. See [Admin Console: System Health § Certificates](/development/webui/admin-console/system-health#certificates).
 
 ## The TURN relay
 

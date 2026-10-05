@@ -96,7 +96,7 @@ ini: skrip itu berjalan langsung terhadap basis data dan di luar cakupan untuk `
 ## Terkait
 
 - [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET /admin/api/backups`, `POST /admin/api/profiles/:id/backups`, `GET /admin/api/backups/:id/download`, `POST /admin/api/backups/upload`, `POST /admin/api/backups/:id/plan`, `POST /admin/api/backups/:id/restore`, `DELETE /admin/api/backups/:id`.
-- [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
+- [Ikhtisar](/id/development/webui/admin-console/overview): shell enam-tab, peran admin vs superadmin, dan menu akun.
 - [Operator](/id/development/webui/admin-console/operators): mendaftarkan, mencari, menangguhkan/mengaktifkan kembali, dan mereset kata sandi akun operator.
 - [Unit](/id/development/webui/admin-console/units): titik masuk backup bercakupan-unit yang dicapai dari tampilan Unit Terdaftar.
 - [Penyewaan](/id/development/webui/admin-console/rentals): pintasan backup satu-klik ke tab ini, dan profil yang dimiliki arsip ini.

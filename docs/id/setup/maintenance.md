@@ -13,7 +13,7 @@ Perawatan rutin sistem MSD700 yang sudah deploy. Tiap tugas menyebut mesinnya. A
 | Tugas | Seberapa sering | Di mana | Catatan |
 | --- | --- | --- | --- |
 | Rotasi keyring JWT | Tiap beberapa bulan, atau segera setelah curiga bocor | Server | [Rotasi secrets](#rotasi-secrets) |
-| Perpanjang sertifikat TLS | Sebelum kedaluwarsa | Server | [Sertifikat](#sertifikat). `certbot renew` saja **tidak** mengupdate HiveMQ |
+| Perpanjang sertifikat TLS | Sebelum kedaluwarsa | Server | [Sertifikat](#sertifikat). `certbot renew` saja **tidak** mengupdate HiveMQ. Tab **System Health** di Konsol Admin menampilkan kedua tanggal kedaluwarsa |
 | Cek unit relay jalan | Sesekali | Server | `docker ps --filter name=unit_relays`. Di mode multi-unit (default) satu relay mati menjatuhkan semua unit |
 | Prune key kedaluwarsa | Setelah grace window rotasi | Server | `./scripts/secrets.sh prune --dev` |
 | Cek disk Docker | Bulanan | Keduanya | `docker system df`, lalu prune image/build cache |
@@ -104,6 +104,8 @@ Kehilangan ping operator lebih dari 2 detik bisa menaikkan `/emergency_pause`. J
 :::
 
 `update_ssl.sh` terkunci ke `msd.nglobal.jp` dan `/srv/msd/secrets/hivemq/keystore.p12`. Password export harus cocok dengan config broker. Jangan print di diagnostik. Cek expiry yang disajikan masing-masing untuk HTTPS dan MQTT sebelum dan sesudah.
+
+Tab **System Health** di Konsol Admin membaca kedua sertifikat yang disajikan dan menampilkan sisa hari, pembaruan terakhir dan pembaruan certbot berikutnya (kedaluwarsa dikurangi 30 hari). Tab ini menandai broker **Needs attention** bila broker masih menyajikan sertifikat yang lebih lama dari website, persis pembaruan yang keystore-nya tidak dibangun ulang. Lihat [Konsol Admin: Kesehatan Sistem § Sertifikat](/id/development/webui/admin-console/system-health#certificates).
 
 ## Relay TURN
 

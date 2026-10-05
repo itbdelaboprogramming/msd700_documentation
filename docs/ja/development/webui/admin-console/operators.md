@@ -63,7 +63,7 @@ search: false
 ## 関連
 
 - [メッセージ仕様: HTTP API § 管理 API](/ja/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`、`PATCH /admin/api/users/:id/status`、`PATCH /admin/api/users/:id/password`。
-- [概要](/ja/development/webui/admin-console/overview): 5タブのシェル、admin と superadmin のロール、アカウントメニュー。
+- [概要](/ja/development/webui/admin-console/overview): 6タブのシェル、admin と superadmin のロール、アカウントメニュー。
 - [ユニット](/ja/development/webui/admin-console/units): ロボット一覧の 登録済みユニット と Pending のサブビュー。
 - [レンタル](/ja/development/webui/admin-console/rentals): オペレーターアカウントが実際にロボットへのアクセスを得る場所。
 - [バックアップ](/ja/development/webui/admin-console/backups): レンタルプロファイル全体のアーカイブと復元。

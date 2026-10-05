@@ -8,18 +8,19 @@ search: false
 <RoleBadge role="developer" />
 
 Sisi back-office dari MSD700, dicapai lewat [login admin](/id/development/webui/accounts/overview#login-admin-admin)
-terpisah yang dijelaskan di Akun & Akses: sebuah shell lima-tab (`admin/dashboard.tsx`, satu
+terpisah yang dijelaskan di Akun & Akses: sebuah shell enam-tab (`admin/dashboard.tsx`, satu
 komponen `*Panel.tsx` per tab di bawah `src/components/admin/`) untuk staf yang menjalankan seluruh
 unit-unit alih-alih mengemudikan satu robot. Halaman ini memperkenalkan shell itu sendiri, dua peran
 admin yang dilayaninya, dan menu akun yang dipakai bersama di setiap tab. Setiap tab punya
 halamannya sendiri: [Operator](/id/development/webui/admin-console/operators),
 [Unit](/id/development/webui/admin-console/units),
-[Penyewaan](/id/development/webui/admin-console/rentals), dan
-[Cadangan](/id/development/webui/admin-console/backups). Yang menghubungkan aksi konsol kembali
+[Penyewaan](/id/development/webui/admin-console/rentals),
+[Cadangan](/id/development/webui/admin-console/backups), dan
+[Kesehatan Sistem](/id/development/webui/admin-console/system-health). Yang menghubungkan aksi konsol kembali
 ke robot dan kontainer unit di bawahnya adalah
 [Integrasi ROS](/id/development/webui/admin-console/ros-integration).
 
-## Lima tab
+## Enam tab
 
 | Tab | Komponen | Terlihat oleh | Mengelola |
 | --- | --- | --- | --- |
@@ -27,11 +28,12 @@ ke robot dan kontainer unit di bawahnya adalah
 | Unit | `UnitsPanel.tsx` | admin, superadmin | `units`: robot fisik mana saja yang ada, terdaftar dan tertunda |
 | Penyewaan | `ProfilesPanel.tsx` | admin, superadmin | `rental_profiles`: sebuah unit disewakan kepada siapa |
 | Cadangan | `BackupsPanel.tsx` | admin, superadmin | Arsip profil penyewaan secara utuh |
+| Kesehatan Sistem | `SystemHealthPanel.tsx` | admin, superadmin | Tidak ada: hanya membaca apakah layanan, port, dan sertifikat SSL server berfungsi |
 | Admin | `AdminsPanel.tsx` | superadmin saja | `admin_accounts`: staf back-office itu sendiri |
 
 Empat tab pertama mengelola sisi unit yang *menghadap-operator*: orang yang mengemudi, robot yang
-mereka kemudikan, dan hubungan penyewaan yang menghubungkan keduanya. Tab kelima mengelola operator
-konsol itu sendiri. Ketidaksimetrisan itu disengaja, bukan kelalaian: seorang admin dapat melakukan
+mereka kemudikan, dan hubungan penyewaan yang menghubungkan keduanya. Kesehatan Sistem hanya membaca.
+Tab terakhir mengelola operator konsol itu sendiri. Ketidaksimetrisan itu disengaja, bukan kelalaian: seorang admin dapat melakukan
 semua yang dibutuhkan untuk menjalankan penyewa dan robot sehari-hari tanpa pernah bisa membuat
 atau menghapus akun back-office lain.
 

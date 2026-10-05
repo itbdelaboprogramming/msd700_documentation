@@ -24,7 +24,7 @@ Dashboard operator, konsol admin, dan layanan backend/bridge yang menghubungkann
   <LinkCard icon="🧭" title="Navigasi" details="Kendali manual, Autopilot, pinpoint/rute, sinkronisasi & penyelarasan peta, dan coverage cleaning." link="/id/development/webui/navigation/overview" />
   <LinkCard icon="🗺️" title="Mapping" details="Membangun peta baru: Play/Pause/Stop, eksplorasi manual vs. otonom, dan save-on-stop." link="/id/development/webui/mapping/overview" />
   <LinkCard icon="🗄️" title="Database" details="Halaman Map DB: mendaftar, mencari, mengganti nama, dan menghapus peta yang direkam." link="/id/development/webui/database/overview" />
-  <LinkCard icon="🛠️" title="Konsol Admin" details="Tab Operators, Units, Rentals, Backups, dan Admins khusus superadmin." link="/id/development/webui/admin-console/overview" />
+  <LinkCard icon="🛠️" title="Konsol Admin" details="Tab Operators, Units, Rentals, Backups, System Health, dan Admins khusus superadmin." link="/id/development/webui/admin-console/overview" />
   <LinkCard icon="🔑" title="Akun & Akses" details="Login/pendaftaran operator, login admin, keyring JWT, dan pendaftaran perangkat keras." link="/id/development/webui/accounts/overview" />
   <LinkCard icon="📷" title="Kamera & Live View" details="Pipeline video WebRTC di balik live feed dashboard." link="/id/development/webui/camera/overview" />
 </LinkCards>

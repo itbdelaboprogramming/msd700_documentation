@@ -542,6 +542,8 @@ Wi-Fi パネルが使います:
 | 管理者 (superadmin) | `GET/POST /admins` (`username, fullname, password, role`)、`PATCH /admins/:id/password`、`PATCH /admins/:id/status` (`status`)、`DELETE /admins/:id` |
 | オペレーター | `GET/POST /users` (`username, email, fullname, password`)、`PATCH /users/:id/status`、`PATCH /users/:id/password` |
 | ユニット | `GET/POST /units` (`unit_name, unit_id?`)、`PATCH /units/:id` (`unit_name`)、`DELETE /units/:id`、`DELETE /units/:id/device`、`POST /units/:id/enrollment-code` |
+| ライブユニットステータス | `GET /units/live`: デバイスが紐付いた各ユニットに ping し、`{ available, data: [{ id, online, ready, in_use, in_use_by, activity, battery, uptime_min, rtt_ms, last_answer_at }] }` を返す。バックエンドにブローカー接続がないときは `available: false`。[ユニット § ユニットステータス](/ja/development/webui/admin-console/units#unit-status) 参照 |
+| システムヘルス | `GET /system/health`（新しい実行は `?refresh=1`）: `{ data: { checked_at, overall, counts, checks[], ports[] } }`。[システムヘルス](/ja/development/webui/admin-console/system-health) 参照 |
 | 保留中のロボット | `GET /pending-units`、`POST /pending-units/:id/register` (`unit_name`)、`POST /pending-units/:id/adopt` (`unit_id, confirm?`)、`DELETE /pending-units/:id` |
 | ユニットのデータ | `POST /units/:id/transfer` (`target_unit_id, profile_id \| all_profiles`)、`POST /units/:id/swap` (`target_unit_id` + スコープ)、`POST /units/:id/backups` (スコープ)、`DELETE /units/:id/data` (スコープ) |
 | レンタル | `GET/POST /profiles` (`profile_name, tenant_name, notes`)、`GET/PATCH/DELETE /profiles/:id`、`POST /profiles/:id/members` (`user_id`)、`DELETE /profiles/:id/members/:userId`、`POST /profiles/:id/units` (`unit_id`)、`DELETE /profiles/:id/units/:unitId` |

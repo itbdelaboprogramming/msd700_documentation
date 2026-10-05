@@ -13,7 +13,7 @@ outline: deep
 | タスク | 頻度 | 場所 | 備考 |
 | --- | --- | --- | --- |
 | JWTキーリングのローテーション | 数か月ごと、漏洩疑い時は即時 | サーバー | [シークレットのローテーション](#シークレットのローテーション) |
-| TLS証明書の更新 | 期限前 | サーバー | [証明書](#証明書)。`certbot renew`だけではHiveMQは更新され**ません** |
+| TLS証明書の更新 | 期限前 | サーバー | [証明書](#証明書)。`certbot renew`だけではHiveMQは更新され**ません**。管理コンソールの**System Health**で両方の期限を確認できます |
 | ユニットリレーの稼働確認 | 時々 | サーバー | `docker ps --filter name=unit_relays`。マルチユニットモード(デフォルト)では1台停止で全滅します |
 | 期限切れ鍵の削除 | ローテーション猶予期間後 | サーバー | `./scripts/secrets.sh prune --dev` |
 | Dockerディスク使用量 | 月次 | 両方 | `docker system df`、その後イメージ/ビルドキャッシュ削除 |
@@ -104,6 +104,8 @@ docker compose --profile server_prod up -d --no-deps --force-recreate hivemq   #
 :::
 
 `update_ssl.sh`は`msd.nglobal.jp`と`/srv/msd/secrets/hivemq/keystore.p12`に固定です。エクスポートパスワードはブローカー設定と一致させます。診断で表示しないでください。HTTPSとMQTTそれぞれの提示期限を前後で確認します。
+
+管理コンソールの**System Health**タブは、提示されている両方の証明書を読み、残り日数、最終更新日、certbotの次回更新日(期限の30日前)を表示します。ブローカーがWebsiteより古い証明書を提示している場合、つまりキーストアを再構築していない更新の場合は、ブローカーを**Needs attention**として示します。[管理コンソール: システムヘルス § 証明書](/ja/development/webui/admin-console/system-health#certificates)を参照してください。
 
 ## TURNリレー
 

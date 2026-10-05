@@ -47,7 +47,7 @@ Browser memanggil [`POST /api/hardware/ping`](/id/development/message-contracts/
 | `user_id` | backend, dari JWT | Identitas lease. Tidak pernah diambil dari body, sehingga klien tidak bisa claim sebagai orang lain. Berupa ULID, bukan username, agar rename tidak memindahkan lease. |
 | `claim` | browser | `true` dari halaman operasional (Navigation, Mapping); `false` dari daftar unit, yang hanya membaca status |
 | `release` | browser | `true` saat keluar dari halaman operasional (dikirim dengan `page: "other"`, `keepalive`) |
-| `page` | browser | `dashboard`, `navigation`, `mapping`, `other`. Menentukan tier watchdog mana yang di-refresh ping. |
+| `page` | browser | `dashboard`, `navigation`, `mapping`, `other`. Menentukan tier watchdog mana yang di-refresh ping. Probe konsol admin milik backend sendiri mengirim `admin`, yang seperti `dashboard` tidak me-refresh tier apa pun dan tidak bisa melepas pause ([Unit § Status Unit](/id/development/webui/admin-console/units#unit-status)); probe itu juga mengirim `session_id` dan `user_id` kosong, sehingga robot menjawab seperti kepada pembaca anonim. |
 | `origin` | backend, dari `DEPLOYMENT_MODE` | `cloud` atau `local`. Tidak pernah dari body. |
 | `force_takeover` | browser | `true` hanya setelah operator mengonfirmasi prompt takeover |
 

@@ -60,7 +60,7 @@ seorang admin menetapkan kata sandi pada akun orang lain, bukan akunnya sendiri.
 ## Terkait
 
 - [Kontrak Pesan: HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api): `GET/POST /admin/api/users`, `PATCH /admin/api/users/:id/status`, `PATCH /admin/api/users/:id/password`.
-- [Ikhtisar](/id/development/webui/admin-console/overview): shell lima-tab, peran admin vs superadmin, dan menu akun.
+- [Ikhtisar](/id/development/webui/admin-console/overview): shell enam-tab, peran admin vs superadmin, dan menu akun.
 - [Unit](/id/development/webui/admin-console/units): sub-tampilan Unit Terdaftar dan Tertunda di atas daftar robot.
 - [Penyewaan](/id/development/webui/admin-console/rentals): tempat sebuah akun operator sungguhan mendapatkan akses ke robot.
 - [Cadangan](/id/development/webui/admin-console/backups): mengarsipkan dan memulihkan profil penyewaan secara utuh.

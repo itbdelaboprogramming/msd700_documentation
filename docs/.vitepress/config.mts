@@ -199,6 +199,7 @@ const enSidebar = {
             { text: 'Units', link: '/development/webui/admin-console/units' },
             { text: 'Rentals', link: '/development/webui/admin-console/rentals' },
             { text: 'Backups', link: '/development/webui/admin-console/backups' },
+            { text: 'System Health', link: '/development/webui/admin-console/system-health' },
             { text: 'ROS Integration', link: '/development/webui/admin-console/ros-integration' },
           ]
         },
@@ -427,6 +428,7 @@ const idSidebar = {
             { text: 'Unit', link: '/id/development/webui/admin-console/units' },
             { text: 'Penyewaan', link: '/id/development/webui/admin-console/rentals' },
             { text: 'Cadangan', link: '/id/development/webui/admin-console/backups' },
+            { text: 'Kesehatan Sistem', link: '/id/development/webui/admin-console/system-health' },
             { text: 'Integrasi ROS', link: '/id/development/webui/admin-console/ros-integration' },
           ]
         },
@@ -655,6 +657,7 @@ const jaSidebar = {
             { text: 'ユニット', link: '/ja/development/webui/admin-console/units' },
             { text: 'レンタル', link: '/ja/development/webui/admin-console/rentals' },
             { text: 'バックアップ', link: '/ja/development/webui/admin-console/backups' },
+            { text: 'システムヘルス', link: '/ja/development/webui/admin-console/system-health' },
             { text: 'ROS連携', link: '/ja/development/webui/admin-console/ros-integration' },
           ]
         },
