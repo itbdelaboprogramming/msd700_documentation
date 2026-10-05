@@ -128,6 +128,39 @@ Cancel Coverage は [`POST /api/boustrophedon/deactivate`](/ja/development/messa
 `robot_activity`、[HTTP の ping 応答](/ja/development/message-contracts/http-api#hardware-ping) の `intended_mode`/`needs_recovery` を読む。再構築は
 [`resync`](/ja/development/message-contracts/operation-sync#resync) で促した [`operation_snapshot`](/ja/development/message-contracts/operation-sync#snapshot) を読む。
 
+### ロボット自体が再起動したとき {#robot-restarted}
+
+上のケースは、動き続けているロボットにブラウザが戻ってくる場合である。こちらはその逆で、ページは
+開いたまま、その裏でロボットが再起動した場合(リブート、またはロボットのコンテナの再起動)であり、
+ロボットが行っていたことはすべて失われている。
+
+**検出方法。** `RobotConnectionStatus` は
+[ping 応答](/ja/development/message-contracts/heartbeat-and-lease#ping-response) の最後の `uptime`
+(`system_command` 起動からの**分**)と、その受信時刻を保持する。ping が3回以上連続で失敗した後、
+最初の応答を、ロボットが動き続けていた場合の uptime(最後の値に途切れていた時間を足したもの)と
+比べる。それより0.25分を超えて短ければ、ロボットの時計は途切れている間に始まったことになり、
+ページは `robotRestarted` を発火する(`restartDetection.ts`)。ロボットが動き続けていたネットワーク
+障害では、uptime が途切れていた時間だけ増えているため、発火しない。`0` を報告する応答(ノードが
+まだ起動中)は起動とは読まず、途切れた状態の終了にも数えない。
+
+**オペレーターに見えるもの。** 「Robot restarted. Navigation session has been stopped.」という
+バナーと **Reinit Navigation** ボタン。バナーが出ている間、マップ(マップだけで、ページ全体では
+ない)は暗くなり、入力を受け付けない。操作対象のセッションがもう存在しないためである。ページの
+他の部分は使えるままで、非常停止ボタンも暗い層の上に残る。ロボットがバックエンドの期待するモード
+(`intended_mode`)で戻るとバナーは自動で閉じ、**×** で手動でも閉じられる。
+
+**Reinit の動作。** バックエンドの意図したマップ(なければページ自身のマップ)でナビゲーション
+init をもう一度実行する。再起動を検出した時点で run が **On Progress** だった場合は、その run を
+再び開始する。カバレッジは他の開始と同じ初期化オーバーレイを経て
+([カバレッジ清掃](/ja/development/webui/navigation/coverage-cleaning#initialization-overlay)
+を参照)最初から計画し直し、ポイントナビゲーションは最初のピンから再び向かう。押す前にバナーが
+そのことを知らせる。一時停止していた run は停止したままである。
+
+2026-10-05 まで、Reinit は中断した run を一度も再開しなかった。再起動ハンドラーは発火した時点で
+run のフラグをリセットし、Reinit はその後で run の状態を読んでいたため、常に `Idle` を見ていた。
+現在は状態をリセット前に取得する。同じ変更で検出も直した。uptime を秒のつもりの上限と比べていた
+ためである。
+
 ### ログアウトはセッションを終了する(autopilotがオンの場合を除く)
 
 2つのログアウト契約は意図的に正反対であり、どちらもプリフライトのpeek pingが報告するロボットの

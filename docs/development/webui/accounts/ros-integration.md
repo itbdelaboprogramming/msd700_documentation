@@ -22,7 +22,10 @@ described in [Hardware Enrolment](/development/webui/accounts/enrolment), and on
 result to disk on the robot host:
 
 - `Certificates/robot/device.json` (mode `0600`): the device secret issued by the cloud enrolment
-  service.
+  service, and which backend issued it (`server`).
+- `Certificates/robot/identities/`: one copy of `device.json` per backend, for a robot used with
+  both production and the dev stack. See
+  [Hardware Enrolment § One robot, two clouds](/development/webui/accounts/enrolment#one-robot-two-clouds).
 - `Certificates/robot/token.cred`: the onboard token cache, a 12-hour TTL token minted from that
   device secret, used to authenticate to HiveMQ and the cloud media server.
 

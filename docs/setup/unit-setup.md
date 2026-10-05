@@ -193,6 +193,10 @@ This starts the robot container plus the always-on `local_dev` stack (database, 
 4. The unit saves its identity to `src/ros-web-ui/Certificates/robot/device.json` plus a token in `token.cred`. Treat both as secrets. Later launches reuse them.
 5. The production bridge targets HiveMQ TLS port `8883`. Approval alone proves nothing about connectivity; check the cloud and local dashboards separately.
 
+::: info Production and dev on one unit
+Each cloud registers the unit separately, and the unit keeps one identity per cloud. The first `up --dev` on a unit registered with production (or the first plain `up` on one registered with dev) is a first enrolment for that cloud: a claim code, then the unit waits until that cloud's admin approves it, and starts on the new id. Switching back later needs no approval. See [Hardware Enrolment § One robot, two clouds](/development/webui/accounts/enrolment#one-robot-two-clouds).
+:::
+
 ---
 
 ### Step 6: Provision the WiFi hotspot

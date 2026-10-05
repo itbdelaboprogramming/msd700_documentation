@@ -153,6 +153,39 @@ from a new workstation, not just the high-level behavior.
 [`operation_snapshot`](/development/message-contracts/operation-sync#snapshot), prompted by a
 [`resync`](/development/message-contracts/operation-sync#resync).
 
+### When the robot itself restarted {#robot-restarted}
+
+The case above is the browser coming back to a robot that kept running. This one is the opposite:
+the page stayed open and the robot restarted under it (a reboot, or the robot container restarted),
+so everything it was doing is gone.
+
+**How it is detected.** `RobotConnectionStatus` keeps the last `uptime` from the
+[ping response](/development/message-contracts/heartbeat-and-lease#ping-response), which is in
+**minutes** since `system_command` started, and when it arrived. After at least three ping failures
+in a row, the first reply is compared with what the uptime would be had the robot stayed up: the
+last value plus the time away. A reply more than 0.25 min short of that means the robot's clock
+started during the outage, and the page fires `robotRestarted` (`restartDetection.ts`). A network
+outage on a robot that stayed up never fires it, because its uptime grew with the time away. A reply
+reporting `0` (the node is still starting) is not read as a boot and does not end the outage either.
+
+**What the operator sees.** A banner, "Robot restarted. Navigation session has been stopped.", with
+a **Reinit Navigation** button. While it is up, the map, and only the map, is dimmed and takes no
+input, because the session it would act on no longer exists. The rest of the page stays usable, and
+the emergency stop stays above the dimming. The banner closes on its own if the robot comes back in
+the mode the backend expects (`intended_mode`), and **×** closes it by hand.
+
+**What Reinit does.** It runs navigation init again on the backend's intended map (falling back to
+the page's own). If a run was **On Progress** when the restart was detected, it then starts that run
+again: coverage goes through the same init overlay as any other start (see
+[Coverage Cleaning](/development/webui/navigation/coverage-cleaning#initialization-overlay)) and
+plans from scratch, and point navigation sets off for the pins again from the first one. The banner
+says so before the click. A run that was paused stays stopped.
+
+Until 2026-10-05 Reinit never started the interrupted run: the restart handler resets the run flags
+as soon as it fires, and Reinit read the run status back afterwards, so it always found `Idle`. The
+status is now captured before that reset. The same change fixed the detection, which compared the
+uptime against a limit meant in seconds.
+
 ### Logout ends the session, unless autopilot is on
 
 The two logout contracts are deliberately opposite, and both hinge on the robot's `autopilot` flag

@@ -75,6 +75,45 @@ a racing second call, presents the copy it held a moment earlier is not locked o
 so the window is exactly "until first successful use". A takeover (the `fingerprint` changed) still
 cuts over immediately, with no grace for the box being replaced.
 
+## One robot, two clouds {#one-robot-two-clouds}
+
+Production and the dev stack (`docker-manager.sh up --dev`) are separate registries with separate
+databases. A unit one of them approved does not exist on the other, so a robot used with both is two
+units, with two identities. The robot keeps them apart:
+
+- `device.json` records the backend that issued it (`server`). It is the identity in use, the one
+  every reader on the robot takes.
+- `Certificates/robot/identities/` holds one copy per backend. Switching backends swaps the right
+  copy into `device.json` and sets the other aside. Nothing is deleted, and nothing is ever presented
+  to a backend that did not issue it.
+
+Before each boot, `docker-manager.sh` asks `enroll.py --select --server <backend>` for the identity
+of the backend it is about to use (no network involved). With one, the robot boots as before. With
+none, the boot is a **first enrolment for that backend**: claim code, then the robot waits for that
+backend's admin to approve it, stores the new identity and only then starts, so the unit is online
+in that backend's dashboard as soon as it is up. Coming back to the other backend later needs no
+approval: its copy is swapped back in.
+
+The boot identity check (`enroll.py --revalidate`) only ever checks the identity of the backend in
+use. When there is none, it exits with code `5` instead of booting, and `run_msd.sh` (or
+`run_ros2.sh`) enrols and waits. A binding that **this** backend dropped (an admin deleted or
+unbound the unit) is still handled without blocking: the robot announces itself, boots on its cached
+id, and a collector picks up the approval.
+
+Until 2026-10-05 there was a single `device.json` for both. `up --dev` on a robot registered with
+production presented the production credential to dev, got the same `401 reenroll` a dropped binding
+gets, announced itself and booted on the production id, which dev had never heard of. The approval
+landed in the background and needed a restart to take effect, and it overwrote the production
+identity, so going back to production repeated everything. On top of that, the boot check and the
+collector claimed with the container's own machine-id instead of the host fingerprint, so the
+self-heal above never recognised the same laptop. `docker-manager.sh` now passes the host
+fingerprint on every `up`.
+
+An identity written before this change carries no `server`. The first backend that accepts it gets
+it recorded as its own. One a backend refuses is kept as `identities/unstamped-<ULID>.json` and
+tried once against the next backend that has no identity of its own, before that backend is asked to
+approve the robot.
+
 ## Related
 
 - [Message Contracts: Firmware & Enrolment](/development/message-contracts/firmware-and-enrolment#enrolment): the `/enroll` request and response shapes.

@@ -103,7 +103,7 @@ Coverageと同じcustom-coverage(`use_autocover: false`)経路にルーティン
 | Auto Coverage | `Please wait while system is setting the map area boundary` |
 | Custom Area、Operation Playlist | `Initializing Auto Coverage...` |
 
-アクションバーのPlayも、カバレッジモードに実行できるもの(ループを閉じたカスタムエリアなど)があればrunを開始し、そのrunにも同じオーバーレイが表示される。一時停止中のrunに対するPlayは再開するだけで、オーバーレイは表示しない。2026-10-05まで、Playから開始したrunにはオーバーレイがまったく表示されなかった。Playがサブメニューのボタンと同じハンドラーを通さず、開始リクエストを自分で送っていたためである。
+アクションバーのPlayも、カバレッジモードに実行できるもの(ループを閉じたカスタムエリアなど)があればrunを開始し、そのrunにも同じオーバーレイが表示される。一時停止中のrunに対するPlayは再開するだけで、オーバーレイは表示しない。2026-10-05まで、Playから開始したrunにはオーバーレイがまったく表示されなかった。Playがサブメニューのボタンと同じハンドラーを通さず、開始リクエストを自分で送っていたためである。ロボットの再起動後に**Reinit Navigation**で再開したrunにもこのオーバーレイが表示される。[手動操作 & オートパイロット § ロボット自体が再起動したとき](/ja/development/webui/navigation/manual-and-autopilot#robot-restarted)を参照。
 
 オーバーレイは次のうち最も早く起きたもので消える。
 

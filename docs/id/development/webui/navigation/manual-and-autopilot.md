@@ -153,6 +153,41 @@ login dari workstation baru, bukan sekadar perilaku tingkat tinggi.
 [jawaban ping HTTP](/id/development/message-contracts/http-api#hardware-ping). Rekonstruksi membaca [`operation_snapshot`](/id/development/message-contracts/operation-sync#snapshot),
 dipicu oleh [`resync`](/id/development/message-contracts/operation-sync#resync).
 
+### Saat robot sendiri restart {#robot-restarted}
+
+Kasus di atas adalah browser yang kembali ke robot yang tetap berjalan. Yang ini kebalikannya:
+halaman tetap terbuka dan robot restart di belakangnya (reboot, atau container robot di-restart),
+sehingga semua yang sedang dikerjakannya hilang.
+
+**Cara mendeteksinya.** `RobotConnectionStatus` menyimpan `uptime` terakhir dari
+[respons ping](/id/development/message-contracts/heartbeat-and-lease#ping-response), dalam **menit**
+sejak `system_command` mulai, beserta waktu diterimanya. Setelah minimal tiga ping gagal
+berturut-turut, balasan pertama dibandingkan dengan uptime yang seharusnya bila robot tetap hidup:
+nilai terakhir ditambah lama terputus. Balasan yang kurang lebih dari 0,25 menit dari angka itu
+berarti jam robot mulai saat terputus, dan halaman memicu `robotRestarted` (`restartDetection.ts`).
+Gangguan jaringan pada robot yang tetap hidup tidak pernah memicunya, karena uptime-nya bertambah
+sebanyak waktu terputus. Balasan dengan `0` (node masih mulai) tidak dibaca sebagai boot dan juga
+tidak mengakhiri status terputus.
+
+**Yang dilihat operator.** Banner "Robot restarted. Navigation session has been stopped." dengan
+tombol **Reinit Navigation**. Selama banner tampil, map, dan hanya map, digelapkan dan tidak
+menerima input, karena sesi yang akan dikenainya sudah tidak ada. Bagian halaman lain tetap bisa
+dipakai, dan tombol emergency stop tetap berada di atas lapisan gelap itu. Banner tertutup sendiri
+bila robot kembali dalam mode yang diharapkan backend (`intended_mode`), dan **×** menutupnya
+secara manual.
+
+**Yang dilakukan Reinit.** Navigation init dijalankan lagi pada map yang diinginkan backend (bila
+tidak ada, map halaman itu sendiri). Bila sebuah run sedang **On Progress** saat restart terdeteksi,
+run itu lalu dimulai lagi: coverage lewat overlay inisialisasi yang sama dengan start lainnya (lihat
+[Coverage Cleaning](/id/development/webui/navigation/coverage-cleaning#initialization-overlay)) dan
+merencanakan dari awal, sedangkan navigasi titik berangkat lagi ke pin mulai dari yang pertama.
+Banner memberi tahu hal ini sebelum tombol ditekan. Run yang di-pause tetap berhenti.
+
+Sampai 2026-10-05 Reinit tidak pernah memulai lagi run yang terputus: handler restart me-reset flag
+run begitu terpicu, dan Reinit membaca status run sesudahnya, sehingga selalu menemukan `Idle`.
+Status kini diambil sebelum reset itu. Perubahan yang sama memperbaiki deteksinya, yang
+membandingkan uptime dengan batas yang dimaksudkan dalam detik.
+
 ### Logout mengakhiri sesi, kecuali autopilot menyala
 
 Dua kontrak logout sengaja berlawanan, dan keduanya bergantung pada flag `autopilot` robot seperti

@@ -343,7 +343,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | `local-build` | ローカルスタックイメージをリビルド |
 | `local-logs` | ローカルスタックのログ末尾 |
 | `local-status` | ローカルスタックの`docker compose ps` |
-| `reenroll` | ユニットデータを退避しキャッシュIDを消去。次回`up`でクレームコード表示。コンソールにユニット残存なら管理者**Unbind**優先 |
+| `reenroll` | ユニットデータを退避しキャッシュID(と`identities/`内のコピー)を消去。次回`up`でクレームコード表示。コンソールにユニット残存なら管理者**Unbind**優先 |
 | `print-autostart-unit` | レンダー済み`msd700.service`表示。`up`がsudoできない導入用 |
 | `help` | フラグ+環境の完全ヘルプ |
 
@@ -352,7 +352,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | フラグ | 対象 | 効果 |
 | --- | --- | --- |
 | `--simulator`、`-s` | `build`、`up` | Gazeboイメージ(`msd700-simulator:latest`)+コンテナ。`run_msd.sh`にも転送され`use_simulator_val:=true`を設定 |
-| `--dev` | `up` | 相手クラウド:本番でなく開発スタック。MQTT 8884、このロボットのROSマスター11322、開発バックエンド登録 |
+| `--dev` | `up` | 相手クラウド:本番でなく開発スタック。MQTT 8884、このロボットのROSマスター11322、専用IDでの開発バックエンド登録([1台のロボット、2つのクラウド](/ja/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | ロボット/ローカルイメージ+コンテナ内catkinワークスペースをリビルド。稼働中ロボットは再作成まで旧イメージ保持 |
 | `--no-autostart` | `up`、`down` | `msd700.service`不変維持(`up`は起動時自動起動を有効化、`down`は無効化) |
 | `-d` | `up`のみ | 全稼働後に端末を返す |
@@ -377,7 +377,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 | 変数 | 既定 | 用途 |
 | --- | --- | --- |
-| `DEVICE_FINGERPRINT` | **ホスト**由来 | Jetsonシリアル(またはmachine-id/先頭実MAC)+機種のsha256。ホストで読むため再ビルドコンテナが新規保留ユニットに見えません |
+| `DEVICE_FINGERPRINT` | **ホスト**由来 | Jetsonシリアル(またはmachine-id/先頭実MAC)+機種のsha256。`up`のたびにホストで読むため再ビルドコンテナが新規保留ユニットに見えません。2026-10-05より前はキャッシュIDがない場合にしか渡されず、起動時のID確認はコンテナのmachine-idでclaimしていました |
 | `ENROLL_SERVER_URL` | 導出 | 登録エンドポイントの直接上書き |
 | `ENROLL_BOOTSTRAP_KEY` | 未設定 | 共有イメージ鍵。コンソールの信頼標識であり関門ではありません |
 | `ENROLL_CODE` | 未設定 | 使い切り登録バウチャー、保留プールを省略 |

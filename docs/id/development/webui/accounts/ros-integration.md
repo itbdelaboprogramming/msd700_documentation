@@ -22,7 +22,10 @@ dijelaskan di [Pendaftaran Perangkat Keras](/id/development/webui/accounts/enrol
 berhasil menulis hasilnya ke disk di host robot:
 
 - `Certificates/robot/device.json` (mode `0600`): rahasia perangkat yang diterbitkan oleh layanan
-  pendaftaran cloud.
+  pendaftaran cloud, beserta backend yang menerbitkannya (`server`).
+- `Certificates/robot/identities/`: satu salinan `device.json` per backend, untuk robot yang dipakai
+  di production dan di stack dev. Lihat
+  [Pendaftaran Perangkat Keras § Satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds).
 - `Certificates/robot/token.cred`: cache token onboard, sebuah token dengan TTL 12 jam yang
   diterbitkan dari rahasia perangkat tersebut, dipakai untuk mengautentikasi ke HiveMQ dan server
   media cloud.

@@ -120,6 +120,20 @@ That is the one action that clears the current session state rather than restori
 to resume what was running, go back to the unit rather than re-opening its map.
 :::
 
+### If the robot restarts
+
+This is the other way round: your page stays open, and the robot restarts under it (it rebooted, or
+its software was restarted). Whatever it was doing has stopped.
+
+A banner says **Robot restarted. Navigation session has been stopped.**, and the map is dimmed until
+you act. The rest of the page still works, and so does the emergency stop. Press
+**Reinit Navigation** to load the map again. If a run was in progress, the robot starts it again
+(the banner tells you before you press): a coverage run from the beginning of its area, a route from
+its first stop. A paused run stays paused.
+
+A connection drop on a robot that stayed on does not show this banner; it only shows
+**Reconnecting**.
+
 ## Robot Stuck
 
 The banner means the robot believes it should be moving and is not.

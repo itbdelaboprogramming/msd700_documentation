@@ -170,7 +170,9 @@ lane.
 Play in the action bar also starts a run when a coverage mode has something to run, such as a
 closed custom area, and that run gets the same overlay. Play on a paused run only resumes it, with
 no overlay. Until 2026-10-05 a run started from Play had no overlay at all, because Play sent the
-start request itself instead of going through the handlers the sub-menu buttons use.
+start request itself instead of going through the handlers the sub-menu buttons use. A run that
+**Reinit Navigation** starts again after a robot restart gets the overlay too, see
+[Manual & Autopilot § When the robot itself restarted](/development/webui/navigation/manual-and-autopilot#robot-restarted).
 
 The overlay comes down on whichever happens first:
 

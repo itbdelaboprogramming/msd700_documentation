@@ -193,6 +193,10 @@ Ini menyalakan container robot plus stack `local_dev` yang selalu on (database, 
 4. Unit menyimpan identitas ke `src/ros-web-ui/Certificates/robot/device.json` plus token di `token.cred`. Perlakukan keduanya sebagai secret. Launch berikutnya memakai ulang.
 5. Bridge produksi menargetkan HiveMQ TLS port `8883`. Approval saja tidak membuktikan konektivitas; cek dashboard cloud dan lokal masing-masing.
 
+::: info Produksi dan dev pada satu unit
+Tiap cloud mendaftarkan unit secara terpisah, dan unit menyimpan satu identitas per cloud. `up --dev` pertama pada unit yang terdaftar di produksi (atau `up` biasa pertama pada unit yang terdaftar di dev) adalah enrolment pertama untuk cloud itu: kode klaim, lalu unit menunggu sampai admin cloud itu menyetujuinya, dan mulai dengan id baru. Kembali lagi nanti tidak perlu persetujuan. Lihat [Pendaftaran Perangkat Keras § Satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds).
+:::
+
 ---
 
 ### Step 6: Provisioning hotspot WiFi

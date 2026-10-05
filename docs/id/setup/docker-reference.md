@@ -343,7 +343,7 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | `local-build` | Rebuild image stack lokal |
 | `local-logs` | Tail log stack lokal |
 | `local-status` | `docker compose ps` untuk stack lokal |
-| `reenroll` | Backup data unit, hapus identitas cached; `up` berikutnya mencetak kode klaim. Pilih **Unbind** admin bila unit masih ada di console |
+| `reenroll` | Backup data unit, hapus identitas cached (dan salinannya di `identities/`); `up` berikutnya mencetak kode klaim. Pilih **Unbind** admin bila unit masih ada di console |
 | `print-autostart-unit` | Cetak render `msd700.service`, untuk instal di mana `up` tak bisa sudo |
 | `help` | Bantuan flag + environment lengkap |
 
@@ -352,7 +352,7 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | Flag | Berlaku untuk | Efek |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Image Gazebo (`msd700-simulator:latest`) + container. Diteruskan juga ke `run_msd.sh`, yang menyetel `use_simulator_val:=true` |
-| `--dev` | `up` | Cloud peer: stack dev, bukan produksi. MQTT 8884, ROS master robot ini 11322, enrolment backend dev |
+| `--dev` | `up` | Cloud peer: stack dev, bukan produksi. MQTT 8884, ROS master robot ini 11322, enrolment backend dev dengan identitasnya sendiri ([satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | Rebuild image robot/lokal + workspace catkin dalam container. Robot jalan mempertahankan image lama sampai recreated |
 | `--no-autostart` | `up`, `down` | Biarkan `msd700.service` (`up` mengaktifkan autostart boot, `down` menonaktifkan) |
 | `-d` | hanya `up` | Kembalikan terminal setelah semua jalan |
@@ -377,7 +377,7 @@ Ia error dengan penjelasan. Robot tanpa identitas cached enrol mandiri dan mence
 
 | Variable | Default | Tujuan |
 | --- | --- | --- |
-| `DEVICE_FINGERPRINT` | diturunkan dari **host** | sha256 serial Jetson (atau machine-id / MAC real pertama) + model. Dibaca di host agar container rebuilt tak muncul sebagai pending unit baru |
+| `DEVICE_FINGERPRINT` | diturunkan dari **host** | sha256 serial Jetson (atau machine-id / MAC real pertama) + model. Dibaca di host pada setiap `up` agar container rebuilt tak muncul sebagai pending unit baru. Sebelum 2026-10-05 hanya dikirim bila belum ada identitas cached, sehingga pengecekan identitas saat boot melakukan claim dengan machine-id container |
 | `ENROLL_SERVER_URL` | diturunkan | Override endpoint enrolment mentah |
 | `ENROLL_BOOTSTRAP_KEY` | unset | Key image bersama. Penanda trust di console, bukan gate |
 | `ENROLL_CODE` | unset | Voucher registrasi sekali pakai, melewati pending pool |

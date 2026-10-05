@@ -343,7 +343,7 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | `local-build` | Rebuild local stack images |
 | `local-logs` | Tail local stack logs |
 | `local-status` | `docker compose ps` for the local stack |
-| `reenroll` | Back up unit data, clear cached identity; next `up` prints a claim code. Prefer admin **Unbind** if the unit still exists in the console |
+| `reenroll` | Back up unit data, clear cached identity (and its copy in `identities/`); next `up` prints a claim code. Prefer admin **Unbind** if the unit still exists in the console |
 | `print-autostart-unit` | Print the rendered `msd700.service`, for installs where `up` can't sudo |
 | `help` | Full flag + environment help |
 
@@ -352,7 +352,7 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | Flag | Applies to | Effect |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Gazebo image (`msd700-simulator:latest`) + container. Also forwarded to `run_msd.sh`, which sets `use_simulator_val:=true` |
-| `--dev` | `up` | Peer cloud: dev stack instead of production. MQTT 8884, this robot's ROS master 11322, dev backend enrolment |
+| `--dev` | `up` | Peer cloud: dev stack instead of production. MQTT 8884, this robot's ROS master 11322, dev backend enrolment with its own identity ([one robot, two clouds](/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | Rebuild robot/local images + in-container catkin workspace. A running robot keeps its old image until recreated |
 | `--no-autostart` | `up`, `down` | Leave `msd700.service` alone (`up` enables boot autostart, `down` disables it) |
 | `-d` | `up` only | Return the terminal once everything runs |
@@ -377,7 +377,7 @@ It errors with an explanation. A robot with no cached identity self-enrols and p
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `DEVICE_FINGERPRINT` | derived from the **host** | sha256 of Jetson serial (or machine-id / first real MAC) + model. Read on the host so a rebuilt container doesn't reappear as a new pending unit |
+| `DEVICE_FINGERPRINT` | derived from the **host** | sha256 of Jetson serial (or machine-id / first real MAC) + model. Read on the host on every `up` so a rebuilt container doesn't reappear as a new pending unit. Before 2026-10-05 it was only passed when no identity was cached, so the boot identity check claimed with the container's machine-id instead |
 | `ENROLL_SERVER_URL` | derived | Override the enrolment endpoint outright |
 | `ENROLL_BOOTSTRAP_KEY` | unset | Shared image key. Trust marker in the console, never a gate |
 | `ENROLL_CODE` | unset | Single-use registration voucher, skips the pending pool |

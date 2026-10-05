@@ -120,6 +120,20 @@ Itu satu-satunya aksi yang menghapus status sesi saat ini alih-alih memulihkanny
 melanjutkan apa yang sedang berjalan, kembalilah ke unit alih-alih membuka ulang petanya.
 :::
 
+### Jika robot restart
+
+Ini kebalikannya: halaman Anda tetap terbuka, dan robot restart di belakangnya (reboot, atau
+software-nya di-restart). Apa pun yang sedang dikerjakannya sudah berhenti.
+
+Sebuah banner bertuliskan **Robot restarted. Navigation session has been stopped.**, dan map
+digelapkan sampai Anda bertindak. Bagian halaman lainnya tetap berfungsi, begitu juga tombol
+berhenti darurat. Tekan **Reinit Navigation** untuk memuat map lagi. Jika sebuah run sedang
+berjalan, robot memulainya lagi (banner memberi tahu sebelum Anda menekan): run coverage dari awal
+areanya, rute dari pemberhentian pertamanya. Run yang di-pause tetap di-pause.
+
+Koneksi yang terputus pada robot yang tetap menyala tidak menampilkan banner ini; yang tampil hanya
+**Reconnecting**.
+
 ## Robot Stuck
 
 Banner ini berarti robot meyakini bahwa dirinya seharusnya bergerak dan ternyata tidak.

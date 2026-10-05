@@ -21,7 +21,10 @@ nonceプロトコルのロボット側は、ロボットのJetson SBC上で動�
 `POST /enroll/claim` と `POST /enroll/status` の呼び出しを行い、成功するとその結果をロボットホストのデ
 ィスクに書き込む。
 
-- `Certificates/robot/device.json` (モード `0600`): クラウド登録サービスが発行したデバイスシークレット。
+- `Certificates/robot/device.json` (モード `0600`): クラウド登録サービスが発行したデバイスシークレットと、
+  発行したバックエンド(`server`)。
+- `Certificates/robot/identities/`: 本番と開発スタックの両方で使うロボットのための、バックエンドごとの
+  `device.json` のコピー。[ハードウェア登録 § 1台のロボット、2つのクラウド](/ja/development/webui/accounts/enrolment#one-robot-two-clouds)を参照。
 - `Certificates/robot/token.cred`: オンボードのトークンキャッシュ。そのデバイスシークレットから発行さ
   れる、TTL12時間のトークンで、HiveMQとクラウドメディアサーバーへの認証に使われる。
 

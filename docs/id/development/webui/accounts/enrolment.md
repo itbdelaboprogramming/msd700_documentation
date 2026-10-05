@@ -79,6 +79,45 @@ membuktikan bahwa ia memegang rahasia yang berlaku saat ini, sehingga jendela wa
 "hingga penggunaan sukses pertama". Sebuah pengambilalihan (`fingerprint` berubah) tetap langsung
 dipotong, tanpa masa tenggang untuk perangkat yang sedang digantikan.
 
+## Satu robot, dua cloud {#one-robot-two-clouds}
+
+Production dan stack dev (`docker-manager.sh up --dev`) adalah dua registry terpisah dengan database
+terpisah. Unit yang disetujui salah satunya tidak ada di yang lain, jadi robot yang dipakai di
+keduanya adalah dua unit, dengan dua identitas. Robot menjaganya tetap terpisah:
+
+- `device.json` mencatat backend yang menerbitkannya (`server`). Ini identitas yang sedang dipakai,
+  yang dibaca semua pembaca di robot.
+- `Certificates/robot/identities/` menyimpan satu salinan per backend. Berpindah backend menukar
+  salinan yang tepat ke `device.json` dan menyisihkan yang lain. Tidak ada yang dihapus, dan tidak
+  ada yang pernah diberikan ke backend yang tidak menerbitkannya.
+
+Sebelum setiap boot, `docker-manager.sh` meminta identitas untuk backend yang akan dipakai lewat
+`enroll.py --select --server <backend>` (tanpa jaringan). Bila ada, robot boot seperti biasa. Bila
+tidak ada, boot itu adalah **enrolment pertama untuk backend tersebut**: kode klaim, lalu robot
+menunggu admin backend itu menyetujuinya, menyimpan identitas baru, dan baru kemudian mulai, sehingga
+unit langsung online di dashboard backend itu begitu menyala. Kembali ke backend lain nanti tidak
+perlu persetujuan: salinannya ditukar kembali.
+
+Pengecekan identitas saat boot (`enroll.py --revalidate`) hanya memeriksa identitas backend yang
+sedang dipakai. Bila tidak ada, ia keluar dengan kode `5` alih-alih boot, dan `run_msd.sh` (atau
+`run_ros2.sh`) melakukan enrolment dan menunggu. Binding yang di-drop oleh backend **ini** sendiri
+(admin menghapus atau unbind unit) tetap ditangani tanpa menunggu: robot mengumumkan dirinya, boot
+dengan id cache-nya, dan sebuah collector mengambil persetujuannya.
+
+Sampai 2026-10-05 hanya ada satu `device.json` untuk keduanya. `up --dev` pada robot yang terdaftar
+di production memberikan kredensial production ke dev, mendapat `401 reenroll` yang sama dengan
+binding yang di-drop, mengumumkan dirinya, lalu boot dengan id production yang tidak dikenal dev.
+Persetujuan datang di latar belakang dan baru berlaku setelah restart, serta menimpa identitas
+production, sehingga kembali ke production mengulang semuanya. Ditambah lagi, pengecekan saat boot
+dan collector melakukan claim dengan machine-id milik container, bukan fingerprint host, sehingga
+self-heal di atas tidak pernah mengenali laptop yang sama. `docker-manager.sh` kini mengirim
+fingerprint host di setiap `up`.
+
+Identitas yang ditulis sebelum perubahan ini tidak punya `server`. Backend pertama yang menerimanya
+mencatatnya sebagai miliknya. Identitas yang ditolak sebuah backend disimpan sebagai
+`identities/unstamped-<ULID>.json` dan dicoba sekali ke backend berikutnya yang belum punya identitas
+sendiri, sebelum backend itu diminta menyetujui robot.
+
 ## Terkait
 
 - [Kontrak Pesan: Firmware & Enrolment](/id/development/message-contracts/firmware-and-enrolment#enrolment): bentuk request dan respons `/enroll`.

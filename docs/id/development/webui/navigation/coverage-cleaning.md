@@ -178,7 +178,9 @@ Play di action bar juga memulai run bila mode coverage punya sesuatu untuk dijal
 custom area yang loop-nya sudah tertutup, dan run itu mendapat overlay yang sama. Play pada run yang
 di-pause hanya melanjutkannya, tanpa overlay. Sampai 2026-10-05 run yang dimulai dari Play sama
 sekali tidak menampilkan overlay, karena Play mengirim request start sendiri, tidak lewat handler
-yang dipakai tombol di sub-menu.
+yang dipakai tombol di sub-menu. Run yang dimulai lagi oleh **Reinit Navigation** setelah robot
+restart juga mendapat overlay ini, lihat
+[Manual & Autopilot § Saat robot sendiri restart](/id/development/webui/navigation/manual-and-autopilot#robot-restarted).
 
 Overlay turun pada mana pun yang terjadi lebih dulu:
 
