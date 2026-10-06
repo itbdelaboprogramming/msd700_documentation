@@ -105,7 +105,13 @@ Planner coverage boustrophedon di balik sweep area dan operation playlist. Lihat
 - **File launch**: `msd700_boustrophedon.launch` (mode `boustrophedon` di `switch_mode.yaml`), `coverage.launch`.
 - **Config**: `config/boustrophedon_params.yaml`, `config/robot/field.yaml` / `prototype.yaml`.
 
-### 10. `third_party/sensor_pointcloud`
+### 10. `msd700_lane_planner`
+Plugin global planner yang dimuat move_base (`msd700_lane_planner/LanePlanner`). Plugin ini membungkus `navfn/NavfnROS` dan berperilaku persis sama sampai sweep coverage menyalakan lane mode-nya; setelah itu, waypoint yang sudah segaris dengan robot mendapat plan lurus searah heading waypoint, sedangkan semua garis yang terhalang, transit, dan pivot tetap direncanakan oleh navfn. Lihat [Costmap dan Motion Planner](/id/development/ros/costmaps-and-planners#global-planner-lane-plans-with-a-navfn-fallback).
+
+- **Plugin**: `src/lane_planner.cpp`, geometri di `include/msd700_lane_planner/lane_geometry.h` (tanpa ROS, diuji di `test/test_lane_geometry.cpp`).
+- **Config**: `msd700_navigation/config/planner/lane_planner_params.yaml`; lane mode diatur oleh `path_coverage_node.py` (`boustrophedon_params.yaml` -> `lane_planner`).
+
+### 11. `third_party/sensor_pointcloud`
 Menggabungkan range message menjadi `PointCloud2`. Disertakan di repo, tetapi tidak di-launch oleh stack saat ini.
 
 `msd700_movement/` adalah direktori sisa tanpa `package.xml` (script navigasi lama, `rplidar_ros`, salinan kedua `robot_pose_publisher`); catkin tidak mem-build-nya.

@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-本ドキュメントは、MSD700ナビゲーションスタックに実装されているレイヤー化コストマップアーキテクチャ、グローバル経路計画アルゴリズム(`navfn`)、およびローカル軌道最適化の仕組み(`teb_local_planner`)を詳述する。
+本ドキュメントは、MSD700ナビゲーションスタックに実装されているレイヤー化コストマップアーキテクチャ、グローバル経路計画(`navfn`フォールバック付きの`msd700_lane_planner`)、およびローカル軌道最適化の仕組み(`teb_local_planner`)を詳述する。
 
 ## モーションプランニングパイプライン
 
@@ -60,6 +60,60 @@ inflation_layer:
 
 ---
 
+## グローバルプランナー: navfnフォールバック付きレーンプラン {#global-planner-lane-plans-with-a-navfn-fallback}
+
+move_baseは`msd700_lane_planner/LanePlanner`を読み込む(`move_base_params.yaml`)。このプラグインは`navfn/NavfnROS`のインスタンスを1つ保持し、**レーンモード**がオフの間はそのプランをそのまま返す。そのため地点間ナビゲーション、移動区間、リカバリーは従来のnavfnとまったく同じに計画される。同じ`NavfnROS`パラメータを読み、レーンでもnavfnでもすべてのプランを`/move_base/NavfnROS/plan`に配信する。Webリレーと RViz がすでに使っているトピックである。
+
+### カバレッジで必要な理由
+
+スイープはウェイポイントごとに move_base ゴールを1つ送る。間隔はレーンに沿って約1 mで、各ゴールはレーンの向きをyawとして持つ。navfnはゴールの位置しか使わない。プランはコストグリッドに沿うため、レーンから約1セル横を走り、最後に正確なゴールを付け足す。これが各プランの終端の短い斜めの折れ曲がりとして現れる。TEBはビアポイントでその折れ曲がりを追い、約1 m後に次のゴールが来るため、ロボットはまっすぐなレーン上で蛇行する。
+
+### プランの選び方
+
+`path_coverage_node`は走行が`running`を報告した時点で`/move_base/LanePlanner/lane_mode`をtrueにし、`complete`、`aborted`、`coverage_failed`、ノードの終了時と起動時にfalseに戻す。move_baseは5 Hzで再計画し、毎回あらためて判断する:
+
+| 条件 | 返すプラン |
+|---|---|
+| レーンモードがオフ | navfn |
+| ゴールが向きに沿って`min_length`(0.10 m)未満しか先にない(その場ピボットなど) | navfn |
+| ロボットがレーンからコリドーより離れている(入る 0.43 x 車体幅、出る 0.65 x 車体幅。フィールドロボットで 0.30 / 0.46 m) | navfn |
+| 直線プランのいずれかの点がグローバルコストマップで`blocked_cost`(253、inscribed)以上、または未知 | navfn(回り込む経路を計画する) |
+| それ以外 | 直線レーンプラン |
+
+レーンはゴールを通りゴールのyawに沿う直線なので、追加のトピックは不要。直線プランはロボット位置から始まり、smoothstepでその直線に戻り、ゴールの向きのまま正確にゴールで終わる。合流長は`merge_gain` x オフセット(最大傾き 1.5 / 6、約14度)、曲率を`merge_max_curvature`(0.5 1/m)以下に保つ長さ、`merge_min_length`(0.30 m)のうち最大のもので、ゴールまでの残り距離を上限とする。
+
+2つのプランの切り替えはプラグイン内部で行われるため、move_baseが再設定やリセットされることはない。レーン上に現れた障害物はスキャンからグローバルコストマップに入り、次の再計画で直線が遮られていると判定され、0.2秒以内にnavfnの回り込み経路が返される。ロボットがコリドー内に戻り直線が空くと、レーンプランに戻る。
+
+::: info 計測値(シミュレーション、フィールドロボット、6 x 5.4 m エリア、4.8 m レーン)
+各レーンの本体部分(レーン開始 1.0 m 後から終了 0.5 m 前まで):
+
+| | navfn | レーンプランナー |
+|---|---|---|
+| プラン終端とウェイポイントの向きの差(中央値) | 18 度 | 0 度 |
+| レーンあたりの向きの振れ幅、ピーク間(中央値) | 12.3 度 | 2.1 度 |
+| クロストラック RMS / 最大 | 48.6 / 87.9 mm | 2.5 / 8.1 mm |
+| 車体ヨーレート RMS | 0.154 rad/s | 0.024 rad/s |
+:::
+
+### パラメータ
+
+`msd700_navigation/config/planner/lane_planner_params.yaml`、名前空間`/move_base/LanePlanner`。すべてプランごとにキャッシュ経由で読まれるため、実行中の`rosparam set`は次の再計画から有効になる。コリドーの値は各走行の開始時に`path_coverage_node`が`boustrophedon_params.yaml` -> `lane_planner`から上書きする。
+
+| パラメータ | 既定値 | 意味 |
+|---|---|---|
+| `lane_mode` | `false` | 走行中のみ`path_coverage_node`が設定 |
+| `corridor_enter` / `corridor_exit` | 0.30 / 0.45 m | レーンプランを使い始める / やめるレーンからの距離(ヒステリシス) |
+| `min_length` | 0.10 m | これより短い区間はnavfnのまま |
+| `merge_gain`、`merge_min_length`、`merge_max_curvature`、`merge_max_fraction` | 6.0、0.30 m、0.5 1/m、1.0 | レーンへ戻る曲線の形 |
+| `blocked_cost` | 253 | 直線を遮るコストマップ値(inscribed: 車体が触れる) |
+| `unknown_is_blocked` | `true` | 未知セルは直線を遮る |
+
+::: warning ロボットイメージを一度再ビルドする
+`msd700_lane_planner`はC++プラグインである。`run_msd.sh`はワークスペースが一度もビルドされていない場合にしか`catkin build`を実行せず、`devel/`はバインドマウントではなくコンテナ内にある。そのため、プラグイン追加前にビルドされたイメージから起動したユニットにはこのクラスがなく、move_baseは起動時に "Failed to create the msd700_lane_planner/LanePlanner planner" で終了し、何もナビゲーションできない。`docker-manager.sh build`を一度実行すること。`up --build`でも動くが、そのコンテナ限りで、次の`down`と`up`では古いイメージから起動する。
+:::
+
+---
+
 ## Timed-Elastic-Band (TEB) 軌道最適化
 
 `teb_local_planner`は、ロボット状態のシーケンス$\mathbf{s}_k = [x_k, y_k, \theta_k]^T$と時間差$\Delta T_k$に対する非線形多目的最適化問題として軌道生成を定式化する:
@@ -92,7 +146,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 ## 進入禁止ゾーンとDynamic Reconfigure
 
 1. **進入禁止グリッドレイヤー(`keepout_layer`)**: `/msd700/keepout_grid`をサブスクライブし、オペレーターが指定したカスタムポリゴンをコスト$254$のセルにラスタライズすることで、グローバル/ローカルプランナーが除外ゾーンを横断する軌道を生成しないようにする。
-2. **網羅走行モードへの適応**: ブストロフェドン走行のパスの間、`path_coverage_node`は`dynamic_reconfigure`経由で前進駆動の重み(`weight_kinematics_forward_drive`)を`500.0`に設定する(ベース値も`500`。走行時はさらに `yaw_goal_tolerance` を `0.10` に締める)。これにより失速することなく滑らかな90度のコム状ピボットターンが可能になる。
+2. **網羅走行モードへの適応**: ブストロフェドン走行のパスの間、`path_coverage_node`は`dynamic_reconfigure`経由で前進駆動の重み(`weight_kinematics_forward_drive`)を`500.0`に設定する(ベース値も`500`。走行時はさらに `yaw_goal_tolerance` を `0.10` に締める)。これにより失速することなく滑らかな90度のコム状ピボットターンが可能になる。また、走行中はグローバルプランナーのレーンモードをオンにする([上記](#global-planner-lane-plans-with-a-navfn-fallback))。
 
 ## 関連ドキュメント
 

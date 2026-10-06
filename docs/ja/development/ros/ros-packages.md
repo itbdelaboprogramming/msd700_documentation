@@ -105,7 +105,13 @@ Velodyneの点群を、スタックの他の部分が使う2Dスキャンに変�
 - **launchファイル**: `msd700_boustrophedon.launch`(`switch_mode.yaml`の`boustrophedon`モード)、`coverage.launch`。
 - **設定**: `config/boustrophedon_params.yaml`、`config/robot/field.yaml` / `prototype.yaml`。
 
-### 10. `third_party/sensor_pointcloud`
+### 10. `msd700_lane_planner`
+move_baseが読み込むグローバルプランナープラグイン(`msd700_lane_planner/LanePlanner`)。`navfn/NavfnROS`をラップし、カバレッジスイープがレーンモードをオンにするまではnavfnとまったく同じに動作する。オンの間、ロボットがすでに沿っているウェイポイントにはウェイポイントの向きに沿った直線プランを返し、遮られた直線・移動区間・ピボットは引き続きnavfnが計画する。[コストマップとモーションプランナー](/ja/development/ros/costmaps-and-planners#global-planner-lane-plans-with-a-navfn-fallback)を参照。
+
+- **プラグイン**: `src/lane_planner.cpp`、幾何計算は`include/msd700_lane_planner/lane_geometry.h`(ROS非依存、`test/test_lane_geometry.cpp`でテスト)。
+- **設定**: `msd700_navigation/config/planner/lane_planner_params.yaml`。レーンモードは`path_coverage_node.py`が切り替える(`boustrophedon_params.yaml` -> `lane_planner`)。
+
+### 11. `third_party/sensor_pointcloud`
 レンジメッセージを`PointCloud2`に集約する。リポジトリに同梱されているが、現在のスタックでは起動されない。
 
 `msd700_movement/`は`package.xml`のない残存ディレクトリ(旧ナビゲーションスクリプト、`rplidar_ros`、`robot_pose_publisher`の2つ目のコピー)で、catkinはビルドしない。

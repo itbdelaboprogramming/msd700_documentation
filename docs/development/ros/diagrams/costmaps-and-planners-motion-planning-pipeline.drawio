@@ -7,7 +7,7 @@
         <mxCell id="n1" value="Navigation Goal: PoseStamped" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="20" y="135" width="223" height="43" as="geometry" />
         </mxCell>
-        <mxCell id="n2" value="Global Planner: navfn/NavfnROS&lt;br&gt;Dijkstra / A* Shortest Path on&lt;br&gt;Global Costmap" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n2" value="Global Planner: msd700_lane_planner/LanePlanner&lt;br&gt;coverage lane: straight plan along the waypoint heading&lt;br&gt;otherwise: navfn/NavfnROS (Dijkstra on Global Costmap)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="182" y="218" width="246" height="75" as="geometry" />
         </mxCell>
         <mxCell id="n3" value="Global Geometric Path:&lt;br&gt;nav_msgs/Path" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

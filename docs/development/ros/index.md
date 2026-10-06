@@ -25,7 +25,7 @@ The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops t
 ## Navigation & Planning
 
 <LinkCards>
-  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, navfn global planner, and TEB local trajectory optimization." link="/development/ros/costmaps-and-planners" />
+  <LinkCard icon="🗺️" title="Costmaps & Planners" details="Move base, the lane planner with its navfn fallback, and TEB local trajectory optimization." link="/development/ros/costmaps-and-planners" />
   <LinkCard icon="🔄" title="Dynamic Mode Switching" details="switch_mode.py, subprocess process spawning, and Autopilot sequencer." link="/development/ros/mode-switching" />
 </LinkCards>
 

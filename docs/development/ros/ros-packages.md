@@ -105,7 +105,13 @@ The boustrophedon coverage planner behind area sweeps and operation playlists. S
 - **Launch files**: `msd700_boustrophedon.launch` (the `boustrophedon` mode in `switch_mode.yaml`), `coverage.launch`.
 - **Config**: `config/boustrophedon_params.yaml`, `config/robot/field.yaml` / `prototype.yaml`.
 
-### 10. `third_party/sensor_pointcloud`
+### 10. `msd700_lane_planner`
+The global planner plugin move_base loads (`msd700_lane_planner/LanePlanner`). It wraps `navfn/NavfnROS` and behaves exactly like it until a coverage sweep turns on its lane mode; then a waypoint the robot is lined up with gets a straight plan along the waypoint heading, and navfn still plans every blocked line, transit and pivot. See [Costmaps and Motion Planners](/development/ros/costmaps-and-planners#global-planner-lane-plans-with-a-navfn-fallback).
+
+- **Plugin**: `src/lane_planner.cpp`, geometry in `include/msd700_lane_planner/lane_geometry.h` (no ROS, unit-tested in `test/test_lane_geometry.cpp`).
+- **Config**: `msd700_navigation/config/planner/lane_planner_params.yaml`; lane mode is switched by `path_coverage_node.py` (`boustrophedon_params.yaml` -> `lane_planner`).
+
+### 11. `third_party/sensor_pointcloud`
 Aggregates range messages into a `PointCloud2`. Vendored but not launched by the current stack.
 
 `msd700_movement/` is a leftover directory with no `package.xml` (old navigation scripts, `rplidar_ros`, a second `robot_pose_publisher` copy); catkin does not build it.

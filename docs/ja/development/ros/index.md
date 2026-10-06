@@ -25,7 +25,7 @@ search: false
 ## ナビゲーション & プランニング
 
 <LinkCards>
-  <LinkCard icon="🗺️" title="コストマップ & プランナー" details="Move base、navfnグローバルプランナー、TEBローカル軌道最適化。" link="/ja/development/ros/costmaps-and-planners" />
+  <LinkCard icon="🗺️" title="コストマップ & プランナー" details="Move base、navfnフォールバック付きレーンプランナー、TEBローカル軌道最適化。" link="/ja/development/ros/costmaps-and-planners" />
   <LinkCard icon="🔄" title="動的モード切り替え" details="switch_mode.py、subprocessによるプロセス起動、Autopilotシーケンサー。" link="/ja/development/ros/mode-switching" />
 </LinkCards>
 

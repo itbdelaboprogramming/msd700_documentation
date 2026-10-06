@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-This document details the layered costmap architecture, global path planning algorithms (`navfn`), and local trajectory optimization mechanics (`teb_local_planner`) implemented in the MSD700 navigation stack.
+This document details the layered costmap architecture, global path planning (`msd700_lane_planner` with its `navfn` fallback), and local trajectory optimization mechanics (`teb_local_planner`) implemented in the MSD700 navigation stack.
 
 ## Motion Planning Pipeline
 
@@ -55,6 +55,60 @@ inflation_layer:
 
 ---
 
+## Global Planner: Lane Plans with a navfn Fallback {#global-planner-lane-plans-with-a-navfn-fallback}
+
+move_base loads `msd700_lane_planner/LanePlanner` (`move_base_params.yaml`). It holds a `navfn/NavfnROS` instance and returns that instance's plan unchanged unless **lane mode** is on, so point-to-point navigation, transits and recovery plan exactly as they did on plain navfn. It reads the same `NavfnROS` parameters and publishes every plan, lane or navfn, on `/move_base/NavfnROS/plan`, the topic the web relay and RViz already consume.
+
+### Why coverage needs it
+
+A sweep sends one move_base goal per waypoint, about 1 m apart along a lane, and each goal carries the lane direction as its yaw. navfn uses only the goal's position. Its plan follows the cost grid, so it runs about one cell off the lane and then appends the exact goal, which shows up as a short diagonal hook at the end of every plan. TEB follows that hook with its via-points, the next goal arrives about 1 m later, and the robot weaves down a straight lane.
+
+### How a plan is chosen
+
+`path_coverage_node` sets `/move_base/LanePlanner/lane_mode` to true when a run reports `running` and back to false on `complete`, `aborted`, `coverage_failed`, node shutdown and node start. move_base replans at 5 Hz, and every call decides afresh:
+
+| Condition | Plan returned |
+|---|---|
+| Lane mode off | navfn |
+| Goal less than `min_length` (0.10 m) ahead along its heading, e.g. an in-place pivot | navfn |
+| Robot farther from the lane than the corridor (enter 0.43 x body width, leave 0.65 x body width: 0.30 / 0.46 m on the field robot) | navfn |
+| Any point of the straight plan at or above `blocked_cost` (253, inscribed) or unknown in the global costmap | navfn, which plans the way around |
+| Otherwise | straight lane plan |
+
+The lane is the line through the goal along the goal's yaw, so no extra topic is needed. The straight plan starts at the robot, returns to that line along a smoothstep, and ends exactly on the goal with the goal's heading. The merge length is the largest of `merge_gain` x offset (peak slope 1.5 / 6, about 14 degrees), the length that keeps curvature under `merge_max_curvature` (0.5 1/m) and `merge_min_length` (0.30 m), capped at the distance left to the goal.
+
+Switching between the two plans happens inside the plugin, so move_base is never reconfigured or reset by it. An obstacle that appears on the lane enters the global costmap from the scan, the next replan finds the line blocked, and navfn's detour is returned within 0.2 s. Once the robot is back within the corridor and the line is free, lane plans resume.
+
+::: info Measured (simulation, field robot, 6 x 5.4 m area, 4.8 m lanes)
+Over the body of each lane (1.0 m after the lane starts to 0.5 m before it ends):
+
+| | navfn | lane planner |
+|---|---|---|
+| Plan end vs waypoint heading (median) | 18 degrees | 0 degrees |
+| Heading swing per lane, peak to peak (median) | 12.3 degrees | 2.1 degrees |
+| Cross-track RMS / max | 48.6 / 87.9 mm | 2.5 / 8.1 mm |
+| Body yaw rate RMS | 0.154 rad/s | 0.024 rad/s |
+:::
+
+### Parameters
+
+`msd700_navigation/config/planner/lane_planner_params.yaml`, namespace `/move_base/LanePlanner`. All are read cached on every plan, so a live `rosparam set` takes effect at the next replan. The corridor values are overwritten by `path_coverage_node` from `boustrophedon_params.yaml` -> `lane_planner` at the start of each run.
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `lane_mode` | `false` | Set by `path_coverage_node` for the length of a run |
+| `corridor_enter` / `corridor_exit` | 0.30 / 0.45 m | Off-lane distance that starts / stops lane plans (hysteresis) |
+| `min_length` | 0.10 m | Shorter legs stay with navfn |
+| `merge_gain`, `merge_min_length`, `merge_max_curvature`, `merge_max_fraction` | 6.0, 0.30 m, 0.5 1/m, 1.0 | Shape of the return to the lane |
+| `blocked_cost` | 253 | Costmap value that blocks the line (inscribed: the body would touch) |
+| `unknown_is_blocked` | `true` | Unknown cells block the line |
+
+::: warning Rebuild the robot image once
+`msd700_lane_planner` is a C++ plugin. `run_msd.sh` only runs `catkin build` when the workspace was never built, and `devel/` lives in the container rather than on the bind mount, so a unit started from an image built before the plugin has no such class: move_base exits at start with "Failed to create the msd700_lane_planner/LanePlanner planner" and nothing navigates. Run `docker-manager.sh build` once. `up --build` also works, but only for that container; the next `down` and `up` starts from the old image again.
+:::
+
+---
+
 ## Timed-Elastic-Band (TEB) Trajectory Optimization
 
 The `teb_local_planner` formulates trajectory generation as a non-linear multi-objective optimization problem over a sequence of robot states $\mathbf{s}_k = [x_k, y_k, \theta_k]^T$ and time differences $\Delta T_k$:
@@ -87,7 +141,7 @@ $$V(\mathcal{B}) = \sum_k \left( \gamma_{\text{time}} \cdot \Delta T_k^2 + \gamm
 ## Keep-Out Zones and Dynamic Reconfigure
 
 1. **Keep-Out Grid Layer (`keepout_layer`)**: Subscribes to `/msd700/keepout_grid` where custom operator polygons are rasterized into cost $254$ cells, preventing the global and local planners from generating trajectories across excluded zones.
-2. **Coverage Mode Adaptation**: During boustrophedon sweep passes, `path_coverage_node` sets `weight_kinematics_forward_drive` to `500.0` via `dynamic_reconfigure` (base value is also `500`; the sweep additionally tightens `yaw_goal_tolerance` to `0.10`), allowing smooth 90-degree comb pivot turns without stalling.
+2. **Coverage Mode Adaptation**: During boustrophedon sweep passes, `path_coverage_node` sets `weight_kinematics_forward_drive` to `500.0` via `dynamic_reconfigure` (base value is also `500`; the sweep additionally tightens `yaw_goal_tolerance` to `0.10`), allowing smooth 90-degree comb pivot turns without stalling. It also turns on the global planner's lane mode for the run ([above](#global-planner-lane-plans-with-a-navfn-fallback)).
 
 ## Related Documentation
 

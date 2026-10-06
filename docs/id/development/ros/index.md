@@ -25,7 +25,7 @@ Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat u
 ## Navigasi & Perencanaan
 
 <LinkCards>
-  <LinkCard icon="🗺️" title="Costmap & Planner" details="Move base, global planner navfn, dan optimisasi trajektori lokal TEB." link="/id/development/ros/costmaps-and-planners" />
+  <LinkCard icon="🗺️" title="Costmap & Planner" details="Move base, lane planner dengan fallback navfn, dan optimisasi trajektori lokal TEB." link="/id/development/ros/costmaps-and-planners" />
   <LinkCard icon="🔄" title="Pergantian Mode Dinamis" details="switch_mode.py, spawning proses subprocess, dan sequencer Autopilot." link="/id/development/ros/mode-switching" />
 </LinkCards>
 
