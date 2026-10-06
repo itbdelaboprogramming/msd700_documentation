@@ -129,6 +129,42 @@ recovery run out its full timeout every time. Count children with `getNumChildre
 placement now lives in `coverageOverlayLayer.ts` (`placeAboveGrid`), with a unit test built on a
 copy of 0.7.1's `setChildIndex()`.
 
+## Mouse and touch input {#map-input}
+
+Every touch gesture on the canvas mirrors a mouse gesture and ends in the same code:
+
+| Gesture | Mouse path | Touch path |
+| --- | --- | --- |
+| Zoom | Native `wheel` listener, `whenWheel` → `zoomBy` (`viewControls.ts`) | `usePinch` → `applyPinch` → `zoomBy` (`touchGestures.ts`) |
+| Pan | Middle-button drag, `whenMouseDown/Move` → `PanView.pan` | Same `usePinch` frame: the finger midpoint's travel moves `stage.x/y` |
+| Pin with heading | `stagemousedown/move/up` → Nav2D `mouseEventHandler` | Same, fed by EaselJS Touch |
+| Custom-area point | `stagemousedown` with `button === 0` → `placeCustomVertex` | Tap from `createTapTracker` → `placeCustomVertex` |
+| Delete pin or point | DOM `dblclick` → EaselJS `dblclick` on the object under the cursor | Double-tap → `dispatchStageDoubleClick` → same EaselJS `dblclick` |
+
+`createjs.Touch.enable(stage)` in `Nav2D.js` turns each finger into its own
+`stagemousedown/move/up`, with the `TouchEvent` as `nativeEvent`. That is why a one-finger pin drag
+needs no extra code, and also why three guards exist:
+
+- **Two fingers never place a pin.** Nav2D's `mouseEventHandler` sets `multiTouchActive` as soon as
+  `nativeEvent.touches.length > 1`, drops the pin being dragged, and ignores input until the last
+  finger lifts (`touches.length === 0`). The older "two presses in 1 s" delete counters on pin
+  markers also skip presses that are part of a pinch.
+- **Pinch is relative.** `usePinch` (`@use-gesture/react`, touch events, `pinchOnWheel: false` so it
+  never doubles the wheel handler) keeps the previous frame in its memo. Each frame pans by the
+  midpoint's movement, then zooms about the new midpoint by the spread ratio, so the map stays under
+  both fingers and the zoom buttons or auto-fit can change the view between gestures without a jump.
+  The viewport has `touch-action: none` so the browser does not zoom the page instead.
+- **Taps are recognised by hand.** EaselJS Touch calls `preventDefault()` on `touchstart`, so the
+  browser never synthesizes `click` or `dblclick` for a finger. `createTapTracker` reads raw touch
+  events on the viewport (tap: under 350 ms and 10 px; double-tap: second tap within 300 ms and 30 px;
+  any gesture that had two fingers is never a tap). A double-tap calls EaselJS 0.7.1's
+  `_updatePointerPosition(-1, ...)` and `_handleDoubleClick`, so it hit-tests and fires exactly like a
+  mouse double-click. These are private, but the library is vendored in `public/script`, so they cannot
+  change under the dashboard.
+
+Touch input reaches operators on touchscreen laptops and monitors. Phones and tablets are still
+stopped by `DeviceGuard`.
+
 ## Supporting UI
 
 A handful of components appear across modes rather than belonging to any single one:

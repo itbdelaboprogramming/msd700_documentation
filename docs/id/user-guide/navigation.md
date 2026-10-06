@@ -40,6 +40,20 @@ Manual Override selalu memiliki prioritas lebih tinggi dari misi otomatis apa pu
 
 Anda juga bisa mengantrekan beberapa titik henti secara berurutan dan menyimpannya sebagai rute yang bisa dipakai ulang (lihat [Rute & Coverage](/id/user-guide/routes-coverage)).
 
+### Menggeser dan Memperbesar Peta
+
+Peta bisa dipakai dengan mouse maupun layar sentuh. Setiap gestur sentuh melakukan hal yang sama dengan pasangannya di mouse:
+
+| Aksi | Mouse | Layar sentuh |
+| --- | --- | --- |
+| Zoom | Roda scroll, atau tombol **+** / **-** | Pinch dengan dua jari |
+| Pan | Tahan tombol tengah lalu drag | Drag dengan dua jari |
+| Menaruh pin dan menentukan arahnya | Klik, drag ke arah tujuan, lepas | Sentuh, drag ke arah tujuan, angkat jari |
+| Menambah titik custom area | Klik | Tap |
+| Menghapus pin atau titik custom area | Double-click pada titik itu | Double-tap pada titik itu |
+
+Dua jari selalu berarti pan dan zoom, tidak pernah menaruh pin: jika jari kedua menyentuh layar saat Anda sedang men-drag pin, pin tersebut dibatalkan. Layar sentuh berfungsi di laptop layar sentuh dan monitor layar sentuh. Ponsel dan tablet masih diblokir oleh pemberitahuan khusus desktop (lihat [Pemecahan Masalah](/id/user-guide/troubleshooting#_8-halaman-kosong-di-ponsel-tablet-atau-overlay-desktop-only)).
+
 ### Membaca Kanvas Peta
 
 Saat robot bergerak, kanvas menampilkan beberapa indikator yang perlu diketahui:

@@ -132,6 +132,43 @@ penantian pin pada pemulihan sesi selalu menunggu sampai timeout penuh. Hitung c
 `getNumChildren()`. Penempatan overlay sekarang ada di `coverageOverlayLayer.ts` (`placeAboveGrid`),
 dengan unit test yang memakai salinan `setChildIndex()` versi 0.7.1.
 
+## Input mouse dan sentuh {#map-input}
+
+Setiap gestur sentuh di kanvas mencerminkan gestur mouse dan berakhir di kode yang sama:
+
+| Gestur | Jalur mouse | Jalur sentuh |
+| --- | --- | --- |
+| Zoom | Listener `wheel` native, `whenWheel` → `zoomBy` (`viewControls.ts`) | `usePinch` → `applyPinch` → `zoomBy` (`touchGestures.ts`) |
+| Pan | Drag tombol tengah, `whenMouseDown/Move` → `PanView.pan` | Frame `usePinch` yang sama: pergeseran titik tengah jari menggerakkan `stage.x/y` |
+| Pin dengan arah | `stagemousedown/move/up` → `mouseEventHandler` Nav2D | Sama, diumpan oleh EaselJS Touch |
+| Titik custom area | `stagemousedown` dengan `button === 0` → `placeCustomVertex` | Tap dari `createTapTracker` → `placeCustomVertex` |
+| Hapus pin atau titik | `dblclick` DOM → `dblclick` EaselJS pada objek di bawah kursor | Double-tap → `dispatchStageDoubleClick` → `dblclick` EaselJS yang sama |
+
+`createjs.Touch.enable(stage)` di `Nav2D.js` mengubah setiap jari menjadi
+`stagemousedown/move/up` sendiri, dengan `TouchEvent` sebagai `nativeEvent`. Karena itu drag pin
+dengan satu jari tidak butuh kode tambahan, dan karena itu pula ada tiga pengaman:
+
+- **Dua jari tidak pernah menaruh pin.** `mouseEventHandler` Nav2D menyalakan `multiTouchActive`
+  begitu `nativeEvent.touches.length > 1`, membatalkan pin yang sedang di-drag, dan mengabaikan
+  input sampai jari terakhir diangkat (`touches.length === 0`). Penghitung hapus lama "dua tekan
+  dalam 1 detik" pada marker pin juga melewati tekanan yang merupakan bagian dari pinch.
+- **Pinch bersifat relatif.** `usePinch` (`@use-gesture/react`, touch event, `pinchOnWheel: false`
+  supaya tidak menggandakan handler wheel) menyimpan frame sebelumnya di memo. Setiap frame menggeser
+  sejauh perpindahan titik tengah, lalu zoom di sekitar titik tengah baru sebesar rasio jarak jari,
+  sehingga peta tetap di bawah kedua jari dan tombol zoom atau auto-fit bisa mengubah tampilan di
+  antara gestur tanpa lompatan. Viewport memakai `touch-action: none` supaya browser tidak men-zoom
+  halaman.
+- **Tap dikenali sendiri.** EaselJS Touch memanggil `preventDefault()` pada `touchstart`, sehingga
+  browser tidak pernah membuat `click` atau `dblclick` untuk jari. `createTapTracker` membaca touch
+  event mentah di viewport (tap: di bawah 350 ms dan 10 px; double-tap: tap kedua dalam 300 ms dan
+  30 px; gestur yang pernah memakai dua jari tidak pernah dihitung tap). Double-tap memanggil
+  `_updatePointerPosition(-1, ...)` dan `_handleDoubleClick` milik EaselJS 0.7.1, sehingga hit-test
+  dan event-nya persis sama dengan double-click mouse. Keduanya private, tetapi library ini
+  di-vendor di `public/script`, jadi tidak bisa berubah di bawah dashboard.
+
+Input sentuh sampai ke operator di laptop dan monitor layar sentuh. Ponsel dan tablet masih
+dihentikan oleh `DeviceGuard`.
+
 ## UI pendukung
 
 Ada beberapa komponen yang muncul lintas mode alih-alih menjadi milik satu mode saja:

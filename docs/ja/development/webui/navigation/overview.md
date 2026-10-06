@@ -86,6 +86,26 @@ canvasがこの形で決してクラッシュしないことを保証するた�
 
 これが、カバレッジエリアのオーバーレイ(レイヤー2)が開始のたびに見えなくなり、後のマップメッセージがたまたまグリッドをインデックス0に戻すまで表示されなかった原因である。同じ理由で、セッション復旧時のピン待ちも毎回タイムアウトまで待っていた。子の数は`getNumChildren()`で数えること。オーバーレイの配置は現在`coverageOverlayLayer.ts`(`placeAboveGrid`)にあり、0.7.1の`setChildIndex()`の複製を使ったユニットテストがある。
 
+## マウス入力とタッチ入力 {#map-input}
+
+キャンバス上の各タッチ操作はマウス操作に対応しており、同じコードに到達する。
+
+| 操作 | マウスの経路 | タッチの経路 |
+| --- | --- | --- |
+| ズーム | ネイティブ`wheel`リスナー、`whenWheel` → `zoomBy`(`viewControls.ts`) | `usePinch` → `applyPinch` → `zoomBy`(`touchGestures.ts`) |
+| パン | 中ボタンドラッグ、`whenMouseDown/Move` → `PanView.pan` | 同じ`usePinch`フレーム: 指の中点の移動量で`stage.x/y`を動かす |
+| 向き付きピン | `stagemousedown/move/up` → Nav2Dの`mouseEventHandler` | 同じ。EaselJS Touchが供給する |
+| カスタムエリアの点 | `button === 0`の`stagemousedown` → `placeCustomVertex` | `createTapTracker`のタップ → `placeCustomVertex` |
+| ピンまたは点の削除 | DOMの`dblclick` → カーソル下のオブジェクトへのEaselJS `dblclick` | ダブルタップ → `dispatchStageDoubleClick` → 同じEaselJS `dblclick` |
+
+`Nav2D.js`の`createjs.Touch.enable(stage)`は、各指をそれぞれの`stagemousedown/move/up`に変換し、`TouchEvent`を`nativeEvent`として渡す。そのため1本指のピンドラッグには追加コードが不要であり、同じ理由で次の3つのガードがある。
+
+- **2本指ではピンを置かない。** Nav2Dの`mouseEventHandler`は`nativeEvent.touches.length > 1`になった時点で`multiTouchActive`を立て、ドラッグ中のピンを取り消し、最後の指が離れる(`touches.length === 0`)まで入力を無視する。ピンマーカーにある従来の「1秒以内に2回押すと削除」カウンターも、ピンチの一部である押下は数えない。
+- **ピンチは相対的に適用する。** `usePinch`(`@use-gesture/react`、タッチイベント、ホイールハンドラーと二重にならないよう`pinchOnWheel: false`)は前フレームをmemoに保持する。各フレームで中点の移動分だけパンし、その後新しい中点を中心に指の間隔の比率でズームする。これによりマップは両指の下に留まり、ズームボタンや自動フィットがジェスチャーの合間に表示を変えても飛ばない。ブラウザーがページ全体をズームしないよう、ビューポートには`touch-action: none`を指定している。
+- **タップは独自に認識する。** EaselJS Touchは`touchstart`で`preventDefault()`を呼ぶため、ブラウザーは指に対して`click`や`dblclick`を生成しない。`createTapTracker`はビューポート上の生のタッチイベントを読む(タップ: 350 ms未満かつ10 px以内。ダブルタップ: 2回目のタップが300 ms以内かつ30 px以内。2本指を含んだジェスチャーはタップにならない)。ダブルタップはEaselJS 0.7.1の`_updatePointerPosition(-1, ...)`と`_handleDoubleClick`を呼ぶので、ヒットテストとイベントはマウスのダブルクリックと完全に同じになる。これらは非公開APIだが、ライブラリーは`public/script`に同梱されているため、ダッシュボードの知らないうちに変わることはない。
+
+タッチ入力が使えるのはタッチスクリーン付きのノートPCとモニターである。スマートフォンとタブレットは引き続き`DeviceGuard`で止められる。
+
 ## 補助UI
 
 特定の1つのモードに属するのではなく、モード横断で現れるコンポーネントがいくつかある。

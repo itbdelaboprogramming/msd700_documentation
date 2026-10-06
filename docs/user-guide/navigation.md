@@ -40,6 +40,20 @@ Manual Override always takes priority over any automatic mission: the two toggle
 
 You can queue several stops in order and save them as a reusable route (see [Routes & Coverage](/user-guide/routes-coverage)).
 
+### Moving Around the Map
+
+The map works with a mouse and with a touchscreen. Each touch gesture does what its mouse counterpart does:
+
+| Action | Mouse | Touchscreen |
+| --- | --- | --- |
+| Zoom | Scroll wheel, or the **+** / **-** buttons | Pinch with two fingers |
+| Pan | Hold the middle button and drag | Drag with two fingers |
+| Place a pin and set its heading | Click, drag toward the heading, release | Touch, drag toward the heading, lift |
+| Add a custom-area point | Click | Tap |
+| Remove a pin or custom-area point | Double-click it | Double-tap it |
+
+Two fingers are always pan and zoom, never a pin: if a second finger touches the screen while you are dragging out a pin, that pin is dropped. Touch works on touchscreen laptops and touchscreen monitors. Phones and tablets are still blocked by the desktop-only notice (see [Troubleshooting](/user-guide/troubleshooting#_8-blank-page-on-a-phone-tablet-or-desktop-only-overlay)).
+
 ### Reading the Map Canvas
 
 While the robot is moving, the canvas shows a few indicators worth knowing:
