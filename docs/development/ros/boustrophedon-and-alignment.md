@@ -60,6 +60,33 @@ During vertical sweep line progression along the $x$-axis, boundary vertices are
 3. **SPLIT Critical Point**: An internal obstacle divides an active cell into two distinct parallel sub-cells.
 4. **MERGE Critical Point**: Two parallel sub-cells rejoin past the trailing edge of an obstacle.
 
+### Thin Cells
+A small obstacle at the edge of an area can make the decomposition close a cell there and leave a sliver a few raster cells wide. A cell narrower than the robot body (0.70 m across its minimum rotated rectangle) is merged into the neighbouring cell when at least half of its long side borders that cell (`merge_thin_cells` in `coverage_geometry.py`). The merged cell keeps the neighbour's sweep direction, so its lanes stay parallel to the lanes already planned there. A thin cell with no such neighbour is planned on its own.
+
+## Lane Placement Inside a Cell
+
+Lanes run along the long side of the cell, spaced at most one `pitch` apart. Two rules decide where the outermost lanes go.
+
+**A side that leans off the lane direction.** At the bounding-box edge such a side is only a corner, so a lane there would be a few centimetres long and is dropped. The planner walks inward in 2 cm steps, up to one `pitch`, and keeps the position that leaves the least floor between the lane and that side unswept. A side parallel to the lanes keeps its lane at `lane_edge_clearance`, as before.
+
+**A strip too thin for two lanes.** When the two outermost lane centres would be closer than `min_lane_spacing`, the strip gets one lane down its middle instead of a pass out and back.
+
+| `min_lane_spacing` | Meaning |
+| --- | --- |
+| `auto` (default) | 0.25 x body width: **0.175 m** on the field robot, 0.075 m on the prototype |
+| Strip swept once | Narrower than `min_lane_spacing` + 2 x `lane_edge_clearance`: **0.875 m** on the field robot |
+| Floor given up | At most half of `min_lane_spacing` per side: 0.09 m |
+| `0` | Every strip wider than the inset gets two lanes |
+
+Measured on a live 4.3 x 4.3 m area with one side leaning 0.18 m and a small obstacle in a corner:
+
+| | Before | After |
+| --- | --- | --- |
+| Cells | 2 (one of them 0.10 m wide) | 1 |
+| Lanes | 6 + 2 (the 2 lanes 2 mm apart) | 7 |
+| Unswept strip along the leaning side | 0.54 m wide | 0.13 m wide |
+| Attainment | 89% (reported partial) | 98% |
+
 ---
 
 ## Five-Layer Obstacle Management

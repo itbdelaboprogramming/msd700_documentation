@@ -11,6 +11,7 @@ search: false
 ## アーキテクチャ上のマイルストーン
 
 ### 2026年10月: ROS を使わないサーバー(進行中)
+- **傾いた辺と細いストリップでの網羅レーン**: レーン方向に対して傾いたエリアの辺に、最大0.54 m幅の未走査ストリップが残らなくなった。最も外側のレーンは、短すぎて保持できなかった角の位置ではなく、最も多く走査できる内側の位置へ移動する。最も外側の2本のレーンの間隔が`min_lane_spacing`(0.175 m、つまり0.875 m未満のストリップ)より狭くなる場合は、往復ではなく中央を1回走査し、小さな障害物の横に分解が残すスライバーは隣接セルに統合される。実機の4.3 x 4.3 mエリアでは、attainmentが89%から98%に向上した。[ブストロフェドン網羅走行 § セル内のレーン配置](/ja/development/ros/boustrophedon-and-alignment#セル内のレーン配置)を参照。
 - **管理コンソールのライブユニットステータス**: Units タブの **Unit Status** は、オペレーターのユニット一覧と同じ読み取り専用の ping(`page: "admin"`、claim なし)で5秒ごとに各ロボットへ直接問い合わせ、Ready、オペレーターによる In use by、または Starting up と ping 時間を表示するようになった。以前は5分ごとのクラウド同期だけに従っていたため、電源を入れたばかりのロボットは、オペレーターには Ready と見えている間も数分間 Off と表示されていた。[ユニット § ユニットステータス](/ja/development/webui/admin-console/units#unit-status) 参照。
 - **システムヘルスタブ**: 新しい管理コンソールタブが、データベース、バックエンド、MQTT ブローカー、ライブリンク、Web UI、メディア、シグナリングを確認し、それらのポートを一覧にし、Website と MQTT ブローカーの証明書を残り日数と certbot の次回更新日とともに読む。ブローカーが Website より古い証明書を提示している場合、つまり `certbot renew` が行わないキーストア再構築が漏れている場合に警告する。[システムヘルス](/ja/development/webui/admin-console/system-health) 参照。
 - **ROS を使わないサーバー**: 2026-10-03 のメンテナンス以降、本番と開発の両クラウドは ROS をまったく動かしていません。roscore、rosbridge、`catkin_make`、リレーコンテナはありません。`backend_node`、メディア、シグナリングは 269 MB のイメージ(`Docker/Dockerfile` のターゲット `server`)から素の Node として動き、両方のクラウドダッシュボードは `NEXT_PUBLIC_UNIT_LINK=string` でビルドされます。ライブリンクゲートウェイは rosbridge のポート(Apache 背後の 9090、開発の 9091)を引き継いだため、ダッシュボードの URL はどれも変わりません。ユニットとそのローカルダッシュボードは変更なしです。[Docker リファレンス](/ja/setup/docker-reference#service-and-port-map) を参照。

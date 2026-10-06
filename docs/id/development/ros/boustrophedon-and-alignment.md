@@ -60,6 +60,33 @@ Selama progresi sweep line vertikal sepanjang sumbu $x$, vertex boundary diklasi
 3. **SPLIT Critical Point**: Obstacle internal membagi sel aktif menjadi dua sub-sel paralel yang berbeda.
 4. **MERGE Critical Point**: Dua sub-sel paralel bergabung kembali melewati trailing edge sebuah obstacle.
 
+### Sel Tipis
+Obstacle kecil di tepi area dapat membuat dekomposisi menutup sel di titik itu dan menyisakan sliver selebar beberapa sel raster. Sel yang lebih sempit dari body robot (0,70 m pada minimum rotated rectangle-nya) digabung ke sel tetangganya bila minimal setengah sisi panjangnya berbatasan dengan sel itu (`merge_thin_cells` di `coverage_geometry.py`). Sel hasil gabungan mempertahankan arah sweep sel tetangga, sehingga lane-nya tetap sejajar dengan lane yang sudah direncanakan di sana. Sel tipis tanpa tetangga seperti itu direncanakan sendiri.
+
+## Penempatan Lane di Dalam Sel
+
+Lane berjalan sepanjang sisi panjang sel, dengan jarak paling jauh satu `pitch`. Dua aturan menentukan posisi lane terluar.
+
+**Sisi yang miring terhadap arah lane.** Di tepi bounding box, sisi seperti itu hanya berupa pojok, sehingga lane di sana hanya beberapa sentimeter panjangnya dan dibuang. Planner bergeser ke dalam per 2 cm, sampai satu `pitch`, dan memilih posisi yang menyisakan lantai tak tersapu paling sedikit di antara lane dan sisi itu. Sisi yang sejajar dengan lane tetap mendapat lane di `lane_edge_clearance`, seperti sebelumnya.
+
+**Strip yang terlalu tipis untuk dua lane.** Bila dua garis tengah lane terluar berjarak kurang dari `min_lane_spacing`, strip itu mendapat satu lane di tengahnya, bukan satu pass pulang-pergi.
+
+| `min_lane_spacing` | Arti |
+| --- | --- |
+| `auto` (default) | 0,25 x lebar body: **0,175 m** pada robot field, 0,075 m pada prototype |
+| Strip yang disapu sekali | Lebih sempit dari `min_lane_spacing` + 2 x `lane_edge_clearance`: **0,875 m** pada robot field |
+| Lantai yang dikorbankan | Paling banyak setengah `min_lane_spacing` per sisi: 0,09 m |
+| `0` | Setiap strip yang lebih lebar dari inset mendapat dua lane |
+
+Hasil pengukuran pada area live 4,3 x 4,3 m dengan satu sisi miring 0,18 m dan obstacle kecil di salah satu pojok:
+
+| | Sebelum | Sesudah |
+| --- | --- | --- |
+| Sel | 2 (salah satunya selebar 0,10 m) | 1 |
+| Lane | 6 + 2 (2 lane berjarak 2 mm) | 7 |
+| Strip tak tersapu di sepanjang sisi miring | Lebar 0,54 m | Lebar 0,13 m |
+| Attainment | 89% (dilaporkan partial) | 98% |
+
 ---
 
 ## Manajemen Obstacle Lima-Layer
