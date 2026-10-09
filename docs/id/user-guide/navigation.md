@@ -26,6 +26,8 @@ Gunakan kendali manual saat Anda ingin mengemudikan robot sendiri, langkah demi 
    - Tahan **Shift** untuk mode lambat (`0.20 m/s`) saat butuh presisi
 3. Lepaskan semua tombol (atau klik **Stop**) untuk menghentikan robot seketika.
 
+Di ponsel atau tablet tidak ada keyboard: sebagai gantinya muncul joystick di layar, dan robot berhenti saat jari Anda diangkat. Lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets#driving-with-the-joystick).
+
 ::: info Catatan
 Manual Override selalu memiliki prioritas lebih tinggi dari misi otomatis apa pun: kedua toggle saling eksklusif, jadi menyalakannya akan menjeda pergerakan otonom.
 :::
@@ -40,7 +42,7 @@ Manual Override selalu memiliki prioritas lebih tinggi dari misi otomatis apa pu
 
 Anda juga bisa mengantrekan beberapa titik henti secara berurutan dan menyimpannya sebagai rute yang bisa dipakai ulang (lihat [Rute & Coverage](/id/user-guide/routes-coverage)).
 
-### Menggeser dan Memperbesar Peta
+### Menggeser dan Memperbesar Peta {#moving-around-the-map}
 
 Peta bisa dipakai dengan mouse maupun layar sentuh. Setiap gestur sentuh melakukan hal yang sama dengan pasangannya di mouse:
 
@@ -52,7 +54,7 @@ Peta bisa dipakai dengan mouse maupun layar sentuh. Setiap gestur sentuh melakuk
 | Menambah titik custom area | Klik | Tap |
 | Menghapus pin atau titik custom area | Double-click pada titik itu | Double-tap pada titik itu |
 
-Dua jari selalu berarti pan dan zoom, tidak pernah menaruh pin: jika jari kedua menyentuh layar saat Anda sedang men-drag pin, pin tersebut dibatalkan. Layar sentuh berfungsi di laptop layar sentuh dan monitor layar sentuh. Ponsel dan tablet masih diblokir oleh pemberitahuan khusus desktop (lihat [Pemecahan Masalah](/id/user-guide/troubleshooting#_8-halaman-kosong-di-ponsel-tablet-atau-overlay-desktop-only)).
+Dua jari selalu berarti pan dan zoom, tidak pernah menaruh pin: jika jari kedua menyentuh layar saat Anda sedang men-drag pin, pin tersebut dibatalkan. Layar sentuh berfungsi di laptop dan monitor layar sentuh, ponsel, dan tablet. Di ponsel dan tablet, tombol zoom ada di balik tombol **Dots** (lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets#controls-on-the-map)).
 
 ### Membaca Kanvas Peta
 

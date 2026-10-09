@@ -162,8 +162,9 @@ needs no extra code, and also why three guards exist:
   mouse double-click. These are private, but the library is vendored in `public/script`, so they cannot
   change under the dashboard.
 
-Touch input reaches operators on touchscreen laptops and monitors. Phones and tablets are still
-stopped by `DeviceGuard`.
+Touch input reaches operators on touchscreen laptops and monitors, which keep the desktop layout,
+and on phones and tablets, which get the touch layouts described in
+[Phone & Tablet Layouts](/development/webui/touch-layouts).
 
 ## Supporting UI
 

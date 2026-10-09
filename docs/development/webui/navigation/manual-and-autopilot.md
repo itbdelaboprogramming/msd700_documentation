@@ -21,12 +21,13 @@ page, but the two toggles carry different practical weight here:
 
 - **Manual Override** stops any running autonomous operation on this page (a dispatched pinpoint,
   a multi-point route, or a coverage sweep) and hands the `twist_mux` over to the keyboard, so WASD
-  input drives the robot directly.
+  input drives the robot directly. Phones and tablets drive from an on-screen joystick instead (see
+  [Phone & Tablet Layouts § Manual driving on touch](/development/webui/touch-layouts#joystick)).
 - **Autopilot** keeps a dispatched run alive without the browser tab needing to stay open, because
   the unit-side `operation_supervisor` takes over dispatching the run itself.
 
 **Contracts:** the Manual Override toggle is [`POST /api/manual`](/development/message-contracts/http-api#manual) →
-[`manual.enable` / `disable`](/development/message-contracts/mqtt-commands#manual). WASD driving is a `geometry_msgs/Twist` on
+[`manual.enable` / `disable`](/development/message-contracts/mqtt-commands#manual). WASD and joystick driving is a `geometry_msgs/Twist` on
 [`server/key_vel`](/development/message-contracts/rosbridge#publications) at 10 Hz, which reaches the robot as
 [`string/key_vel`](/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel`. The Autopilot toggle is
 [`POST /api/autopilot`](/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/development/message-contracts/mqtt-commands#autopilot),
@@ -105,7 +106,7 @@ The full activity table:
 | Activity Key | Target UI Tab | Description |
 | --- | --- | --- |
 | `idle` | Idle | System initialized; motor controllers enabled but no active goal. |
-| `manual` | Idle | Manual teleop active via WASD keyboard controls. |
+| `manual` | Idle | Manual teleop active via WASD keys or the touch joystick. |
 | `mapping_active` | Mapping | Active SLAM mapping with `explore_lite` frontier exploration. |
 | `mapping_paused` | Mapping | SLAM exploration temporarily paused by operator. |
 | `mapping_stop_failed` | Mapping | Map saving failed; SLAM state remains active so operator can retry. |
@@ -310,6 +311,35 @@ nothing on it. A refused run clears the overlay again, and a refused single cust
 cyan drawer polygon so the operator still has an area to retry with. See
 [Coverage Cleaning § Initialization overlay](/development/webui/navigation/coverage-cleaning#initialization-overlay)
 for what covers the map while that switch runs.
+
+### Non-autopilot exit and map switch teardown
+
+When coverage or boustrophedon is actively running without Autopilot engaged, exiting the session or opening any map from the Database must cleanly terminate all operations.
+
+1. **Robot-side teardown**:
+   - `switch_mode.py` terminates all processes when entering idle, eliminating zombie boustrophedon instances.
+   - `system_command.py` initiates `cancel_and_stop_all_coverage()` upon non-autopilot idle, ping timeout, navigation init, and navigation deactivate. This routine cancels active `move_base` goals, calls `/path_coverage/cancel`, clears latched coverage plans (`/msd700/coverage_plan`) and polygons (`/msd700/coverage_polygon`), clears path plans and boustrophedon overlay topics, stops both coverage features in `switch_mode`, and sends a stop signal to `operation_supervisor`.
+   - `active_map_id` is cleared upon returning to idle or deactivating navigation, preventing stale map IDs from leaking into ping replies and triggering erroneous session recovery.
+
+2. **Frontend-side teardown**:
+   - `clearBrowserSession({ preserveAutonomousState: false })` removes persisted coverage entries from `localStorage` (`nav_coverage_state_persisted`) whenever the operator logs out without autopilot.
+   - When selecting or opening a map in `DatabaseComponent.tsx`, if autopilot is not enabled, the dashboard proactively calls `cancelAllCoverage(unitId)`, `sendOperationStop()`, and `clearCoverageState()`.
+   - `MapComponent.tsx` gates coverage snapshot restoration by autopilot state. If `operation_supervisor` emits an active coverage snapshot while autopilot is disabled, the snapshot is rejected, overlays and paths are hidden and cleared, and the UI returns to idle navigation defaults.
+
+### Takeover failsafe and recovery suppression
+
+When control of a unit is taken over by another session (another browser tab, device, or surface):
+
+1. **Recovery suppression**:
+   - The session that lost control must not enter or remain in any recovery state.
+   - `RobotConnectionStatus.tsx` dispatches a `sessionTakenOver` event when `origin_conflict` is acknowledged and marks `operatingSession.markLeaseLost(unitId)`.
+   - `MapComponent.tsx` and the navigation page listen for `sessionTakenOver` and check `wasLeaseLost(unitId)`. Any pending recovery sequence, snapshot application, or `Recovering Session...` overlay is immediately cancelled and dismissed (`setIsRecoveringSession(false)`).
+
+2. **Failsafe sign-out**:
+   - `SessionTakenOverNotice` provides a direct "Sign Out" action.
+   - Triggering sign-out (either by clicking "Sign Out" or through the automatic 8-second timeout) executes `clearBrowserSession({ preserveAutonomousState: true })`.
+   - All session credentials, tokens, and active unit selections are wiped from `sessionStorage`, ensuring the browser is redirected directly to the login page (`/`) in a signed-out state rather than bouncing to the unit list.
+   - The robot's ongoing operation and persisted autonomy state remain completely unaffected, allowing the taking-over session to continue uninterrupted.
 
 ## Related
 

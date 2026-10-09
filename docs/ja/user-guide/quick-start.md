@@ -14,7 +14,7 @@ search: false
 開始する前に、以下を確認してください。
 1. ダッシュボード上の有効なユーザーアカウントを持っていること。
 2. 管理者によって、少なくとも1台のロボットがアカウントに割り当てられていること。
-3. ノートPCまたはデスクトップPC上のGoogle ChromeまたはMicrosoft Edge。
+3. ノートPCまたはデスクトップPC上のGoogle ChromeまたはMicrosoft Edge。スマートフォンやタブレットもタッチ用レイアウトで使えます([スマートフォンとタブレット](/ja/user-guide/phones-and-tablets)を参照)。このガイドはデスクトップでの操作を説明します。
 
 ---
 
@@ -73,6 +73,8 @@ search: false
 - **A / D**: 左折 / 右折します。
 - **低速モードは Shift 長押し**: 狭い場所やマッピング時の精密な移動用の `0.20 m/s` です。操作パネル下のヒントには「Drive with W A S D · hold Shift = slow」と表示されます。
 - すべてのキーを離す(または **Stop** をクリック)とロボットは即座に停止します。
+
+スマートフォンやタブレットでは、画面上のジョイスティックで操作します([スマートフォンとタブレット](/ja/user-guide/phones-and-tablets#driving-with-the-joystick)を参照)。
 
 ---
 

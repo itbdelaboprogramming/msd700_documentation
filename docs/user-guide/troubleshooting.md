@@ -100,12 +100,16 @@ For low-level server errors, Docker container logs, or ROS driver diagnostics, s
 - **Operator Actions**:
   1. Log in again. The dashboard asks the robot what it is doing and restores your operation (see [How the Robot Behaves](/user-guide/behavior#coming-back)): nothing is lost unless the robot itself was paused or shut down meanwhile.
 
-### 8. Blank Page on a Phone/Tablet, or "Desktop Only" Overlay
-- **Symptom**: The dashboard refuses to render on a mobile device, or a blocking overlay covers a desktop window.
-- **Probable Causes**: The dashboard only supports desktop-size browser windows. Small windows are blocked deliberately so a half-visible control bar can never drive a live robot.
+### 8. "Desktop Only", "Turn Your Phone Upright" or "Screen Size Not Supported" Notice {#device-notice}
+- **Symptom**: A notice covers the page, or the page refuses to open.
+- **Probable Causes**:
+  - **"Turn your phone upright"**: the phone layout is portrait only. The page stays loaded underneath, and the robot keeps doing what it was doing.
+  - **"Desktop only" on a phone or tablet**: you opened the Admin Console, which needs a desktop or laptop. The operator pages work on phones and tablets.
+  - **"This screen size is not supported yet" on a desktop**: the window is smaller than 1400 x 720. Small windows are blocked deliberately so a half-visible control bar can never drive a live robot.
 - **Operator Actions**:
-  1. Switch to a laptop or desktop with Chrome or Edge.
-  2. If you see the overlay on a desktop, maximize the window (at least 1366 x 768) until it clears.
+  1. On a phone, hold it upright.
+  2. For the Admin Console, switch to a laptop or desktop with Chrome or Edge.
+  3. On a desktop, maximize the window or press **F11** (at least 1400 x 720), and reset the page zoom with **Ctrl + 0**.
 
 ---
 

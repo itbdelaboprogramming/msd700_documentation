@@ -39,6 +39,7 @@ Each section below walks through a specific feature with step-by-step instructio
   <LinkCard icon="🗄️" title="Maps & Database" details="View, search, rename, and delete your saved maps." link="/user-guide/database" />
   <LinkCard icon="📍" title="Routes & Coverage" details="Save point-to-point routes and draw areas for systematic cleaning sweeps." link="/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="Live Camera" details="Watch the robot's point of view in real time from anywhere." link="/user-guide/camera" />
+  <LinkCard icon="📱" title="Phones & Tablets" details="The touch layout: menu, map buttons, camera panel, and driving with the joystick." link="/user-guide/phones-and-tablets" />
   <LinkCard icon="🤖" title="How the Robot Behaves" details="Understand safety watchdogs, operating leases, Autopilot persistence, and session recovery." link="/user-guide/behavior" />
   <LinkCard icon="🛠️" title="Admin Console" details="For operators: add operators, manage rentals, and monitor unit status." link="/user-guide/admin-console" />
   <LinkCard icon="❓" title="Frequently Asked Questions" details="Answers to common operational questions regarding battery, maps, and connectivity." link="/user-guide/faq" />
@@ -63,7 +64,7 @@ Each section below walks through a specific feature with step-by-step instructio
 ## System Requirements
 
 - **Supported Browsers**: Google Chrome (recommended) or Microsoft Edge.
-- **Desktop only**: Use a laptop or desktop with a window at least 1366 x 768. Phones and tablets are blocked with a full-page notice, and smaller desktop windows are covered by a blocking overlay: a half-visible control bar must never drive a live robot.
+- **Devices**: A laptop or desktop with a window at least 1400 x 720, or a phone or tablet, which get a touch layout (see [Phones & Tablets](/user-guide/phones-and-tablets)). Smaller desktop windows are covered by a blocking overlay: a half-visible control bar must never drive a live robot. The Admin Console needs a desktop or laptop.
 - **Network**: Internet access for the cloud dashboard (`msd.nglobal.jp`), or a local Wi-Fi connection when operating robots offline in the field.
 
 ## Need Help?

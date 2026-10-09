@@ -19,7 +19,7 @@ Sebelum robot bisa bernavigasi di suatu ruangan, robot membutuhkan **peta** dari
 
 Anda bisa membangun peta dengan dua cara:
 
-- **Kemudikan secara manual**: Gunakan tombol **W A S D** (tahan **Shift** untuk mode lambat `0.20 m/s`) untuk mengemudikan robot perlahan mengelilingi seluruh area, termasuk sudut dan jalan buntu, agar tidak ada yang terlewat.
+- **Kemudikan secara manual**: Gunakan tombol **W A S D** (tahan **Shift** untuk mode lambat `0.20 m/s`), atau joystick di ponsel atau tablet, untuk mengemudikan robot perlahan mengelilingi seluruh area, termasuk sudut dan jalan buntu, agar tidak ada yang terlewat.
 - **Eksplorasi otonom**: Nyalakan toggle **Autopilot** di panel Robot Control dan robot akan menjelajahi area secara mandiri, mundur otomatis jika merasa terjebak di sudut. (Manual Override harus dalam keadaan mati: mengemudikan sendiri selalu diprioritaskan.)
 
 Saat Anda mengemudikan, peta akan terisi secara real-time di halaman: dinding dan rintangan muncul sebagai garis gelap, lantai terbuka muncul dengan warna lebih terang.

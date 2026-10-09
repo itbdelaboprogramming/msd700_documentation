@@ -100,12 +100,16 @@ Untuk error server tingkat rendah, log kontainer Docker, atau diagnostik driver 
 - **Tindakan Operator**:
   1. Masuk kembali. Dashboard akan menanyakan ke robot apa yang sedang dilakukannya dan memulihkan operasi Anda (lihat [Bagaimana Robot Berperilaku](/id/user-guide/behavior#kembali-lagi)): tidak ada yang hilang kecuali robot itu sendiri sempat dijeda atau dimatikan.
 
-### 8. Halaman Kosong di Ponsel/Tablet, atau Overlay "Desktop Only"
-- **Gejala**: Dashboard menolak tampil di perangkat seluler, atau overlay pemblokir menutupi jendela desktop.
-- **Kemungkinan Penyebab**: Dashboard hanya mendukung jendela browser berukuran desktop. Jendela kecil diblokir secara sengaja agar bilah kendali yang terlihat separuh tidak pernah mengendalikan robot yang sedang aktif.
+### 8. Pemberitahuan "Desktop Only", "Turn Your Phone Upright" atau "Screen Size Not Supported" {#device-notice}
+- **Gejala**: Sebuah pemberitahuan menutupi halaman, atau halaman menolak terbuka.
+- **Kemungkinan Penyebab**:
+  - **"Turn your phone upright"**: tata letak ponsel hanya untuk posisi tegak (portrait). Halaman tetap termuat di bawahnya, dan robot tetap melanjutkan pekerjaannya.
+  - **"Desktop only" di ponsel atau tablet**: Anda membuka Konsol Admin, yang membutuhkan desktop atau laptop. Halaman operator berfungsi di ponsel dan tablet.
+  - **"This screen size is not supported yet" di desktop**: jendela lebih kecil dari 1400 x 720. Jendela kecil diblokir secara sengaja agar bilah kendali yang terlihat separuh tidak pernah mengendalikan robot yang sedang aktif.
 - **Tindakan Operator**:
-  1. Beralih ke laptop atau desktop dengan Chrome atau Edge.
-  2. Jika overlay muncul di desktop, maksimalkan jendela (minimal 1366 x 768) hingga overlay tersebut hilang.
+  1. Di ponsel, pegang ponsel dalam posisi tegak.
+  2. Untuk Konsol Admin, beralih ke laptop atau desktop dengan Chrome atau Edge.
+  3. Di desktop, maksimalkan jendela atau tekan **F11** (minimal 1400 x 720), dan kembalikan zoom halaman dengan **Ctrl + 0**.
 
 ---
 

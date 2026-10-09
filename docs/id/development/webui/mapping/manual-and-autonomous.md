@@ -23,8 +23,8 @@ dan sebagian besar hanya mengawasi, memakai Pause/Stop dan emergency stop bila d
 ## Manual Override
 
 Sidebar me-render `ManualAutopilotPanel`, komponen bersama yang sama yang dipakai di halaman
-Navigasi. Mengaktifkan **Manual Override** di halaman Pemetaan menyerahkan teleop keyboard WASD ke
-operator, mengambil alih kemudi dari perilaku eksplorasi otonom yang dijelaskan di atas. Ini
+Navigasi. Mengaktifkan **Manual Override** di halaman Pemetaan menyerahkan teleop keyboard WASD (joystick
+di ponsel atau tablet) ke operator, mengambil alih kemudi dari perilaku eksplorasi otonom yang dijelaskan di atas. Ini
 adalah komponen dan toggle yang sama seperti di Navigasi; yang berbeda hanyalah apa yang
 kendalinya diserahkan *dari* (eksplorasi otonom di sini, alih-alih goal yang dikirim atau sapuan
 cakupan di Navigasi), sehingga mekanismenya tidak diulang di halaman ini.

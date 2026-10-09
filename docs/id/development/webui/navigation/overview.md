@@ -166,8 +166,9 @@ dengan satu jari tidak butuh kode tambahan, dan karena itu pula ada tiga pengama
   dan event-nya persis sama dengan double-click mouse. Keduanya private, tetapi library ini
   di-vendor di `public/script`, jadi tidak bisa berubah di bawah dashboard.
 
-Input sentuh sampai ke operator di laptop dan monitor layar sentuh. Ponsel dan tablet masih
-dihentikan oleh `DeviceGuard`.
+Input sentuh sampai ke operator di laptop dan monitor layar sentuh, yang tetap memakai tata letak
+desktop, serta di ponsel dan tablet, yang mendapat tata letak sentuh yang dijelaskan di
+[Tata Letak Ponsel & Tablet](/id/development/webui/touch-layouts).
 
 ## UI pendukung
 

@@ -77,7 +77,7 @@ rosbridge はグリッドを PNG エンコードしたペイロードで送り�
 
 | トピック | 型 | 送信タイミング | ロボットが受け取るもの |
 | --- | --- | --- | --- |
-| `<root>/server/key_vel` | `geometry_msgs/Twist` | 手動操作中: 10 Hz で送り続ける(キーを押していなければゼロの twist)。加えてウィンドウのフォーカス喪失時と手動操作オフ時にゼロの twist。`linear.x` ±0.4 m/s、`angular.z` ±1.0 rad/s(Shift で 0.2 と 0.5) | [`/mux/key_vel`](/ja/development/message-contracts/bridge-topics#json-twist) |
+| `<root>/server/key_vel` | `geometry_msgs/Twist` | 手動操作中: 10 Hz で送り続ける(キーを押していなければゼロの twist)。加えてウィンドウのフォーカス喪失時と手動操作オフ時にゼロの twist。`linear.x` ±0.4 m/s、`angular.z` ±1.0 rad/s(Shift で 0.2 と 0.5)。タッチのジョイスティックは倒した量に応じて両方を同じ ±0.4 と ±1.0 まで調整し、Shift の段階はない | [`/mux/key_vel`](/ja/development/message-contracts/bridge-topics#json-twist) |
 | `<root>/initialpose` | `geometry_msgs/PoseWithCovarianceStamped` | 姿勢推定、ホームベース姿勢の初期化 | [`/initialpose`](/ja/development/message-contracts/bridge-topics#json-initialpose) |
 | `<root>/string/move_base/result_ack` | `std_msgs/String` | 受け取った `move_base` の result ごと、data = `goal_id.id` | [ACK](/ja/development/message-contracts/bridge-topics#acks) |
 | `<root>/string/boustrophedon_path_ack` | `std_msgs/String` | 描画したカバレッジパスのリビジョンごと、data = リビジョン | [ACK](/ja/development/message-contracts/bridge-topics#acks) |

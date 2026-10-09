@@ -17,7 +17,7 @@ search: false
 ## Manual Override
 
 サイドバーはNavigation画面で使われているのと同じ共有コンポーネント`ManualAutopilotPanel`をレンダーする。Mapping画面で**Manual
-Override**を切り替えると、WASDキーボードテレオペがオペレーターに引き渡され、上記の自律探索の動作から運転が奪われる。これはNavigationと同じコンポーネント・同じトグルである。異なるのは、制御を*何から*奪うかだけである(ここでは自律探索であり、Navigationでは送信済みのゴールやカバレッジ清掃の掃引である)。そのため、その仕組みは本ページでは繰り返さない。
+Override**を切り替えると、WASDキーボードテレオペ(スマートフォンやタブレットではジョイスティック)がオペレーターに引き渡され、上記の自律探索の動作から運転が奪われる。これはNavigationと同じコンポーネント・同じトグルである。異なるのは、制御を*何から*奪うかだけである(ここでは自律探索であり、Navigationでは送信済みのゴールやカバレッジ清掃の掃引である)。そのため、その仕組みは本ページでは繰り返さない。
 
 **メッセージ仕様:** ナビゲーションと同じ: [`POST /api/manual`](/ja/development/message-contracts/http-api#manual) →
 [`manual.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#manual)、WASD は [`<root>/server/key_vel`](/ja/development/message-contracts/rosbridge#publications) 上の `Twist`。

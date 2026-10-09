@@ -43,6 +43,8 @@ The robot's sensor can see through clear glass or get confused by mirrors, so gl
 You drive with the **W A S D** keys; there are two fixed speeds:
 - **Normal**: `0.40 m/s` forward.
 - **Slow mode**: hold **Shift** for `0.20 m/s` precise movement, e.g. in tight spaces or while mapping.
+
+On a phone or tablet the joystick is analog instead: the further you push it, the faster the robot goes, up to `0.40 m/s`.
 :::
 
 ::: details 8. How long does the battery last and how is it monitored?
@@ -52,7 +54,7 @@ The robot is powered by a 24V LiFePO4 high-capacity battery pack providing **4 t
 :::
 
 ::: details 9. Can I operate the robot if there is no internet connection in the building?
-Yes. Every MSD700 robot runs an onboard web server. Connect your laptop directly to the robot's Wi-Fi hotspot (ask your administrator for its name) and open `http://mymsd.jp` in Chrome or Edge (on another local network, `http://<robot-ip>:3000`). You can perform all mapping, teleoperation, and coverage routines completely offline. Note the dashboard requires a desktop-size browser window even offline: phones and tablets are not supported.
+Yes. Every MSD700 robot runs an onboard web server. Connect your laptop directly to the robot's Wi-Fi hotspot (ask your administrator for its name) and open `http://mymsd.jp` in Chrome or Edge (on another local network, `http://<robot-ip>:3000`). You can perform all mapping, teleoperation, and coverage routines completely offline. The local dashboard works on a phone or tablet too, with the same touch layout as the cloud one (see [Phones & Tablets](/user-guide/phones-and-tablets)).
 :::
 
 ::: details 10. How does the Emergency Stop work?

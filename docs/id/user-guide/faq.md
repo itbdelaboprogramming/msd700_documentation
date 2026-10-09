@@ -43,6 +43,8 @@ Sensor robot dapat menembus kaca bening atau menjadi bingung karena cermin, sehi
 Anda mengemudikan dengan tombol **W A S D**; ada dua kecepatan tetap:
 - **Normal**: `0.40 m/s` maju.
 - **Mode lambat**: tahan **Shift** untuk gerakan presisi `0.20 m/s`, misalnya di ruang sempit atau saat pemetaan.
+
+Di ponsel atau tablet, joystick bersifat analog: makin jauh didorong, makin cepat robot berjalan, hingga `0.40 m/s`.
 :::
 
 ::: details 8. Berapa lama baterai bertahan dan bagaimana pemantauannya?
@@ -52,7 +54,7 @@ Robot ditenagai oleh paket baterai LiFePO4 24V berkapasitas tinggi yang menyedia
 :::
 
 ::: details 9. Bisakah saya mengoperasikan robot jika tidak ada koneksi internet di gedung?
-Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop Anda langsung ke hotspot Wi-Fi robot (tanyakan namanya ke administrator) dan buka `http://mymsd.jp` di Chrome atau Edge (jika lewat jaringan lokal lain, `http://<robot-ip>:3000`). Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan coverage sepenuhnya secara offline. Perhatikan bahwa dashboard membutuhkan jendela browser berukuran desktop bahkan saat offline: ponsel dan tablet tidak didukung.
+Ya. Setiap robot MSD700 menjalankan server web onboard. Sambungkan laptop Anda langsung ke hotspot Wi-Fi robot (tanyakan namanya ke administrator) dan buka `http://mymsd.jp` di Chrome atau Edge (jika lewat jaringan lokal lain, `http://<robot-ip>:3000`). Anda dapat melakukan semua rutinitas pemetaan, teleoperasi, dan coverage sepenuhnya secara offline. Dashboard lokal juga berfungsi di ponsel atau tablet, dengan tata letak sentuh yang sama seperti versi cloud (lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets)).
 :::
 
 ::: details 10. Bagaimana cara kerja Emergency Stop?

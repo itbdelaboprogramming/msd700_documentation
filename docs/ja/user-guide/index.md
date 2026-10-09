@@ -39,6 +39,7 @@ ROS Web UI では、以下のことが可能です。
   <LinkCard icon="🗄️" title="マップとデータベース" details="保存済みマップの表示、検索、名前変更、削除。" link="/ja/user-guide/database" />
   <LinkCard icon="📍" title="ルートとカバレッジ" details="地点間ルートの保存と、体系的な清掃のためのエリア描画。" link="/ja/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="ライブカメラ" details="どこからでもロボットの視点をリアルタイムに確認。" link="/ja/user-guide/camera" />
+  <LinkCard icon="📱" title="スマートフォンとタブレット" details="タッチ用レイアウト: メニュー、マップのボタン、カメラパネル、ジョイスティックでの操作。" link="/ja/user-guide/phones-and-tablets" />
   <LinkCard icon="🤖" title="ロボットの動作仕様" details="セーフティウォッチドッグ、操作リース、オートパイロットの持続性、セッション復旧について理解します。" link="/ja/user-guide/behavior" />
   <LinkCard icon="🛠️" title="管理コンソール" details="ユニット管理者向け:オペレーターの追加、レンタル管理、全ユニット状況の監視。" link="/ja/user-guide/admin-console" />
   <LinkCard icon="❓" title="よくある質問 (FAQ)" details="バッテリー、マップ、接続に関する一般的な運用上の質問への回答です。" link="/ja/user-guide/faq" />
@@ -63,7 +64,7 @@ ROS Web UI では、以下のことが可能です。
 ## システム要件
 
 - **対応ブラウザ**: Google Chrome(推奨)またはMicrosoft Edge。
-- **デスクトップのみ**: ノートPCまたはデスクトップPCで、ウィンドウサイズは最低1366 x 768で使用してください。スマートフォンやタブレットは全画面の通知でブロックされ、小さなデスクトップウィンドウはブロック表示で覆われます。中途半端に表示された操作バーで実機を操作させないための仕様です。
+- **対応デバイス**: ウィンドウサイズが最低1400 x 720のノートPCまたはデスクトップPC、またはタッチ用レイアウトで表示されるスマートフォンとタブレット([スマートフォンとタブレット](/ja/user-guide/phones-and-tablets)を参照)。それより小さなデスクトップウィンドウはブロック表示で覆われます。中途半端に表示された操作バーで実機を操作させないための仕様です。管理コンソールにはノートPCまたはデスクトップPCが必要です。
 - **ネットワーク**: クラウドダッシュボード(`msd.nglobal.jp`)へのインターネットアクセス、またはフィールドでロボットをオフライン運用する際のローカルWi-Fi接続。
 
 ## お困りの場合
