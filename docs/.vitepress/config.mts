@@ -49,6 +49,7 @@ const enSidebar = {
         { text: 'Maps & Database', link: '/user-guide/database' },
         { text: 'Routes & Coverage', link: '/user-guide/routes-coverage' },
         { text: 'Live Camera', link: '/user-guide/camera' },
+        { text: 'Phones & Tablets', link: '/user-guide/phones-and-tablets' },
       ]
     },
     {
@@ -223,6 +224,7 @@ const enSidebar = {
           text: 'Platform Reference',
           items: [
             { text: 'Frontend Canvas & Web UI', link: '/development/frontend-canvas' },
+            { text: 'Phone & Tablet Layouts', link: '/development/webui/touch-layouts' },
             { text: 'Database Schema', link: '/development/database-schema' },
             { text: 'Data Sync (Offline First)', link: '/development/data-sync' },
             { text: 'Backup & Restore', link: '/development/backup-and-restore' },
@@ -278,6 +280,7 @@ const idSidebar = {
         { text: 'Peta & Database', link: '/id/user-guide/database' },
         { text: 'Rute & Coverage', link: '/id/user-guide/routes-coverage' },
         { text: 'Kamera Langsung', link: '/id/user-guide/camera' },
+        { text: 'Ponsel & Tablet', link: '/id/user-guide/phones-and-tablets' },
       ]
     },
     {
@@ -452,6 +455,7 @@ const idSidebar = {
           text: 'Referensi Platform',
           items: [
             { text: 'Canvas Frontend & Web UI', link: '/id/development/frontend-canvas' },
+            { text: 'Tata Letak Ponsel & Tablet', link: '/id/development/webui/touch-layouts' },
             { text: 'Skema Database', link: '/id/development/database-schema' },
             { text: 'Sinkronisasi Data (Offline First)', link: '/id/development/data-sync' },
             { text: 'Cadangan & Pemulihan', link: '/id/development/backup-and-restore' },
@@ -507,6 +511,7 @@ const jaSidebar = {
         { text: 'マップとデータベース', link: '/ja/user-guide/database' },
         { text: 'ルートとカバレッジ', link: '/ja/user-guide/routes-coverage' },
         { text: 'ライブカメラ', link: '/ja/user-guide/camera' },
+        { text: 'スマートフォンとタブレット', link: '/ja/user-guide/phones-and-tablets' },
       ]
     },
     {
@@ -681,6 +686,7 @@ const jaSidebar = {
           text: 'プラットフォームリファレンス',
           items: [
             { text: 'フロントエンド Canvas & Web UI', link: '/ja/development/frontend-canvas' },
+            { text: 'スマートフォン・タブレットのレイアウト', link: '/ja/development/webui/touch-layouts' },
             { text: 'データベース設計', link: '/ja/development/database-schema' },
             { text: 'データ同期 (オフラインファースト)', link: '/ja/development/data-sync' },
             { text: 'バックアップ & リストア', link: '/ja/development/backup-and-restore' },

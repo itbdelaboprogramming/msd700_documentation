@@ -14,7 +14,7 @@ Panduan ini memandu Anda melalui proses masuk ke dashboard MSD700, mengambil ali
 Sebelum memulai, pastikan Anda memiliki:
 1. Akun pengguna aktif di dashboard.
 2. Setidaknya satu robot yang ditetapkan ke akun Anda oleh administrator.
-3. Google Chrome atau Microsoft Edge pada laptop atau komputer desktop.
+3. Google Chrome atau Microsoft Edge pada laptop atau komputer desktop. Ponsel atau tablet juga bisa, dengan tata letak sentuh (lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets)); panduan ini menjelaskan tampilan desktop.
 
 ---
 
@@ -73,6 +73,8 @@ Anda mengemudikan robot secara manual dengan keyboard:
 - **A / D**: Belok kiri / kanan.
 - **Tahan Shift untuk mode lambat**: Gerakan presisi `0.20 m/s` untuk ruang sempit dan pemetaan. Petunjuk di bawah kontrol berbunyi "Drive with W A S D · hold Shift = slow".
 - **Lepaskan semua tombol** (atau klik **Stop**) untuk menghentikan robot seketika.
+
+Di ponsel atau tablet Anda mengemudi dengan joystick di layar (lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets#driving-with-the-joystick)).
 
 ---
 

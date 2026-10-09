@@ -26,6 +26,8 @@ Use manual control when you want to drive the robot yourself, step by step.
    - Hold **Shift** for slow mode (`0.20 m/s`) when precision matters
 3. Release all keys (or click **Stop**) to halt the robot immediately.
 
+On a phone or tablet there is no keyboard: an on-screen joystick appears instead, and the robot stops when you lift your finger. See [Phones & Tablets](/user-guide/phones-and-tablets#driving-with-the-joystick).
+
 ::: info Note
 Manual Override always takes priority over any automatic mission: the two toggles are mutually exclusive, so turning it on pauses autonomous driving.
 :::
@@ -40,7 +42,7 @@ Manual Override always takes priority over any automatic mission: the two toggle
 
 You can queue several stops in order and save them as a reusable route (see [Routes & Coverage](/user-guide/routes-coverage)).
 
-### Moving Around the Map
+### Moving Around the Map {#moving-around-the-map}
 
 The map works with a mouse and with a touchscreen. Each touch gesture does what its mouse counterpart does:
 
@@ -52,7 +54,7 @@ The map works with a mouse and with a touchscreen. Each touch gesture does what 
 | Add a custom-area point | Click | Tap |
 | Remove a pin or custom-area point | Double-click it | Double-tap it |
 
-Two fingers are always pan and zoom, never a pin: if a second finger touches the screen while you are dragging out a pin, that pin is dropped. Touch works on touchscreen laptops and touchscreen monitors. Phones and tablets are still blocked by the desktop-only notice (see [Troubleshooting](/user-guide/troubleshooting#_8-blank-page-on-a-phone-tablet-or-desktop-only-overlay)).
+Two fingers are always pan and zoom, never a pin: if a second finger touches the screen while you are dragging out a pin, that pin is dropped. Touch works on touchscreen laptops and monitors, phones and tablets. On phones and tablets the zoom buttons sit behind the **Dots** button (see [Phones & Tablets](/user-guide/phones-and-tablets#controls-on-the-map)).
 
 ### Reading the Map Canvas
 

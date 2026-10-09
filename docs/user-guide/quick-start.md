@@ -14,7 +14,7 @@ This guide walks you through logging in to the MSD700 dashboard, taking control 
 Before starting, ensure you have:
 1. An active user account on the dashboard.
 2. At least one robot assigned to your account by an administrator.
-3. Google Chrome or Microsoft Edge on a laptop or desktop computer.
+3. Google Chrome or Microsoft Edge on a laptop or desktop computer. A phone or tablet works too, with a touch layout (see [Phones & Tablets](/user-guide/phones-and-tablets)); this guide describes the desktop.
 
 ---
 
@@ -73,6 +73,8 @@ You drive the robot manually with your keyboard:
 - **A / D**: Turn left / right.
 - **Hold Shift for slow mode**: Precise movement at `0.20 m/s` for tight spaces and mapping. The hint under the controls reads "Drive with W A S D · hold Shift = slow".
 - **Release all keys** (or click **Stop**) to halt the robot immediately.
+
+On a phone or tablet you drive with an on-screen joystick instead (see [Phones & Tablets](/user-guide/phones-and-tablets#driving-with-the-joystick)).
 
 ---
 

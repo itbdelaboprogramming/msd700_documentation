@@ -21,7 +21,8 @@ Mapping, tetapi kedua toggle ini membawa bobot praktis yang berbeda di sini:
 
 - **Manual Override** menghentikan operasi otonom yang sedang berjalan di halaman ini (pinpoint
   yang dikirim, rute multi-titik, atau sapuan cakupan) dan menyerahkan `twist_mux` ke keyboard,
-  sehingga input WASD mengemudikan robot secara langsung.
+  sehingga input WASD mengemudikan robot secara langsung. Ponsel dan tablet mengemudi dengan
+  joystick di layar (lihat [Tata Letak Ponsel & Tablet § Mengemudi manual di layar sentuh](/id/development/webui/touch-layouts#joystick)).
 - **Autopilot** menjaga jalannya run yang telah dikirim tetap hidup tanpa perlu tab browser tetap
   terbuka, karena `operation_supervisor` di sisi unit mengambil alih pengiriman run itu sendiri.
 
@@ -31,7 +32,7 @@ Override dan Autopilot di sana.
 
 **Kontrak:** toggle Manual Override adalah
 [`POST /api/manual`](/id/development/message-contracts/http-api#manual) → [`manual.enable` / `disable`](/id/development/message-contracts/mqtt-commands#manual). Mengemudi
-WASD adalah `geometry_msgs/Twist` di [`server/key_vel`](/id/development/message-contracts/rosbridge#publications) 10 Hz, yang sampai ke robot
+WASD dan joystick adalah `geometry_msgs/Twist` di [`server/key_vel`](/id/development/message-contracts/rosbridge#publications) 10 Hz, yang sampai ke robot
 sebagai [`string/key_vel`](/id/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel`. Toggle Autopilot adalah
 [`POST /api/autopilot`](/id/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/id/development/message-contracts/mqtt-commands#autopilot),
 berpasangan dengan [`batch` + `takeover`](/id/development/message-contracts/operation-sync#takeover) saat aktif dan
@@ -106,7 +107,7 @@ Tabel aktivitas lengkap:
 | Kunci Aktivitas | Tab UI Target | Deskripsi |
 | --- | --- | --- |
 | `idle` | Idle | Sistem terinisialisasi; motor controller aktif namun tidak ada goal aktif. |
-| `manual` | Idle | Teleop manual aktif lewat kontrol keyboard WASD. |
+| `manual` | Idle | Teleop manual aktif lewat tombol WASD atau joystick sentuh. |
 | `mapping_active` | Mapping | Pemetaan SLAM aktif dengan eksplorasi frontier `explore_lite`. |
 | `mapping_paused` | Mapping | Eksplorasi SLAM dijeda sementara oleh operator. |
 | `mapping_stop_failed` | Mapping | Penyimpanan peta gagal; state SLAM tetap aktif agar operator bisa mencoba lagi. |
@@ -323,6 +324,35 @@ yang ditolak akan menggambar ulang polygon drawer cyan sehingga operator tetap m
 untuk dicoba ulang. Lihat
 [Pembersihan Cakupan § Overlay inisialisasi](/id/development/webui/navigation/coverage-cleaning#initialization-overlay)
 untuk apa yang menutupi peta selama perpindahan mode itu berjalan.
+
+### Teardown keluar sesi dan pergantian peta non-autopilot
+
+Ketika cakupan atau boustrophedon sedang berjalan tanpa mode Autopilot aktif, keluar dari sesi atau membuka peta apa pun dari Database harus menghentikan seluruh operasi secara bersih.
+
+1. **Teardown sisi robot**:
+   - `switch_mode.py` mematikan semua proses saat masuk ke mode idle, mencegah proses zombie boustrophedon tertinggal.
+   - `system_command.py` memanggil `cancel_and_stop_all_coverage()` saat idle non-autopilot, timeout ping, inisialisasi navigasi, dan deaktivasi navigasi. Rutinitas ini membatalkan goal `move_base` yang aktif, memanggil `/path_coverage/cancel`, membersihkan topik rencana cakupan (`/msd700/coverage_plan`) dan poligon (`/msd700/coverage_polygon`) yang ter-latch, membersihkan overlay jalur, mematikan kedua fitur tambahan di `switch_mode`, serta mengirim sinyal stop ke `operation_supervisor`.
+   - `active_map_id` dikosongkan saat kembali ke idle atau mematikan navigasi, sehingga ID peta usang tidak bocor ke respons ping dan memicu pemulihan sesi yang keliru.
+
+2. **Teardown sisi frontend**:
+   - `clearBrowserSession({ preserveAutonomousState: false })` menghapus entri cakupan persisten dari `localStorage` (`nav_coverage_state_persisted`) setiap kali operator keluar tanpa autopilot.
+   - Saat memilih atau membuka peta di `DatabaseComponent.tsx`, jika autopilot tidak menyala, dashboard secara proaktif memanggil `cancelAllCoverage(unitId)`, `sendOperationStop()`, dan `clearCoverageState()`.
+   - `MapComponent.tsx` membatasi pemulihan snapshot cakupan dengan status autopilot. Jika `operation_supervisor` memancarkan snapshot cakupan aktif saat autopilot tidak menyala, snapshot tersebut ditolak, overlay dan jalur disembunyikan dan dibersihkan, serta tampilan UI dikembalikan ke kondisi default navigasi idle.
+
+### Failsafe pengambilalihan (takeover) dan penekanan recovery
+
+Ketika kendali sebuah unit diambil alih (takeover) oleh sesi lain (tab browser, perangkat, atau antarmuka lain):
+
+1. **Penekanan pemulihan (recovery suppression)**:
+   - Sesi yang kehilangan kendali tidak boleh masuk atau berada dalam status pemulihan apa pun.
+   - `RobotConnectionStatus.tsx` mengirimkan event `sessionTakenOver` saat `origin_conflict` terkonfirmasi dan menandai `operatingSession.markLeaseLost(unitId)`.
+   - `MapComponent.tsx` dan halaman navigasi mendengarkan `sessionTakenOver` dan memeriksa `wasLeaseLost(unitId)`. Setiap urutan pemulihan, penerapan snapshot, atau overlay `Recovering Session...` langsung dibatalkan dan disembunyikan (`setIsRecoveringSession(false)`).
+
+2. **Sign-out failsafe**:
+   - `SessionTakenOverNotice` menyediakan tombol tindakan langsung "Sign Out".
+   - Memicu sign-out (baik melalui klik tombol "Sign Out" maupun timeout otomatis 8 detik) menjalankan `clearBrowserSession({ preserveAutonomousState: true })`.
+   - Seluruh kredensial sesi, token, dan pilihan unit aktif dihapus dari `sessionStorage`, memastikan browser langsung diarahkan ke halaman login (`/`) dalam kondisi tersignout dan aman, bukan terlempar ke daftar unit.
+   - Operasi robot yang sedang berjalan serta status otonom persisten tetap utuh tanpa terputus, sehingga sesi baru yang mengambil alih dapat melanjutkan tugasnya dengan lancar.
 
 ## Terkait
 

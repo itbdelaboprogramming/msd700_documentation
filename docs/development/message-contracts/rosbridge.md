@@ -77,7 +77,7 @@ advertised `ROSLIB.Topic` per name for the whole session (`operation_sync`, `bou
 
 | Topic | Type | Sent when | Robot receives |
 | --- | --- | --- | --- |
-| `<root>/server/key_vel` | `geometry_msgs/Twist` | While manual override is on: continuously at 10 Hz (a zero twist when no key is held), plus a zero twist on window blur and when manual is turned off. `linear.x` ±0.4 m/s and `angular.z` ±1.0 rad/s (Shift: 0.2 and 0.5). | [`/mux/key_vel`](/development/message-contracts/bridge-topics#json-twist) |
+| `<root>/server/key_vel` | `geometry_msgs/Twist` | While manual override is on: continuously at 10 Hz (a zero twist when no key is held), plus a zero twist on window blur and when manual is turned off. `linear.x` ±0.4 m/s and `angular.z` ±1.0 rad/s (Shift: 0.2 and 0.5). The touch joystick scales both by its deflection, up to the same ±0.4 and ±1.0, with no Shift step. | [`/mux/key_vel`](/development/message-contracts/bridge-topics#json-twist) |
 | `<root>/initialpose` | `geometry_msgs/PoseWithCovarianceStamped` | pose estimate, home base pose seed | [`/initialpose`](/development/message-contracts/bridge-topics#json-initialpose) |
 | `<root>/string/move_base/result_ack` | `std_msgs/String` | every `move_base` result seen, data = `goal_id.id` | [ACK](/development/message-contracts/bridge-topics#acks) |
 | `<root>/string/boustrophedon_path_ack` | `std_msgs/String` | every coverage path revision drawn, data = revision | [ACK](/development/message-contracts/bridge-topics#acks) |

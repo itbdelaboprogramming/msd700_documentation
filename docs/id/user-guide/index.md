@@ -39,6 +39,7 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
   <LinkCard icon="🗄️" title="Peta & Database" details="Lihat, cari, ganti nama, dan hapus peta yang tersimpan." link="/id/user-guide/database" />
   <LinkCard icon="📍" title="Rute & Coverage" details="Simpan rute titik-ke-titik dan gambar area untuk penyapuan sistematis." link="/id/user-guide/routes-coverage" />
   <LinkCard icon="📷" title="Kamera Langsung" details="Lihat sudut pandang robot secara real-time dari mana saja." link="/id/user-guide/camera" />
+  <LinkCard icon="📱" title="Ponsel & Tablet" details="Tata letak sentuh: menu, tombol peta, panel kamera, dan mengemudi dengan joystick." link="/id/user-guide/phones-and-tablets" />
   <LinkCard icon="🤖" title="Bagaimana Robot Berperilaku" details="Pahami watchdog keselamatan, lease operasi, persistensi Autopilot, dan pemulihan sesi." link="/id/user-guide/behavior" />
   <LinkCard icon="🛠️" title="Konsol Admin" details="Untuk manajer unit: tambah operator, kelola penyewaan, dan pantau status semua unit." link="/id/user-guide/admin-console" />
   <LinkCard icon="❓" title="Tanya Jawab (FAQ)" details="Jawaban untuk pertanyaan operasional umum mengenai baterai, peta, dan konektivitas." link="/id/user-guide/faq" />
@@ -63,7 +64,7 @@ Setiap bagian di bawah menjelaskan satu fitur langkah demi langkah, ditulis untu
 ## Persyaratan Sistem
 
 - **Browser yang Didukung**: Google Chrome (disarankan) atau Microsoft Edge.
-- **Hanya desktop**: Gunakan laptop atau desktop dengan jendela minimal 1366 x 768. Ponsel dan tablet diblokir dengan pemberitahuan satu halaman penuh, dan jendela desktop yang lebih kecil ditutup overlay pemblokir: bilah kendali yang terlihat separuh tidak boleh mengendalikan robot yang sedang aktif.
+- **Perangkat**: Laptop atau desktop dengan jendela minimal 1400 x 720, atau ponsel dan tablet, yang mendapat tata letak sentuh (lihat [Ponsel & Tablet](/id/user-guide/phones-and-tablets)). Jendela desktop yang lebih kecil ditutup overlay pemblokir: bilah kendali yang terlihat separuh tidak boleh mengendalikan robot yang sedang aktif. Konsol Admin tetap membutuhkan desktop atau laptop.
 - **Jaringan**: Akses internet untuk dashboard cloud (`msd.nglobal.jp`), atau koneksi Wi-Fi lokal saat mengoperasikan robot secara offline di lapangan.
 
 ## Butuh Bantuan?

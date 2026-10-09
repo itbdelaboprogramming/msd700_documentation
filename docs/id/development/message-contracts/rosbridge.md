@@ -77,7 +77,7 @@ ROS yang baru belum tersambung ke relay yang men-subscribe-nya. Karena itu dashb
 
 | Topik | Tipe | Dikirim saat | Diterima robot |
 | --- | --- | --- | --- |
-| `<root>/server/key_vel` | `geometry_msgs/Twist` | Selama manual override aktif: terus-menerus 10 Hz (twist nol bila tidak ada tombol ditekan), ditambah twist nol saat window blur dan saat manual dimatikan. `linear.x` ±0,4 m/s dan `angular.z` ±1,0 rad/s (Shift: 0,2 dan 0,5). | [`/mux/key_vel`](/id/development/message-contracts/bridge-topics#json-twist) |
+| `<root>/server/key_vel` | `geometry_msgs/Twist` | Selama manual override aktif: terus-menerus 10 Hz (twist nol bila tidak ada tombol ditekan), ditambah twist nol saat window blur dan saat manual dimatikan. `linear.x` ±0,4 m/s dan `angular.z` ±1,0 rad/s (Shift: 0,2 dan 0,5). Joystick sentuh menskalakan keduanya sesuai simpangannya, hingga ±0,4 dan ±1,0 yang sama, tanpa langkah Shift. | [`/mux/key_vel`](/id/development/message-contracts/bridge-topics#json-twist) |
 | `<root>/initialpose` | `geometry_msgs/PoseWithCovarianceStamped` | estimasi pose, seed pose home base | [`/initialpose`](/id/development/message-contracts/bridge-topics#json-initialpose) |
 | `<root>/string/move_base/result_ack` | `std_msgs/String` | setiap result `move_base` yang terlihat, data = `goal_id.id` | [ACK](/id/development/message-contracts/bridge-topics#acks) |
 | `<root>/string/boustrophedon_path_ack` | `std_msgs/String` | setiap revisi path coverage yang tergambar, data = revisi | [ACK](/id/development/message-contracts/bridge-topics#acks) |

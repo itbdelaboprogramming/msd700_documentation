@@ -22,7 +22,8 @@ Pause/Stop and the emergency stop as needed.
 ## Manual Override
 
 The sidebar renders `ManualAutopilotPanel`, the same shared component used on the Navigation page.
-Toggling **Manual Override** on the Mapping page hands WASD keyboard teleop to the operator,
+Toggling **Manual Override** on the Mapping page hands WASD keyboard teleop (the joystick on
+a phone or tablet) to the operator,
 taking over driving from the autonomous exploration behavior described above. This is the same
 component and toggle as Navigation's; only what it hands control *away from* differs (autonomous
 exploration here, rather than a dispatched goal or coverage sweep on Navigation), so its mechanics

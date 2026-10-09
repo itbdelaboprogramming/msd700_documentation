@@ -16,14 +16,14 @@ List/Action Barパターンとcanvasパイプラインについては[概要](/j
 
 `ManualAutopilotPanel`はサイドバーに配置されており、Mappingページでレンダーされるのと同じコンポーネントだが、この2つのトグルはここでは実務上異なる重みを持つ。
 
-- **Manual Override**は、このページで実行中の自律動作(送信済みのピンポイント、複数点ルート、またはカバレッジ清掃の掃引)を停止し、`twist_mux`をキーボードに引き渡す。これによりWASD入力がロボットを直接操作する。
+- **Manual Override**は、このページで実行中の自律動作(送信済みのピンポイント、複数点ルート、またはカバレッジ清掃の掃引)を停止し、`twist_mux`をキーボードに引き渡す。これによりWASD入力がロボットを直接操作する。スマートフォンとタブレットでは代わりに画面上のジョイスティックで操作する([スマートフォン・タブレットのレイアウト § タッチでの手動操作](/ja/development/webui/touch-layouts#joystick)を参照)。
 - **Autopilot**は、ブラウザタブを開いたままにしなくても送信済みのrunを維持する。ユニット側の`operation_supervisor`がrunの送信そのものを引き継ぐためである。
 
 同じパネルはMappingページのサイドバーにも表示されるが、そこでは2つのトグルはナビゲーションのrunではなくアクティブなSLAMセッションを制御する。そのページ独自の説明では、そちらでのManual
 OverrideとAutopilotの意味を扱っている。
 
 **メッセージ仕様:** Manual Override のトグルは
-[`POST /api/manual`](/ja/development/message-contracts/http-api#manual) → [`manual.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#manual)。WASD の運転は
+[`POST /api/manual`](/ja/development/message-contracts/http-api#manual) → [`manual.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#manual)。WASD とジョイスティックの運転は
 10 Hz の [`server/key_vel`](/ja/development/message-contracts/rosbridge#publications) 上の `geometry_msgs/Twist` で、ロボットには
 [`string/key_vel`](/ja/development/message-contracts/bridge-topics#json-twist) → `/mux/key_vel` として届く。Autopilot のトグルは
 [`POST /api/autopilot`](/ja/development/message-contracts/http-api#autopilot) → [`autopilot.enable` / `disable`](/ja/development/message-contracts/mqtt-commands#autopilot) で、
@@ -92,7 +92,7 @@ Cancel Coverage は [`POST /api/boustrophedon/deactivate`](/ja/development/messa
 | アクティビティキー | 対象UIタブ | 説明 |
 | --- | --- | --- |
 | `idle` | Idle | システム初期化済み。モーターコントローラーは有効だがアクティブなゴールはない。 |
-| `manual` | Idle | WASDキーボード操作による手動テレオペがアクティブ。 |
+| `manual` | Idle | WASDキーまたはタッチのジョイスティックによる手動テレオペがアクティブ。 |
 | `mapping_active` | Mapping | `explore_lite`のフロンティア探索によるアクティブなSLAMマッピング。 |
 | `mapping_paused` | Mapping | オペレーターによってSLAM探索が一時的に停止されている。 |
 | `mapping_stop_failed` | Mapping | マップ保存に失敗。オペレーターが再試行できるようSLAM状態はアクティブなまま維持される。 |
@@ -241,6 +241,35 @@ supervisorはすべてのbatchに新しいスナップショットで応答し�
 
 同じ規則はrunが**開始**するときにも適用される。エリアは計画が送信された時点で描画され、ロボットがそれを確認応答した時点ではない。`POST
 /api/boustrophedon/init`は`switch_mode`がロボット上でカバレッジスタックを立ち上げてから初めて応答するため、オペレーターは何もないマップを数秒間見つめることになる。拒否されたrunは再びオーバーレイをクリアし、拒否された単一のカスタムエリアはシアンのドロワーポリゴンを再描画し、オペレーターが再試行できるエリアを残す。その切り替えの間マップを覆うものについては[カバレッジ清掃 § 初期化オーバーレイ](/ja/development/webui/navigation/coverage-cleaning#initialization-overlay)を参照。
+
+### オートパイロット非稼働時の離脱およびマップ切替時の破棄処理
+
+オートパイロットが無効な状態でカバレッジやボストロフェドンが稼働している場合、セッションの終了(ログアウト)またはDatabaseからのマップ再オープン時に、すべてのオペレーションをクリーンに停止・終了する。
+
+1. **ロボット側の破棄処理**:
+   - `switch_mode.py`はidleモードへの遷移時にすべてのプロセスを終了し、ボストロフェドンのゾンビプロセスが残留するのを防ぐ。
+   - `system_command.py`は、オートパイロット非稼働時のidle化、pingタイムアウト、ナビゲーション初期化、およびナビゲーション停止時に`cancel_and_stop_all_coverage()`を実行する。このルーチンは稼働中の`move_base`ゴールをキャンセルし、`/path_coverage/cancel`を呼び出し、ラッチされたカバレッジ計画(`/msd700/coverage_plan`)とポリゴン(`/msd700/coverage_polygon`)をクリアし、パス計画およびボストロフェドンオーバーレイのトピックをクリアし、`switch_mode`内の両方のカバレッジ機能を停止し、`operation_supervisor`にstopシグナルを送信する。
+   - idle復帰時やナビゲーション停止時に`active_map_id`をクリアし、古いマップIDがping応答に漏れて誤ったセッション復旧がトリガーされるのを防ぐ。
+
+2. **フロントエンド側の破棄処理**:
+   - `clearBrowserSession({ preserveAutonomousState: false })`により、オートパイロットなしでログアウトした際に`localStorage`の永続化カバレッジ情報(`nav_coverage_state_persisted`)を削除する。
+   - `DatabaseComponent.tsx`でマップを選択・起動する際、オートパイロットが無効であれば、ダッシュボードが先行して`cancelAllCoverage(unitId)`、`sendOperationStop()`、および`clearCoverageState()`を呼び出す。
+   - `MapComponent.tsx`はカバレッジスナップショットの復元をオートパイロット状態により制御する。オートパイロットが無効な状態で`operation_supervisor`がアクティブなカバレッジスナップショットを発行した場合、そのスナップショットは拒否され、オーバーレイとパスは非表示・クリアされ、UIは初期のidleナビゲーション状態に戻る。
+
+### テイクオーバー時のフェイルセーフとリカバリ抑制
+
+別セッション（他のタブ、端末、またはUI）によってユニットの制御がテイクオーバー（乗っ取り・権限引き継ぎ）された場合：
+
+1. **リカバリの抑制（Recovery suppression）**:
+   - 制御権を失ったセッションは、いかなるリカバリ状態にも遷移してはならない。
+   - `RobotConnectionStatus.tsx`は`origin_conflict`確認時に`sessionTakenOver`イベントを発火し、`operatingSession.markLeaseLost(unitId)`を設定する。
+   - `MapComponent.tsx`およびナビゲーションページは`sessionTakenOver`を検知し、`wasLeaseLost(unitId)`を検証する。進行中のリカバリシーケンス、スナップショット適用、または`Recovering Session...`オーバーレイは即座に中止・非表示化される（`setIsRecoveringSession(false)`）。
+
+2. **フェイルセーフ・サインアウト**:
+   - `SessionTakenOverNotice`は直接「Sign Out」アクションを提供する。
+   - サインアウトの実行（「Sign Out」クリックまたは8秒の自動タイムアウト）は`clearBrowserSession({ preserveAutonomousState: true })`を実行する。
+   - すべてのセッション認証情報、トークン、ユニット選択情報は`sessionStorage`から消去され、ユニット選択画面に留まることなく直接ログイン画面（`/`）へサインアウト状態のまま安全に遷移する。
+   - ロボット上で実行中のオペレーションおよび自律走行状態は完全に保持され、テイクオーバーした新しいセッションによる運行が妨げられることはない。
 
 ## 関連
 
