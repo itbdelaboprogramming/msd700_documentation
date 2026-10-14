@@ -118,13 +118,33 @@ hardware servicing or refurbishment."
 
 ### Swap data between two units
 
-**Contract:** `POST /admin/api/units/:id/swap` with `target_unit_id` and a rental scope; see [HTTP API § Admin API](/development/message-contracts/http-api#admin-api).
+**Contract:** `POST /admin/api/units/:id/swap` with `target_unit_id` and `profile_id` (the rental both units are assigned to); see [HTTP API § Admin API](/development/message-contracts/http-api#admin-api).
 
 Exchanges the unit-scoped dataset (the same "complete operational history recorded by a specific
 physical robot" defined above) between two existing units, rather than lifting it out into an
 archive. This is the bidirectional counterpart to the backup and restore operations described in
 [Backups](/development/webui/admin-console/backups): a robot's own history moves to a different
 unit identity instead of leaving the live system.
+
+The rules the backend applies:
+
+| Rule | Behavior |
+|---|---|
+| Same rental only | Both units must be assigned to the same rental. A unit without a rental, or two units of different rentals, is refused with 409, also on the dry run. The console offers Swap data only for a unit that has another unit in its rental, and lists only those units as Unit B. |
+| Scope | Only maps of that shared rental move, in both directions. Maps the units still hold from earlier rentals stay where they are. `profile_id` must name the shared rental; another rental or `all_profiles` is refused with 400. |
+| What moves | `maps_data.unit_id` is exchanged. Routes, areas and playlists follow through `map_id`. Map ids and map files stay the same, nothing is copied or deleted. |
+| Same name on both units | Allowed. A map name that exists on both units in the same rental is exchanged like any other map and keeps its name, so each unit ends up with the other unit's version. The dry run (`dry_run: true`) lists these names in `same_name`; `conflicts` is always empty. A same-named map in a different rental is not a pair. |
+| How it is written | One transaction. Because `UNIQUE (map_name, unit_id, profile_id)` is checked row by row, the source side of each same-name pair is parked under `~swap~<HEX(id)>`, the unit ids are exchanged, and the names are put back. |
+| Sync to the robots | Every moved map and its children get a new `modified_at`, and each moved map gets a tombstone for its previous owner. On its next sync each robot drops the maps it lost and downloads the maps it received. When a received map has the same name as a lost one, the unit applies that tombstone first, so the map arrives under its real name and not as `Name (2)`. |
+| Undo | Running the same swap again restores the previous state. |
+
+::: warning Limits
+No in-use check: a swap is accepted while an operator is using either unit. The robot keeps its
+old maps until its next sync.
+:::
+
+The robots need the backend change in their own image (the unit-side sync engine), or a received
+map with the same name as a lost one shows as `Name (2)` on the robot's local dashboard.
 
 ### Clear all data for a unit/rental
 

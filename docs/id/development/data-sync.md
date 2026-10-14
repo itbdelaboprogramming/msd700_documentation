@@ -28,6 +28,36 @@ Tidak semua tabel database bersinkronisasi ke arah yang sama:
 
 Aset biner (seperti occupancy grid `.pgm`, metadata `.yaml`, dan thumbnail peta) disinkronkan lewat endpoint khusus (`/sync/file/:mapId/:kind`) dan diverifikasi lewat ukuran file yang tepat.
 
+### Akun mengikuti penyewaan unit saat ini
+
+Sebuah unit hanya memegang akun dari satu penyewaan: penyewaan tempat unit itu terdaftar sekarang.
+Setiap pull mengirim tabel identitas downstream (`rental_profiles`, `users`, `profile_members`,
+`profile_units`) secara utuh, bukan sejak watermark, dan unit menghapus setiap baris lokal yang tidak
+dikirim cloud. Ini diperlukan karena konsol admin menghapus baris-baris ini tanpa tombstone
+(mengeluarkan anggota, melepas unit, memindahkannya ke penyewaan lain).
+
+| Aksi admin | Di unit setelah sinkronisasi berikutnya |
+|---|---|
+| Unit dipindah ke penyewaan lain | Hanya anggota penyewaan baru yang bisa login offline. Akun, hash password, dan keanggotaan penyewa sebelumnya dihapus. |
+| Unit dilepas, tanpa penyewaan baru | Cloud menjawab `NO_RENTAL` dan unit menghapus semua akun, keanggotaan, dan assignment-nya. Tidak ada yang bisa login atau mengemudikannya secara lokal sampai unit di-assign lagi. |
+| Anggota dikeluarkan dari penyewaan | Akun itu dihapus di unit. Bila dimasukkan lagi, akun kembali pada pull berikutnya. |
+
+Yang tetap ada:
+
+- Peta, rute, dan file yang direkam di penyewaan sebelumnya tetap di unit. Karena anggotanya sudah
+  tidak ada, tidak ada yang bisa melihatnya secara lokal. Baris `rental_profiles` lama hanya tersisa
+  selama peta seperti itu masih merujuknya (`ON DELETE RESTRICT`).
+- Kolom pembuat peta (`created_by`, `modified_by`) yang menunjuk akun yang dihapus menjadi null di
+  unit. Ini tidak mengubah `modified_at`, jadi tidak ada yang di-push balik. Baris yang di-push dengan
+  pembuat null tidak pernah menghapus pembuat yang sudah tersimpan di cloud.
+
+Saat cloud memasukkan ulang sebuah baris dengan id baru (assignment ulang, anggota dimasukkan lagi),
+unit menghapus salinan basinya yang memegang kunci unik yang sama lebih dulu, jadi id cloud yang
+dipakai dan pruning tidak menghapus satu-satunya assignment unit. Sesi yang sudah login di unit
+langsung kehilangan akses ke robot, karena cache akses unit dibersihkan setelah pruning. Kedua sisi
+memerlukan versi backend ini: cloud yang lebih lama tidak mengirim penanda `identity_complete` dan
+unitnya tidak menghapus apa pun.
+
 ## Mekanika Sinkronisasi
 
 ![Mekanika Sinkronisasi](../../development/diagrams/data-sync-synchronization-mechanics.drawio)

@@ -28,6 +28,35 @@ Not all database tables synchronize in the same direction:
 
 Binary assets (such as `.pgm` occupancy grids, `.yaml` metadata, and map thumbnails) synchronize via dedicated endpoints (`/sync/file/:mapId/:kind`) and are verified by exact file size.
 
+### Accounts follow the unit's current rental
+
+A unit holds the accounts of exactly one rental: the one it is assigned to now. Every pull sends
+the downstream identity tables (`rental_profiles`, `users`, `profile_members`, `profile_units`) in
+full, not since the watermark, and the unit deletes every local row the cloud did not send. This is
+needed because the admin console deletes these rows without tombstones (removing a member,
+releasing a unit, assigning it to another rental).
+
+| Admin action | On the unit after its next sync |
+|---|---|
+| Unit moved to another rental | Only the new rental's members can sign in offline. The previous tenant's accounts, password hashes and memberships are deleted. |
+| Unit released, no new rental | The cloud answers `NO_RENTAL` and the unit deletes all accounts, memberships and its assignment. Nobody can sign in or drive it locally until it is assigned again. |
+| Member removed from the rental | That account is deleted on the unit. Added back later, it returns on the next pull. |
+
+What stays:
+
+- Maps, routes and files recorded under an earlier rental stay on the unit. With their members
+  gone, nobody can see them locally. The old `rental_profiles` row stays only while such maps
+  still refer to it (`ON DELETE RESTRICT`).
+- Map author columns (`created_by`, `modified_by`) that point at a deleted account become null on
+  the unit. This does not change `modified_at`, so nothing is pushed back. A pushed row with a null
+  author never erases the author already stored in the cloud.
+
+When the cloud re-inserts a row under a new id (a re-assignment, a member added back), the unit
+deletes its stale copy that holds the same unique key first, so the cloud id is kept and the pruning
+does not remove the unit's only assignment. A session already signed in on the unit loses robot
+access at once, because the unit access cache is cleared after pruning. Both sides need this backend
+version: an older cloud sends no `identity_complete` marker and its units prune nothing.
+
 ## Synchronization Mechanics
 
 ![Synchronization Mechanics](./diagrams/data-sync-synchronization-mechanics.drawio)

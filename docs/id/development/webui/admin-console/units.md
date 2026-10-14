@@ -129,7 +129,28 @@ mengangkatnya keluar ke sebuah arsip. Ini adalah rekan dua-arah dari operasi bac
 yang dijelaskan di [Cadangan](/id/development/webui/admin-console/backups): riwayat milik sebuah
 robot berpindah ke identitas unit lain alih-alih meninggalkan sistem yang hidup.
 
-**Kontrak:** `POST /admin/api/units/:id/swap` dengan `target_unit_id` dan cakupan rental; lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
+Aturan yang diterapkan backend:
+
+| Aturan | Perilaku |
+|---|---|
+| Hanya satu penyewaan | Kedua unit harus terdaftar di penyewaan yang sama. Unit tanpa penyewaan, atau dua unit dari penyewaan berbeda, ditolak dengan 409, juga pada dry run. Konsol hanya menawarkan Swap data untuk unit yang punya unit lain di penyewaannya, dan hanya mencantumkan unit-unit itu sebagai Unit B. |
+| Cakupan | Hanya peta penyewaan bersama itu yang berpindah, ke dua arah. Peta dari penyewaan sebelumnya yang masih dipegang unit tetap di tempatnya. `profile_id` harus menyebut penyewaan bersama; penyewaan lain atau `all_profiles` ditolak dengan 400. |
+| Yang berpindah | `maps_data.unit_id` ditukar. Rute, area, dan playlist ikut lewat `map_id`. Id peta dan file peta tetap sama, tidak ada yang disalin atau dihapus. |
+| Nama sama di kedua unit | Diizinkan. Nama peta yang ada di kedua unit dalam penyewaan yang sama ditukar seperti peta lain dan namanya tetap, jadi tiap unit mendapat versi milik unit lainnya. Dry run (`dry_run: true`) mencantumkan nama ini di `same_name`; `conflicts` selalu kosong. Peta bernama sama di penyewaan lain bukan pasangan. |
+| Cara penulisan | Satu transaksi. Karena `UNIQUE (map_name, unit_id, profile_id)` diperiksa per baris, sisi sumber dari tiap pasangan nama sama diparkir dulu dengan nama `~swap~<HEX(id)>`, unit_id ditukar, lalu namanya dikembalikan. |
+| Sinkronisasi ke robot | Setiap peta yang pindah beserta anaknya mendapat `modified_at` baru, dan tiap peta yang pindah mendapat tombstone untuk pemilik sebelumnya. Pada sinkronisasi berikutnya tiap robot membuang peta yang hilang darinya dan mengunduh peta yang diterimanya. Bila peta yang diterima bernama sama dengan peta yang hilang, unit menerapkan tombstone itu lebih dulu, jadi peta tiba dengan nama aslinya, bukan `Nama (2)`. |
+| Membatalkan | Menjalankan swap yang sama sekali lagi mengembalikan keadaan sebelumnya. |
+
+::: warning Batasan
+Tidak ada pemeriksaan unit sedang dipakai: swap diterima walau operator sedang memakai salah satu
+unit. Robot tetap memegang peta lamanya sampai sinkronisasi berikutnya.
+:::
+
+Robot memerlukan perubahan backend ini di image-nya sendiri (sync engine sisi unit). Tanpa itu,
+peta yang diterima dengan nama yang sama dengan peta yang hilang tampil sebagai `Nama (2)` di
+dashboard lokal robot.
+
+**Kontrak:** `POST /admin/api/units/:id/swap` dengan `target_unit_id` dan `profile_id` (penyewaan tempat kedua unit terdaftar); lihat [HTTP API § Admin API](/id/development/message-contracts/http-api#admin-api).
 
 ### Bersihkan semua data untuk sebuah unit/penyewaan
 

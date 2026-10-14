@@ -554,7 +554,7 @@ description per tab: [Admin Console](/development/webui/admin-console/overview).
 | Live unit status | `GET /units/live`: pings every unit with a bound device and answers `{ available, data: [{ id, online, ready, in_use, in_use_by, activity, battery, uptime_min, rtt_ms, last_answer_at }] }`; `available: false` when the backend has no broker connection. See [Units § Unit Status](/development/webui/admin-console/units#unit-status) |
 | System health | `GET /system/health` (`?refresh=1` for a fresh run): `{ data: { checked_at, overall, counts, checks[], ports[] } }`. See [System Health](/development/webui/admin-console/system-health) |
 | Pending robots | `GET /pending-units`, `POST /pending-units/:id/register` (`unit_name`), `POST /pending-units/:id/adopt` (`unit_id, confirm?`), `DELETE /pending-units/:id` |
-| Unit data | `POST /units/:id/transfer` (`target_unit_id, profile_id \| all_profiles`), `POST /units/:id/swap` (`target_unit_id` + scope), `POST /units/:id/backups` (scope), `DELETE /units/:id/data` (scope) |
+| Unit data | `POST /units/:id/transfer` (`target_unit_id, profile_id \| all_profiles`), `POST /units/:id/swap` (`target_unit_id, profile_id`, both units in that rental), `POST /units/:id/backups` (scope), `DELETE /units/:id/data` (scope) |
 | Rentals | `GET/POST /profiles` (`profile_name, tenant_name, notes`), `GET/PATCH/DELETE /profiles/:id`, `POST /profiles/:id/members` (`user_id`), `DELETE /profiles/:id/members/:userId`, `POST /profiles/:id/units` (`unit_id`), `DELETE /profiles/:id/units/:unitId` |
 | Backups | `GET /backups`, `POST /profiles/:id/backups`, `GET /backups/:id/download`, `DELETE /backups/:id`, `POST /backups/upload` (raw archive), `POST /backups/:id/plan`, `POST /backups/:id/restore` |
 
