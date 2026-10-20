@@ -18,7 +18,7 @@ The robot-side ROS 1 Noetic stack: the packages, algorithms, and control loops t
 
 <LinkCards>
   <LinkCard icon="👁️" title="Perception & Hazard Scan" details="/scan for SLAM, /scan_hazard for costmaps, and the MSD700_HAZARD_SCAN switch." link="/development/ros/perception-and-hazard-scan" />
-  <LinkCard icon="📡" title="Sensor Fusion & Control" details="Velodyne VLP-16 LiDAR, IMU filtering, and EKF state estimation." link="/development/ros/sensor-fusion-and-control" />
+  <LinkCard icon="📡" title="Sensor Fusion & Control" details="3D LiDAR (Velodyne VLP-16 or Livox Mid-360), IMU filtering, and EKF state estimation." link="/development/ros/sensor-fusion-and-control" />
   <LinkCard icon="📐" title="Coordinate Transforms (TF)" details="REP-103/105 transform tree, sensor offsets, and BoundaryPublisher restamping." link="/development/ros/tf-transforms" />
 </LinkCards>
 

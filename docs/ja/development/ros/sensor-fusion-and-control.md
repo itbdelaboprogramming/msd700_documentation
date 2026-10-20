@@ -93,7 +93,7 @@ Velodyne VLP-16センサーは16本のレーザーリングにわたって毎秒
 
 ![LiDARポイントクラウド投影パイプライン](../../../development/ros/diagrams/sensor-fusion-and-control-lidar-pointcloud-projection-pipeline.drawio)
 
-センサー周辺の$\pm 0.30\text{ m}$バンドはナビゲーションコストマップに残し、それ以外(床面反射、天井)は落とす。第2のパイプライン(`cloud_hazard.launch`)は地面をフィットさせ、その上$0.08$–$0.65\text{ m}$バンドで穴や段差を監視し、`/scan_hazard`をパブリッシュする。
+センサー周辺の$\pm 0.30\text{ m}$バンドはナビゲーションコストマップに残し、それ以外(床面反射、天井)は落とす。Livox Mid-360ユニット(`msd700_hardware/launch/livox_scanner.launch`)ではバンドを `base_footprint` で切り、床から$0.08$–$0.65\text{ m}$とする。Mid-360は傾けて取り付けるため、傾いたセンサーフレームのバンドは前方の床を切り込んで壁として報告してしまう。これには `base_footprint -> laser` の変換が必要なので、Livoxユニットでは `msd700_navigation.launch` も自前の `robot_state_publisher` を起動する。第2のパイプライン(`cloud_hazard.launch`)は地面をフィットさせ、その上$0.08$–$0.65\text{ m}$バンドで穴や段差を監視し、`/scan_hazard`をパブリッシュする。
 
 ## 関連ドキュメント
 

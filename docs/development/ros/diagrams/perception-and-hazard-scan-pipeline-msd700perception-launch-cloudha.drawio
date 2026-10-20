@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="n1" value="Velodyne PointCloud2&lt;br&gt;VLP-16, 192.168.103.231, 10 Hz" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n1" value="3D lidar PointCloud2, 10 Hz&lt;br&gt;VLP-16: /velodyne_points&lt;br&gt;Mid-360: /livox/points" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="20" y="32" width="231" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n2" value="Ground fit&lt;br&gt;quadratic over near-field floor&lt;br&gt;radius 3.0 m, 3 iterations" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

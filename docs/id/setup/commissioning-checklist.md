@@ -12,14 +12,14 @@ Acceptance end-to-end untuk satu robot baru, dari unboxing hingga sign-off. Ikut
 ## 1. Persiapan host
 
 - [ ] `setup.sh` dijalankan (Docker, grup, xhost). Lolos: `--check` bersih.
-- [ ] Tautan Velodyne (`--configure-lidar`, `192.168.103.231` terjangkau). Lolos: ping menjawab.
+- [ ] Tautan lidar (`--configure-lidar`; VLP-16 `192.168.103.231` atau Mid-360 `192.168.103.232` terjangkau). Lolos: ping menjawab.
 - [ ] `setup.sh --provision-network` dari konsol kabel, hotspot + client tersimpan ke `/etc/hostapd/*.conf` (0600), password tersembunyi diketik dua kali. Lolos: SSID mengudara.
 
 Lihat [Unit Setup](/id/setup/unit-setup).
 
 ## 2. Build dan start
 
-- [ ] `docker/.env` direview (IP Velodyne cocok dengan launch file, `AP_SSID`, `AP_PASSWORD` 8+ karakter). Lolos: tidak ada `change_me` tersisa di tempat yang penting.
+- [ ] `docker/.env` direview (`MSD700_LIDAR_TYPE` sesuai lidar yang terpasang, IP lidar cocok dengan launch file atau `mid360.json`, `AP_SSID`, `AP_PASSWORD` 8+ karakter). Lolos: tidak ada `change_me` tersisa di tempat yang penting.
 - [ ] `docker-manager.sh build` lalu `up`. Lolos: `status` menunjukkan container up; tidak ada error build.
 - [ ] Boot pertama mencetak CLAIM CODE; adopsi/daftarkan di Pending. Lolos: unit muncul di bawah ULID-nya, tanpa baris pending kedua.
 
@@ -38,6 +38,7 @@ Lihat [WiFi Hotspot](/id/setup/wifi-hotspot), [Hardware Enrolment](/id/developme
 - [ ] `tmux attach -t robot_services`: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, `token_refresh` semuanya hidup. Lolos: tidak ada window mati pada menit ke-5.
 - [ ] `ros_doctor.sh` bersih. Lolos: `OK master answers`, stempel stack ada, rosbridge listening, tanpa node asing.
 - [ ] `curl http://localhost:5002/local/status` menjawab. Lolos: HTTP 200 berisi status unit.
+- [ ] Pemasangan lidar, di lantai terbuka yang datar dengan `MSD700_HAZARD_SCAN=true`: `rostopic echo /hazard_scan/ground_tilt` dan `/hazard_scan/ground_offset`. Lolos: keduanya sekitar 0 dan tidak ada saran pemasangan di log `hazard_scan`. Lihat [Memeriksa pemasangan di robot](/id/development/ros/perception-and-hazard-scan#checking-the-mount).
 
 Lihat [Docker Reference § Unit `run_msd.sh`](/id/setup/docker-reference#unit-run-msd-sh).
 

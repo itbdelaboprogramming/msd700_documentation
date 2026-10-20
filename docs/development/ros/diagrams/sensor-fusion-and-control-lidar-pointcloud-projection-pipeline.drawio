@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="n1" value="sensor_msgs/PointCloud2&lt;br&gt;(/velodyne_points)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n1" value="sensor_msgs/PointCloud2&lt;br&gt;(/velodyne_points, VLP-16)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="21" y="51" width="196" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n2" value="Z-Axis Vertical Slicing Window&lt;br&gt;min_height: -0.30 m&lt;br&gt;max_height: +0.30 m" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">

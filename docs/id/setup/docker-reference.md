@@ -499,9 +499,13 @@ Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.exampl
 | Identitas | `USER_UID`, `USER_GID` | kosong = autodetect | Jetson 2002, laptop 1000 |
 | Identitas | `UNIT_ID` | kosong = cloud enrol | Di-pin hanya untuk recovery |
 | Identitas | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
-| Persepsi | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Butuh Velodyne terpasang; lihat [Persepsi](/id/development/ros/perception-and-hazard-scan) |
+| Persepsi | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Butuh lidar terpasang; lihat [Persepsi](/id/development/ros/perception-and-hazard-scan) |
+| Persepsi | `MSD700_LIDAR_TYPE` | `velodyne` | `velodyne`, `livox`, atau `rplidar`. Memilih driver, preset pose lidar, dan profil sensor hazard sekaligus; lihat [Jenis lidar dan pemasangannya](/id/development/ros/perception-and-hazard-scan#lidar-type-and-mount) |
+| Persepsi | `MSD700_LIDAR_POSE_FILE` | kosong = preset untuk jenis lidar | Path absolut (di container) ke file pose lidar milik unit ini |
+| Persepsi | `MSD700_LIVOX_CONFIG` | kosong = `msd700_hardware/config/livox/mid360.json` | JSON jaringan Mid-360 (alamat host dan sensor) |
 | Simulasi | `MSD700_SIM_WORLD` | `mine` (template `warehouse`) | `warehouse`, `hazard`, `mine` |
 | Simulasi | `MSD700_SIM_HEADLESS` | `true` (template: tidak ada) | |
+| Simulasi | `MSD700_SIM_LIDAR_POSE_FILE` | kosong = `msd700_xacro_field_livox_sim.yaml` | Pemasangan Livox untuk robot simulasi saja; `MSD700_LIDAR_POSE_FILE` milik unit tidak dibaca di simulasi |
 | Simulasi | `WITH_SIMULATOR` | `false` | Menambah stack Gazebo ke image; makan 1+ GB |
 | Port unit | `MYSQL_PORT_LOCAL` | `3306` | |
 | Port unit | `MOSQUITTO_PORT_LOCAL`, `MOSQUITTO_WS_PORT_LOCAL` | `1883`, `9001` (WS hanya live) | |
@@ -519,8 +523,8 @@ Config tinggal di `msd700_noetic/docker/.env` (otomatis dibuat dari `.env.exampl
 | Jaringan | `STA_SSID_LOCAL`, `STA_PASSWORD_LOCAL` | kosong | Uplink client, opsional |
 | Jaringan | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
 | Velodyne | `VELODYNE_IFACE` | `end0` (template: kosong = autodetect) | Dibaca `setup.sh` saja, di luar Docker |
-| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Jaga tetap sinkron dengan `velodyne_scanner.launch device_ip` |
-| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Jaga tetap sinkron dengan `velodyne_scanner.launch device_ip`, dan dengan alamat host di `mid360.json` pada unit Mid-360 |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | Hanya dipakai untuk ping saat setup; `192.168.103.232` pada unit Mid-360 |
 | Camera ICE | `LOCAL_STUN_URLS`, `LOCAL_TURN_URL`, `LOCAL_TURN_USERNAME`, `LOCAL_TURN_CREDENTIAL` | absen di live; template punya contoh ter-comment | Literal `none` = tanpa server; default kode berlaku bila unset |
 | Path | `WEBUI_PATH`, `DASHBOARD_PATH` | di-comment (autoresolve `src/<repo>` atau `../<repo>`) | |
 

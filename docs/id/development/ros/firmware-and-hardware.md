@@ -53,7 +53,7 @@ Gain ada di `Core/Inc/configuration.h`; tuning bawaan hanya integral (`KP 0.00`,
 
 - **Attitude**: kompas CMPS12 (tilt-compensated) dibaca setiap 5 ms; yaw-nya juga menjadi heading yang dikirim ke ROS.
 - **UWB**: posisi tag follower lewat `USART2`, difilter dan dilaporkan di field `uwb_*`.
-- **LIDAR**: pembaca RPLIDAR sisa dari prototipe. Unit memakai Velodyne VLP-16 lewat Ethernet.
+- **LIDAR**: pembaca RPLIDAR sisa dari prototipe. Unit memakai lidar 3D lewat Ethernet: Velodyne VLP-16 atau Livox Mid-360, dipilih oleh `MSD700_LIDAR_TYPE` (lihat [Jenis lidar dan pemasangannya](/id/development/ros/perception-and-hazard-scan#lidar-type-and-mount)).
 
 ## Dokumentasi Terkait
 

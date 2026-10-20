@@ -12,14 +12,14 @@ search: false
 ## 1. ホスト準備
 
 - [ ] `setup.sh` 実行(Docker、グループ、xhost)。合格: `--check` がクリーン。
-- [ ] Velodyneリンク(`--configure-lidar`、`192.168.103.231` 到達可)。合格: pingに応答。
+- [ ] LiDARリンク(`--configure-lidar`。VLP-16 `192.168.103.231` またはMid-360 `192.168.103.232` に到達可)。合格: pingに応答。
 - [ ] 有線コンソールから `setup.sh --provision-network`、ホットスポット+クライアントを `/etc/hostapd/*.conf` (0600)に保存、隠しパスワードを2回入力。合格: SSIDが放送される。
 
 [ユニット構築](/ja/setup/unit-setup)参照。
 
 ## 2. ビルドと起動
 
-- [ ] `docker/.env` 確認(Velodyne IPがlaunchファイルと一致、`AP_SSID`、8文字以上の `AP_PASSWORD`)。合格: 要所に `change_me` が残っていない。
+- [ ] `docker/.env` 確認(`MSD700_LIDAR_TYPE` が装着したLiDARと一致、LiDAR IPがlaunchファイルまたは `mid360.json` と一致、`AP_SSID`、8文字以上の `AP_PASSWORD`)。合格: 要所に `change_me` が残っていない。
 - [ ] `docker-manager.sh build` の後に `up`。合格: `status` でコンテナ起動、ビルドエラーなし。
 - [ ] 初回起動でCLAIM CODEが表示され、Pendingで採用/登録する。合格: ユニットがULIDで表示され、pending行の重複なし。
 
@@ -38,6 +38,7 @@ search: false
 - [ ] `tmux attach -t robot_services`: `roscore`、`ros_webui`、`camera_client`、`switch_mode`、`log_janitor`、`token_refresh` が全て生存。合格: 5分時点で死んだウィンドウなし。
 - [ ] `ros_doctor.sh` がクリーン。合格: `OK master answers`、スタック刻印あり、rosbridgeがlisten、外部ノードなし。
 - [ ] `curl http://localhost:5002/local/status` に応答。合格: 当該ユニットのステータスでHTTP 200。
+- [ ] LiDAR取付。`MSD700_HAZARD_SCAN=true` で開けた水平な床にて `rostopic echo /hazard_scan/ground_tilt` と `/hazard_scan/ground_offset`。合格: どちらもほぼ0で、`hazard_scan` のログに取付の助言がない。[ロボット上での取付確認](/ja/development/ros/perception-and-hazard-scan#checking-the-mount)参照。
 
 [Dockerリファレンス § ユニット `run_msd.sh`](/ja/setup/docker-reference#ユニット-run-msd-sh)参照。
 

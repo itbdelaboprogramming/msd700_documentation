@@ -59,6 +59,7 @@ Robot field (ukuran produksi) dimodelkan dalam `msd700_description/urdf/msd700_f
 - **Dimensi**: panjang 0,90 m, lebar 0,70 m, tinggi 0,25 m, massa 150 kg.
 - **Geometri Drive**: Empat roda penggerak (depan/belakang kiri/kanan); odometri mem-fusi-kannya sebagai pasangan diferensial.
 - **LiDAR Velodyne VLP-16**: 0,50 m di atas footprint pada mast mounting. (Prototype uji fisik, `irbot`, memasangnya 0,527 m di atas footprint.)
+- **LiDAR Livox Mid-360** (dengan `MSD700_LIDAR_TYPE=livox`): `urdf/livox/mid360.urdf.xacro`, dipasang dari `config/msd700_xacro_field_livox_sim.yaml`. Tinggi (0,34 m) dan kemiringan 45° ke depan sama dengan unit, tetapi di x 0,50 m, bukan 0,21 m seperti di unit: badan ini jauh lebih besar daripada prototype dan di 0,21 atapnya akan menghalangi sinar ke depan. `MSD700_SIM_LIDAR_POSE_FILE` menggantikan preset untuk satu run. Grid sinar tetap 360 x 24 menggantikan pola non-repetitif aslinya. Lihat [Jenis lidar dan pemasangannya](/id/development/ros/perception-and-hazard-scan#lidar-type-and-mount).
 - **Frame ROS Terstandarisasi**: Menggunakan konvensi frame standar (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Menjalankan Stack Simulasi

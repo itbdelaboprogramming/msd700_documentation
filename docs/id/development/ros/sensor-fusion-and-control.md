@@ -93,7 +93,7 @@ Sensor Velodyne VLP-16 menghasilkan 300.000 titik/detik melintasi 16 laser ring.
 
 ![Pipeline Proyeksi PointCloud LiDAR](../../../development/ros/diagrams/sensor-fusion-and-control-lidar-pointcloud-projection-pipeline.drawio)
 
-Ini menjaga pita $\pm 0.30\text{ m}$ di sekitar sensor di dalam costmap navigasi sementara return di luarnya (pantulan lantai, langit-langit) dibuang. Pipeline kedua (`cloud_hazard.launch`) mem-fitting ground dan mengawasi pita $0.08$–$0.65\text{ m}$ di atasnya untuk lubang dan drop-off, mempublikasikan `/scan_hazard`.
+Ini menjaga pita $\pm 0.30\text{ m}$ di sekitar sensor di dalam costmap navigasi sementara return di luarnya (pantulan lantai, langit-langit) dibuang. Pada unit Livox Mid-360 (`msd700_hardware/launch/livox_scanner.launch`) pita dipotong di `base_footprint`, $0.08$–$0.65\text{ m}$ di atas lantai: Mid-360 dipasang miring, dan pita di frame sensor yang miring akan memotong lantai di depan dan melaporkannya sebagai dinding. Untuk itu dibutuhkan transform `base_footprint -> laser`, jadi `msd700_navigation.launch` juga menjalankan `robot_state_publisher` sendiri pada unit Livox. Pipeline kedua (`cloud_hazard.launch`) mem-fitting ground dan mengawasi pita $0.08$–$0.65\text{ m}$ di atasnya untuk lubang dan drop-off, mempublikasikan `/scan_hazard`.
 
 ## Dokumentasi Terkait
 

@@ -497,9 +497,13 @@ docker exec -it msd700 tmux list-windows -t robot_services
 | Identity | `USER_UID`、`USER_GID` | 空=自動検出 | Jetson 2002、PC 1000 |
 | Identity | `UNIT_ID` | 空=クラウド登録 | 復旧時のピン留め専用 |
 | Identity | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
-| 知覚 | `MSD700_HAZARD_SCAN` | `true`(テンプレートは `false`) | Velodyne装着が前提。[知覚](/ja/development/ros/perception-and-hazard-scan)参照 |
+| 知覚 | `MSD700_HAZARD_SCAN` | `true`(テンプレートは `false`) | LiDAR装着が前提。[知覚](/ja/development/ros/perception-and-hazard-scan)参照 |
+| 知覚 | `MSD700_LIDAR_TYPE` | `velodyne` | `velodyne`、`livox`、`rplidar`。ドライバー、LiDAR姿勢プリセット、ハザード用センサープロファイルをまとめて選ぶ。[LiDARの種類と取付](/ja/development/ros/perception-and-hazard-scan#lidar-type-and-mount)参照 |
+| 知覚 | `MSD700_LIDAR_POSE_FILE` | 空=LiDAR種類のプリセット | このユニット専用のLiDAR姿勢ファイルへの絶対パス(コンテナ内) |
+| 知覚 | `MSD700_LIVOX_CONFIG` | 空=`msd700_hardware/config/livox/mid360.json` | Mid-360のネットワークJSON(ホストとセンサーのアドレス) |
 | シミュレーション | `MSD700_SIM_WORLD` | `mine`(テンプレートは `warehouse`) | `warehouse`、`hazard`、`mine` |
 | シミュレーション | `MSD700_SIM_HEADLESS` | `true`(テンプレート:なし) | |
+| シミュレーション | `MSD700_SIM_LIDAR_POSE_FILE` | 空=`msd700_xacro_field_livox_sim.yaml` | シミュレーションのロボット専用のLivox取付。ユニットの `MSD700_LIDAR_POSE_FILE` はシミュレーションでは読まない |
 | シミュレーション | `WITH_SIMULATOR` | `false` | Gazeboスタックをイメージ追加。1GB超消費 |
 | ユニットポート | `MYSQL_PORT_LOCAL` | `3306` | |
 | ユニットポート | `MOSQUITTO_PORT_LOCAL`、`MOSQUITTO_WS_PORT_LOCAL` | `1883`、`9001`(WSはライブのみ) | |
@@ -517,8 +521,8 @@ docker exec -it msd700 tmux list-windows -t robot_services
 | ネットワーク | `STA_SSID_LOCAL`、`STA_PASSWORD_LOCAL` | 空 | クライアント上り、任意 |
 | ネットワーク | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
 | Velodyne | `VELODYNE_IFACE` | `end0`(テンプレート:空=自動検出) | `setup.sh` のみ読取、Docker外 |
-| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | `velodyne_scanner.launch device_ip` と同期維持 |
-| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | `velodyne_scanner.launch device_ip` と同期維持。Mid-360ユニットでは `mid360.json` のホストアドレスとも同期 |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | セットアップのpingにのみ使用。Mid-360ユニットでは `192.168.103.232` |
 | カメラICE | `LOCAL_STUN_URLS`、`LOCAL_TURN_URL`、`LOCAL_TURN_USERNAME`、`LOCAL_TURN_CREDENTIAL` | ライブなし。テンプレートにコメント例あり | リテラル `none` =サーバーなし。未設定時はコード既定 |
 | パス | `WEBUI_PATH`、`DASHBOARD_PATH` | コメント(自動解決 `src/<repo>` または `../<repo>`) | |
 

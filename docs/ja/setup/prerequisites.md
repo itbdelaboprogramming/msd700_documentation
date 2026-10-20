@@ -24,7 +24,7 @@ MSD700サーバーやロボットユニットをインストールする**前に
 | 項目 | 内容 |
 | --- | --- |
 | **コンピューター** | NVIDIA Jetson (ARM64)。機種に合ったBSP/カーネルが必要 |
-| **LiDAR** | Velodyne VLP-16 (Ethernet接続)。ホスト`192.168.103.100/24`、センサー`192.168.103.231`、UDP `2368` |
+| **LiDAR** | Velodyne VLP-16またはLivox Mid-360(Ethernet接続)。ユニットごとに `MSD700_LIDAR_TYPE` で設定。ホスト`192.168.103.100/24`。VLP-16:センサー`192.168.103.231`、UDP `2368`。Mid-360:センサー`192.168.103.232`、UDP `56100`〜`56501` |
 | **IMU** | 姿勢フィルタとオドメトリ融合用 |
 | **モーター** | STM32コントローラー(`/dev/stm32`として認識、udevルールが必要) |
 | **電源** | バッテリー、保護回路、E-Stop:ユニットBOMと照合すること |
@@ -71,7 +71,7 @@ ComposeはMySQLをループバックバインドなしで公開し、バック�
 1. **OS**: 機種対応BSPのARM64 Ubuntu。
 2. **Docker**: Docker CE + Compose v2。
 3. **udevルール**: `/dev/stm32`モーターコントローラーとRealSense USB用(`setup.sh`が導入、[ユニット構築](/ja/setup/unit-setup)参照)。
-4. **LiDAR接続**: 専用Ethernet。通常ホスト`192.168.103.100/24`、センサー`192.168.103.231`。インターフェース名は自動検出、必要なら`VELODYNE_IFACE`で上書き。
+4. **LiDAR接続**: 専用Ethernet。通常ホスト`192.168.103.100/24`、センサー`192.168.103.231`(VLP-16)または`192.168.103.232`(Mid-360)。インターフェース名は自動検出、必要なら`VELODYNE_IFACE`で上書き。
 5. **ホットスポット用ツール**: NetworkManager、`iw`、`dnsmasq`、`iptables`、systemd、udev、polkit。初回起動前に導入、[WiFiホットスポット](/ja/setup/wifi-hotspot)参照。
 6. **X11ディスプレイ**(任意): RVizまたはGazeboにのみ必要。セットアップ時に`DISPLAY`がなくても警告だけです。
 
@@ -136,7 +136,7 @@ sudo systemctl enable containerd.service
 ::: danger 安全第一
 1. **E-Stopを手元に。** モーターテストの前に、赤い非常停止ボタンを手の届く場所に置いてください。
 2. **初回電源投入時は車体を浮かせる。** モーター方向テスト中、車輪が自由に回るよう台の上に載せてください。
-3. **LiDARレーザー。** Velodyne VLP-16はClass 1アイセーフです。それでも動作中に拡大光学系を前に置かないでください。
+3. **LiDARレーザー。** Velodyne VLP-16とLivox Mid-360はどちらもClass 1アイセーフです。それでも動作中に拡大光学系を前に置かないでください。
 :::
 
 ## 次のステップ

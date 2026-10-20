@@ -24,7 +24,7 @@ Hardware, OS, network ports, and software you need **before** installing the MSD
 | Component | What you need |
 | --- | --- |
 | **Computer** | NVIDIA Jetson (ARM64) with a BSP/kernel matching that exact model |
-| **LiDAR** | Velodyne VLP-16 over Ethernet. Host `192.168.103.100/24`, sensor `192.168.103.231`, UDP `2368` |
+| **LiDAR** | Velodyne VLP-16 or Livox Mid-360 over Ethernet, set per unit by `MSD700_LIDAR_TYPE`. Host `192.168.103.100/24`. VLP-16: sensor `192.168.103.231`, UDP `2368`. Mid-360: sensor `192.168.103.232`, UDP `56100` to `56501` |
 | **IMU** | Unit IMU for orientation filtering and odometry fusion |
 | **Motors** | STM32 controller, exposed as `/dev/stm32` (needs udev rules, below) |
 | **Power** | Battery, protection, and E-Stop: check against the unit BOM |
@@ -71,7 +71,7 @@ On the **unit**, operator laptops on the LAN need dashboard `3000`, backend `500
 1. **OS**: ARM64 Ubuntu with a BSP for that exact Jetson model.
 2. **Docker**: Docker CE + Compose v2.
 3. **udev rules**: for the `/dev/stm32` motor controller and RealSense USB (installed by `setup.sh`, see [Unit Setup](/setup/unit-setup)).
-4. **LiDAR link**: dedicated Ethernet, normally host `192.168.103.100/24` and sensor `192.168.103.231`. The interface name is auto-detected; override with `VELODYNE_IFACE` if needed.
+4. **LiDAR link**: dedicated Ethernet, normally host `192.168.103.100/24` and sensor `192.168.103.231` (VLP-16) or `192.168.103.232` (Mid-360). The interface name is auto-detected; override with `VELODYNE_IFACE` if needed.
 5. **Hotspot tools**: NetworkManager, `iw`, `dnsmasq`, `iptables`, systemd, udev, polkit. Install before the first start; see [WiFi Hotspot](/setup/wifi-hotspot).
 6. **X11 display** (optional): only for RViz or Gazebo. A missing `DISPLAY` during setup is just a warning.
 
@@ -136,7 +136,7 @@ sudo systemctl enable containerd.service
 ::: danger Safety first
 1. **Keep the E-Stop close.** Before any motor test, make sure the red mushroom button is within arm's reach.
 2. **Lift the chassis for the first power-up.** Put the robot on blocks so the wheels spin freely during motor direction tests.
-3. **LiDAR lasers.** The Velodyne VLP-16 is Class 1 eye-safe. Still, never put magnifying optics in front of it while it runs.
+3. **LiDAR lasers.** The Velodyne VLP-16 and the Livox Mid-360 are both Class 1 eye-safe. Still, never put magnifying optics in front of it while it runs.
 :::
 
 ## Next step

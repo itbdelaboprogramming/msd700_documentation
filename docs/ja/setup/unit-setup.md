@@ -69,7 +69,7 @@ cd ~/msd700_noetic
 ./setup.sh
 ```
 
-Dockerの導入(未導入時)、グループ権限と`xhost`の設定、スクリプトの実行権限付与、Velodyne有線リンク設定、STM32/RealSenseのudevルールとRealSense復旧サービス、シミュレーターワールドのダウンロードを行います。ホストを変更します。読み取り専用チェックではありません。
+Dockerの導入(未導入時)、グループ権限と`xhost`の設定、スクリプトの実行権限付与、LiDAR有線リンク設定、STM32/RealSenseのudevルールとRealSense復旧サービス、シミュレーターワールドのダウンロードを行います。ホストを変更します。読み取り専用チェックではありません。
 
 ::: warning Dockerグループ
 スクリプトがユーザーを`docker`グループに追加した場合、ログアウト・ログインし直すか、`newgrp docker`を実行します(現在のシェルのみ有効)。
@@ -97,6 +97,17 @@ ROSドライバーは何も表示せずにタイムアウトし、点群が現�
 `src/msd700_robot/msd700_hardware/launch/velodyne_scanner.launch`の`device_ip`と一致している必要があります。
 
 確認: `ping 192.168.103.231`が応答し、コンテナ内で`rostopic list | grep velodyne`に点群トピックが表示されること。
+:::
+
+::: details Livox Mid-360(Mid-360搭載ユニットのみ)
+Mid-360はVLP-16と同じ有線リンクとホストアドレス(プロファイル `msd700-velodyne`、`192.168.103.100/24`)を使うため、`./setup.sh --configure-lidar` は同じ手順で実行する。異なる点:
+
+1. **センサーアドレス。** Mid-360の工場出荷時は `192.168.1.1XX`(XXはシリアル番号の下2桁)。Livox Viewer 2で一度 `192.168.103.232` に設定するか、`MSD700_LIVOX_CONFIG` でユニット専用のネットワークJSONを渡す。既定は `src/msd700_robot/msd700_hardware/config/livox/mid360.json`(ホスト `192.168.103.100`、センサー `192.168.103.232`)。
+2. **`docker/.env`。** `MSD700_LIDAR_TYPE=livox` を設定し、セットアップのpingが正しいセンサーを確認するよう `VELODYNE_SENSOR_IP=192.168.103.232` にする(変数名はそのまま。セットアップはこのpingにしか使わない)。
+3. **取付。** LiDARの姿勢は `src/msd700_robot/msd700_description/config/msd700_xacro_irbot_livox.yaml` にある(プロトタイプの実測取付)。このユニットの取付が異なる場合は `MSD700_LIDAR_POSE_FILE` で別ファイルを指定する。
+4. **イメージ。** Livoxドライバーはロボットイメージにコンパイル済み。この変更を取り込んだら `./scripts/docker-manager.sh build` を一度実行する。
+
+確認: `ping 192.168.103.232` が応答し、コンテナ内で `rostopic hz /livox/points` が約10 Hzを示すこと。ドライバーのログが `bind failed` で終わる場合、JSONのホストアドレスがこのマシンにない(リンクプロファイルが停止しているか、別のインターフェースに付いている)。その後、開けた水平な床で取付を確認する:[ロボット上での取付確認](/ja/development/ros/perception-and-hazard-scan#checking-the-mount)。
 :::
 
 ---

@@ -18,7 +18,7 @@ Stack ROS 1 Noetic sisi robot: paket, algoritma, dan loop kontrol yang membuat u
 
 <LinkCards>
   <LinkCard icon="👁️" title="Persepsi & Hazard Scan" details="/scan untuk SLAM, /scan_hazard untuk costmap, dan switch MSD700_HAZARD_SCAN." link="/id/development/ros/perception-and-hazard-scan" />
-  <LinkCard icon="📡" title="Sensor Fusion & Kontrol" details="LiDAR Velodyne VLP-16, filtering IMU, dan estimasi state EKF." link="/id/development/ros/sensor-fusion-and-control" />
+  <LinkCard icon="📡" title="Sensor Fusion & Kontrol" details="LiDAR 3D (Velodyne VLP-16 atau Livox Mid-360), filtering IMU, dan estimasi state EKF." link="/id/development/ros/sensor-fusion-and-control" />
   <LinkCard icon="📐" title="Transformasi Koordinat (TF)" details="Pohon transformasi REP-103/105, offset sensor, dan restamping BoundaryPublisher." link="/id/development/ros/tf-transforms" />
 </LinkCards>
 

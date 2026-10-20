@@ -23,7 +23,7 @@ The launch layer that assembles hardware, sim, and navigation into runnable stac
 | `robot_navigation.launch` | Full stack: hardware **or** sim + control + navigation core, optional RViz/teleop | Robot vs sim (`use_sim`) |
 | `robot_slam.launch` | Same layering for mapping (gmapping/hector) | Robot vs sim (`use_sim`) |
 | `robot_teleop.launch` | Manual drive: hardware/sim + control + `teleop_twist_keyboard` → `mux/key_vel` | Robot vs sim + teleop/debug |
-| `lidar_scanner.launch` | Real-robot lidar entry (Velodyne default, RPLIDAR/legacy); never launched in sim | Robot only |
+| `lidar_scanner.launch` | Real-robot lidar entry: `velodyne` (default), `livox` or legacy `rplidar`, from `MSD700_LIDAR_TYPE`; never launched in sim | Robot only |
 | `serial_launch.launch` | `rosserial_python` on `/dev/stm32` @57600 | Robot |
 | `map_server.launch` | `map_server` on a package-relative or absolute yaml | Both |
 | `multiple_point.launch` | `nav_controller.py` + `nav_gui.py` multi-point mode | Neutral |
@@ -62,9 +62,10 @@ Manages state estimation, coordinate transform hierarchies, and sensor fusion.
 Defines physical kinematic structures, collision geometries, and sensor placements using URDF and Xacro.
 
 - **Primary URDF Models**:
-  - `urdf/irbot.urdf.xacro`: The model the **real unit** publishes (via `launch/robot_description.launch.xml`, always on in `bringup_msd.launch`). Fixed chain `base_footprint -> base_link -> laser` and `base_link -> imu`; lidar height from `config/msd700_xacro_irbot.yaml`.
+  - `urdf/irbot.urdf.xacro`: The model the **real unit** publishes (via `launch/robot_description.launch.xml`, always on in `bringup_msd.launch`). Fixed chain `base_footprint -> base_link -> laser` and `base_link -> imu`; 6-DOF lidar mount from `config/msd700_xacro_irbot.yaml` (VLP-16) or `config/msd700_xacro_irbot_livox.yaml` (Mid-360), picked by `MSD700_LIDAR_TYPE` and published as `/lidar_mount_config`.
   - `urdf/msd700_field.urdf.xacro`: True-scale **simulation** model (0.90 x 0.70 m body, 4 drive wheels at x = ±0.30 m / y = ±0.30 m, Velodyne mast at 0.50 m above footprint). No casters, no `camera_link`.
   - `urdf/velodyne/VLP_16.urdf.xacro`: High-fidelity 16-channel 3D LiDAR model and Gazebo sensor plugins.
+  - `urdf/livox/mid360.urdf.xacro`: Livox Mid-360 for Gazebo (360 x 24 beam grid over -7° to +52°), mounted on `msd700_field` from `config/msd700_xacro_field_livox_sim.yaml` when `lidar_type:=livox`.
   - `urdf/turtlebot3_waffle.urdf.xacro`: Legacy small-scale prototype model.
 
 ### 4. `msd700_hardware` & `msd700_firmware`
@@ -73,6 +74,7 @@ Handles low-level hardware interfaces, motor actuation and encoder pulse countin
 - **Hardware Architecture**:
   - `serial_launch.launch` (`msd700_bringup`): Connects the host to the low-level microcontroller over `/dev/stm32` at 57600 baud (via `rosserial_python` `serial_node.py`).
   - The STM32 firmware speaks rosserial (`hardware_state` / `hardware_command`). In the default `hardware_mode 1`, `raw_sensor_node` and `bridger.py` handle both directions; the C++ `msd700_hardware` interface (`msd700_hardware.launch`, `config/odometry_config.yaml`) is only used in `hardware_mode 2`. There is no `/battery_state` topic anywhere in the stack. See [Firmware and Hardware](/development/ros/firmware-and-hardware) for what the firmware actually implements.
+  - Lidar drivers: `launch/velodyne_scanner.launch` (VLP-16), `launch/livox_driver.launch` (Mid-360 driver plus `scripts/restamp_cloud.py`, network in `config/livox/mid360.json`) and `launch/livox_scanner.launch` (Mid-360 plain flattener in `base_footprint`). `msd700_bringup/lidar_scanner.launch` picks between them.
 
 ### 5. `msd700_simulation`
 Gazebo simulation environment for testing navigation algorithms in software.
@@ -92,11 +94,11 @@ Robot-internal message contracts (`msd700_robot/msd700_msgs/msg/`):
 - `WebNavCommand.msg`: `string command`, `geometry_msgs/PoseStamped pose`, `string file_path`.
 
 ### 8. `msd700_perception`
-Turns the Velodyne point cloud into the 2D scans the rest of the stack uses: `/scan` for SLAM/AMCL, `/scan_hazard` (obstacles plus holes) for the costmaps, `/scan_holes` for the dashboard overlay. See [Perception and Hazard Scan](/development/ros/perception-and-hazard-scan).
+Turns the 3D lidar point cloud (VLP-16 or Mid-360) into the 2D scans the rest of the stack uses: `/scan` for SLAM/AMCL, `/scan_hazard` (obstacles plus holes) for the costmaps, `/scan_holes` for the dashboard overlay. See [Perception and Hazard Scan](/development/ros/perception-and-hazard-scan).
 
 - **Nodes**: `hazard_scan_node.py` (the pipeline, library code in `src/msd700_perception/`, C fast path in `src_cpp/fastops.cpp`); `hazard_inspector.py` for stage-by-stage debugging.
-- **Launch files**: `velodyne_hazard.launch` (drop-in replacement for `msd700_hardware/velodyne_scanner.launch`, chosen by `MSD700_HAZARD_SCAN=true`), `cloud_hazard.launch`, `hazard_scan.launch`.
-- **Config**: `config/hazard_scan.yaml`.
+- **Launch files**: `velodyne_hazard.launch` and `livox_hazard.launch` (drop-in replacements for `msd700_hardware/velodyne_scanner.launch` and `livox_scanner.launch`, chosen by `MSD700_HAZARD_SCAN=true`), `cloud_hazard.launch`, `hazard_scan.launch`.
+- **Config**: `config/hazard_scan.yaml`, layered with `config/sensor/<sensor_profile>.yaml` (`velodyne_vlp16`, `livox_mid360`) and `config/robot/<robot_profile>.yaml`.
 
 ### 9. `msd700_coverage`
 The boustrophedon coverage planner behind area sweeps and operation playlists. See [Boustrophedon Coverage](/development/ros/boustrophedon-and-alignment).

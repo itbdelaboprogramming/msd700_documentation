@@ -23,7 +23,7 @@ Lapisan launch yang merakit hardware, sim, dan navigasi menjadi stack yang bisa 
 | `robot_navigation.launch` | Stack penuh: hardware **atau** sim + control + navigation core, RViz/teleop opsional | Robot vs sim (`use_sim`) |
 | `robot_slam.launch` | Layering sama untuk mapping (gmapping/hector) | Robot vs sim (`use_sim`) |
 | `robot_teleop.launch` | Drive manual: hardware/sim + control + `teleop_twist_keyboard` → `mux/key_vel` | Robot vs sim + teleop/debug |
-| `lidar_scanner.launch` | Entry lidar robot nyata (default Velodyne, RPLIDAR/legacy); tidak pernah di-launch di sim | Hanya robot |
+| `lidar_scanner.launch` | Entry lidar robot nyata: `velodyne` (default), `livox`, atau `rplidar` legacy, dari `MSD700_LIDAR_TYPE`; tidak pernah di-launch di sim | Hanya robot |
 | `serial_launch.launch` | `rosserial_python` di `/dev/stm32` @57600 | Robot |
 | `map_server.launch` | `map_server` di yaml relatif-paket atau absolut | Keduanya |
 | `multiple_point.launch` | Mode multi-point `nav_controller.py` + `nav_gui.py` | Netral |
@@ -62,9 +62,10 @@ Mengelola estimasi state, hierarki transformasi koordinat, dan sensor fusion.
 Mendefinisikan struktur kinematik fisik, geometri collision, dan penempatan sensor menggunakan URDF dan Xacro.
 
 - **Model URDF Utama**:
-  - `urdf/irbot.urdf.xacro`: Model yang dipublikasikan **unit sungguhan** (lewat `launch/robot_description.launch.xml`, selalu aktif di `bringup_msd.launch`). Rantai tetap `base_footprint -> base_link -> laser` dan `base_link -> imu`; tinggi lidar dari `config/msd700_xacro_irbot.yaml`.
+  - `urdf/irbot.urdf.xacro`: Model yang dipublikasikan **unit sungguhan** (lewat `launch/robot_description.launch.xml`, selalu aktif di `bringup_msd.launch`). Rantai tetap `base_footprint -> base_link -> laser` dan `base_link -> imu`; pemasangan lidar 6-DOF dari `config/msd700_xacro_irbot.yaml` (VLP-16) atau `config/msd700_xacro_irbot_livox.yaml` (Mid-360), dipilih oleh `MSD700_LIDAR_TYPE` dan dipublikasikan sebagai `/lidar_mount_config`.
   - `urdf/msd700_field.urdf.xacro`: Model **simulasi** berskala nyata (body 0,90 x 0,70 m, 4 roda penggerak pada x = ±0,30 m / y = ±0,30 m, mast Velodyne pada 0,50 m di atas footprint). Tanpa caster, tanpa `camera_link`.
   - `urdf/velodyne/VLP_16.urdf.xacro`: Model LiDAR 3D 16-channel resolusi tinggi dan plugin sensor Gazebo.
+  - `urdf/livox/mid360.urdf.xacro`: Livox Mid-360 untuk Gazebo (grid sinar 360 x 24 pada -7° sampai +52°), dipasang di `msd700_field` dari `config/msd700_xacro_field_livox_sim.yaml` bila `lidar_type:=livox`.
   - `urdf/turtlebot3_waffle.urdf.xacro`: Model prototipe skala kecil legacy.
 
 ### 4. `msd700_hardware` & `msd700_firmware`
@@ -73,6 +74,7 @@ Menangani antarmuka hardware level rendah, aktuasi motor, dan penghitungan pulsa
 - **Arsitektur Hardware**:
   - `serial_launch.launch` (`msd700_bringup`): Menghubungkan host ke mikrokontroler level rendah melalui `/dev/stm32` pada 57600 baud (via `rosserial_python` `serial_node.py`).
   - Firmware STM32 berbicara rosserial (`hardware_state` / `hardware_command`). Pada `hardware_mode 1` (default), `raw_sensor_node` dan `bridger.py` menangani kedua arah; interface C++ `msd700_hardware` (`msd700_hardware.launch`, `config/odometry_config.yaml`) hanya dipakai pada `hardware_mode 2`. Tidak ada topic `/battery_state` di mana pun dalam stack. Lihat [Firmware dan Perangkat Keras](/id/development/ros/firmware-and-hardware) untuk apa yang benar-benar diimplementasikan firmware.
+  - Driver lidar: `launch/velodyne_scanner.launch` (VLP-16), `launch/livox_driver.launch` (driver Mid-360 plus `scripts/restamp_cloud.py`, jaringan di `config/livox/mid360.json`), dan `launch/livox_scanner.launch` (perata polos Mid-360 di `base_footprint`). `msd700_bringup/lidar_scanner.launch` memilih di antaranya.
 
 ### 5. `msd700_simulation`
 Lingkungan simulasi Gazebo untuk menguji algoritma navigasi secara software.
@@ -92,11 +94,11 @@ Kontrak message internal robot (`msd700_robot/msd700_msgs/msg/`):
 - `WebNavCommand.msg`: `string command`, `geometry_msgs/PoseStamped pose`, `string file_path`.
 
 ### 8. `msd700_perception`
-Mengubah point cloud Velodyne menjadi scan 2D yang dipakai bagian lain stack: `/scan` untuk SLAM/AMCL, `/scan_hazard` (obstacle plus lubang) untuk costmap, `/scan_holes` untuk overlay dashboard. Lihat [Persepsi dan Hazard Scan](/id/development/ros/perception-and-hazard-scan).
+Mengubah point cloud lidar 3D (VLP-16 atau Mid-360) menjadi scan 2D yang dipakai bagian lain stack: `/scan` untuk SLAM/AMCL, `/scan_hazard` (obstacle plus lubang) untuk costmap, `/scan_holes` untuk overlay dashboard. Lihat [Persepsi dan Hazard Scan](/id/development/ros/perception-and-hazard-scan).
 
 - **Node**: `hazard_scan_node.py` (pipeline-nya, kode library di `src/msd700_perception/`, jalur cepat C di `src_cpp/fastops.cpp`); `hazard_inspector.py` untuk debugging per tahap.
-- **File launch**: `velodyne_hazard.launch` (pengganti langsung `msd700_hardware/velodyne_scanner.launch`, dipilih oleh `MSD700_HAZARD_SCAN=true`), `cloud_hazard.launch`, `hazard_scan.launch`.
-- **Config**: `config/hazard_scan.yaml`.
+- **File launch**: `velodyne_hazard.launch` dan `livox_hazard.launch` (pengganti langsung `msd700_hardware/velodyne_scanner.launch` dan `livox_scanner.launch`, dipilih oleh `MSD700_HAZARD_SCAN=true`), `cloud_hazard.launch`, `hazard_scan.launch`.
+- **Config**: `config/hazard_scan.yaml`, dilapisi `config/sensor/<sensor_profile>.yaml` (`velodyne_vlp16`, `livox_mid360`) dan `config/robot/<robot_profile>.yaml`.
 
 ### 9. `msd700_coverage`
 Planner coverage boustrophedon di balik sweep area dan operation playlist. Lihat [Coverage Boustrophedon](/id/development/ros/boustrophedon-and-alignment).

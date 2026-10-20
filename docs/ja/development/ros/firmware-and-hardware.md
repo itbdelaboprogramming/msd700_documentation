@@ -53,7 +53,7 @@ $$u_k = K_p e_k + K_i T_s \sum e_j + \frac{K_d}{T_s} (e_k - e_{k-1}), \quad |u_k
 
 - **Attitude**: CMPS12(傾斜補正コンパス)を5 msごとに読む。そのヨーがROSへ送るheadingにもなる。
 - **UWB**: `USART2`上のフォロワータグ測位。フィルタ後に`uwb_*`フィールドで報告する。
-- **LIDAR**: 試作機から残っているRPLIDAR読み取りタスク。ユニットはEthernet接続のVelodyne VLP-16を使う。
+- **LIDAR**: 試作機から残っているRPLIDAR読み取りタスク。ユニットはEthernet接続の3D LiDARを使う。`MSD700_LIDAR_TYPE` で選ぶVelodyne VLP-16またはLivox Mid-360である([LiDARの種類と取付](/ja/development/ros/perception-and-hazard-scan#lidar-type-and-mount)を参照)。
 
 ## 関連ドキュメント
 

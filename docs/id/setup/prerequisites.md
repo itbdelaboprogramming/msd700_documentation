@@ -24,7 +24,7 @@ Hardware, OS, port jaringan, dan software yang wajib siap **sebelum** menginstal
 | Komponen | Yang dibutuhkan |
 | --- | --- |
 | **Komputer** | NVIDIA Jetson (ARM64) dengan BSP/kernel yang cocok untuk model tersebut |
-| **LiDAR** | Velodyne VLP-16 via Ethernet. Host `192.168.103.100/24`, sensor `192.168.103.231`, UDP `2368` |
+| **LiDAR** | Velodyne VLP-16 atau Livox Mid-360 via Ethernet, diatur per unit lewat `MSD700_LIDAR_TYPE`. Host `192.168.103.100/24`. VLP-16: sensor `192.168.103.231`, UDP `2368`. Mid-360: sensor `192.168.103.232`, UDP `56100` sampai `56501` |
 | **IMU** | IMU unit untuk filter orientasi dan fusi odometri |
 | **Motor** | Kontroler STM32, muncul sebagai `/dev/stm32` (butuh udev rules, lihat bawah) |
 | **Daya** | Baterai, proteksi, dan E-Stop: cocokkan dengan BOM unit |
@@ -71,7 +71,7 @@ Di **unit**, laptop operator di LAN butuh dashboard `3000`, backend `5002`, rosb
 1. **OS**: Ubuntu ARM64 dengan BSP untuk model Jetson tersebut.
 2. **Docker**: Docker CE + Compose v2.
 3. **udev rules**: untuk kontroler motor `/dev/stm32` dan USB RealSense (dipasang oleh `setup.sh`, lihat [Setup Unit](/id/setup/unit-setup)).
-4. **Link LiDAR**: Ethernet khusus, umumnya host `192.168.103.100/24` dan sensor `192.168.103.231`. Nama interface terdeteksi otomatis; override dengan `VELODYNE_IFACE` bila perlu.
+4. **Link LiDAR**: Ethernet khusus, umumnya host `192.168.103.100/24` dan sensor `192.168.103.231` (VLP-16) atau `192.168.103.232` (Mid-360). Nama interface terdeteksi otomatis; override dengan `VELODYNE_IFACE` bila perlu.
 5. **Tool hotspot**: NetworkManager, `iw`, `dnsmasq`, `iptables`, systemd, udev, polkit. Instal sebelum start pertama; lihat [WiFi Hotspot](/id/setup/wifi-hotspot).
 6. **Display X11** (opsional): hanya untuk RViz atau Gazebo. `DISPLAY` yang tidak ada saat setup hanya berupa warning.
 
@@ -136,7 +136,7 @@ sudo systemctl enable containerd.service
 ::: danger Keselamatan dulu
 1. **E-Stop harus dekat.** Sebelum tes motor apa pun, pastikan tombol merah dalam jangkauan tangan.
 2. **Angkat chasis saat power-up pertama.** Letakkan robot di atas balok agar roda berputar bebas saat tes arah motor.
-3. **Laser LiDAR.** Velodyne VLP-16 adalah laser Class 1 yang aman untuk mata. Namun jangan letakkan optik pembesar di depannya saat menyala.
+3. **Laser LiDAR.** Velodyne VLP-16 dan Livox Mid-360 sama-sama laser Class 1 yang aman untuk mata. Namun jangan letakkan optik pembesar di depannya saat menyala.
 :::
 
 ## Langkah berikutnya

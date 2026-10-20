@@ -16,7 +16,7 @@
         <mxCell id="n4" value="base_link" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="77" y="487" width="107" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="n5" value="laser&lt;br&gt;(Velodyne VLP-16)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="n5" value="laser&lt;br&gt;(VLP-16 or Mid-360)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="35" y="627" width="157" height="59" as="geometry" />
         </mxCell>
         <mxCell id="n6" value="imu&lt;br&gt;(CMPS12 via STM32)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
@@ -43,7 +43,7 @@
             <mxPoint x="-1" y="0" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="n10" value="Static: z = +0.427 m" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3364;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4968;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
+        <mxCell id="n10" value="Static: 6-DOF lidar mount&lt;br&gt;(VLP-16: z = +0.427 m)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.3364;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4968;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="n4" target="n5">
           <mxGeometry x="-0.0020" relative="1" as="geometry">
             <mxPoint x="113" y="531" as="sourcePoint" />
             <mxPoint x="113" y="627" as="targetPoint" />

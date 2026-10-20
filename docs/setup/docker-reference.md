@@ -499,9 +499,13 @@ Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on
 | Identity | `USER_UID`, `USER_GID` | empty = autodetect | Jetson 2002, laptop 1000 |
 | Identity | `UNIT_ID` | empty = cloud enrol | Pinned only for recovery |
 | Identity | `MAPS_FOLDER_LOCAL` | `/home/ubuntu/ros_maps` | |
-| Perception | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Needs the Velodyne fitted; see [Perception](/development/ros/perception-and-hazard-scan) |
+| Perception | `MSD700_HAZARD_SCAN` | `true` (template `false`) | Needs the lidar fitted; see [Perception](/development/ros/perception-and-hazard-scan) |
+| Perception | `MSD700_LIDAR_TYPE` | `velodyne` | `velodyne`, `livox` or `rplidar`. Picks the driver, the lidar pose preset and the hazard sensor profile together; see [Lidar type and mount](/development/ros/perception-and-hazard-scan#lidar-type-and-mount) |
+| Perception | `MSD700_LIDAR_POSE_FILE` | empty = preset for the lidar type | Absolute path (in the container) to this unit's own lidar pose file |
+| Perception | `MSD700_LIVOX_CONFIG` | empty = `msd700_hardware/config/livox/mid360.json` | Mid-360 network JSON (host and sensor addresses) |
 | Simulation | `MSD700_SIM_WORLD` | `mine` (template `warehouse`) | `warehouse`, `hazard`, `mine` |
 | Simulation | `MSD700_SIM_HEADLESS` | `true` (template: absent) | |
+| Simulation | `MSD700_SIM_LIDAR_POSE_FILE` | empty = `msd700_xacro_field_livox_sim.yaml` | Livox mount for the simulated robot only; the unit's `MSD700_LIDAR_POSE_FILE` is not read in simulation |
 | Simulation | `WITH_SIMULATOR` | `false` | Adds the Gazebo stack to the image; costs 1+ GB |
 | Unit ports | `MYSQL_PORT_LOCAL` | `3306` | |
 | Unit ports | `MOSQUITTO_PORT_LOCAL`, `MOSQUITTO_WS_PORT_LOCAL` | `1883`, `9001` (WS live only) | |
@@ -519,8 +523,8 @@ Config lives in `msd700_noetic/docker/.env` (auto-created from `.env.example` on
 | Network | `STA_SSID_LOCAL`, `STA_PASSWORD_LOCAL` | empty | Client uplink, optional |
 | Network | `PORTAL_HOSTNAME_LOCAL` | `mymsd.jp` | |
 | Velodyne | `VELODYNE_IFACE` | `end0` (template: empty = autodetect) | Read by `setup.sh` only, outside Docker |
-| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Keep in sync with `velodyne_scanner.launch device_ip` |
-| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | |
+| Velodyne | `VELODYNE_HOST_CIDR` | `192.168.103.100/24` | Keep in sync with `velodyne_scanner.launch device_ip`, and with the host addresses in `mid360.json` on a Mid-360 unit |
+| Velodyne | `VELODYNE_SENSOR_IP` | `192.168.103.231` | Used only for the setup ping; `192.168.103.232` on a Mid-360 unit |
 | Camera ICE | `LOCAL_STUN_URLS`, `LOCAL_TURN_URL`, `LOCAL_TURN_USERNAME`, `LOCAL_TURN_CREDENTIAL` | absent live; template has commented examples | Literal `none` = no server; code default applies when unset |
 | Paths | `WEBUI_PATH`, `DASHBOARD_PATH` | commented (autoresolved `src/<repo>` or `../<repo>`) | |
 

@@ -23,7 +23,7 @@ search: false
 | `robot_navigation.launch` | フルスタック:ハード**または**sim + 制御 + ナビゲーションコア、任意RViz/テレオペ | 実機対sim (`use_sim`) |
 | `robot_slam.launch` | マッピング用の同層構成(gmapping/hector) | 実機対sim (`use_sim`) |
 | `robot_teleop.launch` | 手動運転:ハード/sim + 制御 + `teleop_twist_keyboard` → `mux/key_vel` | 実機対sim + テレオペ/デバッグ |
-| `lidar_scanner.launch` | 実機LiDAR入口(Velodyne既定、RPLIDAR/レガシー)。simでは決して起動しない | 実機のみ |
+| `lidar_scanner.launch` | 実機LiDAR入口。`MSD700_LIDAR_TYPE` に応じて `velodyne`(既定)、`livox`、レガシーの `rplidar`。simでは決して起動しない | 実機のみ |
 | `serial_launch.launch` | `/dev/stm32` @57600上の `rosserial_python` | 実機 |
 | `map_server.launch` | パッケージ相対または絶対yaml上の `map_server` | 両方 |
 | `multiple_point.launch` | `nav_controller.py` + `nav_gui.py` の多点モード | 中立 |
@@ -62,9 +62,10 @@ search: false
 URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、センサー配置を定義する。
 
 - **主要URDFモデル**:
-  - `urdf/irbot.urdf.xacro`: **実機**がパブリッシュするモデル(`launch/robot_description.launch.xml`経由、`bringup_msd.launch`で常時起動)。固定チェーン`base_footprint -> base_link -> laser`と`base_link -> imu`。LiDARの高さは`config/msd700_xacro_irbot.yaml`による。
+  - `urdf/irbot.urdf.xacro`: **実機**がパブリッシュするモデル(`launch/robot_description.launch.xml`経由、`bringup_msd.launch`で常時起動)。固定チェーン`base_footprint -> base_link -> laser`と`base_link -> imu`。6自由度のLiDAR取付は `config/msd700_xacro_irbot.yaml`(VLP-16)または `config/msd700_xacro_irbot_livox.yaml`(Mid-360)による。`MSD700_LIDAR_TYPE` で選ばれ、`/lidar_mount_config` として配信される。
   - `urdf/msd700_field.urdf.xacro`: 実寸スケールの**シミュレーション**モデル(0.90 x 0.70 mボディ、x = ±0.30 m / y = ±0.30 mに4つの駆動輪、footprintから0.50 m上のVelodyneマスト)。キャスターなし、`camera_link`なし。
   - `urdf/velodyne/VLP_16.urdf.xacro`: 高精度16チャンネル3D LiDARモデルとGazeboセンサープラグイン。
+  - `urdf/livox/mid360.urdf.xacro`: Gazebo用Livox Mid-360(-7°〜+52°の360 x 24光線グリッド)。`lidar_type:=livox` のとき `config/msd700_xacro_field_livox_sim.yaml` から `msd700_field` に取り付ける。
   - `urdf/turtlebot3_waffle.urdf.xacro`: レガシーな小型プロトタイプモデル。
 
 ### 4. `msd700_hardware` & `msd700_firmware`
@@ -73,6 +74,7 @@ URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、セ�
 - **ハードウェア構成**:
   - `serial_launch.launch` (`msd700_bringup`): ホストを低レベルマイコンに`/dev/stm32`経由(57600ボー、`rosserial_python`の`serial_node.py`経由)で接続する。
   - STM32ファームウェアはrosserial(`hardware_state` / `hardware_command`)で通信する。既定の`hardware_mode 1`では`raw_sensor_node`と`bridger.py`が双方向を処理し、C++の`msd700_hardware`インターフェース(`msd700_hardware.launch`、`config/odometry_config.yaml`)は`hardware_mode 2`でのみ使われる。スタック内のどこにも`/battery_state`トピックは存在しない。ファームウェアの実装内容については[ファームウェア & ハードウェア](/ja/development/ros/firmware-and-hardware)を参照。
+  - LiDARドライバー: `launch/velodyne_scanner.launch`(VLP-16)、`launch/livox_driver.launch`(Mid-360ドライバーと `scripts/restamp_cloud.py`、ネットワークは `config/livox/mid360.json`)、`launch/livox_scanner.launch`(`base_footprint` で切るMid-360の素の平坦化)。`msd700_bringup/lidar_scanner.launch` がこれらから選ぶ。
 
 ### 5. `msd700_simulation`
 ナビゲーションアルゴリズムをソフトウェア上でテストするGazeboシミュレーション環境。
@@ -92,11 +94,11 @@ URDFとXacroを用いて物理的な運動構造、衝突ジオメトリ、セ�
 - `WebNavCommand.msg`: `string command`、`geometry_msgs/PoseStamped pose`、`string file_path`。
 
 ### 8. `msd700_perception`
-Velodyneの点群を、スタックの他の部分が使う2Dスキャンに変換する: SLAM/AMCL用の`/scan`、コストマップ用の`/scan_hazard`(障害物と穴)、ダッシュボードのオーバーレイ用の`/scan_holes`。[知覚とハザードスキャン](/ja/development/ros/perception-and-hazard-scan)を参照。
+3D LiDAR(VLP-16またはMid-360)の点群を、スタックの他の部分が使う2Dスキャンに変換する: SLAM/AMCL用の`/scan`、コストマップ用の`/scan_hazard`(障害物と穴)、ダッシュボードのオーバーレイ用の`/scan_holes`。[知覚とハザードスキャン](/ja/development/ros/perception-and-hazard-scan)を参照。
 
 - **ノード**: `hazard_scan_node.py`(パイプライン本体。ライブラリコードは`src/msd700_perception/`、Cの高速パスは`src_cpp/fastops.cpp`)、段階ごとのデバッグ用`hazard_inspector.py`。
-- **launchファイル**: `velodyne_hazard.launch`(`msd700_hardware/velodyne_scanner.launch`の置き換え。`MSD700_HAZARD_SCAN=true`で選択)、`cloud_hazard.launch`、`hazard_scan.launch`。
-- **設定**: `config/hazard_scan.yaml`。
+- **launchファイル**: `velodyne_hazard.launch` と `livox_hazard.launch`(`msd700_hardware/velodyne_scanner.launch` と `livox_scanner.launch` の置き換え。`MSD700_HAZARD_SCAN=true`で選択)、`cloud_hazard.launch`、`hazard_scan.launch`。
+- **設定**: `config/hazard_scan.yaml`。`config/sensor/<sensor_profile>.yaml`(`velodyne_vlp16`、`livox_mid360`)と `config/robot/<robot_profile>.yaml` を重ねる。
 
 ### 9. `msd700_coverage`
 エリア掃引とオペレーションプレイリストを支えるブストロフェドン網羅走行プランナー。[ブストロフェドン網羅走行](/ja/development/ros/boustrophedon-and-alignment)を参照。

@@ -69,7 +69,7 @@ cd ~/msd700_noetic
 ./setup.sh
 ```
 
-This installs Docker if missing, sets group access and `xhost`, makes scripts executable, configures the Velodyne wired link, installs STM32/RealSense udev rules and the RealSense recovery service, and downloads simulator worlds. It changes the host; it is not a read-only check.
+This installs Docker if missing, sets group access and `xhost`, makes scripts executable, configures the lidar wired link, installs STM32/RealSense udev rules and the RealSense recovery service, and downloads simulator worlds. It changes the host; it is not a read-only check.
 
 ::: warning Docker group
 If the script added you to the `docker` group, log out and back in, or run `newgrp docker` (current shell only).
@@ -98,6 +98,29 @@ route). With 0 or 2+ candidates it is skipped with a warning, never guessed.
 
 Verify: `ping 192.168.103.231` answers, and inside the container `rostopic list | grep velodyne`
 shows the point cloud topics.
+:::
+
+::: details Livox Mid-360 (only on units with a Mid-360)
+The Mid-360 uses the same wired link and host address as the VLP-16 (profile `msd700-velodyne`,
+`192.168.103.100/24`), so `./setup.sh --configure-lidar` is run the same way. What differs:
+
+1. **Sensor address.** A Mid-360 leaves the factory at `192.168.1.1XX` (XX = the last two digits of
+   its serial number). Set it once to `192.168.103.232` with Livox Viewer 2, or give the unit its own
+   network JSON through `MSD700_LIVOX_CONFIG`. The default is
+   `src/msd700_robot/msd700_hardware/config/livox/mid360.json` (host `192.168.103.100`, sensor
+   `192.168.103.232`).
+2. **`docker/.env`.** Set `MSD700_LIDAR_TYPE=livox`, and `VELODYNE_SENSOR_IP=192.168.103.232` so the
+   setup ping checks the right sensor (the variable keeps its name; setup only uses it for that ping).
+3. **Mount.** The lidar pose is in `src/msd700_robot/msd700_description/config/msd700_xacro_irbot_livox.yaml`,
+   the prototype's measured mount. Point `MSD700_LIDAR_POSE_FILE` at another file if this unit's
+   mount differs.
+4. **Image.** The Livox driver is compiled into the robot image. After pulling this change, run
+   `./scripts/docker-manager.sh build` once.
+
+Verify: `ping 192.168.103.232` answers, and inside the container `rostopic hz /livox/points` shows
+about 10 Hz. A driver log ending in `bind failed` means the JSON's host address is not on this
+machine: the link profile is down or on the wrong interface. Then check the mount on open, level
+floor: [Checking the mount on the robot](/development/ros/perception-and-hazard-scan#checking-the-mount).
 :::
 
 ---

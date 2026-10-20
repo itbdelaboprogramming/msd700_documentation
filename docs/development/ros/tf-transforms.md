@@ -13,7 +13,7 @@ This document provides a comprehensive specification of the coordinate transform
 
 The coordinate transform tree adheres to ROS REP-103 (Standard Units of Measure & Coordinate Conventions) and REP-105 (Coordinate Frames for Mobile Platforms):
 
-The tree below is what the **real unit** publishes: `irbot.urdf.xacro` through `msd700_description/launch/robot_description.launch.xml`, started by `bringup_msd.launch` in every mode (idle included) so `/scan` and the EKF always have their static transforms. The lidar height comes from `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) and is the datum `msd700_perception` measures every height from.
+The tree below is what the **real unit** publishes: `irbot.urdf.xacro` through `msd700_description/launch/robot_description.launch.xml`, started by `bringup_msd.launch` in every mode (idle included) so `/scan` and the EKF always have their static transforms. The lidar mount comes from `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) on a VLP-16 unit, or from `config/msd700_xacro_irbot_livox.yaml` on a Livox Mid-360 unit (`MSD700_LIDAR_TYPE=livox`), and is the datum `msd700_perception` measures every height from.
 
 ![Coordinate Frame Hierarchy (TF Tree)](./diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
@@ -30,7 +30,7 @@ In simulation the Gazebo model `msd700_field.urdf.xacro` is used instead: frames
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Corrects odometric drift against static laser occupancy grid. | Discrete jumps when localized; preserves last transform if laser scans drop. |
 | `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Continuous fusion of wheel odometry velocities and IMU attitude and angular rates. | Continuous, smooth, drift-free short-term trajectory. |
 | `base_footprint -> base_link` | `robot_state_publisher` | Static | Fixed elevation offset ($z = 0.10\text{ m}$ = `wheel_radius`). | Fixed transform from URDF. |
-| `base_link -> laser` | `robot_state_publisher` | Static | LiDAR mount ($x = 0$, $z = 0.427\text{ m}$ from `base_link`, `msd700_xacro_irbot.yaml`). | Fixed transform from URDF. |
+| `base_link -> laser` | `robot_state_publisher` | Static | LiDAR mount, 6-DOF (`offset_x/y/z_lidar`, `lidar_roll/pitch/yaw`). VLP-16: $x = 0$, $z = 0.427\text{ m}$ from `base_link` (`msd700_xacro_irbot.yaml`). Mid-360: $x = 0.21$, $z = 0.24\text{ m}$, rpy $(0, -0.7854, 3.1416)$, dome tilted 45° forward (`msd700_xacro_irbot_livox.yaml`). See [Lidar type and mount](/development/ros/perception-and-hazard-scan#lidar-type-and-mount). | Fixed transform from URDF. |
 | `base_link -> imu` | `robot_state_publisher` | Static | Identity; `/imu/data` is stamped in frame `imu`, so without this edge the EKF drops every IMU sample. | Fixed transform from URDF. |
 
 ---

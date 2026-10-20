@@ -69,7 +69,7 @@ cd ~/msd700_noetic
 ./setup.sh
 ```
 
-Ini menginstal Docker bila belum ada, mengatur akses grup dan `xhost`, membuat script executable, mengonfigurasi link kabel Velodyne, memasang udev rules STM32/RealSense dan service recovery RealSense, serta mengunduh world simulator. Ini mengubah host; bukan cek read-only.
+Ini menginstal Docker bila belum ada, mengatur akses grup dan `xhost`, membuat script executable, mengonfigurasi link kabel lidar, memasang udev rules STM32/RealSense dan service recovery RealSense, serta mengunduh world simulator. Ini mengubah host; bukan cek read-only.
 
 ::: warning Grup docker
 Bila script menambahkan user ke grup `docker`, logout dan login ulang, atau jalankan `newgrp docker` (hanya shell saat ini).
@@ -98,6 +98,29 @@ route). Jika kandidatnya 0 atau lebih dari 1, langkah ini dilewati dengan warnin
 
 Verifikasi: `ping 192.168.103.231` dijawab, dan di dalam container `rostopic list | grep velodyne`
 menampilkan topic point cloud.
+:::
+
+::: details Livox Mid-360 (hanya untuk unit dengan Mid-360)
+Mid-360 memakai link kabel dan alamat host yang sama dengan VLP-16 (profil `msd700-velodyne`,
+`192.168.103.100/24`), sehingga `./setup.sh --configure-lidar` dijalankan dengan cara yang sama. Yang berbeda:
+
+1. **Alamat sensor.** Mid-360 dari pabrik memakai `192.168.1.1XX` (XX = dua digit terakhir nomor
+   serinya). Atur sekali ke `192.168.103.232` dengan Livox Viewer 2, atau berikan unit JSON
+   jaringannya sendiri lewat `MSD700_LIVOX_CONFIG`. Defaultnya
+   `src/msd700_robot/msd700_hardware/config/livox/mid360.json` (host `192.168.103.100`, sensor
+   `192.168.103.232`).
+2. **`docker/.env`.** Set `MSD700_LIDAR_TYPE=livox`, dan `VELODYNE_SENSOR_IP=192.168.103.232` supaya ping
+   saat setup memeriksa sensor yang benar (nama variabelnya tetap; setup hanya memakainya untuk ping itu).
+3. **Pemasangan.** Pose lidar ada di `src/msd700_robot/msd700_description/config/msd700_xacro_irbot_livox.yaml`,
+   pemasangan prototype yang sudah diukur. Arahkan `MSD700_LIDAR_POSE_FILE` ke file lain bila
+   pemasangan unit ini berbeda.
+4. **Image.** Driver Livox dikompilasi ke dalam image robot. Setelah menarik perubahan ini, jalankan
+   `./scripts/docker-manager.sh build` sekali.
+
+Verifikasi: `ping 192.168.103.232` dijawab, dan di dalam container `rostopic hz /livox/points`
+menunjukkan sekitar 10 Hz. Log driver yang berakhir dengan `bind failed` berarti alamat host di JSON
+tidak ada di mesin ini: profil link mati atau terpasang di interface yang salah. Setelah itu periksa
+pemasangan di lantai terbuka yang datar: [Memeriksa pemasangan di robot](/id/development/ros/perception-and-hazard-scan#checking-the-mount).
 :::
 
 ---

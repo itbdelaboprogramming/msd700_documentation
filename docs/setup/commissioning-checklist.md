@@ -12,14 +12,14 @@ End-to-end acceptance for one new robot, unboxing to signed-off. Follow the link
 ## 1. Host prep
 
 - [ ] `setup.sh` run (Docker, groups, xhost). Pass: `--check` clean.
-- [ ] Velodyne link (`--configure-lidar`, `192.168.103.231` reachable). Pass: ping answers.
+- [ ] Lidar link (`--configure-lidar`; VLP-16 `192.168.103.231` or Mid-360 `192.168.103.232` reachable). Pass: ping answers.
 - [ ] `setup.sh --provision-network` from a wired console, hotspot + client saved to `/etc/hostapd/*.conf` (0600), hidden password typed twice. Pass: SSID broadcasts.
 
 See [Unit Setup](/setup/unit-setup).
 
 ## 2. Build and start
 
-- [ ] `docker/.env` reviewed ( Velodyne IPs match the launch file, `AP_SSID`, 8+ char `AP_PASSWORD`). Pass: no `change_me` left where it matters.
+- [ ] `docker/.env` reviewed (`MSD700_LIDAR_TYPE` matches the fitted lidar, lidar IPs match the launch file or `mid360.json`, `AP_SSID`, 8+ char `AP_PASSWORD`). Pass: no `change_me` left where it matters.
 - [ ] `docker-manager.sh build` then `up`. Pass: `status` shows the container up; no build errors.
 - [ ] First boot prints a CLAIM CODE; adopt/register it in Pending. Pass: unit appears under its ULID, no second pending row.
 
@@ -38,6 +38,7 @@ See [WiFi Hotspot](/setup/wifi-hotspot), [Hardware Enrolment](/development/webui
 - [ ] `tmux attach -t robot_services`: `roscore`, `ros_webui`, `camera_client`, `switch_mode`, `log_janitor`, `token_refresh` all alive. Pass: no window dead at 5 minutes.
 - [ ] `ros_doctor.sh` clean. Pass: `OK master answers`, stack stamp present, rosbridge listening, no foreign nodes.
 - [ ] `curl http://localhost:5002/local/status` answers. Pass: HTTP 200 with the unit's status.
+- [ ] Lidar mount, on open level floor with `MSD700_HAZARD_SCAN=true`: `rostopic echo /hazard_scan/ground_tilt` and `/hazard_scan/ground_offset`. Pass: both about 0 and no mount advice in the `hazard_scan` log. See [Checking the mount on the robot](/development/ros/perception-and-hazard-scan#checking-the-mount).
 
 See [Docker Reference § Unit `run_msd.sh`](/setup/docker-reference#unit-run-msd-sh).
 

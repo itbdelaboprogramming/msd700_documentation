@@ -13,7 +13,7 @@
         <mxCell id="n1" value="" style="rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;container=1;collapsible=0;recursiveResize=0;" vertex="1" parent="1">
           <mxGeometry x="517" y="755" width="270" height="207" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="Velodyne VLP-16 3D LiDAR&lt;br&gt;(16 beams, Ethernet:&lt;br&gt;192.168.103.231)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
+        <mxCell id="n7" value="3D LiDAR, one per unit&lt;br&gt;VLP-16 (192.168.103.231)&lt;br&gt;or Livox Mid-360 (192.168.103.232)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
           <mxGeometry x="813" y="46" width="246" height="75" as="geometry" />
         </mxCell>
         <mxCell id="n8" value="CMPS12 compass/IMU on the&lt;br&gt;STM32&lt;br&gt;accel, gyro, magnetometer,&lt;br&gt;heading" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
@@ -25,7 +25,7 @@
         <mxCell id="n10" value="USB Camera&lt;br&gt;separate WebRTC device, not a&lt;br&gt;URDF link" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n3">
           <mxGeometry x="288" y="38" width="246" height="75" as="geometry" />
         </mxCell>
-        <mxCell id="n11" value="pointcloud_to_laserscan&lt;br&gt;Projects 3D pointcloud to 2D /scan&lt;br&gt;Height window: -0.30 to +0.30 m" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
+        <mxCell id="n11" value="pointcloud_to_laserscan&lt;br&gt;Projects 3D pointcloud to 2D /scan&lt;br&gt;VLP-16: -0.30 to +0.30 m (sensor)&lt;br&gt;Mid-360: 0.08 to 0.65 m (floor)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">
           <mxGeometry x="288" y="31" width="240" height="74" as="geometry" />
         </mxCell>
         <mxCell id="n12" value="raw_sensor_node&lt;br&gt;(hardware_state.py)&lt;br&gt;/wheel/odom, /imu/data_raw,&lt;br&gt;/imu/mag" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n2">

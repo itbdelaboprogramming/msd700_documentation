@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Bagaimana awan Velodyne menjadi dua scan 2D yang dikonsumsi sisa stack: `/scan` untuk SLAM dan lokalisasi, `/scan_hazard` untuk costmap. Satu awan 3D masuk, dua scan 2D keluar: simulasi dan robot nyata berbagi pipeline yang persis sama.
+Bagaimana awan lidar 3D (Velodyne VLP-16 atau Livox Mid-360, dipilih per unit) menjadi dua scan 2D yang dikonsumsi sisa stack: `/scan` untuk SLAM dan lokalisasi, `/scan_hazard` untuk costmap. Satu awan 3D masuk, dua scan 2D keluar: simulasi dan robot nyata berbagi pipeline yang persis sama.
 
 ## Kedua scan {#the-two-scans}
 
@@ -22,13 +22,85 @@ Memanggang tepi lubang ke peta statis akan menghantui lokalisasi selamanya, sehi
 
 Jejak lubang bukan latch milik costmap. Jejak mempertahankan sel setelah robot menjauh dan selama sel itu berada di blind zone, lalu membuangnya begitu detektor melihatnya lagi dan mendapati lantai: `memory.clear_hits` (3) frame ketika return lantai pada bearing sel itu menjangkau melewatinya, tidak ada apa pun di depannya, dan jaraknya dalam `expected_max_range` (3.5 m), tanpa deteksi baru sel itu di antaranya. Jadi salah deteksi hilang dari dashboard seperti hilang dari costmap di RViz. Sel yang sudah dibantah baru kembali setelah `confirm_frames` (3) deteksi baru.
 
+## Jenis lidar dan pemasangannya {#lidar-type-and-mount}
+
+Sebuah unit membawa Velodyne VLP-16 atau Livox Mid-360. `MSD700_LIDAR_TYPE` di `docker/.env` unit memilih driver, pemasangan, dan tuning persepsi sekaligus, sehingga ketiganya tidak bisa saling berbeda:
+
+| | `velodyne` (default) | `livox` |
+| --- | --- | --- |
+| Driver | `velodyne_driver` + `velodyne_pointcloud` | `livox_ros_driver2` 1.2.6 di atas Livox-SDK2 v1.3.1, terpasang di image pada `/opt/livox_ws` |
+| Topik awan | `/velodyne_points` | `/livox/points` (di-stamp ulang, [lihat di bawah](#time-stamps)) |
+| File pemasangan (TF `base_link -> laser`) | `msd700_xacro_irbot.yaml` | `msd700_xacro_irbot_livox.yaml` |
+| Profil sensor | `config/sensor/velodyne_vlp16.yaml` | `config/sensor/livox_mid360.yaml` |
+| Bidang pandang | 360° x -15° sampai +15°, 16 ring | 360° x -7° sampai +52°, pola non-repetitif |
+| Alamat sensor | `192.168.103.231`, UDP 2368 | `192.168.103.232`, diatur di `msd700_hardware/config/livox/mid360.json` |
+
+Kedua driver mempublikasikan di frame `laser`, sehingga TF dan semua yang di hilir sama untuk sensor mana pun.
+
+### Pemasangan {#lidar-mount}
+
+Pemasangan adalah enam angka relatif terhadap `base_link`, dengan konvensi REP-103 (x ke depan, y ke kiri, z ke atas; sudut dalam radian, diterapkan roll, lalu pitch, lalu yaw terhadap sumbu tetap, seperti URDF): `offset_x_lidar`, `offset_y_lidar`, `offset_z_lidar`, `lidar_roll`, `lidar_pitch` (positif berarti hidung turun), dan `lidar_yaw`. `MSD700_LIDAR_POSE_FILE` (path absolut) menggantikan preset untuk unit yang pemasangannya berbeda.
+
+| Preset | x | y | z di atas `base_link` | roll | pitch | yaw | Tinggi dari lantai |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| VLP-16 di tiang | 0 | 0 | 0.427 m | 0 | 0 | 0 | 0.527 m |
+| Mid-360 di prototype | 0.21 m | 0 | 0.24 m | 0 | -0.7854 | 3.1416 | 0.34 m |
+
+Pose Mid-360 diambil dari URDF prototype (`msd700_prototype_robot.urdf.xacro`: `lidar_3d_xyz 0.21 0 0.23`, diukur dari `base_link` yang berada 0.11 m di atas lantai; milik kita 0.10 m, jadi 0.24). rpy-nya memiringkan kubah 45° ke depan dan memutar sensor 180° pada sumbunya sendiri untuk jalur kabel. Untuk cakupan, hasilnya sama dengan pitch 45° hidung turun karena Mid-360 melihat 360° di sekeliling sumbunya, tetapi yaw harus tetap ada: tanpanya TF mencerminkan awan, depan menjadi belakang. Badan robot tetap yang sudah dikonfigurasi; hanya pose lidar yang mengikuti prototype.
+
+### Di mana lantai terlihat {#floor-reach}
+
+Node tidak menganggap sensor terpasang datar tepat di atas origin base. `src/msd700_perception/sensor_model.py` mengambil pemasangan dari TF dan bidang pandang dari profil sensor, lalu menghitung per bearing output lantai terdekat yang bisa dilihat sensor dan lantai terjauh yang bisa dinilai (sinar minimal `sensor.min_grazing_deg`, 8°, di bawah horizontal). Deteksi lubang, pemeriksaan lantai di balik saran kalibrasi, timeout latch, dan trail dashboard semuanya memakai nilai per bearing ini. Lubang yang ter-latch di belakang sensor yang menghadap ke depan dianggap tidak teramati, bukan dibiarkan kedaluwarsa.
+
+| Bearing | VLP-16 di tiang | Mid-360 di prototype |
+| --- | --- | --- |
+| Depan | 1.97 m | 0.48 m |
+| 60° | 1.97 m | 0.82 m |
+| 90° (samping) | 1.97 m | 3.1 m |
+| Belakang (lewat sekitar 95°) | 1.97 m | tidak pernah |
+
+Lantai terdekat yang terlihat, diukur dari origin base, di lantai datar. Node mencatat angkanya sendiri saat mulai (`floor reach for this mount: ...`).
+
+::: warning Mid-360 buta di belakang robot
+Karena dimiringkan ke depan, Mid-360 tidak melihat lantai maupun obstacle rendah di belakang robot, dan dinding di belakangnya kembali di atas `max_obstacle_height`, sehingga `/scan` untuk AMCL dan gmapping sebagian besar hanya separuh depan. Mundurlah pelan-pelan.
+:::
+
+::: tip Mid-360 yang dipasang datar tidak bisa melihat lantai
+Dipasang datar setinggi tiang, sinarnya baru mengenai lantai 5.65 m di depan, di luar ground fit 3.0 m. Lantai tidak bisa di-fit dan deteksi lubang mati. Kemiringan ke depan itulah yang membuatnya bekerja.
+:::
+
+### Filter badan dan zona mati {#body-filter}
+
+Titik di dalam kotak badan robot sendiri (`self_filter` di `config/robot/<profile>.yaml`, dalam `base_footprint`) dibuang paling awal, dan kotak yang sama menghalangi sinar di `sensor_model`. `livox_mid360` menyalakannya; untuk VLP-16 di atas tiang filter ini tetap mati karena sensor itu tidak bisa melihat badan. Titik yang lebih dekat ke sensor daripada `sensor.min_range` juga dibuang, termasuk `(0, 0, 0)` yang dikirim driver Livox untuk sinar kosong.
+
+### Stempel waktu {#time-stamps}
+
+`livox_ros_driver2` memberi stempel waktu setiap awan dari jam internal lidar. Tanpa PTP jam itu dihitung sejak lidar menyala, sehingga setiap lookup TF pada stempel itu gagal dan node tidak mempublikasikan apa pun. `msd700_hardware/scripts/restamp_cloud.py` mempublikasikan ulang `/livox/lidar` sebagai `/livox/points` dengan waktu kedatangan, dengan latensi paling besar satu frame (0.1 s). Berikan `restamp:=false` ke `livox_driver.launch` setelah unit memakai PTP.
+
+### Memeriksa pemasangan di robot {#checking-the-mount}
+
+Di lantai terbuka yang datar:
+
+```bash
+rostopic echo /hazard_scan/ground_tilt     # derajat: x = roll, y = pitch; sekitar 0 bila TF benar
+rostopic echo /hazard_scan/ground_offset   # m; sekitar 0 bila offset_z_lidar benar
+```
+
+Bacaan tidak nol yang stabil berarti file pemasangan salah. Node mencatat berapa yang perlu ditambahkan ke `lidar_roll`, `lidar_pitch`, atau `offset_z_lidar` dan menyebut file yang sedang dipakai (param `/lidar_mount_config`). Betulkan kemiringan dulu: bila sensor berada di depan `base_link`, kesalahan pitch juga tampak sebagai offset. Yaw tidak bisa dibaca dari lantai; luruskan robot terhadap dinding lurus dan bandingkan dinding di `/scan` dengan heading robot di RViz. Pemasangan diterapkan oleh xacro saat launch, jadi restart `robot_state_publisher` setelah mengubahnya.
+
+::: warning Tuning Mid-360 masih milik VLP-16
+Parameter yang bergantung pada cara sensor mengambil sampel (dilasi, jarak antar ring, `descent_run.max_gap`, lebar crest) masih diwarisi apa adanya sampai rosbag Mid-360 diputar ulang lewat node. `config/sensor/livox_mid360.yaml` mencantumkan daftarnya.
+:::
+
 ## Pipeline (`msd700_perception/launch/cloud_hazard.launch`)
 
 ![Pipeline (msd700perception/launch/cloudhazard.launch)](../../../development/ros/diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
 
-Pita-pita itu adalah meter **di atas permukaan tanah hasil fit**, bukan sensor: `ground_tolerance 0.06`, `min_obstacle_height 0.08` (di atas pita lantai berarti obstacle nyata), `max_obstacle_height 0.65` (di atas ini robot melintas di bawahnya), `hole_depth_threshold 0.12` (`config/hazard_scan.yaml`). Fit-nya kuadratik (orde 2, perlu untuk melintasi tanah bergelombang) atas return lantai dalam 3.0 m, dibobot ulang 3 kali, dengan diskriminator lantai-vs-dinding (`steepest_ring_deg 15.0`) agar dinding tidak memiringkan tanah.
+Pita-pita itu adalah meter **di atas permukaan tanah hasil fit**, bukan sensor: `ground_tolerance 0.06`, `min_obstacle_height 0.08` (di atas pita lantai berarti obstacle nyata), `max_obstacle_height 0.65` (di atas ini robot melintas di bawahnya), `hole_depth_threshold 0.12` (`config/hazard_scan.yaml`). Fit-nya kuadratik (orde 2, perlu untuk melintasi tanah bergelombang) atas return lantai dalam 3.0 m, dibobot ulang 3 kali, dengan diskriminator lantai-vs-dinding (kandidat yang lebih dekat daripada [jangkauan lantai](#floor-reach) sensor pada bearing-nya tidak mungkin lantai) agar dinding tidak memiringkan tanah.
 
-`hazard_scan.launch` membungkus node-nya (`hazard_scan_node.py`, respawn on): `scan_topic /scan_hazard`, `obstacles_topic /scan_obstacles`, `holes_topic /scan_holes`, `cells_topic /msd700/hazard_cells`, base frame `base_footprint`. Tinggi mount lidar berasal dari TF, bukan config ini.
+`hazard_scan.launch` membungkus node-nya (`hazard_scan_node.py`, respawn on): `scan_topic /scan_hazard`, `obstacles_topic /scan_obstacles`, `holes_topic /scan_holes`, `cells_topic /msd700/hazard_cells`, base frame `base_footprint`. Pemasangan lidar (posisi dan kemiringan) berasal dari TF, bukan config ini.
+
+Parameter dimuat berlapis: `config/hazard_scan.yaml`, lalu `config/sensor/<sensor_profile>.yaml`, lalu `config/robot/<robot_profile>.yaml`, lalu rosparam privat node. File dasar dibaca dari disk setiap kali dimuat, sehingga suntingan yang diikuti `~reload_params` langsung berlaku dan profil bisa menimpanya. Sampai Oktober 2026 launch juga menyalin seluruh file ke rosparam node, yang duduk paling akhir dalam penggabungan, menutupi kedua profil, dan mengunci nilai yang seharusnya dibaca ulang saat reload.
 
 ### Jalur cepat C (`fastops`)
 
@@ -102,27 +174,29 @@ Node menyimpan buffer pendek sampel `/imu/data` dan menilai setiap cloud terhada
 Gerbang ini memakan sekitar 11 ms pada frame sintetis terburuk, masih di dalam periode scan 100 ms.
 
 ::: warning Bayangan puncak
-Dari tanjakan, beberapa meter pertama di balik puncak tersembunyi: sinar melintas di atasnya pada 1 sampai 5 derajat dan mendarat beberapa meter lebih jauh. Lubang di pita itu tidak meninggalkan return di bawah bidang jauh dan tidak ada tanah yang mendarat lagi, sehingga ikut terhapus bersama puncaknya (harness menyimpannya sebagai test, `test_what_the_crest_gate_cannot_see`). Begitu badan robot rebah datar di atas puncak, meter-meter itu berada di dalam zona buta 1.87 m, sehingga tidak ada bagian package ini yang melihatnya dari sisi mana pun. Ini batas geometri sensor, bukan batas tuning. Lewati puncak dengan pelan.
+Dari tanjakan, beberapa meter pertama di balik puncak tersembunyi: sinar melintas di atasnya pada 1 sampai 5 derajat dan mendarat beberapa meter lebih jauh. Lubang di pita itu tidak meninggalkan return di bawah bidang jauh dan tidak ada tanah yang mendarat lagi, sehingga ikut terhapus bersama puncaknya (harness menyimpannya sebagai test, `test_what_the_crest_gate_cannot_see`). Begitu badan robot rebah datar di atas puncak, meter-meter itu berada di dalam zona buta (1.87 m pada VLP-16), sehingga tidak ada bagian package ini yang melihatnya dari sisi mana pun. Ini batas geometri sensor, bukan batas tuning. Lewati puncak dengan pelan.
 :::
 
 ## Sakelar `MSD700_HAZARD_SCAN`
 
 Satu environment variable, dua belahan yang harus sepakat:
 
-- **Belahan lidar** (`lidar_scanner.launch`): `true` menukar perata `pointcloud_to_laserscan` polos dengan `velodyne_hazard.launch` (driver dan `/scan` yang sama untuk SLAM/AMCL, plus `/scan_hazard`). Prasyarat: Velodyne terpasang di `192.168.103.231` dan paket `ros-noetic-velodyne` + `ros-noetic-pointcloud-to-laserscan` (terpanggang di image).
+- **Belahan lidar** (`lidar_scanner.launch`): `true` menukar perata polos dengan `velodyne_hazard.launch` atau `livox_hazard.launch`, sesuai `MSD700_LIDAR_TYPE` (driver dan `/scan` yang sama untuk SLAM/AMCL, plus `/scan_hazard`). Prasyarat: sensor di alamatnya (VLP-16 `192.168.103.231`, Mid-360 `192.168.103.232`) dan paket driver-nya (semua terpanggang di image).
 - **Belahan costmap** (`navigation_core.launch`, `msd700_navigation.launch`): keempat topik observasi costmap mengikuti satu arg `obstacle_scan`: `scan` secara default, `scan_hazard` saat persepsi jalan. Sengaja se-unit, tidak pernah per-mode (`switch_mode.yaml` menyatakannya begitu): override per-mode akan membiarkan costmap meminta topik yang tak dipublikasikan siapa pun.
 
 ::: warning Jangan pernah tambahkan `scan_hazard` sebagai sumber kedua
 Arahkan `obstacle_scan` ke satu scan atau yang lain, bukan keduanya. Raytrace scan polos akan menghapus tanda lubang yang baru saja dicat `scan_hazard` (`move_base.launch` membawa warning ini). Override manual tanpa env var: `obstacle_scan:=scan_hazard` pada navigation launch.
 :::
 
-Default live adalah `MSD700_HAZARD_SCAN=true` di `docker/.env` unit (template membawa `false`). Jaga `.env` tetap sinkron dengan `velodyne_scanner.launch device_ip`.
+Default live adalah `MSD700_HAZARD_SCAN=true` di `docker/.env` unit (template membawa `false`). Jaga `.env` tetap sinkron dengan `velodyne_scanner.launch device_ip` (VLP-16) atau `msd700_hardware/config/livox/mid360.json` (Mid-360).
 
 ## Mengujinya
 
 `msd700_hazard_test.launch`: robot lapangan dengan VLP-16 asli di world berlubang: parit, kerb 0.15 m, bangku drive-under, balok must-block. `msd700_mine.launch`: rig open-pit/bawah-tanah 44 m dengan chasm 3.0 m. `msd700_world.launch` mendispatch menurut `MSD700_SIM_WORLD`: `warehouse` (AWS datar, `/scan_hazard` = `/scan`), `hazard`, `mine`.
 
-Aturan uji latch, dari header launch: kemudikan **dalam 1.87 m** dari lubang. Demo diam di 3 m tidak membuktikan apa-apa.
+Aturan uji latch, dari header launch: kemudikan **dalam 1.87 m** dari lubang (VLP-16; pada Mid-360 jaraknya bergantung pada bearing, lihat [tabel di atas](#floor-reach)). Demo diam di 3 m tidak membuktikan apa-apa.
+
+Dengan `MSD700_LIDAR_TYPE=livox` simulator memasang Mid-360 (`msd700_description/urdf/livox/mid360.urdf.xacro`) dari `msd700_xacro_field_livox_sim.yaml`: tinggi dan kemiringan sama dengan unit, tetapi di x 0.50 m, bukan 0.21 m. Badan robot field di simulasi (0.90 x 0.70 m, atap 0.31 m) jauh lebih besar daripada prototype, dan di x 0.21 atapnya menghalangi sinar ke depan sehingga lantai baru terlihat sekitar 2.9 m di depan. `MSD700_SIM_LIDAR_POSE_FILE` menggantikan preset sim untuk satu run. Sinar di simulasi berupa grid tetap 360 x 24, bukan pola rosette Mid-360: tepat untuk geometri pemasangan, tidak untuk tuning. Offline: `test/test_sensor_model.py` dan `test/test_livox_mount.py` (raycast VLP-16 dan Mid-360 pada pemasangan apa pun lewat config asli).
 
 ## Dokumentasi Terkait
 

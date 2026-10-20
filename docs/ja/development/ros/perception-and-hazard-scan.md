@@ -7,7 +7,7 @@ search: false
 
 <RoleBadge role="developer" />
 
-Velodyneのクラウドが、スタックの残りが消費する2つの2Dスキャン(`/scan` はSLAMとローカライゼーション用、`/scan_hazard` はコストマップ用)にどうなるか。入力は1つの3Dクラウド、出力は2つの2Dスキャン、シミュレーションと実機はパイプラインを完全に共有する。
+3D LiDARのクラウド(ユニットごとに選ぶVelodyne VLP-16またはLivox Mid-360)が、スタックの残りが消費する2つの2Dスキャン(`/scan` はSLAMとローカライゼーション用、`/scan_hazard` はコストマップ用)にどうなるか。入力は1つの3Dクラウド、出力は2つの2Dスキャン、シミュレーションと実機はパイプラインを完全に共有する。
 
 ## 2つのスキャン {#the-two-scans}
 
@@ -22,13 +22,85 @@ Velodyneのクラウドが、スタックの残りが消費する2つの2Dスキ
 
 穴の軌跡はコストマップのラッチとは別物である。ロボットが離れた後も、セルがブラインドゾーンにある間も、そのセルを保持する。一方、検出器が再びそのセルを見て床と判断すれば消す。条件は `memory.clear_hits`(3)フレームで、そのセルの方位の床リターンがセルの先まで届き、手前に何もなく、距離が `expected_max_range`(3.5 m)以内であり、その間にセルの新しい検出がないこと。したがって誤検出は、RViz のコストマップから消えるのと同じようにダッシュボードからも消える。否定されたセルは、`confirm_frames`(3)回の新しい検出の後にのみ戻る。
 
+## LiDARの種類と取付 {#lidar-type-and-mount}
+
+ユニットはVelodyne VLP-16かLivox Mid-360のどちらかを搭載する。ユニットの `docker/.env` の `MSD700_LIDAR_TYPE` がドライバー、取付、知覚のチューニングをまとめて選ぶため、3つが食い違うことはない:
+
+| | `velodyne`(既定) | `livox` |
+| --- | --- | --- |
+| ドライバー | `velodyne_driver` + `velodyne_pointcloud` | Livox-SDK2 v1.3.1上の `livox_ros_driver2` 1.2.6。イメージ内 `/opt/livox_ws` にビルド済み |
+| クラウドトピック | `/velodyne_points` | `/livox/points`(スタンプ付け直し、[下記参照](#time-stamps)) |
+| 取付ファイル(TF `base_link -> laser`) | `msd700_xacro_irbot.yaml` | `msd700_xacro_irbot_livox.yaml` |
+| センサープロファイル | `config/sensor/velodyne_vlp16.yaml` | `config/sensor/livox_mid360.yaml` |
+| 視野 | 360° x -15°〜+15°、16リング | 360° x -7°〜+52°、非反復パターン |
+| センサーアドレス | `192.168.103.231`、UDP 2368 | `192.168.103.232`、`msd700_hardware/config/livox/mid360.json` で設定 |
+
+どちらのドライバーもフレーム `laser` で配信するため、TFと下流はどちらのセンサーでも同じである。
+
+### 取付 {#lidar-mount}
+
+取付は `base_link` に対する6つの数値で、REP-103の規約に従う(xは前方、yは左、zは上。角度はラジアンで、URDFと同じく固定軸まわりにroll、pitch、yawの順に適用):`offset_x_lidar`、`offset_y_lidar`、`offset_z_lidar`、`lidar_roll`、`lidar_pitch`(機首下げが正)、`lidar_yaw`。取付が異なるユニットでは `MSD700_LIDAR_POSE_FILE`(絶対パス)がプリセットを置き換える。
+
+| プリセット | x | y | `base_link` からのz | roll | pitch | yaw | 床からの高さ |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| マスト上のVLP-16 | 0 | 0 | 0.427 m | 0 | 0 | 0 | 0.527 m |
+| プロトタイプのMid-360 | 0.21 m | 0 | 0.24 m | 0 | -0.7854 | 3.1416 | 0.34 m |
+
+Mid-360の姿勢はプロトタイプのURDF(`msd700_prototype_robot.urdf.xacro`:`lidar_3d_xyz 0.21 0 0.23`、床から0.11 mの `base_link` 基準。こちらは0.10 mなので0.24)から取っている。そのrpyはドームを前方へ45°傾け、配線のためにセンサーを自身の軸まわりに180°回す。Mid-360は自身の軸まわりに360°見えるため、カバー範囲は機首下げ45°と同じだが、yawは残すこと。yawがないとTFがクラウドを前後反転させる。ロボットの車体は設定済みのものをそのまま使い、LiDARの姿勢だけプロトタイプに合わせる。
+
+### 床が見える範囲 {#floor-reach}
+
+ノードはセンサーがベース原点の真上に水平に付いているとは仮定しない。`src/msd700_perception/sensor_model.py` がTFから取付を、センサープロファイルから視野を取り、出力の方位ごとに、センサーが見える最も近い床と判定できる最も遠い床(水平より `sensor.min_grazing_deg` の8°以上下向きの光線)を求める。穴検出、キャリブレーション助言の裏の床チェック、ラッチのタイムアウト、ダッシュボードのトレイルはすべてこの方位ごとの値を使う。前向きセンサーの後方でラッチされた穴は、期限切れにせず観測不能として保持される。
+
+| 方位 | マスト上のVLP-16 | プロトタイプのMid-360 |
+| --- | --- | --- |
+| 前方 | 1.97 m | 0.48 m |
+| 60° | 1.97 m | 0.82 m |
+| 90°(真横) | 1.97 m | 3.1 m |
+| 後方(約95°より後ろ) | 1.97 m | 見えない |
+
+平坦な床での、ベース原点から見て最も近い可視の床。ノードは起動時に自分の値をログに出す(`floor reach for this mount: ...`)。
+
+::: warning Mid-360はロボットの後方が見えない
+前に傾けているため、ロボット後方の床も低い障害物も見えず、後方の壁は `max_obstacle_height` より上で返る。そのためAMCLとgmapping用の `/scan` はほぼ前半分だけになる。後退はゆっくり行うこと。
+:::
+
+::: tip 水平に付けたMid-360は床が見えない
+マストの高さに水平に付けると、光線が床に届くのは5.65 m先で、3.0 mの地面フィットの外になる。床を適合できず穴検出は止まる。前傾こそが動作の条件である。
+:::
+
+### 車体フィルターと不感帯 {#body-filter}
+
+ロボット自身の車体ボックス(`config/robot/<profile>.yaml` の `self_filter`、`base_footprint` 基準)の中の点は最初に捨てられ、同じボックスが `sensor_model` で光線を遮る。`livox_mid360` で有効になり、車体が見えないマスト上のVLP-16では無効のままである。センサーから `sensor.min_range` より近い点も捨てられ、Livoxドライバーが空の光線に出す `(0, 0, 0)` もこれで除かれる。
+
+### タイムスタンプ {#time-stamps}
+
+`livox_ros_driver2` は各クラウドにLiDAR自身の時計でスタンプを付ける。PTPがないとその時計はLiDARの電源投入からの時間になり、そのスタンプでのTF参照はすべて失敗してノードは何も配信しない。`msd700_hardware/scripts/restamp_cloud.py` が `/livox/lidar` を受信時刻付きの `/livox/points` として再配信する。遅れは最大1フレーム(0.1 s)。ユニットでPTPが動いたら `livox_driver.launch` に `restamp:=false` を渡す。
+
+### ロボット上での取付確認 {#checking-the-mount}
+
+開けた水平な床で:
+
+```bash
+rostopic echo /hazard_scan/ground_tilt     # 度: x = roll, y = pitch。TFが正しければほぼ0
+rostopic echo /hazard_scan/ground_offset   # m。offset_z_lidarが正しければほぼ0
+```
+
+0でない値が安定して出るなら取付ファイルがずれている。ノードは `lidar_roll`、`lidar_pitch`、`offset_z_lidar` に足すべき値と使用中のファイル(param `/lidar_mount_config`)をログに出す。先に傾きを直すこと。センサーが `base_link` より前にあると、pitchの誤差はオフセットとしても現れる。yawは床から読めないので、まっすぐな壁にロボットを正対させ、RViz上で `/scan` の壁とロボットの向きを比べる。取付は起動時にxacroで適用されるため、編集後は `robot_state_publisher` を再起動すること。
+
+::: warning Mid-360のチューニングはまだVLP-16のもの
+センサーのサンプリング方法に依存するパラメーター(膨張、リング間隔、`descent_run.max_gap`、クレスト幅)は、Mid-360のrosbagをノードで再生するまでそのまま引き継がれている。一覧は `config/sensor/livox_mid360.yaml` にある。
+:::
+
 ## パイプライン(`msd700_perception/launch/cloud_hazard.launch`)
 
 ![パイプライン(msd700perception/launch/cloudhazard.launch)](../../../development/ros/diagrams/perception-and-hazard-scan-pipeline-msd700perception-launch-cloudha.drawio)
 
-帯域はセンサーからでなく**適合地表面からの**メートルである:`ground_tolerance 0.06`、`min_obstacle_height 0.08`(フロア帯より上は真の障害物)、`max_obstacle_height 0.65`(これより上はロボットが下を潜る)、`hole_depth_threshold 0.12`(`config/hazard_scan.yaml`)。適合は2次(次数2、うねる地面を跨ぐために必要)で、3.0 m以内の床リターンを3回再重み付けし、床壁判別器(`steepest_ring_deg 15.0`)で壁が地面を傾けないようにする。
+帯域はセンサーからでなく**適合地表面からの**メートルである:`ground_tolerance 0.06`、`min_obstacle_height 0.08`(フロア帯より上は真の障害物)、`max_obstacle_height 0.65`(これより上はロボットが下を潜る)、`hole_depth_threshold 0.12`(`config/hazard_scan.yaml`)。適合は2次(次数2、うねる地面を跨ぐために必要)で、3.0 m以内の床リターンを3回再重み付けし、床壁判別器(その方位のセンサーの[床が見える範囲](#floor-reach)より近い候補は床になり得ない)で壁が地面を傾けないようにする。
 
-`hazard_scan.launch` はノードを包む(`hazard_scan_node.py`、respawnあり):`scan_topic /scan_hazard`、`obstacles_topic /scan_obstacles`、`holes_topic /scan_holes`、`cells_topic /msd700/hazard_cells`、ベースフレーム `base_footprint`。LiDAR取付高さはこの設定でなくTF由来である。
+`hazard_scan.launch` はノードを包む(`hazard_scan_node.py`、respawnあり):`scan_topic /scan_hazard`、`obstacles_topic /scan_obstacles`、`holes_topic /scan_holes`、`cells_topic /msd700/hazard_cells`、ベースフレーム `base_footprint`。LiDARの取付(位置と傾き)はこの設定でなくTF由来である。
+
+パラメーターは層で読み込まれる:`config/hazard_scan.yaml`、次に `config/sensor/<sensor_profile>.yaml`、次に `config/robot/<robot_profile>.yaml`、最後にノードのプライベートrosparam。基本ファイルは読み込みのたびにディスクから読まれるため、編集後の `~reload_params` が効き、プロファイルで上書きできる。2026年10月まではlaunchがファイル全体をノードのrosparamにもコピーしており、それがマージの最後に来て両プロファイルを隠し、リロードで読み直すべき値を固定していた。
 
 ### Cの高速パス(`fastops`)
 
@@ -102,27 +174,29 @@ Velodyneのクラウドが、スタックの残りが消費する2つの2Dスキ
 ゲートのコストは最悪の合成フレームで約11 msで、100 msのスキャン周期に収まる。
 
 ::: warning 頂上の影
-坂の上からは、頂上の先の最初の数メートルが見えない。光線は1〜5度でその上を通過し、数メートル先に着地する。その帯にある穴は遠い平面より下にリターンを残さず、再び着地する地面もないため、頂上と一緒に消される(ハーネスはこれをテスト `test_what_the_crest_gate_cannot_see` として残している)。車体が頂上で水平に戻ると、その数メートルは1.87 mの死角の中に入るため、このパッケージのどの部分もどちら側からも見ることができない。これはチューニングではなくセンサーの幾何学的な限界である。頂上はゆっくり越えること。
+坂の上からは、頂上の先の最初の数メートルが見えない。光線は1〜5度でその上を通過し、数メートル先に着地する。その帯にある穴は遠い平面より下にリターンを残さず、再び着地する地面もないため、頂上と一緒に消される(ハーネスはこれをテスト `test_what_the_crest_gate_cannot_see` として残している)。車体が頂上で水平に戻ると、その数メートルは死角(VLP-16で1.87 m)の中に入るため、このパッケージのどの部分もどちら側からも見ることができない。これはチューニングではなくセンサーの幾何学的な限界である。頂上はゆっくり越えること。
 :::
 
 ## `MSD700_HAZARD_SCAN` スイッチ
 
 1つの環境変数であり、合意すべき2つの半分がある:
 
-- **LiDAR半分**(`lidar_scanner.launch`):`true` で素の `pointcloud_to_laserscan` 平坦化を `velodyne_hazard.launch` に切替え(ドライバーとSLAM/AMCL用 `/scan` は同じ、`/scan_hazard` が追加)。前提: `192.168.103.231` にVelodyne装着、`ros-noetic-velodyne` + `ros-noetic-pointcloud-to-laserscan` パッケージ(イメージに組込済み)。
+- **LiDAR半分**(`lidar_scanner.launch`):`true` で素の平坦化を、`MSD700_LIDAR_TYPE` に応じて `velodyne_hazard.launch` または `livox_hazard.launch` に切替え(ドライバーとSLAM/AMCL用 `/scan` は同じ、`/scan_hazard` が追加)。前提:センサーが所定のアドレスにあること(VLP-16は `192.168.103.231`、Mid-360は `192.168.103.232`)とドライバーパッケージ(いずれもイメージに組込済み)。
 - **コストマップ半分**(`navigation_core.launch`、`msd700_navigation.launch`):4つのコストマップ観測トピック全てが1つの `obstacle_scan` 引数に従う。既定は `scan`、知覚稼働時は `scan_hazard`。意図的にユニット全体でありモード別にしない(`switch_mode.yaml` に記載):モード別上書きは、誰も配信しないトピックをコストマップに要求させてしまう。
 
 ::: warning `scan_hazard` を第二ソースとして追加しないこと
 `obstacle_scan` はどちらか一方のスキャンを指し、両方ではない。素スキャンのraytraceが `scan_hazard` が描いたばかりの穴マークを消してしまう(`move_base.launch` に同警告あり)。環境変数なしの手動上書き:ナビゲーションlaunchに `obstacle_scan:=scan_hazard`。
 :::
 
-ライブ既定はユニットの `docker/.env` で `MSD700_HAZARD_SCAN=true`(テンプレートは `false`)。`.env` は `velodyne_scanner.launch device_ip` と同期を保つこと。
+ライブ既定はユニットの `docker/.env` で `MSD700_HAZARD_SCAN=true`(テンプレートは `false`)。`.env` は `velodyne_scanner.launch device_ip`(VLP-16)または `msd700_hardware/config/livox/mid360.json`(Mid-360)と同期を保つこと。
 
 ## テスト方法
 
 `msd700_hazard_test.launch`:実VLP-16付き実機で穴ありワールド、トレンチ、0.15 m縁石、潜りベンチ、必遮ビーム。`msd700_mine.launch`:3.0 m割れ目付き44 m露天/坑内リグ。`msd700_world.launch` は `MSD700_SIM_WORLD` で振分け:`warehouse`(平坦AWS、`/scan_hazard` = `/scan`)、`hazard`、`mine`。
 
-ランチャーヘッダー由来のラッチテスト規則:穴の**1.87 m以内**に入って運転すること。3 mでの停止デモは何も証明しない。
+ランチャーヘッダー由来のラッチテスト規則:穴の**1.87 m以内**に入って運転すること(VLP-16の場合。Mid-360では方位によって変わる。[上の表](#floor-reach)を参照)。3 mでの停止デモは何も証明しない。
+
+`MSD700_LIDAR_TYPE=livox` のとき、シミュレーターは `msd700_xacro_field_livox_sim.yaml` からMid-360(`msd700_description/urdf/livox/mid360.urdf.xacro`)を取り付ける。高さと傾きはユニットと同じだが、xは0.21 mではなく0.50 m。シミュレーションのフィールド車体(0.90 x 0.70 m、屋根0.31 m)はプロトタイプよりずっと大きく、x 0.21では屋根が前方の光線を遮り、床が見えるのは約2.9 m先からになるためである。`MSD700_SIM_LIDAR_POSE_FILE` は1回の実行に限りシミュレーション用プリセットを置き換える。シミュレーションの光線はMid-360のロゼットではなく固定の360 x 24グリッドで、取付の幾何には適するがチューニングには使えない。オフライン:`test/test_sensor_model.py` と `test/test_livox_mount.py`(任意の取付のVLP-16とMid-360を実設定でレイキャスト)。
 
 ## 関連ドキュメント
 

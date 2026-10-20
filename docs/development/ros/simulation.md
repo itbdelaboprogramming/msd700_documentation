@@ -59,6 +59,7 @@ The field (production-size) robot is modeled in `msd700_description/urdf/msd700_
 - **Dimensions**: 0.90 m length, 0.70 m width, 0.25 m height, mass 150 kg.
 - **Drive Geometry**: Four drive wheels (front/back left/right); odometry fuses them as a differential pair.
 - **Velodyne VLP-16 LiDAR**: 0.50 m above the footprint on a mounting mast. (The physical test prototype, `irbot`, carries it 0.527 m above the footprint.)
+- **Livox Mid-360 LiDAR** (with `MSD700_LIDAR_TYPE=livox`): `urdf/livox/mid360.urdf.xacro`, mounted from `config/msd700_xacro_field_livox_sim.yaml`. Same height (0.34 m) and 45° forward tilt as the unit, but at x 0.50 m instead of the unit's 0.21 m: this body is far bigger than the prototype and at 0.21 its roof would block the forward beams. `MSD700_SIM_LIDAR_POSE_FILE` replaces the preset for one run. A fixed 360 x 24 beam grid stands in for the real non-repetitive pattern. See [Lidar type and mount](/development/ros/perception-and-hazard-scan#lidar-type-and-mount).
 - **Standardized ROS Frames**: Uses standard frame conventions (`base_footprint`, `base_link`, `base_scan`, `imu_link`, `odom`, `map`).
 
 ## Launching Simulation Stacks

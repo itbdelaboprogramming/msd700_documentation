@@ -13,7 +13,7 @@
         <mxCell id="n4" value="4 Drive Wheels: x ±0.30 m, y ±0.30&lt;br&gt;m&lt;br&gt;Radius 0.10 m, Separation 0.60 m" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="288" y="120" width="246" height="75" as="geometry" />
         </mxCell>
-        <mxCell id="n5" value="Velodyne VLP-16 LiDAR: 0.40 m&lt;br&gt;above base_link&lt;br&gt;0.50 m above footprint" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
+        <mxCell id="n5" value="VLP-16 LiDAR: 0.40 m above&lt;br&gt;base_link, 0.50 m above footprint&lt;br&gt;or Mid-360: x 0.50 m, 0.34 m up,&lt;br&gt;tilted 45° forward" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">
           <mxGeometry x="12" y="120" width="246" height="75" as="geometry" />
         </mxCell>
         <mxCell id="n6" value="EKF Sensor Fusion:&lt;br&gt;/odometry/filtered (Odom + IMU)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="n1">

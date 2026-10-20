@@ -53,7 +53,7 @@ Gains are in `Core/Inc/configuration.h`; the shipped tuning is integral-only (`K
 
 - **Attitude**: CMPS12 tilt-compensated compass read every 5 ms; its yaw is also the heading published to ROS.
 - **UWB**: follower-tag positioning on `USART2`, filtered and reported in the `uwb_*` fields.
-- **LIDAR**: an RPLIDAR reader left over from the prototype. The unit uses the Velodyne VLP-16 over Ethernet instead.
+- **LIDAR**: an RPLIDAR reader left over from the prototype. The unit uses a 3D lidar over Ethernet instead: a Velodyne VLP-16 or a Livox Mid-360, chosen by `MSD700_LIDAR_TYPE` (see [Lidar type and mount](/development/ros/perception-and-hazard-scan#lidar-type-and-mount)).
 
 ## Related Documentation
 

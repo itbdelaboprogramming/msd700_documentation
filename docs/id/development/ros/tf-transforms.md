@@ -13,7 +13,7 @@ Dokumen ini menyediakan spesifikasi komprehensif untuk pohon transformasi koordi
 
 Pohon transformasi koordinat mematuhi ROS REP-103 (Standard Units of Measure & Coordinate Conventions) dan REP-105 (Coordinate Frames for Mobile Platforms):
 
-Pohon di bawah adalah yang dipublikasikan **unit sungguhan**: `irbot.urdf.xacro` lewat `msd700_description/launch/robot_description.launch.xml`, dijalankan oleh `bringup_msd.launch` di setiap mode (termasuk idle) sehingga `/scan` dan EKF selalu punya transform statisnya. Tinggi lidar diambil dari `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) dan menjadi acuan `msd700_perception` untuk mengukur semua ketinggian.
+Pohon di bawah adalah yang dipublikasikan **unit sungguhan**: `irbot.urdf.xacro` lewat `msd700_description/launch/robot_description.launch.xml`, dijalankan oleh `bringup_msd.launch` di setiap mode (termasuk idle) sehingga `/scan` dan EKF selalu punya transform statisnya. Pemasangan lidar diambil dari `config/msd700_xacro_irbot.yaml` (`offset_z_lidar: 0.427`, `wheel_radius: 0.10`) pada unit VLP-16, atau dari `config/msd700_xacro_irbot_livox.yaml` pada unit Livox Mid-360 (`MSD700_LIDAR_TYPE=livox`), dan menjadi acuan `msd700_perception` untuk mengukur semua ketinggian.
 
 ![Hierarki Frame Koordinat (Pohon TF)](../../../development/ros/diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
@@ -30,7 +30,7 @@ Di simulasi yang dipakai adalah model Gazebo `msd700_field.urdf.xacro`: frame `b
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | Mengoreksi drift odometrik terhadap occupancy grid laser statis. | Lompatan diskret saat terlokalisasi; mempertahankan transformasi terakhir jika laser scan terputus. |
 | `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | Fusion kontinu kecepatan odometri roda serta attitude dan angular rate IMU. | Trajektori jangka pendek yang kontinu, halus, dan bebas-drift. |
 | `base_footprint -> base_link` | `robot_state_publisher` | Statis | Offset elevasi tetap ($z = 0.10\text{ m}$ = `wheel_radius`). | Transformasi tetap dari URDF. |
-| `base_link -> laser` | `robot_state_publisher` | Statis | Dudukan LiDAR ($x = 0$, $z = 0.427\text{ m}$ dari `base_link`, `msd700_xacro_irbot.yaml`). | Transformasi tetap dari URDF. |
+| `base_link -> laser` | `robot_state_publisher` | Statis | Dudukan LiDAR, 6-DOF (`offset_x/y/z_lidar`, `lidar_roll/pitch/yaw`). VLP-16: $x = 0$, $z = 0.427\text{ m}$ dari `base_link` (`msd700_xacro_irbot.yaml`). Mid-360: $x = 0.21$, $z = 0.24\text{ m}$, rpy $(0, -0.7854, 3.1416)$, kubah miring 45° ke depan (`msd700_xacro_irbot_livox.yaml`). Lihat [Jenis lidar dan pemasangannya](/id/development/ros/perception-and-hazard-scan#lidar-type-and-mount). | Transformasi tetap dari URDF. |
 | `base_link -> imu` | `robot_state_publisher` | Statis | Identitas; `/imu/data` dicap dengan frame `imu`, jadi tanpa edge ini EKF membuang setiap sampel IMU. | Transformasi tetap dari URDF. |
 
 ---

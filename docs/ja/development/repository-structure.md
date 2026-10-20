@@ -60,11 +60,11 @@ msd700_robot/
 ├── msd700_coverage/          # Boustrophedon sweep planner (path_coverage_node)
 ├── msd700_description/       # URDF, including msd700_field.urdf.xacro (real size)
 ├── msd700_firmware/          # Legacy Arduino firmware (reference only; the unit runs the STM32 firmware from firmware-msd700)
-├── msd700_hardware/          # Hardware drivers (serial, Velodyne, odometry)
+├── msd700_hardware/          # Hardware drivers (serial, Velodyne, Livox, odometry)
 ├── msd700_movement/          # Vendored third_party only
 ├── msd700_msgs/              # Robot-level messages
 ├── msd700_navigation/        # move_base, TEB, SLAM, costmaps
-├── msd700_perception/        # Velodyne pipelines (scan, hazard)
+├── msd700_perception/        # 3D lidar pipelines (scan, hazard)
 ├── msd700_simulation/        # Gazebo worlds and sim launches
 │   ├── worlds/               #   small, TurtleBot-scale worlds, committed
 │   ├── scripts/              #   fetch_sim_worlds.sh: pulls the AWS warehouse

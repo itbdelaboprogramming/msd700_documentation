@@ -93,7 +93,7 @@ The Velodyne VLP-16 sensor produces 300,000 points/sec across 16 laser rings. To
 
 ![LiDAR PointCloud Projection Pipeline](./diagrams/sensor-fusion-and-control-lidar-pointcloud-projection-pipeline.drawio)
 
-This keeps the $\pm 0.30\text{ m}$ band around the sensor in the navigation costmaps while returns outside it (floor reflections, ceiling) are dropped. A second pipeline (`cloud_hazard.launch`) fits ground and watches the $0.08$–$0.65\text{ m}$ band above it for holes and drop-offs, publishing `/scan_hazard`.
+This keeps the $\pm 0.30\text{ m}$ band around the sensor in the navigation costmaps while returns outside it (floor reflections, ceiling) are dropped. On a Livox Mid-360 unit (`msd700_hardware/launch/livox_scanner.launch`) the band is cut in `base_footprint` instead, $0.08$–$0.65\text{ m}$ above the floor: the Mid-360 is mounted tilted, and a band in a tilted sensor frame would slice into the floor ahead and report it as a wall. That needs the `base_footprint -> laser` transform, so `msd700_navigation.launch` also starts its own `robot_state_publisher` on a Livox unit. A second pipeline (`cloud_hazard.launch`) fits ground and watches the $0.08$–$0.65\text{ m}$ band above it for holes and drop-offs, publishing `/scan_hazard`.
 
 ## Related Documentation
 

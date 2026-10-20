@@ -59,6 +59,7 @@ fieldロボット(量産サイズ)は`msd700_description/urdf/msd700_field.urdf.
 - **寸法**: 長さ0.90 m、幅0.70 m、高さ0.25 m、質量150 kg。
 - **駆動ジオメトリ**: 4つの駆動輪(前後左右)。オドメトリはそれらを差動ペアとして融合する。
 - **Velodyne VLP-16 LiDAR**: footprintから0.50 m上のマウントマストに設置。(実機試験用のprototype `irbot`ではfootprintから0.527 m上。)
+- **Livox Mid-360 LiDAR**(`MSD700_LIDAR_TYPE=livox` のとき): `urdf/livox/mid360.urdf.xacro`。`config/msd700_xacro_field_livox_sim.yaml` から取り付ける。高さ(0.34 m)と前方45°の傾きはユニットと同じだが、xはユニットの0.21 mではなく0.50 m。この車体はプロトタイプよりずっと大きく、0.21では屋根が前方の光線を遮るためである。`MSD700_SIM_LIDAR_POSE_FILE` は1回の実行に限りプリセットを置き換える。実機の非反復パターンの代わりに固定の360 x 24光線グリッドを使う。[LiDARの種類と取付](/ja/development/ros/perception-and-hazard-scan#lidar-type-and-mount)を参照。
 - **標準化されたROSフレーム**: 標準的なフレーム規約(`base_footprint`、`base_link`、`base_scan`、`imu_link`、`odom`、`map`)を使用する。
 
 ## シミュレーションスタックの起動

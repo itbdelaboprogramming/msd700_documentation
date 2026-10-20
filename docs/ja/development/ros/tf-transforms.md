@@ -13,7 +13,7 @@ search: false
 
 座標変換ツリーは、ROS REP-103(Standard Units of Measure & Coordinate Conventions)とREP-105(Coordinate Frames for Mobile Platforms)に準拠する:
 
-以下のツリーは**実機**がパブリッシュするものである: `irbot.urdf.xacro`を`msd700_description/launch/robot_description.launch.xml`経由で読み込み、`bringup_msd.launch`が全モード(idleを含む)で起動するため、`/scan`とEKFは常に静的TFを利用できる。LiDARの高さは`config/msd700_xacro_irbot.yaml`(`offset_z_lidar: 0.427`、`wheel_radius: 0.10`)によるもので、`msd700_perception`はこれを基準にすべての高さを測る。
+以下のツリーは**実機**がパブリッシュするものである: `irbot.urdf.xacro`を`msd700_description/launch/robot_description.launch.xml`経由で読み込み、`bringup_msd.launch`が全モード(idleを含む)で起動するため、`/scan`とEKFは常に静的TFを利用できる。LiDARの取付は、VLP-16ユニットでは`config/msd700_xacro_irbot.yaml`(`offset_z_lidar: 0.427`、`wheel_radius: 0.10`)、Livox Mid-360ユニット(`MSD700_LIDAR_TYPE=livox`)では`config/msd700_xacro_irbot_livox.yaml`によるもので、`msd700_perception`はこれを基準にすべての高さを測る。
 
 ![座標フレーム階層(TFツリー)](../../../development/ros/diagrams/tf-transforms-coordinate-frame-hierarchy-tf-tree.drawio)
 
@@ -30,7 +30,7 @@ search: false
 | `map -> odom` | `amcl` / `slam_gmapping` | 10 Hz | 静的なレーザーoccupancy gridに対してオドメトリドリフトを補正する。 | 位置推定が確定すると離散的にジャンプする。レーザースキャンが途絶えた場合は最後のトランスフォームを維持する。 |
 | `odom -> base_footprint` | `robot_localization` (`ekf_localization_node`) | 30 Hz | ホイールオドメトリ速度とIMUの姿勢・角速度を連続的に融合する。 | 連続的、滑らか、かつドリフトのない短期軌道。 |
 | `base_footprint -> base_link` | `robot_state_publisher` | 静的 | 固定の高さオフセット($z = 0.10\text{ m}$ = `wheel_radius`)。 | URDFからの固定変換。 |
-| `base_link -> laser` | `robot_state_publisher` | 静的 | LiDARマウント($x = 0$、`base_link`から$z = 0.427\text{ m}$、`msd700_xacro_irbot.yaml`)。 | URDFからの固定変換。 |
+| `base_link -> laser` | `robot_state_publisher` | 静的 | LiDARマウント、6自由度(`offset_x/y/z_lidar`、`lidar_roll/pitch/yaw`)。VLP-16:$x = 0$、`base_link`から$z = 0.427\text{ m}$(`msd700_xacro_irbot.yaml`)。Mid-360:$x = 0.21$、$z = 0.24\text{ m}$、rpy $(0, -0.7854, 3.1416)$、ドームを前方へ45°傾ける(`msd700_xacro_irbot_livox.yaml`)。[LiDARの種類と取付](/ja/development/ros/perception-and-hazard-scan#lidar-type-and-mount)を参照。 | URDFからの固定変換。 |
 | `base_link -> imu` | `robot_state_publisher` | 静的 | 恒等変換。`/imu/data`はフレーム`imu`でスタンプされるため、このエッジがないとEKFはIMUサンプルをすべて破棄する。 | URDFからの固定変換。 |
 
 ---
