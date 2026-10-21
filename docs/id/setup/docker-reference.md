@@ -356,6 +356,7 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | Flag | Berlaku untuk | Efek |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Image Gazebo (`msd700-simulator:latest`) + container. Diteruskan juga ke `run_msd.sh`, yang menyetel `use_simulator_val:=true` |
+| `--ros2` | `build`, `up`, `shell`, `logs`, `status` | Robot ROS 2 (`msd_system`) menggantikan ROS 1: image `msd_system:robot`, container `msd_system`, `run_ros2.sh` menggantikan `run_msd.sh`, stack lokal tinggal broker MQTT. Tidak bisa digabung dengan `--simulator`. Lihat [Unit: `--ros2`](#unit-ros2) |
 | `--dev` | `up` | Cloud peer: stack dev, bukan produksi. MQTT 8884, ROS master robot ini 11322, enrolment backend dev dengan identitasnya sendiri ([satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | Rebuild image robot/lokal + workspace catkin dalam container. Robot jalan mempertahankan image lama sampai recreated |
 | `--no-autostart` | `up`, `down` | Biarkan `msd700.service` (`up` mengaktifkan autostart boot, `down` menonaktifkan) |
@@ -419,11 +420,28 @@ Kedua Dockerfile unit meng-install dependency hanya dari manifest paket dan meng
 
 ### Boot autostart (`msd700.service`)
 
-`up` memasang dan mengaktifkan unit systemd (di-render dari `msd700.service.tmpl`); `down` menonaktifkannya. `ExecStart` hasil render menjalankan `docker-manager.sh up -d --no-autostart` **dengan flag `up` yang mempersenjatainya** (`--dev`/`--simulator` terpanggang), sehingga reboot tidak pernah diam-diam membalik robot dev/simulator ke prod/hardware. `Type=oneshot`, `RemainAfterExit=yes`, setelah `docker.service`, timeout start 15 menit. Inspeksi dengan `print-autostart-unit` (atau `grep ExecStart`); `--no-autostart` memilih keluar; dilewati otomatis bila tanpa systemctl atau di dalam container.
+`up` memasang dan mengaktifkan unit systemd (di-render dari `msd700.service.tmpl`); `down` menonaktifkannya. `ExecStart` hasil render menjalankan `docker-manager.sh up -d --no-autostart` **dengan flag `up` yang mempersenjatainya** (`--dev`/`--simulator`/`--ros2` terpanggang), sehingga reboot tidak pernah diam-diam membalik robot dev/simulator ke prod/hardware. `Type=oneshot`, `RemainAfterExit=yes`, setelah `docker.service`, timeout start 15 menit. Inspeksi dengan `print-autostart-unit` (atau `grep ExecStart`); `--no-autostart` memilih keluar; dilewati otomatis bila tanpa systemctl atau di dalam container.
 
 ### `manage-unit.sh` (sisi-server, hanya manual/debug)
 
 Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `start|stop|restart|status|logs|list|loop`. `loop` mem-poll tiap 10 dtk untuk 7 node relay yang diharapkan dan me-restart bila hilang. Normalnya tidak perlu: backend auto-start/stop container unit saat dashboard dibuka plus idle timeout. Jangan pernah pakai dalam mode multi-unit.
+
+### Unit: `--ros2` (msd_system) {#unit-ros2}
+
+`--ros2` mengganti sisi robot dengan stack ROS 2 selama migrasi; cara beralihnya ada di [Setup Unit § Beralih ke stack ROS 2](/id/setup/unit-setup#ros2-stack).
+
+- **Image.** `build --ros2` mem-build `msd_system:pc` dari `src/msd_system/Docker/Dockerfile.pc` dengan context milik msd_system sendiri, lalu service compose `msd_system` (profil `ros2`, `docker/Dockerfile.ros2`) menambahkan tmux dan `run_ros2.sh` di atasnya sebagai `msd_system:robot`.
+- **Workspace.** `msd_system:pc` hanya berisi dependensi. `src/msd_system/src` di-mount ke `/root/msd_system/src` dan di-compile oleh `colcon build` di dalam container. `build/`, `install/`, dan `log/` adalah named volume `msd_system_build`, `msd_system_install`, dan `msd_system_log`, jadi hasil build bertahan melewati `down` dan reboot. `run_ros2.sh` mem-build saat `--build`, saat `install/` kosong, dan saat `install/.msd700_image_id` menyebut image lain dari yang dijalankan container. `build-clean --ros2` menghapus volume itu (hanya saat container sudah tidak ada, jadi `down` dulu). Sampai branch `ros2-persistent-build` repo `msd700_noetic` di-merge, `master` menyimpan hasil build di dalam container dan butuh `up --ros2 --build` setelah setiap `down`.
+- **Mount yang dipakai bersama ROS 1.** `ros-web-ui/Certificates/robot` (identitas yang sama), `ros-web-ui/scripts` (`enroll.py` untuk enrolment dan token refresh), folder peta, dan `msd_webui_state_local` (emergency stop yang terkunci, bertahan melewati `down`).
+- **Satu stack.** `up` menolak selama container robot lain (`msd700`, `msd700_simulator`, `msd_system`) jalan; `down` menghapus ketiganya.
+- **Flag yang diteruskan.** Hanya `--dry-run` dan `--kill` yang sampai ke `run_ros2.sh`; flag `run_msd.sh` lain dibuang dengan warning. `--dev` diteruskan sebagai `dev:=true` di `webui.launch.py`.
+
+| Variabel | Default | Fungsi |
+| --- | --- | --- |
+| `MSD_ROS2_PROFILE` | `prototype` | `webui.launch.py profile:=`; `sim` juga menyetel `use_sim_time:=true` |
+| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window tmux `bringup`. Kosong: window hanya menampilkan pemberitahuan, dan bridge menyalakan hardware saat Initialize |
+| `MSD_ROS2_WEBUI_ARGS` | kosong | Argumen launch tambahan untuk `webui.launch.py` |
+| `ROBOT_TOKEN_REFRESH_SECONDS` | `14400` | Interval token refresh |
 
 ## Unit: `run_msd.sh`
 
