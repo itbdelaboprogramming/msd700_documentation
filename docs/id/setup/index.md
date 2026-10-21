@@ -16,6 +16,7 @@ Setiap halaman berisi perintah shell, contoh output, dan template konfigurasi ya
   <LinkCard icon="📡" title="Setup Unit" details="Instal robot fisik di NVIDIA Jetson, build, dan daftarkan (enrol)." link="/id/setup/unit-setup" />
   <LinkCard icon="🔗" title="Setup Sistem" details="Pastikan server dan unit bekerja sama, lalu serahkan ke operator." link="/id/setup/system-setup" />
   <LinkCard icon="📋" title="Checklist Commissioning" details="Lembar penerimaan satu unit baru: dari unboxing hingga sign-off." link="/id/setup/commissioning-checklist" />
+  <LinkCard icon="⌨️" title="Panduan docker-manager.sh" details="Setiap command dan flag skrip unit: up, down, build, --ros2, --dev, -d, dan lainnya." link="/id/setup/docker-manager" />
   <LinkCard icon="🐳" title="Referensi Docker" details="Semua profile Docker Compose, perintah, environment variable, dan volume." link="/id/setup/docker-reference" />
   <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Jalankan hotspot Wi-Fi milik unit plus koneksi client untuk internet." link="/id/setup/wifi-hotspot" />
   <LinkCard icon="📡" title="Setup Wi-Fi MT7922" details="Perbaiki firmware MediaTek MT7922 onboard di kernel Tegra." link="/id/setup/wifi-mt7922" />

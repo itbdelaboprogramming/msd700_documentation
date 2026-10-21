@@ -327,6 +327,8 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ## ユニット: `docker-manager.sh`
 
+全コマンドとフラグの詳しい説明は[docker-manager.sh ガイド](/ja/setup/docker-manager)にあります。この節は簡潔なリファレンスです。
+
 ユニットは`docker compose`を直接呼びません。`scripts/docker-manager.sh`が包み、共有値を**一度だけ**決めて両半分(ロボットコンテナ+ユニットサーバースタック)に渡し、不一致を防ぎます。
 
 ### コマンド
@@ -429,7 +431,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 `--ros2`は移行期間中、ロボット側をROS 2スタックに切り替えます。切り替え手順は[ユニット構築 § ROS 2スタックへの切り替え](/ja/setup/unit-setup#ros2-stack)にあります。
 
 - **イメージ。** `build --ros2`はmsd_system自身のコンテキストで`src/msd_system/Docker/Dockerfile.pc`から`msd_system:pc`をビルドし、次にcomposeサービス`msd_system`(プロファイル`ros2`、`docker/Dockerfile.ros2`)がtmuxと`run_ros2.sh`を重ねて`msd_system:robot`にします。
-- **ワークスペース。** `msd_system:pc`は依存関係のみです。`src/msd_system/src`は`/root/msd_system/src`にマウントされ、コンテナ内の`colcon build`でコンパイルされます。`build/`、`install/`、`log/`は名前付きボリューム`msd_system_build`、`msd_system_install`、`msd_system_log`なので、ビルド結果は`down`や再起動後も残ります。`run_ros2.sh`は`--build`指定時、`install/`が空のとき、`install/.msd700_image_id`がコンテナの実行イメージと異なるときにビルドします。`build-clean --ros2`はボリュームを削除します(コンテナがない場合のみ。先に`down`)。`msd700_noetic`のブランチ`ros2-persistent-build`がマージされるまで、`master`はビルド結果をコンテナ内に持ち、`down`のたびに`up --ros2 --build`が必要です。
+- **ワークスペース。** `msd_system:pc`は依存関係のみです。`src/msd_system/src`は`/root/msd_system/src`にマウントされ、コンテナ内の`colcon build`でコンパイルされます。`build/`、`install/`、`log/`は名前付きボリューム`msd_system_build`、`msd_system_install`、`msd_system_log`なので、ビルド結果は`down`や再起動後も残ります。`run_ros2.sh`は`--build`指定時、`install/`が空のとき、`install/.msd700_image_id`がコンテナの実行イメージと異なるときにビルドします。`build-clean --ros2`はボリュームを削除します(コンテナがない場合のみ。先に`down`)。
 - **ROS 1と共有するマウント。** `ros-web-ui/Certificates/robot`(同じID)、`ros-web-ui/scripts`(登録とトークン更新用の`enroll.py`)、地図フォルダ、`msd_webui_state_local`(ラッチされた非常停止、`down`後も保持)。
 - **スタックは1つ。** 他のロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`)が稼働中は`up`が拒否します。`down`は3つとも削除します。
 - **転送されるフラグ。** `run_ros2.sh`に届くのは`--dry-run`と`--kill`のみで、他の`run_msd.sh`用フラグは警告付きで破棄されます。`--dev`は`webui.launch.py`の`dev:=true`として渡ります。

@@ -187,6 +187,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+ここで使うコマンドとフラグはすべて[docker-manager.sh ガイド](/ja/setup/docker-manager)で説明しています。
+
 ロボットコンテナと常時起動の`local_dev`スタック(データベース、MQTT、バックエンド/rosbridge、ネットワークエージェント、メディア、シグナリング、ダッシュボード)を起動します。名前に関わらず`local_dev`はどちらのクラウドにも使います。`-d`は起動と登録完了後に戻ります。`up`は起動時自動起動用の`msd700.service`も導入します。除外は`--no-autostart`です。
 
 **登録(初回起動のみ):**
@@ -285,10 +287,6 @@ Web UIブリッジ(`src/msd_webui/`)は`web-ui-bridge`ブランチにあり、`d
 - ビルド結果は名前付きボリューム(`msd_system_build`、`msd_system_install`、`msd_system_log`)に保存されるため、以降の起動、`down`、再起動ではビルドを省略します。
 - `up --ros2`は`--simulator`と同様に`--ros2`を`msd700.service`に焼き込むため、再起動後もROS 2で起動します。
 - `--dev`はROS 1と同じく使えます(開発クラウド、MQTT `8884`)。
-
-::: warning `ros2-persistent-build`がマージされるまで
-ビルド結果の保持は`msd700_noetic`のブランチ`ros2-persistent-build`にあります。`master`ではビルド結果がまだコンテナ内にあり、`down`で消えます。`master`では`up --ros2 --build -d --no-autostart`を使い、`down`や再起動のたびに`--build`を付け直します。
-:::
 
 **ID。** ROS 2コンテナは同じ`src/ros-web-ui/Certificates/robot/`をマウントするため、ユニットはULIDを維持し、新しいクレームコードは出ません。一度も登録していないユニットは[Step 5](#step-5-ロボットの起動と登録)と同じくクレームコードを表示します。
 
@@ -426,6 +424,7 @@ curl -s http://localhost:5002/local/status
 
 - [サーバー構築](/ja/setup/server-setup):クラウドバックエンド。
 - [システム構築](/ja/setup/system-setup):サーバー+ユニットの連携確認。
+- [docker-manager.sh ガイド](/ja/setup/docker-manager):全コマンドとフラグの説明。
 - [Dockerリファレンス](/ja/setup/docker-reference):CLI完全リファレンス。
 - [WiFiホットスポット](/ja/setup/wifi-hotspot):ホットスポットの設定と対処。
 - [MT7922 Wi-Fi](/ja/setup/wifi-mt7922):オンボード無線のファームウェア修正。

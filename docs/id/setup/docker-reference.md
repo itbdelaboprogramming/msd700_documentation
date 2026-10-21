@@ -329,6 +329,8 @@ docker compose --profile server_prod up -d          # 4. kini ia service prod bi
 
 ## Unit: `docker-manager.sh`
 
+Penjelasan langkah demi langkah setiap command dan flag: [Panduan docker-manager.sh](/id/setup/docker-manager). Bagian ini adalah referensi ringkasnya.
+
 Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.sh` membungkusnya, memutuskan nilai bersama **sekali** dan menyerahkannya ke kedua belah (container robot + stack server unit) agar tak bisa beda.
 
 ### Perintah
@@ -431,7 +433,7 @@ Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `
 `--ros2` mengganti sisi robot dengan stack ROS 2 selama migrasi; cara beralihnya ada di [Setup Unit § Beralih ke stack ROS 2](/id/setup/unit-setup#ros2-stack).
 
 - **Image.** `build --ros2` mem-build `msd_system:pc` dari `src/msd_system/Docker/Dockerfile.pc` dengan context milik msd_system sendiri, lalu service compose `msd_system` (profil `ros2`, `docker/Dockerfile.ros2`) menambahkan tmux dan `run_ros2.sh` di atasnya sebagai `msd_system:robot`.
-- **Workspace.** `msd_system:pc` hanya berisi dependensi. `src/msd_system/src` di-mount ke `/root/msd_system/src` dan di-compile oleh `colcon build` di dalam container. `build/`, `install/`, dan `log/` adalah named volume `msd_system_build`, `msd_system_install`, dan `msd_system_log`, jadi hasil build bertahan melewati `down` dan reboot. `run_ros2.sh` mem-build saat `--build`, saat `install/` kosong, dan saat `install/.msd700_image_id` menyebut image lain dari yang dijalankan container. `build-clean --ros2` menghapus volume itu (hanya saat container sudah tidak ada, jadi `down` dulu). Sampai branch `ros2-persistent-build` repo `msd700_noetic` di-merge, `master` menyimpan hasil build di dalam container dan butuh `up --ros2 --build` setelah setiap `down`.
+- **Workspace.** `msd_system:pc` hanya berisi dependensi. `src/msd_system/src` di-mount ke `/root/msd_system/src` dan di-compile oleh `colcon build` di dalam container. `build/`, `install/`, dan `log/` adalah named volume `msd_system_build`, `msd_system_install`, dan `msd_system_log`, jadi hasil build bertahan melewati `down` dan reboot. `run_ros2.sh` mem-build saat `--build`, saat `install/` kosong, dan saat `install/.msd700_image_id` menyebut image lain dari yang dijalankan container. `build-clean --ros2` menghapus volume itu (hanya saat container sudah tidak ada, jadi `down` dulu).
 - **Mount yang dipakai bersama ROS 1.** `ros-web-ui/Certificates/robot` (identitas yang sama), `ros-web-ui/scripts` (`enroll.py` untuk enrolment dan token refresh), folder peta, dan `msd_webui_state_local` (emergency stop yang terkunci, bertahan melewati `down`).
 - **Satu stack.** `up` menolak selama container robot lain (`msd700`, `msd700_simulator`, `msd_system`) jalan; `down` menghapus ketiganya.
 - **Flag yang diteruskan.** Hanya `--dry-run` dan `--kill` yang sampai ke `run_ros2.sh`; flag `run_msd.sh` lain dibuang dengan warning. `--dev` diteruskan sebagai `dev:=true` di `webui.launch.py`.

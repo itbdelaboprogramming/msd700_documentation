@@ -16,6 +16,7 @@ MSD700のハードウェアとソフトウェアのインストール・設定�
   <LinkCard icon="📡" title="ユニット構築" details="NVIDIA Jetson上で実機ロボットをインストールし、ビルドして登録します。" link="/ja/setup/unit-setup" />
   <LinkCard icon="🔗" title="システム構築" details="サーバーとユニットの連携を確認し、オペレーターに引き渡します。" link="/ja/setup/system-setup" />
   <LinkCard icon="📋" title="コミッショニングチェックリスト" details="新規ユニット1台の受け入れシート。開梱からサインオフまで。" link="/ja/setup/commissioning-checklist" />
+  <LinkCard icon="⌨️" title="docker-manager.sh ガイド" details="ユニット用スクリプトの全コマンドとフラグ: up、down、build、--ros2、--dev、-dなど。" link="/ja/setup/docker-manager" />
   <LinkCard icon="🐳" title="Dockerリファレンス" details="Docker Composeプロファイル、コマンド、環境変数、ボリュームの一覧。" link="/ja/setup/docker-reference" />
   <LinkCard icon="📶" title="WiFiホットスポット+クライアント" details="ユニット独自のWi-Fiホットスポットと、インターネット用クライアント接続。" link="/ja/setup/wifi-hotspot" />
   <LinkCard icon="📡" title="MT7922 Wi-Fi設定" details="Tegraカーネル上のオンボードMediaTek MT7922ファームウェア修正。" link="/ja/setup/wifi-mt7922" />

@@ -87,6 +87,7 @@ const enSidebar = {
     {
       text: 'Reference & Networking',
       items: [
+        { text: 'docker-manager.sh Guide', link: '/setup/docker-manager' },
         { text: 'Docker Reference', link: '/setup/docker-reference' },
         { text: 'WiFi Hotspot + Client', link: '/setup/wifi-hotspot' },
         { text: 'MT7922 Wi-Fi Setup', link: '/setup/wifi-mt7922' },
@@ -347,6 +348,7 @@ const idSidebar = {
     {
       text: 'Referensi & Jaringan',
       items: [
+        { text: 'Panduan docker-manager.sh', link: '/id/setup/docker-manager' },
         { text: 'Referensi Docker', link: '/id/setup/docker-reference' },
         { text: 'Hotspot Wi-Fi & Klien', link: '/id/setup/wifi-hotspot' },
         { text: 'Penyiapan Wi-Fi MT7922', link: '/id/setup/wifi-mt7922' },
@@ -578,6 +580,7 @@ const jaSidebar = {
     {
       text: 'リファレンス & ネットワーク',
       items: [
+        { text: 'docker-manager.sh ガイド', link: '/ja/setup/docker-manager' },
         { text: 'Docker コマンドリファレンス', link: '/ja/setup/docker-reference' },
         { text: 'Wi-Fi ホットスポット & クライアント', link: '/ja/setup/wifi-hotspot' },
         { text: 'MT7922 Wi-Fi セットアップ', link: '/ja/setup/wifi-mt7922' },

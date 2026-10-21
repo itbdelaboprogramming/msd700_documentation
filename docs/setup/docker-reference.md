@@ -329,6 +329,8 @@ A prod `up` while systemd still holds the port fails to bind, then `restart: alw
 
 ## Unit: `docker-manager.sh`
 
+Step-by-step explanation of every command and flag: [docker-manager.sh Guide](/setup/docker-manager). This section is the compact reference.
+
 The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wraps it, deciding shared values **once** and handing them to both halves (robot container + unit server stack) so they can't disagree.
 
 ### Commands
@@ -431,7 +433,7 @@ Drives **legacy per-unit** cloud containers by ULID only (names rejected): `star
 `--ros2` swaps the robot half for the ROS 2 stack during the migration; how to switch is in [Unit Setup § Switching to the ROS 2 stack](/setup/unit-setup#ros2-stack).
 
 - **Images.** `build --ros2` builds `msd_system:pc` from `src/msd_system/Docker/Dockerfile.pc` with msd_system's own context, then the compose service `msd_system` (profile `ros2`, `docker/Dockerfile.ros2`) layers tmux and `run_ros2.sh` on it as `msd_system:robot`.
-- **Workspace.** `msd_system:pc` holds dependencies only. `src/msd_system/src` is mounted at `/root/msd_system/src` and compiled by `colcon build` inside the container. `build/`, `install/` and `log/` are the named volumes `msd_system_build`, `msd_system_install` and `msd_system_log`, so the build survives `down` and reboots. `run_ros2.sh` builds on `--build`, when `install/` is empty, and when `install/.msd700_image_id` names another image than the container runs. `build-clean --ros2` drops the volumes (only while the container is gone, so `down` first). Until the `msd700_noetic` branch `ros2-persistent-build` is merged, `master` keeps the build in the container and needs `up --ros2 --build` after every `down`.
+- **Workspace.** `msd_system:pc` holds dependencies only. `src/msd_system/src` is mounted at `/root/msd_system/src` and compiled by `colcon build` inside the container. `build/`, `install/` and `log/` are the named volumes `msd_system_build`, `msd_system_install` and `msd_system_log`, so the build survives `down` and reboots. `run_ros2.sh` builds on `--build`, when `install/` is empty, and when `install/.msd700_image_id` names another image than the container runs. `build-clean --ros2` drops the volumes (only while the container is gone, so `down` first).
 - **Mounts shared with ROS 1.** `ros-web-ui/Certificates/robot` (same identity), `ros-web-ui/scripts` (`enroll.py` for enrolment and token refresh), the maps folder, and `msd_webui_state_local` (the latched emergency stop, kept across `down`).
 - **One stack.** `up` refuses while another robot container (`msd700`, `msd700_simulator`, `msd_system`) runs; `down` removes all three.
 - **Forwarded flags.** Only `--dry-run` and `--kill` reach `run_ros2.sh`; other `run_msd.sh` flags are dropped with a warning. `--dev` arrives as `dev:=true` on `webui.launch.py`.

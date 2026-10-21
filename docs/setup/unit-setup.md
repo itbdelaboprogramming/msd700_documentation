@@ -188,6 +188,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+Every command and flag used here is explained in the [docker-manager.sh Guide](/setup/docker-manager).
+
 This starts the robot container plus the always-on `local_dev` stack (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Despite the name, `local_dev` runs for either cloud. `-d` returns after startup and enrolment finish. `up` also installs `msd700.service` for boot autostart; add `--no-autostart` to skip that.
 
 **Enrolment, first launch only:**
@@ -286,10 +288,6 @@ This builds `msd_system:pc` from `src/msd_system/Docker/Dockerfile.pc` (Jazzy, r
 - The build is kept in named volumes (`msd_system_build`, `msd_system_install`, `msd_system_log`), so later starts, `down` and reboots skip it.
 - `up --ros2` bakes `--ros2` into `msd700.service`, like `--simulator`, so the unit reboots into ROS 2.
 - `--dev` works as on ROS 1 (dev cloud, MQTT `8884`).
-
-::: warning Until `ros2-persistent-build` is merged
-The kept build is on the `msd700_noetic` branch `ros2-persistent-build`. On `master` the build still lives in the container and `down` removes it: use `up --ros2 --build -d --no-autostart` there, and add `--build` again after every `down` or reboot.
-:::
 
 **Identity.** The ROS 2 container mounts the same `src/ros-web-ui/Certificates/robot/`, so the unit keeps its ULID and no new claim code appears. A unit that never enrolled prints a claim code exactly as in [Step 5](#step-5-start-the-robot-and-enrol).
 
@@ -427,6 +425,7 @@ curl -s http://localhost:5002/local/status
 
 - [Server Setup](/setup/server-setup): cloud backend.
 - [System Setup](/setup/system-setup): check server + unit together.
+- [docker-manager.sh Guide](/setup/docker-manager): every command and flag, explained.
 - [Docker Reference](/setup/docker-reference): full CLI reference.
 - [WiFi Hotspot](/setup/wifi-hotspot): hotspot setup and troubleshooting.
 - [MT7922 Wi-Fi](/setup/wifi-mt7922): onboard-radio firmware fix.

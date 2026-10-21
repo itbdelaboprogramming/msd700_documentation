@@ -188,6 +188,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+Setiap command dan flag yang dipakai di sini dijelaskan di [Panduan docker-manager.sh](/id/setup/docker-manager).
+
 Ini menyalakan container robot plus stack `local_dev` yang selalu on (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Namanya saja `local_dev`; jalan untuk cloud mana pun. `-d` kembali setelah startup dan enrolment selesai. `up` juga memasang `msd700.service` untuk autostart boot; tambah `--no-autostart` untuk melewatinya.
 
 **Enrolment, hanya di launch pertama:**
@@ -286,10 +288,6 @@ Perintah ini mem-build `msd_system:pc` dari `src/msd_system/Docker/Dockerfile.pc
 - Hasil build disimpan di named volume (`msd_system_build`, `msd_system_install`, `msd_system_log`), jadi start berikutnya, `down`, dan reboot melewatinya.
 - `up --ros2` menanam `--ros2` ke `msd700.service`, seperti `--simulator`, jadi unit reboot kembali ke ROS 2.
 - `--dev` berlaku sama seperti di ROS 1 (cloud dev, MQTT `8884`).
-
-::: warning Sampai `ros2-persistent-build` di-merge
-Penyimpanan hasil build ada di branch `ros2-persistent-build` repo `msd700_noetic`. Di `master` hasil build masih ada di dalam container dan `down` menghapusnya: di sana pakai `up --ros2 --build -d --no-autostart`, dan tambahkan `--build` lagi setelah setiap `down` atau reboot.
-:::
 
 **Identitas.** Container ROS 2 me-mount `src/ros-web-ui/Certificates/robot/` yang sama, jadi unit tetap memakai ULID-nya dan tidak muncul claim code baru. Unit yang belum pernah enrol menampilkan claim code persis seperti di [Step 5](#step-5-jalankan-robot-dan-enrol).
 
@@ -427,6 +425,7 @@ curl -s http://localhost:5002/local/status
 
 - [Setup Server](/id/setup/server-setup): backend cloud.
 - [Setup Sistem](/id/setup/system-setup): cek server + unit bersama.
+- [Panduan docker-manager.sh](/id/setup/docker-manager): penjelasan setiap command dan flag.
 - [Referensi Docker](/id/setup/docker-reference): referensi CLI lengkap.
 - [WiFi Hotspot](/id/setup/wifi-hotspot): setup dan troubleshooting hotspot.
 - [Wi-Fi MT7922](/id/setup/wifi-mt7922): fix firmware radio onboard.
