@@ -247,14 +247,14 @@ ROS 1からROS 2への移行期間中、ユニットはどちらかのロボッ�
 | イメージ | `msd700:latest` | `msd_system:robot`(`msd_system:pc`の上に構築) |
 | コンテナ | `msd700` | `msd_system` |
 | セッション起動スクリプト | `run_msd.sh` | `run_ros2.sh`(`docker/ros2/`) |
-| ローカルスタック | 全体(ダッシュボードは`:3000`) | MQTTブローカーのみ |
+| ローカルスタック | 全体(ダッシュボードは`:3000`) | 全体(ダッシュボードは`:3000`)、ROSなしのバックエンド |
 
 同時に動かせるスタックは1つだけです。どちらもホストネットワーク、`/dev`、同じユニットIDを使います。`msd700`または`msd700_simulator`が稼働中だと`up --ros2`は起動を拒否します。
 
 ::: warning 現時点でROS 2で使える機能
 - **使える:** 登録、ハードウェアのInitialize/Stop、手動操縦、非常停止、GPS、フォロワー、帰還(return to home)、そして2026-10-21からは地図作成(保存とアップロード)、保存地図でのナビゲーション、オートパイロット、カバレッジ、自動アライン。ブリッジがモードごとに`msd_bringup.launch.xml`でCMUナビゲーションスタックを起動します。いずれもブリッジ済みでコンテナ内のみで試験済み、実機や実際のダッシュボードでは未検証です。
 - **保存地図:** ROS 2ユニットで作った地図はpgm/yaml(通常どおりアップロード)と、ユニットの地図フォルダに残りロボットの位置推定に使う`.pcd`として保存されます。ROS 1ユニットで作った地図も開けますが、壁から作った3D地図を使うため位置推定の信頼性は下がります。
-- **クラウドダッシュボードのみ。** `--ros2`モードではローカルスタックはMQTTブローカーだけを起動します(残りはROS 1のroscoreが必要)。そのため`:3000`のローカルダッシュボードは開きません。
+- **ローカルダッシュボードと映像。** ローカルスタックはROS 1と同様に動きますが、2つのサービスが入れ替わります。バックエンドはクラウドサーバーと同じくROSなしで動き、ライブリンクを自分で提供します。ダッシュボードはそのリンク用にビルドされます。映像はROS 1と同じ`camera_client.py`から送られます。
 - **シミュレーター。** `up --ros2 --simulator`で同じスタックをPC上のGazeboで動かせます([下記](#ros2-simulator)参照)。現時点ではドライランでのみ確認済みです。
 - **VLP-16のみ。** ROS 2のハードウェア層の既定はVelodyneです。`MSD700_LIDAR_TYPE`(Livox Mid-360)をコンテナへ渡す変更は`msd700_noetic`のブランチ`ros2-lidar-type`にあり、未マージです。
 :::
@@ -304,6 +304,7 @@ Web UIブリッジ(`src/msd_webui/`)は`web-ui-bridge`ブランチにあり、`d
 | --- | --- |
 | `bringup` | `MSD_ROS2_BRINGUP_CMD`、空の場合(既定)はお知らせのみ |
 | `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `camera` | `camera_client.py`(クラウドとローカルダッシュボードへの映像) |
 | `token_refresh` | `token.cred`を更新 |
 
 ```bash
@@ -321,6 +322,7 @@ docker exec -it msd_system tmux attach -t robot_services     # セッション(C
 | `MSD_ROS2_PROFILE` | `prototype` | ブリッジのプロファイル:`prototype`(実機)または`sim`(`--simulator`での既定) |
 | `MSD_ROS2_BRINGUP_CMD` | 空 | `bringup`ウィンドウのコマンド。ハードウェアとナビゲーションは含めません(ブリッジが起動します。Step 4参照)。ここで起動したナビゲーションスタックはそのまま使いますが、その場合保存地図での位置推定は行いません |
 | `MSD_ROS2_WEBUI_ARGS` | 空 | `webui.launch.py`への追加起動引数 |
+| `MSD_ROS2_CAMERA_DEVICE` | 空 | 映像に使うカメラ。ROS 1の`--camera_device`と同じです。空の場合は既定のWebカメラ、なければRealSenseのカラーノード |
 
 ### シミュレーターで動かす {#ros2-simulator}
 

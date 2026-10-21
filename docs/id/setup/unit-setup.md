@@ -248,14 +248,14 @@ Selama migrasi ROS 1 ke ROS 2, satu unit bisa menjalankan salah satu dari dua st
 | Image | `msd700:latest` | `msd_system:robot`, di atas `msd_system:pc` |
 | Container | `msd700` | `msd_system` |
 | Session runner | `run_msd.sh` | `run_ros2.sh` (`docker/ros2/`) |
-| Stack lokal | lengkap (dashboard di `:3000`) | hanya broker MQTT |
+| Stack lokal | lengkap (dashboard di `:3000`) | lengkap (dashboard di `:3000`), backend tanpa ROS |
 
 Hanya satu stack yang jalan pada satu waktu: keduanya memakai network host, `/dev`, dan identitas unit yang sama. `up --ros2` menolak start selama `msd700` atau `msd700_simulator` masih jalan.
 
 ::: warning Yang sudah jalan di ROS 2 saat ini
 - **Jalan:** enrolment, Initialize/Stop hardware, menyetir manual, emergency stop, GPS, follower dan return to home, serta sejak 2026-10-21 mapping (simpan dan unggah), navigasi di peta tersimpan, autopilot, coverage, dan auto align. Bridge menyalakan stack navigasi CMU sendiri untuk setiap mode, lewat `msd_bringup.launch.xml`. Semua sudah di-bridge dan diuji di container saja, belum di robot asli atau dengan dashboard asli.
 - **Peta tersimpan:** peta yang dibuat di unit ROS 2 disimpan sebagai pgm/yaml (diunggah seperti biasa) ditambah `.pcd` yang tetap di folder peta unit dan dipakai robot untuk lokalisasi. Peta yang dibuat di unit ROS 1 tetap bisa dibuka, dengan peta 3D yang diturunkan dari dindingnya, yang lokalisasinya kurang andal.
-- **Hanya dashboard cloud.** Di mode `--ros2` stack lokal hanya menjalankan broker MQTT (sisanya butuh roscore ROS 1), jadi dashboard lokal di `:3000` tidak terbuka.
+- **Dashboard lokal dan video.** Stack lokal jalan seperti di ROS 1, dengan dua service yang diganti: backend jalan tanpa ROS dan melayani live link sendiri, seperti di server cloud, dan dashboard di-build untuk link itu. Video datang dari `camera_client.py` yang sama dengan ROS 1.
 - **Simulator.** `up --ros2 --simulator` menjalankan stack yang sama di Gazebo di laptop (lihat [di bawah](#ros2-simulator)). Sejauh ini baru dicek dengan dry run.
 - **Hanya VLP-16.** Layer hardware ROS 2 default ke Velodyne. Meneruskan `MSD700_LIDAR_TYPE` (Livox Mid-360) ke container ada di branch `ros2-lidar-type` repo `msd700_noetic`, belum di-merge.
 :::
@@ -305,6 +305,7 @@ Jangan jalankan `msd_hardware.launch.xml` atau `msd_bringup` dengan `run_robot:=
 | --- | --- |
 | `bringup` | `MSD_ROS2_BRINGUP_CMD`, atau pemberitahuan bila kosong (default) |
 | `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `camera` | `camera_client.py` (video ke cloud dan dashboard lokal) |
 | `token_refresh` | memperbarui `token.cred` |
 
 ```bash
@@ -322,6 +323,7 @@ Perintah yang menyasar container robot (`status`, `shell`, `logs`) juga butuh `-
 | `MSD_ROS2_PROFILE` | `prototype` | Profil bridge: `prototype` (robot asli) atau `sim` (default dengan `--simulator`) |
 | `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window `bringup`. Jangan masukkan hardware dan navigasi: bridge menyalakan keduanya (lihat Step 4). Stack navigasi yang dinyalakan di sini dipakai apa adanya, tetapi peta tersimpan lalu tidak dilokalisasi |
 | `MSD_ROS2_WEBUI_ARGS` | kosong | Argumen launch tambahan untuk `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | kosong | Kamera untuk video, seperti `--camera_device` di ROS 1. Kosong: webcam default, kalau tidak ada node warna RealSense |
 
 ### Menjalankannya di simulator {#ros2-simulator}
 

@@ -104,7 +104,7 @@ grep ExecStart /etc/systemd/system/msd700.service               # 現在設定�
 
 ### `local-up`、`local-down`、`local-build`、`local-logs`、`local-status`
 
-ユニットのサーバースタック(データベース、MQTTブローカー、バックエンドとrosbridge、ネットワークエージェント、メディア、シグナリング、ダッシュボード)だけを操作し、ロボットには触れません。`up`がこのスタックを起動済みなので、Web側だけを再起動・リビルドするときに使います。`--ros2`では`local-up`はMQTTブローカーだけを起動します。
+ユニットのサーバースタック(データベース、MQTTブローカー、バックエンドとrosbridge、ネットワークエージェント、メディア、シグナリング、ダッシュボード)だけを操作し、ロボットには触れません。`up`がこのスタックを起動済みなので、Web側だけを再起動・リビルドするときに使います。`--ros2`ではバックエンドとダッシュボードがROS 2用のものになります(`--ros2`参照)。
 
 ### `help`
 
@@ -117,7 +117,9 @@ grep ExecStart /etc/systemd/system/msd700.service               # 現在設定�
 ROS 1ロボット(`msd700_robot`、Noetic)の代わりにROS 2ロボット([msd_system](/ros2-msd-system/)、Jazzy)を動かします。
 
 - **使えるコマンド:** `build`、`build-clean`、`up`、`shell`、`logs`、`status`、`local-up`、`print-autostart-unit`。
-- **変わる点:** イメージ`msd_system:robot`、コンテナ`msd_system`、セッション起動スクリプト`run_ros2.sh`。ローカルスタックはMQTTブローカーだけなので、ロボットはクラウドダッシュボードから操作します。
+- **変わる点:** イメージ`msd_system:robot`、コンテナ`msd_system`、セッション起動スクリプト`run_ros2.sh`。
+- **ローカルスタック:** ROS 1と同じサービスですが、2つだけ異なります。`backend_local_ros2`はbackend_nodeをROSなしで動かし、ゲートウェイからライブリンクを提供します(rosbridgeなし)。`frontend_local_ros2`はそのリンク用にビルドしたダッシュボードです(イメージ`ros-dashboard-next-local-ros2`)。ROS 1のイメージは残るため、ROS 1に戻すときにリビルドは不要です。
+- **映像:** ROS 1と同様に`camera_client.py`をロボットコンテナで動かします。`--camera_device <path>`も同じように使えます。
 - **初回起動**でコンテナ内のワークスペースをコンパイルします(`colcon build`、オフライン)。結果はボリュームに保持され、以降の起動で再利用されます。
 - **IDは同じ:** ROS 1と同じ認証情報を使うため、ユニットはULIDを維持します。
 - **`--simulator`と併用:** 同じロボットをGazeboで動かします(下記`--simulator`参照)。
@@ -247,6 +249,7 @@ docker exec -it msd_system tmux attach -t robot_services   # ROS 2
 | `MSD_ROS2_PROFILE` | `prototype`(`--simulator`では`sim`) | ROS 2ブリッジのプロファイル: `prototype`または`sim` |
 | `MSD_ROS2_BRINGUP_CMD` | 空 | ROS 2: `bringup`ウィンドウのコマンド(例: ナビゲーション) |
 | `MSD_ROS2_WEBUI_ARGS` | 空 | ROS 2: `webui.launch.py`への追加引数 |
+| `MSD_ROS2_CAMERA_DEVICE` | 空 | ROS 2: 映像に使うカメラ(`--camera_device`と同じ) |
 | `MSD_ROS2_SIM_WORLD` | 空 | ROS 2シミュレーター: `msd_sim/worlds/`内のワールドファイルまたは絶対パス |
 
 すべての変数: [Dockerリファレンス § 転送する環境変数](/ja/setup/docker-reference#転送する環境変数)と[ユニット`.env`リファレンス](/ja/setup/docker-reference#ユニット-env-リファレンス)。

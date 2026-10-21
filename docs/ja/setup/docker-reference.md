@@ -356,7 +356,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | フラグ | 対象 | 効果 |
 | --- | --- | --- |
 | `--simulator`、`-s` | `build`、`up` | Gazeboイメージ(`msd700-simulator:latest`)+コンテナ。`run_msd.sh`にも転送され`use_simulator_val:=true`を設定 |
-| `--ros2` | `build`、`up`、`shell`、`logs`、`status` | ROS 1の代わりにROS 2ロボット(`msd_system`):イメージ`msd_system:robot`、コンテナ`msd_system`、`run_msd.sh`の代わりに`run_ros2.sh`、ローカルスタックはMQTTブローカーのみ。`--simulator`併用時はGazebo(`msd_sim`)をコンテナ`msd_system_simulator`で、同じイメージで実行。[ユニット: `--ros2`](#unit-ros2)参照 |
+| `--ros2` | `build`、`up`、`shell`、`logs`、`status` | ROS 1の代わりにROS 2ロボット(`msd_system`):イメージ`msd_system:robot`、コンテナ`msd_system`、`run_msd.sh`の代わりに`run_ros2.sh`、ローカルスタックは`backend_local_ros2`と`frontend_local_ros2`。`--simulator`併用時はGazebo(`msd_sim`)をコンテナ`msd_system_simulator`で、同じイメージで実行。[ユニット: `--ros2`](#unit-ros2)参照 |
 | `--dev` | `up` | 相手クラウド:本番でなく開発スタック。MQTT 8884、このロボットのROSマスター11322、専用IDでの開発バックエンド登録([1台のロボット、2つのクラウド](/ja/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | ロボット/ローカルイメージ+コンテナ内catkinワークスペースをリビルド。稼働中ロボットは再作成まで旧イメージ保持 |
 | `--no-autostart` | `up`、`down` | `msd700.service`不変維持(`up`は起動時自動起動を有効化、`down`は無効化) |
@@ -431,7 +431,10 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 `--ros2`は移行期間中、ロボット側をROS 2スタックに切り替えます。切り替え手順は[ユニット構築 § ROS 2スタックへの切り替え](/ja/setup/unit-setup#ros2-stack)にあります。
 
 - **イメージ。** `build --ros2`はmsd_system自身のコンテキストで`src/msd_system/Docker/Dockerfile.pc`から`msd_system:pc`をビルドし、次にcomposeサービス`msd_system`(プロファイル`ros2`、`docker/Dockerfile.ros2`)がtmuxと`run_ros2.sh`を重ねて`msd_system:robot`にします。
-- **ワークスペース。** `msd_system:pc`は依存関係のみです。`src/msd_system/src`は`/root/msd_system/src`にマウントされ、コンテナ内の`colcon build`でコンパイルされます。`build/`、`install/`、`log/`は名前付きボリューム`msd_system_build`、`msd_system_install`、`msd_system_log`なので、ビルド結果は`down`や再起動後も残ります。`run_ros2.sh`は`--build`指定時、`install/`が空のとき、`install/.msd700_image_id`がコンテナの実行イメージと異なるときにビルドします。`build-clean --ros2`はボリュームを削除します(コンテナがない場合のみ。先に`down`)。
+- **ワークスペース。** `msd_system:pc`は依存関係のみです。`src/msd_system/src`は`/root/msd_system/src`にマウントされ、コンテナ内の`colcon build`でコンパイルされます。`build/`、`install/`、`log/`は名前付きボリューム`msd_system_build`、`msd_system_install`、`msd_system_log`なので、ビルド結果は`down`や再起動後も残ります。`run_ros2.sh`は`--build`指定時、`install/`が空のとき、`install/.msd700_image_id`がコンテナの下にある`msd_system:pc`(`msd_system:robot`のラベル)と異なるときにビルドします。薄いレイヤーだけの変更では再コンパイルしません。`build-clean --ros2`はボリュームを削除します(コンテナがない場合のみ。先に`down`)。
+- **ローカルスタック。** `backend_local_ros2`は`backend_local`と同じ`ros-noetic-webui-app-local`イメージ、環境変数、マウントを使いますが、`roslaunch`を使わず`node scripts/backend_node`を直接実行し、`LINK_GATEWAY_PORT`をrosbridgeのポートにします。`msd_webui_bridge`が自分で`mosquitto_local`とMQTTで通信するため、rosbridgeもtopic2stringも不要です。`frontend_local_ros2`は`NEXT_PUBLIC_UNIT_LINK=string`でビルドした`frontend_local`で、イメージは`ros-dashboard-next-local-ros2:latest`です。データベース、MQTT、メディア、シグナリング、ネットワークエージェントは共通です。`up`は先にもう一方のモードのバックエンドとダッシュボードを削除します(同じポートのため)。
+- **映像。** `camera_client.py`はros-web-uiからマウントされ、tmuxウィンドウ`camera`で`run_msd.sh`と同じ環境変数(ローカルのシグナリングとトークンエンドポイント、`--dev`では開発用シグナリングサーバー)で動きます。Pythonパッケージ(aiortc、websockets)は`Dockerfile.ros2`のvenvにあり、イメージのOpenCVとnumpyの上に入っています。
+- **地図。** ブリッジにはROS 1の`system_command.py`と同様に、ローカルメディアサーバー用の`MEDIA_SERVER_URL`と`LOCAL_TOKEN_URL`を渡します。保存した地図はそこにもクラウドにも登録されます。
 - **ROS 1と共有するマウント。** `ros-web-ui/Certificates/robot`(同じID)、`ros-web-ui/scripts`(登録とトークン更新用の`enroll.py`)、地図フォルダ、`msd_webui_state_local`(ラッチされた非常停止、`down`後も保持)。
 - **シミュレーター。** `--simulator`は同じイメージ(`msd_system:pc`はGazeboを含む`jazzy-desktop-full`ベース)をコンテナ`msd_system_simulator`で使い、Gazeboウィンドウ用にX11ソケットをマウントし、GPUは`/dev`経由で使います。`bringup`ウィンドウは`msd_bringup.launch.xml run_robot:=sim run_navigation:=false`を、`twist_mux`を`motion_guard`につないで(`cmd_vel_out:=mux/cmd_vel`、`twist_mux_webui.yaml`)起動します。実機で`hardware_prototype.launch.py`が行うのと同じ配線です。
 - **スタックは1つ。** 他のロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`、`msd_system_simulator`)が稼働中は`up`が拒否します。`down`は4つとも削除します。
@@ -443,6 +446,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | `MSD_ROS2_BRINGUP_CMD` | 空 | tmuxウィンドウ`bringup`のコマンド。空の場合はお知らせのみ表示し、ハードウェアはInitialize時にブリッジが起動。`--simulator`では空の場合に上記のとおり`msd_sim`を起動 |
 | `MSD_ROS2_SIM_WORLD` | 空 | `--simulator`: msd_bringupの`world_file:=`。`msd_sim/worlds/`内のファイルまたは絶対パス |
 | `MSD_ROS2_WEBUI_ARGS` | 空 | `webui.launch.py`への追加起動引数 |
+| `MSD_ROS2_CAMERA_DEVICE` | 空 | `camera_client.py`の`VIRTUAL_CAM_DEVICE`。`--camera_device <path>`でも設定されます |
 | `ROBOT_TOKEN_REFRESH_SECONDS` | `14400` | トークン更新間隔 |
 
 ## ユニット: `run_msd.sh`

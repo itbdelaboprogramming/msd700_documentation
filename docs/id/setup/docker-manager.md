@@ -104,7 +104,7 @@ grep ExecStart /etc/systemd/system/msd700.service               # yang aktif sek
 
 ### `local-up`, `local-down`, `local-build`, `local-logs`, `local-status`
 
-Hanya bekerja pada stack server unit (database, broker MQTT, backend dan rosbridge, network agent, media, signalling, dashboard), tidak pernah robotnya. `up` sudah menjalankan stack ini; pakai perintah ini untuk restart atau rebuild sisi web saja. Dengan `--ros2`, `local-up` hanya menjalankan broker MQTT.
+Hanya bekerja pada stack server unit (database, broker MQTT, backend dan rosbridge, network agent, media, signalling, dashboard), tidak pernah robotnya. `up` sudah menjalankan stack ini; pakai perintah ini untuk restart atau rebuild sisi web saja. Dengan `--ros2`, backend dan dashboard memakai varian ROS 2-nya (lihat `--ros2`).
 
 ### `help`
 
@@ -117,7 +117,9 @@ Menampilkan help bawaan (juga `-h`, `--help`, atau tanpa argumen).
 Menjalankan robot ROS 2 ([msd_system](/ros2-msd-system/), Jazzy) sebagai ganti robot ROS 1 (`msd700_robot`, Noetic).
 
 - **Dipakai dengan:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `local-up`, `print-autostart-unit`.
-- **Yang berubah:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`. Stack lokal hanya menjalankan broker MQTT, jadi kendalikan robot dari dashboard cloud.
+- **Yang berubah:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`.
+- **Stack lokal:** service-nya sama dengan ROS 1, kecuali dua: `backend_local_ros2` menjalankan backend_node tanpa ROS dan melayani live link dari gateway-nya (tanpa rosbridge), dan `frontend_local_ros2` adalah dashboard yang di-build untuk link itu (image `ros-dashboard-next-local-ros2`). Image ROS 1 tetap ada, jadi kembali ke ROS 1 tidak perlu rebuild.
+- **Video:** `camera_client.py` jalan di container robot, seperti di ROS 1. `--camera_device <path>` bekerja sama.
 - **Start pertama** meng-compile workspace di dalam container (`colcon build`, offline); hasilnya disimpan di volume untuk start berikutnya.
 - **Identitas sama:** memakai kredensial yang sama dengan ROS 1, jadi unit tetap memakai ULID-nya.
 - **Dengan `--simulator`:** robot yang sama di Gazebo (lihat `--simulator` di bawah).
@@ -247,6 +249,7 @@ Set langsung di baris perintah (`VAR=value ./scripts/docker-manager.sh up -d`) a
 | `MSD_ROS2_PROFILE` | `prototype` (`sim` dengan `--simulator`) | Profil bridge ROS 2: `prototype` atau `sim` |
 | `MSD_ROS2_BRINGUP_CMD` | kosong | ROS 2: perintah untuk window `bringup`, misalnya navigasi |
 | `MSD_ROS2_WEBUI_ARGS` | kosong | ROS 2: argumen tambahan untuk `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | kosong | ROS 2: kamera untuk video, seperti `--camera_device` |
 | `MSD_ROS2_SIM_WORLD` | kosong | Simulator ROS 2: file world di `msd_sim/worlds/` atau path absolut |
 
 Semua variabel: [Referensi Docker § Environment variable yang diteruskan](/id/setup/docker-reference#environment-variable-yang-diteruskan) dan [referensi `.env` unit](/id/setup/docker-reference#referensi-env-unit).

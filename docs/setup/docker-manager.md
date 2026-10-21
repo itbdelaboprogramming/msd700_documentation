@@ -104,7 +104,7 @@ grep ExecStart /etc/systemd/system/msd700.service               # what is armed 
 
 ### `local-up`, `local-down`, `local-build`, `local-logs`, `local-status`
 
-Act on the unit's server stack only (database, MQTT broker, backend and rosbridge, network agent, media, signalling, dashboard), never the robot. `up` already starts this stack; use these to restart or rebuild only the web half. With `--ros2`, `local-up` starts only the MQTT broker.
+Act on the unit's server stack only (database, MQTT broker, backend and rosbridge, network agent, media, signalling, dashboard), never the robot. `up` already starts this stack; use these to restart or rebuild only the web half. With `--ros2`, the backend and dashboard are their ROS 2 variants (see `--ros2`).
 
 ### `help`
 
@@ -117,7 +117,9 @@ Prints the built-in help (also `-h`, `--help`, or no arguments).
 Runs the ROS 2 robot ([msd_system](/ros2-msd-system/), Jazzy) instead of the ROS 1 robot (`msd700_robot`, Noetic).
 
 - **Use with:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `local-up`, `print-autostart-unit`.
-- **What changes:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`. The local stack runs only its MQTT broker, so drive the robot from the cloud dashboard.
+- **What changes:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`.
+- **Local stack:** the same services as on ROS 1, except two: `backend_local_ros2` runs backend_node without ROS and serves the live link from its gateway (no rosbridge), and `frontend_local_ros2` is the dashboard built for that link (image `ros-dashboard-next-local-ros2`). The ROS 1 images stay, so switching back needs no rebuild.
+- **Video:** `camera_client.py` runs in the robot container, as on ROS 1. `--camera_device <path>` works the same.
 - **First start** compiles the workspace in the container (`colcon build`, offline); it is kept in volumes for later starts.
 - **Same identity:** uses the same credentials as ROS 1, so the unit keeps its ULID.
 - **With `--simulator`:** the same robot in Gazebo (see `--simulator` below).

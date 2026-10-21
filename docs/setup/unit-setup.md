@@ -248,14 +248,14 @@ During the ROS 1 to ROS 2 migration a unit can run either robot stack. The flag 
 | Image | `msd700:latest` | `msd_system:robot`, layered on `msd_system:pc` |
 | Container | `msd700` | `msd_system` |
 | Session runner | `run_msd.sh` | `run_ros2.sh` (`docker/ros2/`) |
-| Local stack | full (dashboard on `:3000`) | MQTT broker only |
+| Local stack | full (dashboard on `:3000`) | full (dashboard on `:3000`), backend without ROS |
 
 Only one stack runs at a time: both use the host network, `/dev` and the same unit identity. `up --ros2` refuses to start while `msd700` or `msd700_simulator` is running.
 
 ::: warning What works on ROS 2 today
 - **Works:** enrolment, Initialize/Stop hardware, manual driving, emergency stop, GPS, follower and return to home, and since 2026-10-21 mapping (save and upload), navigation on a saved map, autopilot, coverage and auto align. The bridge starts the CMU navigation stack itself for each mode, through `msd_bringup.launch.xml`. All bridged and tested in containers only, not yet on a real robot or with the real dashboard.
 - **Saved maps:** a map made on the ROS 2 unit is saved as pgm/yaml (uploaded as usual) plus a `.pcd` that stays in the unit's maps folder and is what the robot localizes against. A map made on a ROS 1 unit still opens, with a 3D map derived from its walls, which localizes less reliably.
-- **Cloud dashboard only.** In `--ros2` mode the local stack runs only its MQTT broker (the rest needs a ROS 1 roscore), so the local dashboard on `:3000` does not open.
+- **Local dashboard and video.** The local stack runs as on ROS 1, with two services swapped: the backend runs without ROS and serves the live link itself, as on the cloud servers, and the dashboard is built for that link. Video comes from the same `camera_client.py` as on ROS 1.
 - **Simulator.** `up --ros2 --simulator` runs the same stack in Gazebo on a laptop (see [below](#ros2-simulator)). Checked with a dry run only so far.
 - **VLP-16 only.** The ROS 2 hardware layer defaults to the Velodyne. Passing `MSD700_LIDAR_TYPE` (Livox Mid-360) into the container is on the `msd700_noetic` branch `ros2-lidar-type`, not merged yet.
 :::
@@ -305,6 +305,7 @@ Do not start `msd_hardware.launch.xml` or `msd_bringup` with `run_robot:=hardwar
 | --- | --- |
 | `bringup` | `MSD_ROS2_BRINGUP_CMD`, or a notice when it is empty (default) |
 | `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `camera` | `camera_client.py` (video to the cloud and the local dashboard) |
 | `token_refresh` | renews `token.cred` |
 
 ```bash
@@ -322,6 +323,7 @@ Commands that target the robot container (`status`, `shell`, `logs`) need `--ros
 | `MSD_ROS2_PROFILE` | `prototype` | Bridge profile: `prototype` (real robot) or `sim` (default with `--simulator`) |
 | `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` window. Leave the hardware and navigation out: the bridge starts both (see Step 4). A navigation stack started here is used as it is, but then a saved map is not localized against |
 | `MSD_ROS2_WEBUI_ARGS` | empty | Extra launch arguments for `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | empty | Camera for the video, like `--camera_device` on ROS 1. Empty: the default webcam, else the RealSense colour node |
 
 ### Running it in the simulator {#ros2-simulator}
 
