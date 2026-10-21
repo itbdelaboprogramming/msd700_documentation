@@ -14,6 +14,10 @@ outline: deep
 このページは実機ロボットを**本番クラウド**に接続します。シミュレーター(`--simulator`)と開発クラウド(`--dev`)は[高度な設定](#高度な設定)にあります。
 :::
 
+::: info 既定はROS 1
+Step 1〜6はROS 1ロボット(`msd700_robot`、Noetic)を構築します。同じユニットでROS 2ロボット(`msd_system`、Jazzy)を動かすには、先にこれらを済ませてから[ROS 2スタックへの切り替え](#ros2-stack)に従います。
+:::
+
 ## システム構成
 
 ![MSD700システム図](../../development/diagrams/msd700-system-diagram.drawio)
@@ -34,7 +38,8 @@ Jetsonワークスペースはロボットパッケージ、Webブリッジ、�
 └── src/
     ├── msd700_robot/
     ├── ros-web-ui/
-    └── ROS-dashboard-next-ts/
+    ├── ROS-dashboard-next-ts/
+    └── msd_system/          # ROS 2スタック用のみ
 ```
 
 ---
@@ -182,6 +187,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+ここで使うコマンドとフラグはすべて[docker-manager.sh ガイド](/ja/setup/docker-manager)で説明しています。
+
 ロボットコンテナと常時起動の`local_dev`スタック(データベース、MQTT、バックエンド/rosbridge、ネットワークエージェント、メディア、シグナリング、ダッシュボード)を起動します。名前に関わらず`local_dev`はどちらのクラウドにも使います。`-d`は起動と登録完了後に戻ります。`up`は起動時自動起動用の`msd700.service`も導入します。除外は`--no-autostart`です。
 
 **登録(初回起動のみ):**
@@ -227,6 +234,104 @@ TTYなし(または`MSD700_NONINTERACTIVE=1`)ではプロンプトをスキッ�
 1. `http://<jetson-ip>:3000`を開きます。
 2. クラウド登録と初回同期(レンタル割当+オペレーターアカウント)済みなら、ローカルダッシュボードで操縦・地図作成・ルート実行がオフラインで使えます。未登録ユニットはオフライン起動できません。
 3. インターネット復帰時、設定済みクラウドと地図・ルート・エリア・DB行を同期します。対象はこのユニットと有効レンタルプロファイルに限定されます。同期状態を確認します。全て送信済みと決め付けないでください。
+
+---
+
+## ROS 2スタックへの切り替え (msd_system) {#ros2-stack}
+
+ROS 1からROS 2への移行期間中、ユニットはどちらかのロボットスタックを実行できます。`docker-manager.sh`の`--ros2`フラグでROS 2側を選びます:ROS 2 Jazzy上の[msd_system](/ros2-msd-system/)と、そのWeb UIブリッジ(`msd_webui_bridge`)です。ブリッジはROS 1ユニットと同じMQTT契約で通信するため、サーバーとダッシュボードの変更は不要です。
+
+| | ROS 1(既定) | ROS 2(`--ros2`) |
+| --- | --- | --- |
+| ロボットのソース | `src/msd700_robot` | `src/msd_system` |
+| イメージ | `msd700:latest` | `msd_system:robot`(`msd_system:pc`の上に構築) |
+| コンテナ | `msd700` | `msd_system` |
+| セッション起動スクリプト | `run_msd.sh` | `run_ros2.sh`(`docker/ros2/`) |
+| ローカルスタック | 全体(ダッシュボードは`:3000`) | MQTTブローカーのみ |
+
+同時に動かせるスタックは1つだけです。どちらもホストネットワーク、`/dev`、同じユニットIDを使います。`msd700`または`msd700_simulator`が稼働中だと`up --ros2`は起動を拒否します。
+
+::: warning 現時点でROS 2で使える機能
+- **使える:** 登録、ハードウェアのInitialize/Stop、手動操縦、非常停止、GPS。スキャン・穴・地図の表示、フォロワー、帰還(return to home)は、CMUナビゲーションスタックの稼働も必要です(下記`MSD_ROS2_BRINGUP_CMD`)。いずれもブリッジ済みでコンテナ内のみで試験済み、実機では未検証です。
+- **未対応:** ダッシュボードからのナビゲーションと地図作成、オートパイロット、カバレッジ、自動アライン。ダッシュボードには「not available」が返ります。
+- **クラウドダッシュボードのみ。** `--ros2`モードではローカルスタックはMQTTブローカーだけを起動します(残りはROS 1のroscoreが必要)。そのため`:3000`のローカルダッシュボードは開きません。
+- **シミュレーター不可。** `--ros2`は`--simulator`と併用できません。
+- **VLP-16のみ。** ROS 2のハードウェア層の既定はVelodyneです。`MSD700_LIDAR_TYPE`(Livox Mid-360)をコンテナへ渡す変更は`msd700_noetic`のブランチ`ros2-lidar-type`にあり、未マージです。
+:::
+
+### Step 1: msd_systemのクローン
+
+```bash
+cd ~/msd700_noetic
+git clone -b web-ui-bridge git@github.com:itbdelaboprogramming/msd_system.git src/msd_system
+```
+
+Web UIブリッジ(`src/msd_webui/`)は`web-ui-bridge`ブランチにあり、`develop`にはまだありません。リポジトリには`CATKIN_IGNORE`があるため、ROS 1の`catkin build`はこれを対象外にします。
+
+### Step 2: ROS 2イメージのビルド
+
+```bash
+./scripts/docker-manager.sh build --ros2
+```
+
+`src/msd_system/Docker/Dockerfile.pc`から`msd_system:pc`(Jazzy、rosdep依存関係、Livox-SDK2)をビルドし、次に薄い`msd_system:robot`層(`docker/Dockerfile.ros2`:tmuxとセッション起動スクリプト)をビルドし、Mosquittoイメージを取得します。インターネットが必要で、Jetsonでの初回は時間がかかります。ROS 1のイメージは残るため、ROS 1に戻すときにリビルドは不要です。
+
+### Step 3: ROS 1を停止し、ROS 2を起動
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up --ros2 -d
+```
+
+- **初回起動でワークスペースをコンパイルします。** `msd_system:pc`は依存関係のみを含むため、`run_ros2.sh`がコンテナ内で`colcon build`を実行します。インターネットは不要ですが、Jetsonでは時間がかかるため、初回は再起動経由ではなく手動で起動します(`msd700.service`は15分でタイムアウトします)。
+- ビルド結果は名前付きボリューム(`msd_system_build`、`msd_system_install`、`msd_system_log`)に保存されるため、以降の起動、`down`、再起動ではビルドを省略します。
+- `up --ros2`は`--simulator`と同様に`--ros2`を`msd700.service`に焼き込むため、再起動後もROS 2で起動します。
+- `--dev`はROS 1と同じく使えます(開発クラウド、MQTT `8884`)。
+
+**ID。** ROS 2コンテナは同じ`src/ros-web-ui/Certificates/robot/`をマウントするため、ユニットはULIDを維持し、新しいクレームコードは出ません。一度も登録していないユニットは[Step 5](#step-5-ロボットの起動と登録)と同じくクレームコードを表示します。
+
+### Step 4: ハードウェアの起動
+
+クラウドダッシュボードでユニットを開き、**Initialize**を押します。ブリッジが`msd_webui_bridge/hardware_prototype.launch.py`を起動します:MCU(`hardware_interface_node`)、`twist_mux`、オドメトリ、センサーを、`motion_guard`に必要なWeb UI配線付きで起動します。**Stop**で再び停止します。
+
+`msd_hardware.launch.xml`や`run_robot:=hardware`付きの`msd_bringup`を横で手動起動しないでください。そのハードウェアにはWeb UI配線がなく、ブリッジは2つ目を起動しません。
+
+### セッションと確認
+
+`run_ros2.sh`はtmuxセッション`robot_services`を開きます。ROS 1と同じ名前です:
+
+| ウィンドウ | 実行内容 |
+| --- | --- |
+| `bringup` | `MSD_ROS2_BRINGUP_CMD`、空の場合(既定)はお知らせのみ |
+| `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `token_refresh` | `token.cred`を更新 |
+
+```bash
+./scripts/docker-manager.sh status --ros2                    # コンテナの状態
+docker exec -it msd_system tmux attach -t robot_services     # セッション(Ctrl-b dで離脱)
+./scripts/docker-manager.sh shell --ros2                     # コンテナ内のbash
+```
+
+ロボットコンテナを対象にするコマンド(`status`、`shell`、`logs`)にも`--ros2`が必要です。付けないとROS 1側を見ます。
+
+**オプション**(環境変数または`docker/.env`):
+
+| 変数 | 既定 | 用途 |
+| --- | --- | --- |
+| `MSD_ROS2_PROFILE` | `prototype` | ブリッジのプロファイル:`prototype`(実機)または`sim` |
+| `MSD_ROS2_BRINGUP_CMD` | 空 | `bringup`ウィンドウのコマンド(例:ナビゲーション)。ハードウェアは含めません(Step 4参照) |
+| `MSD_ROS2_WEBUI_ARGS` | 空 | `webui.launch.py`への追加起動引数 |
+
+**msd_systemをpullしたあと:** `src/`はコンテナにマウントされているため、`up --ros2 --build`で再コンパイルされます。`Docker/Dockerfile.pc`やパッケージの依存関係が変わった場合は、先に`build --ros2`を実行します。ワークスペースは古いイメージでビルドされているため、次の起動で自動的に再ビルドされます。ゼロからビルドするには、`down`のあと`build-clean --ros2`を実行します。3つのボリュームも削除されます。
+
+### ROS 1に戻す
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up -d
+```
+
+`--ros2`なしの`up`はROS 1ロボットとローカルスタック全体を起動し、`msd700.service`を再びROS 1用に設定します。
 
 ---
 
@@ -319,6 +424,7 @@ curl -s http://localhost:5002/local/status
 
 - [サーバー構築](/ja/setup/server-setup):クラウドバックエンド。
 - [システム構築](/ja/setup/system-setup):サーバー+ユニットの連携確認。
+- [docker-manager.sh ガイド](/ja/setup/docker-manager):全コマンドとフラグの説明。
 - [Dockerリファレンス](/ja/setup/docker-reference):CLI完全リファレンス。
 - [WiFiホットスポット](/ja/setup/wifi-hotspot):ホットスポットの設定と対処。
 - [MT7922 Wi-Fi](/ja/setup/wifi-mt7922):オンボード無線のファームウェア修正。

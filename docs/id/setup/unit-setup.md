@@ -14,6 +14,10 @@ Server yang jalan wajib ada dulu ([Setup Server](/id/setup/server-setup)). Jalan
 Halaman ini menghubungkan robot asli ke cloud **produksi**. Simulator (`--simulator`) dan cloud dev (`--dev`) ada di [Advanced Configurations](#advanced-configurations).
 :::
 
+::: info ROS 1 secara default
+Step 1 sampai 6 menyiapkan robot ROS 1 (`msd700_robot`, Noetic). Untuk menjalankan robot ROS 2 (`msd_system`, Jazzy) di unit yang sama, selesaikan dulu semua step itu, lalu ikuti [Beralih ke stack ROS 2](#ros2-stack).
+:::
+
 ## Topologi sistem
 
 ![Diagram Sistem MSD700](../../development/diagrams/msd700-system-diagram.drawio)
@@ -34,7 +38,8 @@ Workspace Jetson menyimpan paket robot, bridge web, dan web UI onboard sebagai c
 └── src/
     ├── msd700_robot/
     ├── ros-web-ui/
-    └── ROS-dashboard-next-ts/
+    ├── ROS-dashboard-next-ts/
+    └── msd_system/          # hanya untuk stack ROS 2
 ```
 
 ---
@@ -183,6 +188,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+Setiap command dan flag yang dipakai di sini dijelaskan di [Panduan docker-manager.sh](/id/setup/docker-manager).
+
 Ini menyalakan container robot plus stack `local_dev` yang selalu on (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Namanya saja `local_dev`; jalan untuk cloud mana pun. `-d` kembali setelah startup dan enrolment selesai. `up` juga memasang `msd700.service` untuk autostart boot; tambah `--no-autostart` untuk melewatinya.
 
 **Enrolment, hanya di launch pertama:**
@@ -228,6 +235,104 @@ Tanpa internet, gabung ke jaringan lokal robot atau [hotspot](/id/setup/wifi-hot
 1. Buka `http://<jetson-ip>:3000`.
 2. Setelah enrolment cloud dan satu sync sukses (rental assignment + akun operator), dashboard lokal bisa menyetir, memetakan, dan menjalankan rute secara offline. Unit yang belum pernah enrol tidak bisa start offline.
 3. Saat internet kembali, sync mempertukarkan peta, rute, area, dan baris database dengan cloud yang dikonfigurasi, terbatas pada unit ini dan rental profile-nya. Cek status sync; jangan anggap semua ter-upload.
+
+---
+
+## Beralih ke stack ROS 2 (msd_system) {#ros2-stack}
+
+Selama migrasi ROS 1 ke ROS 2, satu unit bisa menjalankan salah satu dari dua stack robot. Flag `--ros2` di `docker-manager.sh` memilih stack ROS 2: [msd_system](/ros2-msd-system/) di ROS 2 Jazzy, dengan bridge web UI-nya (`msd_webui_bridge`). Bridge ini memakai kontrak MQTT yang sama dengan unit ROS 1, jadi server dan dashboard tidak perlu diubah.
+
+| | ROS 1 (default) | ROS 2 (`--ros2`) |
+| --- | --- | --- |
+| Source robot | `src/msd700_robot` | `src/msd_system` |
+| Image | `msd700:latest` | `msd_system:robot`, di atas `msd_system:pc` |
+| Container | `msd700` | `msd_system` |
+| Session runner | `run_msd.sh` | `run_ros2.sh` (`docker/ros2/`) |
+| Stack lokal | lengkap (dashboard di `:3000`) | hanya broker MQTT |
+
+Hanya satu stack yang jalan pada satu waktu: keduanya memakai network host, `/dev`, dan identitas unit yang sama. `up --ros2` menolak start selama `msd700` atau `msd700_simulator` masih jalan.
+
+::: warning Yang sudah jalan di ROS 2 saat ini
+- **Jalan:** enrolment, Initialize/Stop hardware, menyetir manual, emergency stop, GPS. Tampilan scan, lubang, dan peta, follower, serta return to home juga butuh stack navigasi CMU yang jalan (`MSD_ROS2_BRINGUP_CMD`, di bawah). Semua sudah di-bridge dan diuji di container saja, belum di robot asli.
+- **Belum:** navigasi dan mapping dari dashboard, autopilot, coverage, dan auto align. Dashboard menerima "not available" untuk fitur ini.
+- **Hanya dashboard cloud.** Di mode `--ros2` stack lokal hanya menjalankan broker MQTT (sisanya butuh roscore ROS 1), jadi dashboard lokal di `:3000` tidak terbuka.
+- **Tanpa simulator.** `--ros2` tidak bisa digabung dengan `--simulator`.
+- **Hanya VLP-16.** Layer hardware ROS 2 default ke Velodyne. Meneruskan `MSD700_LIDAR_TYPE` (Livox Mid-360) ke container ada di branch `ros2-lidar-type` repo `msd700_noetic`, belum di-merge.
+:::
+
+### Step 1: Clone msd_system
+
+```bash
+cd ~/msd700_noetic
+git clone -b web-ui-bridge git@github.com:itbdelaboprogramming/msd_system.git src/msd_system
+```
+
+Bridge web UI (`src/msd_webui/`) ada di branch `web-ui-bridge`, belum di `develop`. Repo ini memuat `CATKIN_IGNORE`, jadi `catkin build` ROS 1 melewatinya.
+
+### Step 2: Build image ROS 2
+
+```bash
+./scripts/docker-manager.sh build --ros2
+```
+
+Perintah ini mem-build `msd_system:pc` dari `src/msd_system/Docker/Dockerfile.pc` (Jazzy, dependensi rosdep, Livox-SDK2), lalu layer tipis `msd_system:robot` (`docker/Dockerfile.ros2`: tmux dan session runner), dan menarik image Mosquitto. Butuh internet dan lama di Jetson untuk pertama kali. Image ROS 1 tetap ada, jadi kembali ke ROS 1 tidak perlu rebuild.
+
+### Step 3: Hentikan ROS 1, jalankan ROS 2
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up --ros2 -d
+```
+
+- **Start pertama meng-compile workspace.** `msd_system:pc` hanya berisi dependensi, jadi `run_ros2.sh` menjalankan `colcon build` di dalam container. Tidak butuh internet, tapi cukup lama di Jetson, jadi lakukan start pertama secara manual, bukan lewat reboot (`msd700.service` timeout setelah 15 menit).
+- Hasil build disimpan di named volume (`msd_system_build`, `msd_system_install`, `msd_system_log`), jadi start berikutnya, `down`, dan reboot melewatinya.
+- `up --ros2` menanam `--ros2` ke `msd700.service`, seperti `--simulator`, jadi unit reboot kembali ke ROS 2.
+- `--dev` berlaku sama seperti di ROS 1 (cloud dev, MQTT `8884`).
+
+**Identitas.** Container ROS 2 me-mount `src/ros-web-ui/Certificates/robot/` yang sama, jadi unit tetap memakai ULID-nya dan tidak muncul claim code baru. Unit yang belum pernah enrol menampilkan claim code persis seperti di [Step 5](#step-5-jalankan-robot-dan-enrol).
+
+### Step 4: Nyalakan hardware
+
+Buka unit di dashboard cloud dan tekan **Initialize**. Bridge lalu menjalankan `msd_webui_bridge/hardware_prototype.launch.py`: MCU (`hardware_interface_node`), `twist_mux`, odometri, dan sensor, dengan wiring web UI yang dibutuhkan `motion_guard`. **Stop** mematikannya lagi.
+
+Jangan jalankan `msd_hardware.launch.xml` atau `msd_bringup` dengan `run_robot:=hardware` secara manual di sampingnya: hardware itu tidak punya wiring web UI, dan bridge tidak akan menjalankan salinan kedua.
+
+### Session dan pengecekan
+
+`run_ros2.sh` membuka session tmux `robot_services`, nama yang sama dengan di ROS 1:
+
+| Window | Menjalankan |
+| --- | --- |
+| `bringup` | `MSD_ROS2_BRINGUP_CMD`, atau pemberitahuan bila kosong (default) |
+| `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `token_refresh` | memperbarui `token.cred` |
+
+```bash
+./scripts/docker-manager.sh status --ros2                    # status container
+docker exec -it msd_system tmux attach -t robot_services     # session (Ctrl-b d untuk keluar)
+./scripts/docker-manager.sh shell --ros2                     # bash di dalam container
+```
+
+Perintah yang menyasar container robot (`status`, `shell`, `logs`) juga butuh `--ros2`, kalau tidak yang dilihat adalah container ROS 1.
+
+**Opsi** (environment atau `docker/.env`):
+
+| Variabel | Default | Fungsi |
+| --- | --- | --- |
+| `MSD_ROS2_PROFILE` | `prototype` | Profil bridge: `prototype` (robot asli) atau `sim` |
+| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window `bringup`, misalnya navigasi. Jangan masukkan hardware (lihat Step 4) |
+| `MSD_ROS2_WEBUI_ARGS` | kosong | Argumen launch tambahan untuk `webui.launch.py` |
+
+**Setelah pull msd_system:** `src/` di-mount ke container, jadi `up --ros2 --build` meng-compile ulang. Bila `Docker/Dockerfile.pc` atau dependensi paket berubah, jalankan `build --ros2` dulu; start berikutnya lalu mem-build ulang workspace sendiri, karena workspace itu di-build di image lama. Untuk build dari nol: `down`, lalu `build-clean --ros2`, yang juga menghapus ketiga volume.
+
+### Kembali ke ROS 1
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up -d
+```
+
+`up` tanpa `--ros2` menjalankan robot ROS 1 dan stack lokal lengkap, serta menyiapkan `msd700.service` untuk ROS 1 lagi.
 
 ---
 
@@ -320,6 +425,7 @@ curl -s http://localhost:5002/local/status
 
 - [Setup Server](/id/setup/server-setup): backend cloud.
 - [Setup Sistem](/id/setup/system-setup): cek server + unit bersama.
+- [Panduan docker-manager.sh](/id/setup/docker-manager): penjelasan setiap command dan flag.
 - [Referensi Docker](/id/setup/docker-reference): referensi CLI lengkap.
 - [WiFi Hotspot](/id/setup/wifi-hotspot): setup dan troubleshooting hotspot.
 - [Wi-Fi MT7922](/id/setup/wifi-mt7922): fix firmware radio onboard.

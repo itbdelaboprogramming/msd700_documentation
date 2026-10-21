@@ -16,6 +16,7 @@ Every page has the exact shell commands, expected outputs, and config templates 
   <LinkCard icon="📡" title="Unit Setup" details="Install the physical robot on the NVIDIA Jetson, build, and enrol it." link="/setup/unit-setup" />
   <LinkCard icon="🔗" title="System Setup" details="Check that server and unit work together, then hand over to operators." link="/setup/system-setup" />
   <LinkCard icon="📋" title="Commissioning Checklist" details="Acceptance sheet for one new unit: unboxing to signed-off." link="/setup/commissioning-checklist" />
+  <LinkCard icon="⌨️" title="docker-manager.sh Guide" details="Every command and flag of the unit script: up, down, build, --ros2, --dev, -d and the rest." link="/setup/docker-manager" />
   <LinkCard icon="🐳" title="Docker Reference" details="All Docker Compose profiles, commands, environment variables, and volumes." link="/setup/docker-reference" />
   <LinkCard icon="📶" title="WiFi Hotspot + Client" details="Run the unit's own Wi-Fi hotspot plus a client connection for internet." link="/setup/wifi-hotspot" />
   <LinkCard icon="📡" title="MT7922 Wi-Fi Setup" details="Fix the onboard MediaTek MT7922 firmware on the Tegra kernel." link="/setup/wifi-mt7922" />

@@ -14,6 +14,10 @@ You need a running [Server](/setup/server-setup) first. Run every command below 
 This page connects a real robot to the **production cloud**. Simulator (`--simulator`) and dev cloud (`--dev`) are in [Advanced Configurations](#advanced-configurations).
 :::
 
+::: info ROS 1 by default
+Steps 1 to 6 set up the ROS 1 robot (`msd700_robot`, Noetic). To run the ROS 2 robot (`msd_system`, Jazzy) on the same unit, finish them first, then follow [Switching to the ROS 2 stack](#ros2-stack).
+:::
+
 ## System topology
 
 ![MSD700 System Diagram](../development/diagrams/msd700-system-diagram.drawio)
@@ -34,7 +38,8 @@ The Jetson workspace keeps robot packages, web bridges, and the onboard web UI a
 └── src/
     ├── msd700_robot/
     ├── ros-web-ui/
-    └── ROS-dashboard-next-ts/
+    ├── ROS-dashboard-next-ts/
+    └── msd_system/          # only for the ROS 2 stack
 ```
 
 ---
@@ -183,6 +188,8 @@ cd ~/msd700_noetic
 ./scripts/docker-manager.sh up -d
 ```
 
+Every command and flag used here is explained in the [docker-manager.sh Guide](/setup/docker-manager).
+
 This starts the robot container plus the always-on `local_dev` stack (database, MQTT, backend/rosbridge, network agent, media, signalling, dashboard). Despite the name, `local_dev` runs for either cloud. `-d` returns after startup and enrolment finish. `up` also installs `msd700.service` for boot autostart; add `--no-autostart` to skip that.
 
 **Enrolment, first launch only:**
@@ -228,6 +235,104 @@ Without internet, join the robot's local network or its [hotspot](/setup/wifi-ho
 1. Open `http://<jetson-ip>:3000`.
 2. After cloud enrolment and one successful sync (rental assignment + operator accounts), the local dashboard drives, maps, and runs routes offline. A never-enrolled unit cannot start offline.
 3. When internet returns, sync exchanges maps, routes, areas, and database rows with the configured cloud, limited to this unit and its rental profile. Check sync status; do not assume everything uploaded.
+
+---
+
+## Switching to the ROS 2 stack (msd_system) {#ros2-stack}
+
+During the ROS 1 to ROS 2 migration a unit can run either robot stack. The flag `--ros2` on `docker-manager.sh` picks the ROS 2 one: [msd_system](/ros2-msd-system/) on ROS 2 Jazzy, with its web UI bridge (`msd_webui_bridge`). The bridge speaks the same MQTT contract as a ROS 1 unit, so the server and dashboard need no change.
+
+| | ROS 1 (default) | ROS 2 (`--ros2`) |
+| --- | --- | --- |
+| Robot source | `src/msd700_robot` | `src/msd_system` |
+| Image | `msd700:latest` | `msd_system:robot`, layered on `msd_system:pc` |
+| Container | `msd700` | `msd_system` |
+| Session runner | `run_msd.sh` | `run_ros2.sh` (`docker/ros2/`) |
+| Local stack | full (dashboard on `:3000`) | MQTT broker only |
+
+Only one stack runs at a time: both use the host network, `/dev` and the same unit identity. `up --ros2` refuses to start while `msd700` or `msd700_simulator` is running.
+
+::: warning What works on ROS 2 today
+- **Works:** enrolment, Initialize/Stop hardware, manual driving, emergency stop, GPS. The scan, hole and map views, follower and return to home also need the CMU navigation stack running (`MSD_ROS2_BRINGUP_CMD`, below). All bridged and tested in containers only, not yet on a real robot.
+- **Not yet:** navigation and mapping from the dashboard, autopilot, coverage and auto align. The dashboard gets "not available" for them.
+- **Cloud dashboard only.** In `--ros2` mode the local stack runs only its MQTT broker (the rest needs a ROS 1 roscore), so the local dashboard on `:3000` does not open.
+- **No simulator.** `--ros2` cannot be combined with `--simulator`.
+- **VLP-16 only.** The ROS 2 hardware layer defaults to the Velodyne. Passing `MSD700_LIDAR_TYPE` (Livox Mid-360) into the container is on the `msd700_noetic` branch `ros2-lidar-type`, not merged yet.
+:::
+
+### Step 1: Clone msd_system
+
+```bash
+cd ~/msd700_noetic
+git clone -b web-ui-bridge git@github.com:itbdelaboprogramming/msd_system.git src/msd_system
+```
+
+The web UI bridge (`src/msd_webui/`) is on the `web-ui-bridge` branch, not yet on `develop`. The repo carries `CATKIN_IGNORE`, so the ROS 1 `catkin build` skips it.
+
+### Step 2: Build the ROS 2 images
+
+```bash
+./scripts/docker-manager.sh build --ros2
+```
+
+This builds `msd_system:pc` from `src/msd_system/Docker/Dockerfile.pc` (Jazzy, rosdep dependencies, Livox-SDK2), then the thin `msd_system:robot` layer (`docker/Dockerfile.ros2`: tmux and the session runner), and pulls Mosquitto. It needs internet and takes long on a Jetson the first time. The ROS 1 images stay, so switching back needs no rebuild.
+
+### Step 3: Stop ROS 1, start ROS 2
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up --ros2 -d
+```
+
+- **The first start compiles the workspace.** `msd_system:pc` holds dependencies only, so `run_ros2.sh` runs `colcon build` inside the container. This needs no internet, but takes a while on a Jetson, so do the first start by hand, not through a reboot (`msd700.service` times out after 15 minutes).
+- The build is kept in named volumes (`msd_system_build`, `msd_system_install`, `msd_system_log`), so later starts, `down` and reboots skip it.
+- `up --ros2` bakes `--ros2` into `msd700.service`, like `--simulator`, so the unit reboots into ROS 2.
+- `--dev` works as on ROS 1 (dev cloud, MQTT `8884`).
+
+**Identity.** The ROS 2 container mounts the same `src/ros-web-ui/Certificates/robot/`, so the unit keeps its ULID and no new claim code appears. A unit that never enrolled prints a claim code exactly as in [Step 5](#step-5-start-the-robot-and-enrol).
+
+### Step 4: Bring up the hardware
+
+Open the unit on the cloud dashboard and press **Initialize**. The bridge then starts `msd_webui_bridge/hardware_prototype.launch.py`: the MCU (`hardware_interface_node`), `twist_mux`, odometry and sensors, with the web UI wiring that `motion_guard` needs. **Stop** shuts it down again.
+
+Do not start `msd_hardware.launch.xml` or `msd_bringup` with `run_robot:=hardware` by hand next to it: that hardware has no web UI wiring, and the bridge will not start a second copy.
+
+### Session and checks
+
+`run_ros2.sh` opens the tmux session `robot_services`, the same name as on ROS 1:
+
+| Window | Runs |
+| --- | --- |
+| `bringup` | `MSD_ROS2_BRINGUP_CMD`, or a notice when it is empty (default) |
+| `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `token_refresh` | renews `token.cred` |
+
+```bash
+./scripts/docker-manager.sh status --ros2                    # container state
+docker exec -it msd_system tmux attach -t robot_services     # session (Ctrl-b d to leave)
+./scripts/docker-manager.sh shell --ros2                     # bash in the container
+```
+
+Commands that target the robot container (`status`, `shell`, `logs`) need `--ros2` too, or they look at the ROS 1 one.
+
+**Options** (environment or `docker/.env`):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MSD_ROS2_PROFILE` | `prototype` | Bridge profile: `prototype` (real robot) or `sim` |
+| `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` window, for example navigation. Leave the hardware out (see Step 4) |
+| `MSD_ROS2_WEBUI_ARGS` | empty | Extra launch arguments for `webui.launch.py` |
+
+**After pulling msd_system:** `src/` is mounted into the container, so `up --ros2 --build` recompiles it. If `Docker/Dockerfile.pc` or package dependencies changed, run `build --ros2` first; the next start then rebuilds the workspace by itself, since it was built on the old image. For a build from scratch: `down`, then `build-clean --ros2`, which also drops the three volumes.
+
+### Switching back to ROS 1
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up -d
+```
+
+`up` without `--ros2` starts the ROS 1 robot and the full local stack, and arms `msd700.service` for ROS 1 again.
 
 ---
 
@@ -320,6 +425,7 @@ curl -s http://localhost:5002/local/status
 
 - [Server Setup](/setup/server-setup): cloud backend.
 - [System Setup](/setup/system-setup): check server + unit together.
+- [docker-manager.sh Guide](/setup/docker-manager): every command and flag, explained.
 - [Docker Reference](/setup/docker-reference): full CLI reference.
 - [WiFi Hotspot](/setup/wifi-hotspot): hotspot setup and troubleshooting.
 - [MT7922 Wi-Fi](/setup/wifi-mt7922): onboard-radio firmware fix.

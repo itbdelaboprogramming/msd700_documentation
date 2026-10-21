@@ -327,6 +327,8 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ## ユニット: `docker-manager.sh`
 
+全コマンドとフラグの詳しい説明は[docker-manager.sh ガイド](/ja/setup/docker-manager)にあります。この節は簡潔なリファレンスです。
+
 ユニットは`docker compose`を直接呼びません。`scripts/docker-manager.sh`が包み、共有値を**一度だけ**決めて両半分(ロボットコンテナ+ユニットサーバースタック)に渡し、不一致を防ぎます。
 
 ### コマンド
@@ -354,6 +356,7 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 | フラグ | 対象 | 効果 |
 | --- | --- | --- |
 | `--simulator`、`-s` | `build`、`up` | Gazeboイメージ(`msd700-simulator:latest`)+コンテナ。`run_msd.sh`にも転送され`use_simulator_val:=true`を設定 |
+| `--ros2` | `build`、`up`、`shell`、`logs`、`status` | ROS 1の代わりにROS 2ロボット(`msd_system`):イメージ`msd_system:robot`、コンテナ`msd_system`、`run_msd.sh`の代わりに`run_ros2.sh`、ローカルスタックはMQTTブローカーのみ。`--simulator`と併用不可。[ユニット: `--ros2`](#unit-ros2)参照 |
 | `--dev` | `up` | 相手クラウド:本番でなく開発スタック。MQTT 8884、このロボットのROSマスター11322、専用IDでの開発バックエンド登録([1台のロボット、2つのクラウド](/ja/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | ロボット/ローカルイメージ+コンテナ内catkinワークスペースをリビルド。稼働中ロボットは再作成まで旧イメージ保持 |
 | `--no-autostart` | `up`、`down` | `msd700.service`不変維持(`up`は起動時自動起動を有効化、`down`は無効化) |
@@ -417,11 +420,28 @@ systemd保持中の本番`up`はバインド失敗し、`restart: always`が永�
 
 ### 起動時自動起動(`msd700.service`)
 
-`up` はsystemdユニットを導入・有効化します(`msd700.service.tmpl` から描画)。`down` は無効化します。描画済み `ExecStart` は、起動時自動起動を仕掛けた `up` の**フラグ付きで** `docker-manager.sh up -d --no-autostart` を実行します(`--dev`/`--simulator` を焼込済み)。そのため再起動でdev/simulatorロボットが黙ってprod/ハード側に替わることはありません。`Type=oneshot`、`RemainAfterExit=yes`、`docker.service` の後、起動タイムアウト15分。`print-autostart-unit` で確認します(または `grep ExecStart`)。`--no-autostart` で不参加。systemctlなし・コンテナ内では自動省略します。
+`up` はsystemdユニットを導入・有効化します(`msd700.service.tmpl` から描画)。`down` は無効化します。描画済み `ExecStart` は、起動時自動起動を仕掛けた `up` の**フラグ付きで** `docker-manager.sh up -d --no-autostart` を実行します(`--dev`/`--simulator`/`--ros2` を焼込済み)。そのため再起動でdev/simulatorロボットが黙ってprod/ハード側に替わることはありません。`Type=oneshot`、`RemainAfterExit=yes`、`docker.service` の後、起動タイムアウト15分。`print-autostart-unit` で確認します(または `grep ExecStart`)。`--no-autostart` で不参加。systemctlなし・コンテナ内では自動省略します。
 
 ### `manage-unit.sh`(サーバー側、手動/デバッグ専用)
 
 **レガシーのユニット単位**クラウドコンテナをULIDのみで駆動します(名前は拒否):`start|stop|restart|status|logs|list|loop`。`loop` は10秒ごとに期待の7中継ノードをポーリングし、欠落で再起動します。通常は不要です。ダッシュボード展開時の自動起動とアイドルタイムアウト停止がバックエンド側で面倒を見ます。マルチユニットモードのユニットには決して使わないでください。
+
+### ユニット: `--ros2` (msd_system) {#unit-ros2}
+
+`--ros2`は移行期間中、ロボット側をROS 2スタックに切り替えます。切り替え手順は[ユニット構築 § ROS 2スタックへの切り替え](/ja/setup/unit-setup#ros2-stack)にあります。
+
+- **イメージ。** `build --ros2`はmsd_system自身のコンテキストで`src/msd_system/Docker/Dockerfile.pc`から`msd_system:pc`をビルドし、次にcomposeサービス`msd_system`(プロファイル`ros2`、`docker/Dockerfile.ros2`)がtmuxと`run_ros2.sh`を重ねて`msd_system:robot`にします。
+- **ワークスペース。** `msd_system:pc`は依存関係のみです。`src/msd_system/src`は`/root/msd_system/src`にマウントされ、コンテナ内の`colcon build`でコンパイルされます。`build/`、`install/`、`log/`は名前付きボリューム`msd_system_build`、`msd_system_install`、`msd_system_log`なので、ビルド結果は`down`や再起動後も残ります。`run_ros2.sh`は`--build`指定時、`install/`が空のとき、`install/.msd700_image_id`がコンテナの実行イメージと異なるときにビルドします。`build-clean --ros2`はボリュームを削除します(コンテナがない場合のみ。先に`down`)。
+- **ROS 1と共有するマウント。** `ros-web-ui/Certificates/robot`(同じID)、`ros-web-ui/scripts`(登録とトークン更新用の`enroll.py`)、地図フォルダ、`msd_webui_state_local`(ラッチされた非常停止、`down`後も保持)。
+- **スタックは1つ。** 他のロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`)が稼働中は`up`が拒否します。`down`は3つとも削除します。
+- **転送されるフラグ。** `run_ros2.sh`に届くのは`--dry-run`と`--kill`のみで、他の`run_msd.sh`用フラグは警告付きで破棄されます。`--dev`は`webui.launch.py`の`dev:=true`として渡ります。
+
+| 変数 | 既定 | 用途 |
+| --- | --- | --- |
+| `MSD_ROS2_PROFILE` | `prototype` | `webui.launch.py profile:=`。`sim`は`use_sim_time:=true`も設定 |
+| `MSD_ROS2_BRINGUP_CMD` | 空 | tmuxウィンドウ`bringup`のコマンド。空の場合はお知らせのみ表示し、ハードウェアはInitialize時にブリッジが起動 |
+| `MSD_ROS2_WEBUI_ARGS` | 空 | `webui.launch.py`への追加起動引数 |
+| `ROBOT_TOKEN_REFRESH_SECONDS` | `14400` | トークン更新間隔 |
 
 ## ユニット: `run_msd.sh`
 
