@@ -29,6 +29,7 @@ cd ~/msd700_noetic
 | 開発クラウドで起動する | `up --dev -d` |
 | ROS 2ロボット(msd_system)を起動する | `up --ros2 -d` |
 | Gazeboシミュレーターを起動する(ハードウェアなしのPC) | `up --simulator -d` |
+| ROS 2ロボットをGazeboで起動する | `up --ros2 --simulator -d` |
 | すべて停止する | `down` |
 | `git pull`後に新しいコードを使う | `build`のあと`down`と`up -d`([リビルドが必要なもの](/ja/setup/docker-reference#リビルドが必要な変更)) |
 | ロボットコンテナでシェルを開く | `shell`(ROS 2: `shell --ros2`) |
@@ -48,12 +49,12 @@ cd ~/msd700_noetic
 - **登録します。** IDを持たないロボットは、管理者が承認するクレームコードを表示します([ユニット構築 Step 5](/ja/setup/unit-setup#step-5-ロボットの起動と登録))。
 - **端末を保持します**(`-d`なしの場合)。Ctrl-Cやセッション終了で、`down`と同じくすべて停止します。
 - **起動時自動起動を設定します。** この実行のモードフラグ(`--dev`、`--simulator`、`--ros2`)付きで`msd700.service`を導入・有効化するため、再起動後も同じロボットが同じクラウドで起動します。`--no-autostart`で省略します。
-- **拒否します。** 別のロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`)が稼働中の場合です。先に`down`を実行します。
+- **拒否します。** 別のロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`、`msd_system_simulator`)が稼働中の場合です。先に`down`を実行します。
 - **稼働中のコンテナは作り直しません**(ビルド後でも)。新しいイメージで起動するには`down`のあと`up`します。
 
 ### `down` / `stop`
 
-すべてのロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`)とローカルスタックを停止・削除し、`msd700.service`を無効化します。地図、ローカルデータベース、認証情報、ROS 2のビルドボリュームは残ります。`--no-autostart`でサービスを有効のまま残します。
+すべてのロボットコンテナ(`msd700`、`msd700_simulator`、`msd_system`、`msd_system_simulator`)とローカルスタックを停止・削除し、`msd700.service`を無効化します。地図、ローカルデータベース、認証情報、ROS 2のビルドボリュームは残ります。`--no-autostart`でサービスを有効のまま残します。
 
 ### `build`
 
@@ -119,7 +120,7 @@ ROS 1ロボット(`msd700_robot`、Noetic)の代わりにROS 2ロボット([msd_
 - **変わる点:** イメージ`msd_system:robot`、コンテナ`msd_system`、セッション起動スクリプト`run_ros2.sh`。ローカルスタックはMQTTブローカーだけなので、ロボットはクラウドダッシュボードから操作します。
 - **初回起動**でコンテナ内のワークスペースをコンパイルします(`colcon build`、オフライン)。結果はボリュームに保持され、以降の起動で再利用されます。
 - **IDは同じ:** ROS 1と同じ認証情報を使うため、ユニットはULIDを維持します。
-- `--simulator`とは**併用できません**。
+- **`--simulator`と併用:** 同じロボットをGazeboで動かします(下記`--simulator`参照)。
 
 ```bash
 ./scripts/docker-manager.sh build --ros2
@@ -132,6 +133,18 @@ ROS 1ロボット(`msd700_robot`、Noetic)の代わりにROS 2ロボット([msd_
 ### `--simulator`、`-s`
 
 ハードウェアロボットの代わりにGazeboシミュレーターのイメージ(`msd700-simulator:latest`、コンテナ`msd700_simulator`)を動かします。ロボットが接続されていないPC向けです。先に`build --simulator`でビルドします。シミュレーター用のワールドもダウンロードされます。`docker/.env`で`MSD700_SIM_HEADLESS=true`にするとGazeboをウィンドウなしで動かします。
+
+`--ros2`と併用すると、msd_system自身のシミュレーション(`msd_sim`)を動かします:
+
+- **イメージは同じです。** `msd_system:pc`にはGazeboが含まれているため、`build --ros2`だけで足ります。違うのはコンテナだけです: `msd_system_simulator`。
+- **起動するもの。** `bringup`ウィンドウが`msd_bringup.launch.xml`経由で`msd_sim`を起動します。ナビゲーションは含めず、実機と同様にブリッジがモードごとに起動します。ブリッジは`sim`プロファイルを使います。
+- **ワールド。** `MSD_ROS2_SIM_WORLD`で`msd_sim/worlds/`内のファイル(例: `campus_hall.sdf`)または絶対パスを選びます。空の場合はmsd_bringupの既定です。
+- **常にウィンドウ付きです。** `MSD700_SIM_HEADLESS`は効きません。`msd_sim`にはまだヘッドレスのオプションがありません。
+
+```bash
+./scripts/docker-manager.sh build --ros2
+./scripts/docker-manager.sh up --ros2 --simulator -d
+```
 
 - **使えるコマンド:** `build`、`build-clean`、`up`、`shell`、`logs`、`status`、`print-autostart-unit`。
 - `msd700.service`に焼き込まれるため、再起動後にハードウェアロボットとして起動することはありません。
@@ -218,7 +231,6 @@ docker exec -it msd_system tmux attach -t robot_services   # ROS 2
 
 - **ロボットスタックは同時に1つだけ。** ROS 1、シミュレーター、ROS 2はホストネットワーク、`/dev`、ユニットIDを共有します。
 - **モードフラグがロボットを決めます。** `--dev`、`--simulator`、`--ros2`で、どのロボットをどこで動かすかが決まります。`shell`、`logs`、`status`にも同じフラグを付けます。`up`はこれらを`msd700.service`に焼き込みます。
-- **`--ros2`と`--simulator`の併用は拒否されます。**
 - **場所違いのフラグは警告して無視されます。** 例: `up`以外での`-d`、`reenroll`以外での`--fresh`。
 
 ## 環境変数
@@ -232,8 +244,9 @@ docker exec -it msd_system tmux attach -t robot_services   # ROS 2
 | `ROS_MASTER_PORT` | `11321`、`--dev`では`11322` | ロボット自身のROSマスター。クラウドの`11311`/`11312`は使わない |
 | `BUILD_PARALLEL` | `true` | `false`でイメージを1つずつビルド |
 | `ENROLL_CODE` | 未設定 | 1回限りの登録コード。保留リストを経由しない |
-| `MSD_ROS2_PROFILE` | `prototype` | ROS 2ブリッジのプロファイル: `prototype`または`sim` |
+| `MSD_ROS2_PROFILE` | `prototype`(`--simulator`では`sim`) | ROS 2ブリッジのプロファイル: `prototype`または`sim` |
 | `MSD_ROS2_BRINGUP_CMD` | 空 | ROS 2: `bringup`ウィンドウのコマンド(例: ナビゲーション) |
 | `MSD_ROS2_WEBUI_ARGS` | 空 | ROS 2: `webui.launch.py`への追加引数 |
+| `MSD_ROS2_SIM_WORLD` | 空 | ROS 2シミュレーター: `msd_sim/worlds/`内のワールドファイルまたは絶対パス |
 
 すべての変数: [Dockerリファレンス § 転送する環境変数](/ja/setup/docker-reference#転送する環境変数)と[ユニット`.env`リファレンス](/ja/setup/docker-reference#ユニット-env-リファレンス)。

@@ -358,7 +358,7 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | Flag | Applies to | Effect |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Gazebo image (`msd700-simulator:latest`) + container. Also forwarded to `run_msd.sh`, which sets `use_simulator_val:=true` |
-| `--ros2` | `build`, `up`, `shell`, `logs`, `status` | ROS 2 robot (`msd_system`) instead of ROS 1: image `msd_system:robot`, container `msd_system`, `run_ros2.sh` instead of `run_msd.sh`, local stack reduced to the MQTT broker. Not combinable with `--simulator`. See [Unit: `--ros2`](#unit-ros2) |
+| `--ros2` | `build`, `up`, `shell`, `logs`, `status` | ROS 2 robot (`msd_system`) instead of ROS 1: image `msd_system:robot`, container `msd_system`, `run_ros2.sh` instead of `run_msd.sh`, local stack reduced to the MQTT broker. With `--simulator`: Gazebo (`msd_sim`) in container `msd_system_simulator`, same image. See [Unit: `--ros2`](#unit-ros2) |
 | `--dev` | `up` | Peer cloud: dev stack instead of production. MQTT 8884, this robot's ROS master 11322, dev backend enrolment with its own identity ([one robot, two clouds](/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | Rebuild robot/local images + in-container catkin workspace. A running robot keeps its old image until recreated |
 | `--no-autostart` | `up`, `down` | Leave `msd700.service` alone (`up` enables boot autostart, `down` disables it) |
@@ -435,13 +435,15 @@ Drives **legacy per-unit** cloud containers by ULID only (names rejected): `star
 - **Images.** `build --ros2` builds `msd_system:pc` from `src/msd_system/Docker/Dockerfile.pc` with msd_system's own context, then the compose service `msd_system` (profile `ros2`, `docker/Dockerfile.ros2`) layers tmux and `run_ros2.sh` on it as `msd_system:robot`.
 - **Workspace.** `msd_system:pc` holds dependencies only. `src/msd_system/src` is mounted at `/root/msd_system/src` and compiled by `colcon build` inside the container. `build/`, `install/` and `log/` are the named volumes `msd_system_build`, `msd_system_install` and `msd_system_log`, so the build survives `down` and reboots. `run_ros2.sh` builds on `--build`, when `install/` is empty, and when `install/.msd700_image_id` names another image than the container runs. `build-clean --ros2` drops the volumes (only while the container is gone, so `down` first).
 - **Mounts shared with ROS 1.** `ros-web-ui/Certificates/robot` (same identity), `ros-web-ui/scripts` (`enroll.py` for enrolment and token refresh), the maps folder, and `msd_webui_state_local` (the latched emergency stop, kept across `down`).
-- **One stack.** `up` refuses while another robot container (`msd700`, `msd700_simulator`, `msd_system`) runs; `down` removes all three.
-- **Forwarded flags.** Only `--dry-run` and `--kill` reach `run_ros2.sh`; other `run_msd.sh` flags are dropped with a warning. `--dev` arrives as `dev:=true` on `webui.launch.py`.
+- **Simulator.** `--simulator` reuses the image (`msd_system:pc` is built on `jazzy-desktop-full`, which carries Gazebo) in container `msd_system_simulator`, with the X11 socket mounted for the Gazebo window and the GPU from `/dev`. The `bringup` window runs `msd_bringup.launch.xml run_robot:=sim run_navigation:=false` with `twist_mux` wired to `motion_guard` (`cmd_vel_out:=mux/cmd_vel`, `twist_mux_webui.yaml`), as `hardware_prototype.launch.py` does on the robot.
+- **One stack.** `up` refuses while another robot container (`msd700`, `msd700_simulator`, `msd_system`, `msd_system_simulator`) runs; `down` removes all four.
+- **Forwarded flags.** Only `--dry-run` and `--kill` reach `run_ros2.sh`; other `run_msd.sh` flags are dropped with a warning. `--dev` arrives as `dev:=true` on `webui.launch.py`, `--simulator` as `MSD_ROS2_SIM=true`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `MSD_ROS2_PROFILE` | `prototype` | `webui.launch.py profile:=`; `sim` also sets `use_sim_time:=true` |
-| `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` tmux window. Empty: the window only prints a notice, and the bridge starts the hardware on Initialize |
+| `MSD_ROS2_PROFILE` | `prototype` (`sim` with `--simulator`) | `webui.launch.py profile:=`; `sim` also sets `use_sim_time:=true` |
+| `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` tmux window. Empty: the window only prints a notice, and the bridge starts the hardware on Initialize. With `--simulator`, empty starts `msd_sim` as above |
+| `MSD_ROS2_SIM_WORLD` | empty | `--simulator`: `world_file:=` for msd_bringup, a file in `msd_sim/worlds/` or an absolute path |
 | `MSD_ROS2_WEBUI_ARGS` | empty | Extra launch arguments for `webui.launch.py` |
 | `ROBOT_TOKEN_REFRESH_SECONDS` | `14400` | Token refresh interval |
 
