@@ -253,10 +253,10 @@ Selama migrasi ROS 1 ke ROS 2, satu unit bisa menjalankan salah satu dari dua st
 Hanya satu stack yang jalan pada satu waktu: keduanya memakai network host, `/dev`, dan identitas unit yang sama. `up --ros2` menolak start selama `msd700` atau `msd700_simulator` masih jalan.
 
 ::: warning Yang sudah jalan di ROS 2 saat ini
-- **Jalan:** enrolment, Initialize/Stop hardware, menyetir manual, emergency stop, GPS. Tampilan scan, lubang, dan peta, follower, serta return to home juga butuh stack navigasi CMU yang jalan (`MSD_ROS2_BRINGUP_CMD`, di bawah). Semua sudah di-bridge dan diuji di container saja, belum di robot asli.
-- **Belum:** navigasi dan mapping dari dashboard, autopilot, coverage, dan auto align. Dashboard menerima "not available" untuk fitur ini.
+- **Jalan:** enrolment, Initialize/Stop hardware, menyetir manual, emergency stop, GPS, follower dan return to home, serta sejak 2026-10-21 mapping (simpan dan unggah), navigasi di peta tersimpan, autopilot, coverage, dan auto align. Bridge menyalakan stack navigasi CMU sendiri untuk setiap mode, lewat `msd_bringup.launch.xml`. Semua sudah di-bridge dan diuji di container saja, belum di robot asli atau dengan dashboard asli.
+- **Peta tersimpan:** peta yang dibuat di unit ROS 2 disimpan sebagai pgm/yaml (diunggah seperti biasa) ditambah `.pcd` yang tetap di folder peta unit dan dipakai robot untuk lokalisasi. Peta yang dibuat di unit ROS 1 tetap bisa dibuka, dengan peta 3D yang diturunkan dari dindingnya, yang lokalisasinya kurang andal.
 - **Hanya dashboard cloud.** Di mode `--ros2` stack lokal hanya menjalankan broker MQTT (sisanya butuh roscore ROS 1), jadi dashboard lokal di `:3000` tidak terbuka.
-- **Tanpa simulator.** `--ros2` tidak bisa digabung dengan `--simulator`.
+- **Simulator.** `up --ros2 --simulator` menjalankan stack yang sama di Gazebo di laptop (lihat [di bawah](#ros2-simulator)). Sejauh ini baru dicek dengan dry run.
 - **Hanya VLP-16.** Layer hardware ROS 2 default ke Velodyne. Meneruskan `MSD700_LIDAR_TYPE` (Livox Mid-360) ke container ada di branch `ros2-lidar-type` repo `msd700_noetic`, belum di-merge.
 :::
 
@@ -319,9 +319,23 @@ Perintah yang menyasar container robot (`status`, `shell`, `logs`) juga butuh `-
 
 | Variabel | Default | Fungsi |
 | --- | --- | --- |
-| `MSD_ROS2_PROFILE` | `prototype` | Profil bridge: `prototype` (robot asli) atau `sim` |
-| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window `bringup`, misalnya navigasi. Jangan masukkan hardware (lihat Step 4) |
+| `MSD_ROS2_PROFILE` | `prototype` | Profil bridge: `prototype` (robot asli) atau `sim` (default dengan `--simulator`) |
+| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window `bringup`. Jangan masukkan hardware dan navigasi: bridge menyalakan keduanya (lihat Step 4). Stack navigasi yang dinyalakan di sini dipakai apa adanya, tetapi peta tersimpan lalu tidak dilokalisasi |
 | `MSD_ROS2_WEBUI_ARGS` | kosong | Argumen launch tambahan untuk `webui.launch.py` |
+
+### Menjalankannya di simulator {#ros2-simulator}
+
+Di laptop tanpa robot, `--simulator` menjalankan stack ROS 2 di Gazebo (`msd_sim`). Image-nya sama, jadi `build --ros2` dari Step 2 sudah cukup:
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up --ros2 --simulator -d
+```
+
+- Container-nya `msd_system_simulator` (attach: `docker exec -it msd_system_simulator tmux attach -t robot_services`). Beri `--ros2 --simulator` juga ke `status`, `shell`, dan `logs`.
+- Jendela Gazebo terbuka di layar laptop. Tidak ada langkah Initialize: simulasinya adalah hardware-nya.
+- Pilih world dengan `MSD_ROS2_SIM_WORLD`, misalnya `MSD_ROS2_SIM_WORLD=campus_hall.sdf`. Default-nya `yayat_gudang.sdf`.
+- Laptop ter-enrol sebagai unit seperti simulator ROS 1, jadi pakai `--dev` supaya tidak masuk ke produksi.
 
 **Setelah pull msd_system:** `src/` di-mount ke container, jadi `up --ros2 --build` meng-compile ulang. Bila `Docker/Dockerfile.pc` atau dependensi paket berubah, jalankan `build --ros2` dulu; start berikutnya lalu mem-build ulang workspace sendiri, karena workspace itu di-build di image lama. Untuk build dari nol: `down`, lalu `build-clean --ros2`, yang juga menghapus ketiga volume.
 

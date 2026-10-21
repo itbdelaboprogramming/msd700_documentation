@@ -254,9 +254,14 @@ Robot dari workspace ROS 2 `msd_system` tidak punya `topic2string` maupun `aws_m
 | `string/hazard_cells` | `webui/hazard_cells` (latched) |
 | `string/map`, `string/map_request` | `webui/map` (latched) |
 | `string/key_vel` | `webui/manual_vel` (`twist_mux` prioritas 90) |
-| `string/move_base/*`, `string/initialpose`, plan, overlay coverage, `operation_*` | belum dilayani (milestone M3 sampai M5) |
+| `string/gps`, `string/follower_status`, `string/rth_status`, `string/rth_path` | fix GPS, follower, msd_rth (hanya msd_system, untuk sementara hanya broker lokal) |
+| `string/move_base/goal`, `cancel`, `result_ack`, `status`, `result` | pelacak goal bridge: goal ke `/way_point`, hasilnya dinilai dari jarak dan kemajuan |
+| `string/initialpose` | `/initialpose` (`lidar_map_localization`) |
+| `string/move_base/NavfnROS/plan`, `.../TebLocalPlannerROS/local_plan` | garis lurus robot ke goal; `/path` dari planner lokal CMU |
+| `string/boustrophedon_path`, `skipped_waypoints`, `coverage_status`, `uncovered_regions`, `coverage_debug`, `boustrophedon_path_ack` | `coverage_node` (`msd_coverage`) |
+| `string/operation_sync`, `operation_progress`, `operation_snapshot` | supervisor operasi di bridge |
 
-Node di baliknya dijelaskan di [Bridge ROS Web UI untuk ROS 2](/id/development/ros/ros2-web-ui-bridge).
+Jawaban ping unit ini membawa `capabilities`, yaitu fitur opsional yang dilayaninya. Node di baliknya, [daftar topic lengkap](/id/development/ros/ros2-web-ui-bridge#topic-list), dan [contoh payload](/id/development/ros/ros2-web-ui-bridge#payloads), termasuk draf tiga stream khusus msd_system, ada di [Bridge ROS Web UI untuk ROS 2](/id/development/ros/ros2-web-ui-bridge).
 
 ## Dokumentasi terkait
 

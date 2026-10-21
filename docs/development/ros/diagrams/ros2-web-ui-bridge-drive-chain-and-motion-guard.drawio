@@ -16,7 +16,7 @@
         <mxCell id="d" value="motion_guard&lt;br&gt;20 Hz, always publishes, zero unless safe" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="200" y="380" width="240" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="e" value="base_controller_node" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+        <mxCell id="e" value="hardware_interface_node" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
           <mxGeometry x="200" y="490" width="240" height="50" as="geometry" />
         </mxCell>
         <mxCell id="f" value="msd_teleop (100)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
