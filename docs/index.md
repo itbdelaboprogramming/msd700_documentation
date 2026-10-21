@@ -16,6 +16,9 @@ hero:
     - theme: alt
       text: Developer Docs
       link: /development/
+    - theme: alt
+      text: ROS2 MSD System
+      link: /ros2-msd-system/
 
 features:
   - title: User Guide
@@ -30,4 +33,8 @@ features:
     details: "For software engineers: deep system architecture, 15-state EKF kinematics, message contracts, and REST API reference."
     link: /development/
     linkText: Read the developer documentation
+  - title: ROS2 MSD System
+    details: "The top-level ROS2 workspace for the MSD700 robot."
+    link: /ros2-msd-system/
+    linkText: Read the MSD System guide
 ---
