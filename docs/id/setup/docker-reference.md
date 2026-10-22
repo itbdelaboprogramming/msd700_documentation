@@ -358,7 +358,7 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | Flag | Berlaku untuk | Efek |
 | --- | --- | --- |
 | `--simulator`, `-s` | `build`, `up` | Image Gazebo (`msd700-simulator:latest`) + container. Diteruskan juga ke `run_msd.sh`, yang menyetel `use_simulator_val:=true` |
-| `--ros2` | `build`, `up`, `shell`, `logs`, `status` | Robot ROS 2 (`msd_system`) menggantikan ROS 1: image `msd_system:robot`, container `msd_system`, `run_ros2.sh` menggantikan `run_msd.sh`, stack lokal tinggal broker MQTT. Tidak bisa digabung dengan `--simulator`. Lihat [Unit: `--ros2`](#unit-ros2) |
+| `--ros2` | `build`, `up`, `shell`, `logs`, `status` | Robot ROS 2 (`msd_system`) menggantikan ROS 1: image `msd_system:robot`, container `msd_system`, `run_ros2.sh` menggantikan `run_msd.sh`, stack lokal dengan `backend_local_ros2` dan `frontend_local_ros2`. Dengan `--simulator`: Gazebo (`msd_sim`) di container `msd_system_simulator`, image yang sama. Lihat [Unit: `--ros2`](#unit-ros2) |
 | `--dev` | `up` | Cloud peer: stack dev, bukan produksi. MQTT 8884, ROS master robot ini 11322, enrolment backend dev dengan identitasnya sendiri ([satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds)) |
 | `--build` | `up` | Rebuild image robot/lokal + workspace catkin dalam container. Robot jalan mempertahankan image lama sampai recreated |
 | `--no-autostart` | `up`, `down` | Biarkan `msd700.service` (`up` mengaktifkan autostart boot, `down` menonaktifkan) |
@@ -433,16 +433,22 @@ Mengemudikan container cloud per-unit **legacy** hanya by ULID (nama ditolak): `
 `--ros2` mengganti sisi robot dengan stack ROS 2 selama migrasi; cara beralihnya ada di [Setup Unit § Beralih ke stack ROS 2](/id/setup/unit-setup#ros2-stack).
 
 - **Image.** `build --ros2` mem-build `msd_system:pc` dari `src/msd_system/Docker/Dockerfile.pc` dengan context milik msd_system sendiri, lalu service compose `msd_system` (profil `ros2`, `docker/Dockerfile.ros2`) menambahkan tmux dan `run_ros2.sh` di atasnya sebagai `msd_system:robot`.
-- **Workspace.** `msd_system:pc` hanya berisi dependensi. `src/msd_system/src` di-mount ke `/root/msd_system/src` dan di-compile oleh `colcon build` di dalam container. `build/`, `install/`, dan `log/` adalah named volume `msd_system_build`, `msd_system_install`, dan `msd_system_log`, jadi hasil build bertahan melewati `down` dan reboot. `run_ros2.sh` mem-build saat `--build`, saat `install/` kosong, dan saat `install/.msd700_image_id` menyebut image lain dari yang dijalankan container. `build-clean --ros2` menghapus volume itu (hanya saat container sudah tidak ada, jadi `down` dulu).
+- **Workspace.** `msd_system:pc` hanya berisi dependensi. `src/msd_system/src` di-mount ke `/root/msd_system/src` dan di-compile oleh `colcon build` di dalam container. `build/`, `install/`, dan `log/` adalah named volume `msd_system_build`, `msd_system_install`, dan `msd_system_log`, jadi hasil build bertahan melewati `down` dan reboot. `run_ros2.sh` mem-build saat `--build`, saat `install/` kosong, dan saat `install/.msd700_image_id` menyebut `msd_system:pc` lain dari yang ada di bawah container (label di `msd_system:robot`), jadi perubahan di layer tipis saja tidak memicu compile ulang. `build-clean --ros2` menghapus volume itu (hanya saat container sudah tidak ada, jadi `down` dulu).
+- **Stack lokal.** `backend_local_ros2` memakai image `ros-noetic-webui-app-local`, env, dan mount yang sama dengan `backend_local`, tetapi menjalankan `node scripts/backend_node` langsung dengan `LINK_GATEWAY_PORT` di port rosbridge: tanpa `roslaunch`, rosbridge, atau topic2string, karena `msd_webui_bridge` sendiri bicara MQTT ke `mosquitto_local`. `frontend_local_ros2` adalah `frontend_local` yang di-build dengan `NEXT_PUBLIC_UNIT_LINK=string` sebagai `ros-dashboard-next-local-ros2:latest`. Database, MQTT, media, signalling, dan network agent dipakai bersama. `up` menghapus backend dan dashboard mode lain lebih dulu (port-nya sama).
+- **Video.** `camera_client.py` di-mount dari ros-web-ui dan jalan di window tmux `camera` dengan environment yang sama seperti dari `run_msd.sh` (signalling dan endpoint token lokal, server signalling dev dengan `--dev`). Paket Python-nya (aiortc, websockets) ada di venv dari `Dockerfile.ros2` di atas OpenCV dan numpy milik image.
+- **Peta.** Bridge mendapat `MEDIA_SERVER_URL` dan `LOCAL_TOKEN_URL` untuk media server lokal, seperti `system_command.py` di ROS 1: peta yang disimpan masuk ke sana dan ke cloud.
 - **Mount yang dipakai bersama ROS 1.** `ros-web-ui/Certificates/robot` (identitas yang sama), `ros-web-ui/scripts` (`enroll.py` untuk enrolment dan token refresh), folder peta, dan `msd_webui_state_local` (emergency stop yang terkunci, bertahan melewati `down`).
-- **Satu stack.** `up` menolak selama container robot lain (`msd700`, `msd700_simulator`, `msd_system`) jalan; `down` menghapus ketiganya.
-- **Flag yang diteruskan.** Hanya `--dry-run` dan `--kill` yang sampai ke `run_ros2.sh`; flag `run_msd.sh` lain dibuang dengan warning. `--dev` diteruskan sebagai `dev:=true` di `webui.launch.py`.
+- **Simulator.** `--simulator` memakai image yang sama (`msd_system:pc` dibangun di atas `jazzy-desktop-full`, yang berisi Gazebo) di container `msd_system_simulator`, dengan socket X11 di-mount untuk jendela Gazebo dan GPU dari `/dev`. Window `bringup` menjalankan `msd_bringup.launch.xml run_robot:=sim run_navigation:=false` dengan `twist_mux` disambungkan ke `motion_guard` (`cmd_vel_out:=mux/cmd_vel`, `twist_mux_webui.yaml`), seperti yang dilakukan `hardware_prototype.launch.py` di robot.
+- **Satu stack.** `up` menolak selama container robot lain (`msd700`, `msd700_simulator`, `msd_system`, `msd_system_simulator`) jalan; `down` menghapus keempatnya.
+- **Flag yang diteruskan.** Hanya `--dry-run` dan `--kill` yang sampai ke `run_ros2.sh`; flag `run_msd.sh` lain dibuang dengan warning. `--dev` diteruskan sebagai `dev:=true` di `webui.launch.py`, `--simulator` sebagai `MSD_ROS2_SIM=true`.
 
 | Variabel | Default | Fungsi |
 | --- | --- | --- |
-| `MSD_ROS2_PROFILE` | `prototype` | `webui.launch.py profile:=`; `sim` juga menyetel `use_sim_time:=true` |
-| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window tmux `bringup`. Kosong: window hanya menampilkan pemberitahuan, dan bridge menyalakan hardware saat Initialize |
+| `MSD_ROS2_PROFILE` | `prototype` (`sim` dengan `--simulator`) | `webui.launch.py profile:=`; `sim` juga menyetel `use_sim_time:=true` |
+| `MSD_ROS2_BRINGUP_CMD` | kosong | Perintah untuk window tmux `bringup`. Kosong: window hanya menampilkan pemberitahuan, dan bridge menyalakan hardware saat Initialize. Dengan `--simulator`, kosong berarti menyalakan `msd_sim` seperti di atas |
+| `MSD_ROS2_SIM_WORLD` | kosong | `--simulator`: `world_file:=` untuk msd_bringup, file di `msd_sim/worlds/` atau path absolut |
 | `MSD_ROS2_WEBUI_ARGS` | kosong | Argumen launch tambahan untuk `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | kosong | `VIRTUAL_CAM_DEVICE` untuk `camera_client.py`; `--camera_device <path>` juga menyetelnya |
 | `ROBOT_TOKEN_REFRESH_SECONDS` | `14400` | Interval token refresh |
 
 ## Unit: `run_msd.sh`

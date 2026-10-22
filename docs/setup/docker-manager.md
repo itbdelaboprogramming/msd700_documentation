@@ -29,6 +29,7 @@ Compose files, images and volumes behind these commands are in the [Docker Refer
 | Start it on the dev cloud | `up --dev -d` |
 | Start the ROS 2 robot (msd_system) | `up --ros2 -d` |
 | Start the Gazebo simulator (laptop, no hardware) | `up --simulator -d` |
+| Start the ROS 2 robot in Gazebo | `up --ros2 --simulator -d` |
 | Stop everything | `down` |
 | Use new code after `git pull` | `build`, then `down` and `up -d` ([what needs a rebuild](/setup/docker-reference#what-needs-a-rebuild)) |
 | Open a shell in the robot container | `shell` (ROS 2: `shell --ros2`) |
@@ -48,12 +49,12 @@ Starts the robot container and the unit's local stack, then runs the robot sessi
 - **Enrols** a robot that has no identity yet: it prints a claim code for an admin to approve ([Unit Setup Step 5](/setup/unit-setup#step-5-start-the-robot-and-enrol)).
 - **Holds the terminal** without `-d`: Ctrl-C, or the session ending, stops everything like `down`.
 - **Arms boot autostart**: installs and enables `msd700.service` with this run's mode flags (`--dev`, `--simulator`, `--ros2`), so a reboot starts the same robot on the same cloud. `--no-autostart` skips this.
-- **Refuses** while another robot container runs (`msd700`, `msd700_simulator` or `msd_system`). Run `down` first.
+- **Refuses** while another robot container runs (`msd700`, `msd700_simulator`, `msd_system` or `msd_system_simulator`). Run `down` first.
 - **Never recreates** a running container, even after a build. To start on a new image: `down`, then `up`.
 
 ### `down` / `stop`
 
-Stops and removes every robot container (`msd700`, `msd700_simulator`, `msd_system`) and the local stack, and disables `msd700.service`. Maps, the local database, credentials and the ROS 2 build volumes are kept. `--no-autostart` leaves the service enabled.
+Stops and removes every robot container (`msd700`, `msd700_simulator`, `msd_system`, `msd_system_simulator`) and the local stack, and disables `msd700.service`. Maps, the local database, credentials and the ROS 2 build volumes are kept. `--no-autostart` leaves the service enabled.
 
 ### `build`
 
@@ -103,7 +104,7 @@ grep ExecStart /etc/systemd/system/msd700.service               # what is armed 
 
 ### `local-up`, `local-down`, `local-build`, `local-logs`, `local-status`
 
-Act on the unit's server stack only (database, MQTT broker, backend and rosbridge, network agent, media, signalling, dashboard), never the robot. `up` already starts this stack; use these to restart or rebuild only the web half. With `--ros2`, `local-up` starts only the MQTT broker.
+Act on the unit's server stack only (database, MQTT broker, backend and rosbridge, network agent, media, signalling, dashboard), never the robot. `up` already starts this stack; use these to restart or rebuild only the web half. With `--ros2`, the backend and dashboard are their ROS 2 variants (see `--ros2`).
 
 ### `help`
 
@@ -116,10 +117,12 @@ Prints the built-in help (also `-h`, `--help`, or no arguments).
 Runs the ROS 2 robot ([msd_system](/ros2-msd-system/), Jazzy) instead of the ROS 1 robot (`msd700_robot`, Noetic).
 
 - **Use with:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `local-up`, `print-autostart-unit`.
-- **What changes:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`. The local stack runs only its MQTT broker, so drive the robot from the cloud dashboard.
+- **What changes:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`.
+- **Local stack:** the same services as on ROS 1, except two: `backend_local_ros2` runs backend_node without ROS and serves the live link from its gateway (no rosbridge), and `frontend_local_ros2` is the dashboard built for that link (image `ros-dashboard-next-local-ros2`). The ROS 1 images stay, so switching back needs no rebuild.
+- **Video:** `camera_client.py` runs in the robot container, as on ROS 1. `--camera_device <path>` works the same.
 - **First start** compiles the workspace in the container (`colcon build`, offline); it is kept in volumes for later starts.
 - **Same identity:** uses the same credentials as ROS 1, so the unit keeps its ULID.
-- **Cannot be combined** with `--simulator`.
+- **With `--simulator`:** the same robot in Gazebo (see `--simulator` below).
 
 ```bash
 ./scripts/docker-manager.sh build --ros2
@@ -132,6 +135,18 @@ Full walkthrough: [Unit Setup § Switching to the ROS 2 stack](/setup/unit-setup
 ### `--simulator`, `-s`
 
 Runs the Gazebo simulator image (`msd700-simulator:latest`, container `msd700_simulator`) instead of the hardware robot. For a laptop with no robot attached. Build it first with `build --simulator`, which also downloads the simulator worlds. `MSD700_SIM_HEADLESS=true` in `docker/.env` runs Gazebo without its window.
+
+With `--ros2` it runs msd_system's own simulation (`msd_sim`) instead:
+
+- **Same image.** `msd_system:pc` already carries Gazebo, so `build --ros2` is enough. Only the container differs: `msd_system_simulator`.
+- **What runs.** The `bringup` window starts `msd_sim` through `msd_bringup.launch.xml`, without navigation, which the bridge starts per mode as on the robot. The bridge uses its `sim` profile.
+- **World.** `MSD_ROS2_SIM_WORLD` picks a file from `msd_sim/worlds/` (for example `campus_hall.sdf`) or an absolute path. Empty: msd_bringup's default.
+- **Always with a window.** `MSD700_SIM_HEADLESS` does not apply: `msd_sim` has no headless option yet.
+
+```bash
+./scripts/docker-manager.sh build --ros2
+./scripts/docker-manager.sh up --ros2 --simulator -d
+```
 
 - **Use with:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `print-autostart-unit`.
 - Baked into `msd700.service`, so a reboot does not come back as a hardware robot.
@@ -218,7 +233,6 @@ Anything else goes to `run_msd.sh` unchanged, for example `--camera_device /dev/
 
 - **One robot stack at a time.** ROS 1, the simulator and ROS 2 share the host network, `/dev` and the unit identity.
 - **Mode flags pick the robot.** `--dev`, `--simulator` and `--ros2` decide which robot runs where. Give the same ones to `shell`, `logs` and `status`; `up` bakes them into `msd700.service`.
-- **`--ros2` and `--simulator` together are rejected.**
 - **A misplaced flag warns and is ignored**, for example `-d` on anything but `up`, or `--fresh` on anything but `reenroll`.
 
 ## Environment variables
@@ -232,8 +246,9 @@ Set them inline (`VAR=value ./scripts/docker-manager.sh up -d`) or in `docker/.e
 | `ROS_MASTER_PORT` | `11321`, `11322` with `--dev` | The robot's own ROS master. Never the cloud's `11311`/`11312` |
 | `BUILD_PARALLEL` | `true` | `false` builds the images one at a time |
 | `ENROLL_CODE` | unset | Single-use registration code, skips the pending list |
-| `MSD_ROS2_PROFILE` | `prototype` | ROS 2 bridge profile: `prototype` or `sim` |
+| `MSD_ROS2_PROFILE` | `prototype` (`sim` with `--simulator`) | ROS 2 bridge profile: `prototype` or `sim` |
 | `MSD_ROS2_BRINGUP_CMD` | empty | ROS 2: command for the `bringup` window, for example navigation |
 | `MSD_ROS2_WEBUI_ARGS` | empty | ROS 2: extra arguments for `webui.launch.py` |
+| `MSD_ROS2_SIM_WORLD` | empty | ROS 2 simulator: world file in `msd_sim/worlds/` or an absolute path |
 
 Every variable: [Docker Reference § Environment variables it forwards](/setup/docker-reference#environment-variables-it-forwards) and [Unit `.env` reference](/setup/docker-reference#unit-env-reference).

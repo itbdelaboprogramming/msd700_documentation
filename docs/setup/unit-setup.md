@@ -248,15 +248,15 @@ During the ROS 1 to ROS 2 migration a unit can run either robot stack. The flag 
 | Image | `msd700:latest` | `msd_system:robot`, layered on `msd_system:pc` |
 | Container | `msd700` | `msd_system` |
 | Session runner | `run_msd.sh` | `run_ros2.sh` (`docker/ros2/`) |
-| Local stack | full (dashboard on `:3000`) | MQTT broker only |
+| Local stack | full (dashboard on `:3000`) | full (dashboard on `:3000`), backend without ROS |
 
 Only one stack runs at a time: both use the host network, `/dev` and the same unit identity. `up --ros2` refuses to start while `msd700` or `msd700_simulator` is running.
 
 ::: warning What works on ROS 2 today
-- **Works:** enrolment, Initialize/Stop hardware, manual driving, emergency stop, GPS. The scan, hole and map views, follower and return to home also need the CMU navigation stack running (`MSD_ROS2_BRINGUP_CMD`, below). All bridged and tested in containers only, not yet on a real robot.
-- **Not yet:** navigation and mapping from the dashboard, autopilot, coverage and auto align. The dashboard gets "not available" for them.
-- **Cloud dashboard only.** In `--ros2` mode the local stack runs only its MQTT broker (the rest needs a ROS 1 roscore), so the local dashboard on `:3000` does not open.
-- **No simulator.** `--ros2` cannot be combined with `--simulator`.
+- **Works:** enrolment, Initialize/Stop hardware, manual driving, emergency stop, GPS, follower and return to home, and since 2026-10-21 mapping (save and upload), navigation on a saved map, autopilot, coverage and auto align. The bridge starts the CMU navigation stack itself for each mode, through `msd_bringup.launch.xml`. All bridged and tested in containers only, not yet on a real robot or with the real dashboard.
+- **Saved maps:** a map made on the ROS 2 unit is saved as pgm/yaml (uploaded as usual) plus a `.pcd` that stays in the unit's maps folder and is what the robot localizes against. A map made on a ROS 1 unit still opens, with a 3D map derived from its walls, which localizes less reliably.
+- **Local dashboard and video.** The local stack runs as on ROS 1, with two services swapped: the backend runs without ROS and serves the live link itself, as on the cloud servers, and the dashboard is built for that link. Video comes from the same `camera_client.py` as on ROS 1.
+- **Simulator.** `up --ros2 --simulator` runs the same stack in Gazebo on a laptop (see [below](#ros2-simulator)). Checked with a dry run only so far.
 - **VLP-16 only.** The ROS 2 hardware layer defaults to the Velodyne. Passing `MSD700_LIDAR_TYPE` (Livox Mid-360) into the container is on the `msd700_noetic` branch `ros2-lidar-type`, not merged yet.
 :::
 
@@ -305,6 +305,7 @@ Do not start `msd_hardware.launch.xml` or `msd_bringup` with `run_robot:=hardwar
 | --- | --- |
 | `bringup` | `MSD_ROS2_BRINGUP_CMD`, or a notice when it is empty (default) |
 | `webui` | `ros2 launch msd_webui_bridge webui.launch.py profile:=prototype ...` |
+| `camera` | `camera_client.py` (video to the cloud and the local dashboard) |
 | `token_refresh` | renews `token.cred` |
 
 ```bash
@@ -319,9 +320,24 @@ Commands that target the robot container (`status`, `shell`, `logs`) need `--ros
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `MSD_ROS2_PROFILE` | `prototype` | Bridge profile: `prototype` (real robot) or `sim` |
-| `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` window, for example navigation. Leave the hardware out (see Step 4) |
+| `MSD_ROS2_PROFILE` | `prototype` | Bridge profile: `prototype` (real robot) or `sim` (default with `--simulator`) |
+| `MSD_ROS2_BRINGUP_CMD` | empty | Command for the `bringup` window. Leave the hardware and navigation out: the bridge starts both (see Step 4). A navigation stack started here is used as it is, but then a saved map is not localized against |
 | `MSD_ROS2_WEBUI_ARGS` | empty | Extra launch arguments for `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | empty | Camera for the video, like `--camera_device` on ROS 1. Empty: the default webcam, else the RealSense colour node |
+
+### Running it in the simulator {#ros2-simulator}
+
+On a laptop with no robot, `--simulator` runs the ROS 2 stack in Gazebo (`msd_sim`). It uses the same image, so `build --ros2` from Step 2 is enough:
+
+```bash
+./scripts/docker-manager.sh down
+./scripts/docker-manager.sh up --ros2 --simulator -d
+```
+
+- The container is `msd_system_simulator` (attach: `docker exec -it msd_system_simulator tmux attach -t robot_services`). Give `--ros2 --simulator` to `status`, `shell` and `logs` too.
+- The Gazebo window opens on the laptop screen. There is no Initialize step: the simulation is the hardware.
+- Pick a world with `MSD_ROS2_SIM_WORLD`, for example `MSD_ROS2_SIM_WORLD=campus_hall.sdf`. The default is `yayat_gudang.sdf`.
+- The laptop enrols as a unit like a ROS 1 simulator does, so use `--dev` to keep it off production.
 
 **After pulling msd_system:** `src/` is mounted into the container, so `up --ros2 --build` recompiles it. If `Docker/Dockerfile.pc` or package dependencies changed, run `build --ros2` first; the next start then rebuilds the workspace by itself, since it was built on the old image. For a build from scratch: `down`, then `build-clean --ros2`, which also drops the three volumes.
 

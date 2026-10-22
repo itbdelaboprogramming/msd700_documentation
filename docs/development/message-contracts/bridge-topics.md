@@ -253,9 +253,14 @@ A robot from the ROS 2 `msd_system` workspace has no `topic2string` or `aws_mqtt
 | `string/hazard_cells` | `webui/hazard_cells` (latched) |
 | `string/map`, `string/map_request` | `webui/map` (latched) |
 | `string/key_vel` | `webui/manual_vel` (`twist_mux` priority 90) |
-| `string/move_base/*`, `string/initialpose`, plans, coverage overlays, `operation_*` | not served yet (milestones M3 to M5) |
+| `string/gps`, `string/follower_status`, `string/rth_status`, `string/rth_path` | GPS fix, follower, msd_rth (msd_system only, local broker only for now) |
+| `string/move_base/goal`, `cancel`, `result_ack`, `status`, `result` | the bridge's goal tracker: goals go to `/way_point`, the outcome is judged by distance and progress |
+| `string/initialpose` | `/initialpose` (`lidar_map_localization`) |
+| `string/move_base/NavfnROS/plan`, `.../TebLocalPlannerROS/local_plan` | a straight line robot to goal; the CMU local planner's `/path` |
+| `string/boustrophedon_path`, `skipped_waypoints`, `coverage_status`, `uncovered_regions`, `coverage_debug`, `boustrophedon_path_ack` | `coverage_node` (`msd_coverage`) |
+| `string/operation_sync`, `operation_progress`, `operation_snapshot` | the bridge's operation supervisor |
 
-See [ROS 2 Web UI Bridge](/development/ros/ros2-web-ui-bridge) for the nodes behind them.
+The ping answer of these units carries `capabilities`, the optional features they serve. See [ROS 2 Web UI Bridge](/development/ros/ros2-web-ui-bridge) for the nodes behind them, the [full topic list](/development/ros/ros2-web-ui-bridge#topic-list) and [payload examples](/development/ros/ros2-web-ui-bridge#payloads), including the drafts of the three msd_system-only streams.
 
 ## Related documentation
 

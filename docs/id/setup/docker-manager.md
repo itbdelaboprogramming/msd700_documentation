@@ -29,6 +29,7 @@ File compose, image, dan volume di balik perintah ini ada di [Referensi Docker](
 | Jalankan di cloud dev | `up --dev -d` |
 | Jalankan robot ROS 2 (msd_system) | `up --ros2 -d` |
 | Jalankan simulator Gazebo (laptop, tanpa hardware) | `up --simulator -d` |
+| Jalankan robot ROS 2 di Gazebo | `up --ros2 --simulator -d` |
 | Hentikan semuanya | `down` |
 | Pakai kode baru setelah `git pull` | `build`, lalu `down` dan `up -d` ([apa yang perlu rebuild](/id/setup/docker-reference#apa-yang-butuh-rebuild)) |
 | Buka shell di container robot | `shell` (ROS 2: `shell --ros2`) |
@@ -48,12 +49,12 @@ Menjalankan container robot dan stack lokal unit, lalu menjalankan session robot
 - **Meng-enrol** robot yang belum punya identitas: menampilkan claim code untuk disetujui admin ([Setup Unit Step 5](/id/setup/unit-setup#step-5-jalankan-robot-dan-enrol)).
 - **Menahan terminal** tanpa `-d`: Ctrl-C, atau session yang berakhir, menghentikan semuanya seperti `down`.
 - **Menyiapkan autostart boot**: memasang dan mengaktifkan `msd700.service` dengan flag mode run ini (`--dev`, `--simulator`, `--ros2`), jadi reboot menjalankan robot yang sama di cloud yang sama. `--no-autostart` melewati langkah ini.
-- **Menolak** selama container robot lain jalan (`msd700`, `msd700_simulator`, atau `msd_system`). Jalankan `down` dulu.
+- **Menolak** selama container robot lain jalan (`msd700`, `msd700_simulator`, `msd_system`, atau `msd_system_simulator`). Jalankan `down` dulu.
 - **Tidak pernah membuat ulang** container yang sedang jalan, bahkan setelah build. Untuk start dengan image baru: `down`, lalu `up`.
 
 ### `down` / `stop`
 
-Menghentikan dan menghapus semua container robot (`msd700`, `msd700_simulator`, `msd_system`) serta stack lokal, dan menonaktifkan `msd700.service`. Peta, database lokal, kredensial, dan volume build ROS 2 tetap disimpan. `--no-autostart` membiarkan service tetap aktif.
+Menghentikan dan menghapus semua container robot (`msd700`, `msd700_simulator`, `msd_system`, `msd_system_simulator`) serta stack lokal, dan menonaktifkan `msd700.service`. Peta, database lokal, kredensial, dan volume build ROS 2 tetap disimpan. `--no-autostart` membiarkan service tetap aktif.
 
 ### `build`
 
@@ -103,7 +104,7 @@ grep ExecStart /etc/systemd/system/msd700.service               # yang aktif sek
 
 ### `local-up`, `local-down`, `local-build`, `local-logs`, `local-status`
 
-Hanya bekerja pada stack server unit (database, broker MQTT, backend dan rosbridge, network agent, media, signalling, dashboard), tidak pernah robotnya. `up` sudah menjalankan stack ini; pakai perintah ini untuk restart atau rebuild sisi web saja. Dengan `--ros2`, `local-up` hanya menjalankan broker MQTT.
+Hanya bekerja pada stack server unit (database, broker MQTT, backend dan rosbridge, network agent, media, signalling, dashboard), tidak pernah robotnya. `up` sudah menjalankan stack ini; pakai perintah ini untuk restart atau rebuild sisi web saja. Dengan `--ros2`, backend dan dashboard memakai varian ROS 2-nya (lihat `--ros2`).
 
 ### `help`
 
@@ -116,10 +117,12 @@ Menampilkan help bawaan (juga `-h`, `--help`, atau tanpa argumen).
 Menjalankan robot ROS 2 ([msd_system](/ros2-msd-system/), Jazzy) sebagai ganti robot ROS 1 (`msd700_robot`, Noetic).
 
 - **Dipakai dengan:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `local-up`, `print-autostart-unit`.
-- **Yang berubah:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`. Stack lokal hanya menjalankan broker MQTT, jadi kendalikan robot dari dashboard cloud.
+- **Yang berubah:** image `msd_system:robot`, container `msd_system`, session runner `run_ros2.sh`.
+- **Stack lokal:** service-nya sama dengan ROS 1, kecuali dua: `backend_local_ros2` menjalankan backend_node tanpa ROS dan melayani live link dari gateway-nya (tanpa rosbridge), dan `frontend_local_ros2` adalah dashboard yang di-build untuk link itu (image `ros-dashboard-next-local-ros2`). Image ROS 1 tetap ada, jadi kembali ke ROS 1 tidak perlu rebuild.
+- **Video:** `camera_client.py` jalan di container robot, seperti di ROS 1. `--camera_device <path>` bekerja sama.
 - **Start pertama** meng-compile workspace di dalam container (`colcon build`, offline); hasilnya disimpan di volume untuk start berikutnya.
 - **Identitas sama:** memakai kredensial yang sama dengan ROS 1, jadi unit tetap memakai ULID-nya.
-- **Tidak bisa digabung** dengan `--simulator`.
+- **Dengan `--simulator`:** robot yang sama di Gazebo (lihat `--simulator` di bawah).
 
 ```bash
 ./scripts/docker-manager.sh build --ros2
@@ -132,6 +135,18 @@ Langkah lengkap: [Setup Unit § Beralih ke stack ROS 2](/id/setup/unit-setup#ros
 ### `--simulator`, `-s`
 
 Menjalankan image simulator Gazebo (`msd700-simulator:latest`, container `msd700_simulator`) sebagai ganti robot hardware. Untuk laptop tanpa robot. Build dulu dengan `build --simulator`, yang juga mengunduh world simulator. `MSD700_SIM_HEADLESS=true` di `docker/.env` menjalankan Gazebo tanpa jendela.
+
+Dengan `--ros2`, yang jalan adalah simulasi milik msd_system sendiri (`msd_sim`):
+
+- **Image sama.** `msd_system:pc` sudah berisi Gazebo, jadi `build --ros2` sudah cukup. Hanya container-nya yang beda: `msd_system_simulator`.
+- **Yang jalan.** Window `bringup` menyalakan `msd_sim` lewat `msd_bringup.launch.xml`, tanpa navigasi, yang dinyalakan bridge per mode seperti di robot. Bridge memakai profil `sim`.
+- **World.** `MSD_ROS2_SIM_WORLD` memilih file dari `msd_sim/worlds/` (misalnya `campus_hall.sdf`) atau path absolut. Kosong: default msd_bringup.
+- **Selalu dengan jendela.** `MSD700_SIM_HEADLESS` tidak berlaku: `msd_sim` belum punya opsi headless.
+
+```bash
+./scripts/docker-manager.sh build --ros2
+./scripts/docker-manager.sh up --ros2 --simulator -d
+```
 
 - **Dipakai dengan:** `build`, `build-clean`, `up`, `shell`, `logs`, `status`, `print-autostart-unit`.
 - Ditanam ke `msd700.service`, jadi reboot tidak kembali sebagai robot hardware.
@@ -218,7 +233,6 @@ Selain di atas, flag diteruskan apa adanya ke `run_msd.sh`, misalnya `--camera_d
 
 - **Satu stack robot pada satu waktu.** ROS 1, simulator, dan ROS 2 berbagi network host, `/dev`, dan identitas unit.
 - **Flag mode memilih robot.** `--dev`, `--simulator`, dan `--ros2` menentukan robot mana yang jalan dan ke cloud mana. Beri flag yang sama ke `shell`, `logs`, dan `status`; `up` menanamnya ke `msd700.service`.
-- **`--ros2` bersama `--simulator` ditolak.**
 - **Flag yang salah tempat menampilkan warning dan diabaikan**, misalnya `-d` selain pada `up`, atau `--fresh` selain pada `reenroll`.
 
 ## Environment variable
@@ -232,8 +246,10 @@ Set langsung di baris perintah (`VAR=value ./scripts/docker-manager.sh up -d`) a
 | `ROS_MASTER_PORT` | `11321`, `11322` dengan `--dev` | ROS master robot sendiri. Jangan pernah `11311`/`11312` milik cloud |
 | `BUILD_PARALLEL` | `true` | `false` mem-build image satu per satu |
 | `ENROLL_CODE` | tidak diset | Kode registrasi sekali pakai, melewati daftar pending |
-| `MSD_ROS2_PROFILE` | `prototype` | Profil bridge ROS 2: `prototype` atau `sim` |
+| `MSD_ROS2_PROFILE` | `prototype` (`sim` dengan `--simulator`) | Profil bridge ROS 2: `prototype` atau `sim` |
 | `MSD_ROS2_BRINGUP_CMD` | kosong | ROS 2: perintah untuk window `bringup`, misalnya navigasi |
 | `MSD_ROS2_WEBUI_ARGS` | kosong | ROS 2: argumen tambahan untuk `webui.launch.py` |
+| `MSD_ROS2_CAMERA_DEVICE` | kosong | ROS 2: kamera untuk video, seperti `--camera_device` |
+| `MSD_ROS2_SIM_WORLD` | kosong | Simulator ROS 2: file world di `msd_sim/worlds/` atau path absolut |
 
 Semua variabel: [Referensi Docker § Environment variable yang diteruskan](/id/setup/docker-reference#environment-variable-yang-diteruskan) dan [referensi `.env` unit](/id/setup/docker-reference#referensi-env-unit).

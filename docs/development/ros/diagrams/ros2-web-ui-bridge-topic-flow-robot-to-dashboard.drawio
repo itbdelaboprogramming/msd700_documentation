@@ -1,0 +1,93 @@
+<mxfile host="msd700-docs">
+  <diagram id="d" name="ROS 2 Web UI bridge: topic flow from robot to dashboard">
+    <mxGraphModel grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="a" value="CMU navigation stack&lt;br&gt;/terrain_map_ext&lt;br&gt;(PointCloud2 in map)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="200" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="b" value="Localisation&lt;br&gt;TF map to base_link,&lt;br&gt;base_footprint&lt;br&gt;/state_estimation" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="235" y="20" width="135" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="c" value="msd_hardware&lt;br&gt;(started on Initialize)&lt;br&gt;IMU, wheel velocities,&lt;br&gt;scan_3d/points, gps/fix" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="385" y="20" width="135" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="d" value="follower, msd_rth&lt;br&gt;(launch layers)&lt;br&gt;goals, target points,&lt;br&gt;webui/rth/status" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="535" y="20" width="125" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="g" value="msd_webui_views (needs TF map to base_footprint)" style="html=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" vertex="1" parent="1">
+          <mxGeometry x="20" y="150" width="200" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="v1" value="scan_flattener" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="160" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="v2" value="hole_trail" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="240" width="160" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="v3" value="grid_mapper" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="290" width="160" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="w" value="webui_bridge&lt;br&gt;encodes, gates and relays: Q1 scan, Path JSON, M1 map, pose JSON, GPS / follower / RTH JSON;&lt;br&gt;hardware liveness from topic traffic; egress gate from the operator's presence" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="420" width="640" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" value="MQTT, cloud and local brokers&lt;br&gt;/unit_&amp;lt;ULID&amp;gt;/system_feedback&lt;br&gt;string/robotpose, string/laserscan,&lt;br&gt;string/laserscan_holes, string/hazard_cells, string/map" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="560" width="420" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="MQTT, local broker only&lt;br&gt;string/gps&lt;br&gt;string/follower_status&lt;br&gt;string/rth_status" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="460" y="560" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dash" value="ROS Web UI dashboard (cloud or local)" style="html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;rounded=0;fontFamily=Helvetica;fontSize=12;fontColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="20" y="700" width="640" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="/terrain_map_ext" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="a" target="g">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="webui/scan, webui/scan_holes,&lt;br&gt;webui/hazard_cells, webui/map" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.156;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="g" target="w">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="TF,&lt;br&gt;/state_estimation" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.441;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="b" target="w">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="liveness,&lt;br&gt;GPS, IMU yaw" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.676;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="c" target="w">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="goals, targets,&lt;br&gt;RTH status" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.902;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="d" target="w">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.33;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="w" target="m1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="525" />
+              <mxPoint x="230" y="525" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.844;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="w" target="m2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="525" />
+              <mxPoint x="560" y="525" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.33;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="m1" target="dash">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="230" y="675" />
+              <mxPoint x="230" y="675" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;arcSize=10;html=1;fontFamily=Helvetica;fontSize=11;labelBackgroundColor=#ffffff;strokeColor=#000000;startArrow=none;endArrow=block;endFill=1;endSize=6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.844;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="m2" target="dash">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="560" y="675" />
+              <mxPoint x="560" y="675" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

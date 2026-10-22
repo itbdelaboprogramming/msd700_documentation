@@ -245,9 +245,14 @@ ROS 2の`msd_system`ワークスペースのロボットには`topic2string`も`
 | `string/hazard_cells` | `webui/hazard_cells`(latched) |
 | `string/map`、`string/map_request` | `webui/map`(latched) |
 | `string/key_vel` | `webui/manual_vel`(`twist_mux`優先度90) |
-| `string/move_base/*`、`string/initialpose`、プラン、カバレッジオーバーレイ、`operation_*` | 未対応(マイルストーンM3〜M5) |
+| `string/gps`、`string/follower_status`、`string/rth_status`、`string/rth_path` | GPSのfix、フォロワー、msd_rth(msd_systemのみ、当面はローカルブローカーのみ) |
+| `string/move_base/goal`、`cancel`、`result_ack`、`status`、`result` | ブリッジのゴール追跡: ゴールは`/way_point`へ、結果は距離と進捗で判定 |
+| `string/initialpose` | `/initialpose`(`lidar_map_localization`) |
+| `string/move_base/NavfnROS/plan`、`.../TebLocalPlannerROS/local_plan` | ロボットからゴールへの直線、CMUローカルプランナーの`/path` |
+| `string/boustrophedon_path`、`skipped_waypoints`、`coverage_status`、`uncovered_regions`、`coverage_debug`、`boustrophedon_path_ack` | `coverage_node`(`msd_coverage`) |
+| `string/operation_sync`、`operation_progress`、`operation_snapshot` | ブリッジの運転スーパーバイザー |
 
-背後のノードは[ROS 2 Web UIブリッジ](/ja/development/ros/ros2-web-ui-bridge)で説明する。
+これらのユニットのpingの応答には、扱う任意機能を示す`capabilities`が含まれる。背後のノード、[トピック一覧](/ja/development/ros/ros2-web-ui-bridge#topic-list)、msd_system専用の3ストリームの草案を含む[ペイロード例](/ja/development/ros/ros2-web-ui-bridge#payloads)は[ROS 2 Web UIブリッジ](/ja/development/ros/ros2-web-ui-bridge)で説明する。
 
 ## 関連ドキュメント
 
