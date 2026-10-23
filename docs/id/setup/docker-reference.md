@@ -367,7 +367,7 @@ Unit tidak pernah memanggil `docker compose` langsung. `scripts/docker-manager.s
 | `--dry-run` | diteruskan | Bukan preview aman: tetap start container, ubah host state, bisa kill sesi dan hubungi enrolment |
 | `--kill` | diteruskan | Kill sesi tmux di container |
 | `--local` | diterima, diabaikan | Deprecated. Stack lokal tetap start |
-| `--fresh` | hanya `reenroll` | Ikut menghapus cache lokal (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). Untuk robot yang akan dipakai rental **baru**; tanpa flag ini cache dipertahankan dan full sync merekonsiliasinya |
+| `--fresh` | hanya `reenroll` | Ikut menghapus cache lokal milik cloud yang sedang dipakai (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`; folder data `_dev` dengan `--dev`). Untuk robot yang akan dipakai rental **baru**; tanpa flag ini cache dipertahankan dan full sync merekonsiliasinya |
 | `--no-archive` | hanya `reenroll` | Lewati backup. Aman hanya jika unit sudah menyinkronkan semua datanya; jika tidak, map offline hilang |
 | `-y`, `--yes` | hanya `reenroll` | Tanpa prompt, termasuk konfirmasi unit-id |
 | `--unit_id` | **ditolak** | Sengaja dihapus. Identitas dari admin console cloud |

@@ -87,7 +87,7 @@ Registers the robot with the cloud again when the cloud no longer knows it: the 
 
 It shows the current unit id and sync state, then:
 
-1. Backs up the unit's maps and credentials to `unit_backups_local/`. This needs the local stack up (`local-up`).
+1. Backs up the unit's maps and credentials to `unit_backups_local/` (`unit_backups_local_dev/` with `--dev`). This needs the local stack up (`local-up`).
 2. Deletes `device.json`, its copy in `identities/`, and `token.cred`.
 3. Asks you to type the unit id to confirm.
 
@@ -160,9 +160,10 @@ Connects to the **dev cloud** instead of production:
 | Backend | `https://msd.nglobal.jp/services/rosbackend` | `http://118.22.31.252:5001` |
 | MQTT broker | `msd.nglobal.jp:8883` | `msd.nglobal.jp:8884` |
 | Robot's own ROS master (ROS 1) | `11321` | `11322` |
+| Local data (MySQL, map files, the unit's backups) | `mysql_data_local`, `media_data_local`, `unit_backups_local` | The same with `_dev` (`mysql_data_local_dev`, ...) |
 
 - The unit keeps a separate identity per cloud. The first `up --dev` on a unit registered with production prints a claim code and waits for the dev admin ([one robot, two clouds](/development/webui/accounts/enrolment#one-robot-two-clouds)).
-- The local stack and local dashboard run either way.
+- The local stack and local dashboard run either way, each on its own copy of the local data: that data is a replica of one cloud (its users, its rental profile, this robot's unit id there), and one cloud's copy left in place blocks the other's.
 - Baked into `msd700.service`, so a reboot comes back on dev.
 - `DEV_SERVER_HOST` and `DEV_BACKEND_PORT` move the dev backend.
 
@@ -207,7 +208,7 @@ Passed to the session runner: kills the robot's tmux session inside the containe
 
 ### `--fresh`
 
-With `reenroll` only. Also wipes the local cache (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). For a robot going out on a **new** rental. Without it the cache is kept and a full sync reconciles it.
+With `reenroll` only. Also wipes the local cache of the cloud in use (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`; with `--dev`, `mysql_data_local_dev` and `media_data_local_dev`). For a robot going out on a **new** rental. Without it the cache is kept and a full sync reconciles it.
 
 ### `--no-archive`
 

@@ -87,7 +87,7 @@ Python、launch、Nodeの変更はビルド不要です。`src/`と`ros-web-ui/s
 
 現在のユニットIDと同期状態を表示したあと、次を行います:
 
-1. ユニットの地図と認証情報を`unit_backups_local/`にバックアップします。ローカルスタックの稼働が必要です(`local-up`)。
+1. ユニットの地図と認証情報を`unit_backups_local/`(`--dev`では`unit_backups_local_dev/`)にバックアップします。ローカルスタックの稼働が必要です(`local-up`)。
 2. `device.json`、`identities/`内のそのコピー、`token.cred`を削除します。
 3. 確認のためユニットIDの入力を求めます。
 
@@ -160,9 +160,10 @@ ROS 1ロボット(`msd700_robot`、Noetic)の代わりにROS 2ロボット([msd_
 | バックエンド | `https://msd.nglobal.jp/services/rosbackend` | `http://118.22.31.252:5001` |
 | MQTTブローカー | `msd.nglobal.jp:8883` | `msd.nglobal.jp:8884` |
 | ロボット自身のROSマスター(ROS 1) | `11321` | `11322` |
+| ローカルデータ(MySQL、地図ファイル、ユニットのバックアップ) | `mysql_data_local`、`media_data_local`、`unit_backups_local` | 同じ名前に`_dev`を付けたもの(`mysql_data_local_dev`など) |
 
 - ユニットはクラウドごとに別のIDを持ちます。本番に登録済みのユニットで初めて`up --dev`を実行すると、クレームコードを表示して開発側の管理者の承認を待ちます([1台のロボット、2つのクラウド](/ja/development/webui/accounts/enrolment#one-robot-two-clouds))。
-- ローカルスタックとローカルダッシュボードはどちらのモードでも動きます。
+- ローカルスタックとローカルダッシュボードはどちらのモードでも動き、それぞれ専用のローカルデータを使います。ローカルデータは1つのクラウドの複製(そのユーザー、レンタルプロファイル、そこでのこのロボットのユニットID)なので、もう一方のクラウドの複製が残っていると、使用中のクラウドの複製が同期できなくなります。
 - `msd700.service`に焼き込まれるため、再起動後も開発クラウドで起動します。
 - `DEV_SERVER_HOST`と`DEV_BACKEND_PORT`で開発バックエンドの場所を変えます。
 
@@ -207,7 +208,7 @@ docker exec -it msd_system tmux attach -t robot_services   # ROS 2
 
 ### `--fresh`
 
-`reenroll`専用です。ローカルキャッシュ(`mysql_data_local`、`media_data_local`、`mosquitto_data_local`)も消去します。**新しい**レンタルに出すロボット向けです。付けない場合、キャッシュは残り、フル同期で整合されます。
+`reenroll`専用です。使用中のクラウドのローカルキャッシュ(`mysql_data_local`、`media_data_local`、`mosquitto_data_local`。`--dev`では`mysql_data_local_dev`と`media_data_local_dev`)も消去します。**新しい**レンタルに出すロボット向けです。付けない場合、キャッシュは残り、フル同期で整合されます。
 
 ### `--no-archive`
 

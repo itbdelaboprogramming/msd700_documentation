@@ -367,7 +367,7 @@ The unit never calls `docker compose` directly. `scripts/docker-manager.sh` wrap
 | `--dry-run` | forwarded | Not a safe preview: still starts containers, changes host state, can kill the session and contact enrolment |
 | `--kill` | forwarded | Kill the tmux session in the container |
 | `--local` | accepted, ignored | Deprecated. Local stack starts either way |
-| `--fresh` | `reenroll` only | Also wipe the local cache (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). For a robot going out on a **new** rental; without it the cache is kept and a full sync reconciles it |
+| `--fresh` | `reenroll` only | Also wipe the local cache of the cloud in use (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`; `_dev` data dirs with `--dev`). For a robot going out on a **new** rental; without it the cache is kept and a full sync reconciles it |
 | `--no-archive` | `reenroll` only | Skip the backup. Safe only if the unit has synced everything it holds; otherwise offline maps are lost |
 | `-y`, `--yes` | `reenroll` only | No prompts, including the unit-id confirmation |
 | `--unit_id` | **rejected** | Removed on purpose. Identity comes from the cloud admin console |

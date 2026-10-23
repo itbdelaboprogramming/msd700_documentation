@@ -87,7 +87,7 @@ Mendaftarkan ulang robot ke cloud saat cloud tidak lagi mengenalnya: unit dihapu
 
 Skrip menampilkan unit id dan status sync saat ini, lalu:
 
-1. Mem-backup peta dan kredensial unit ke `unit_backups_local/`. Ini butuh stack lokal jalan (`local-up`).
+1. Mem-backup peta dan kredensial unit ke `unit_backups_local/` (`unit_backups_local_dev/` dengan `--dev`). Ini butuh stack lokal jalan (`local-up`).
 2. Menghapus `device.json`, salinannya di `identities/`, dan `token.cred`.
 3. Meminta Anda mengetik unit id sebagai konfirmasi.
 
@@ -160,9 +160,10 @@ Terhubung ke **cloud dev**, bukan produksi:
 | Backend | `https://msd.nglobal.jp/services/rosbackend` | `http://118.22.31.252:5001` |
 | Broker MQTT | `msd.nglobal.jp:8883` | `msd.nglobal.jp:8884` |
 | ROS master robot sendiri (ROS 1) | `11321` | `11322` |
+| Data lokal (MySQL, file peta, backup unit) | `mysql_data_local`, `media_data_local`, `unit_backups_local` | Sama, dengan akhiran `_dev` (`mysql_data_local_dev`, ...) |
 
 - Unit menyimpan identitas terpisah per cloud. `up --dev` pertama di unit yang terdaftar di produksi menampilkan claim code dan menunggu admin dev ([satu robot, dua cloud](/id/development/webui/accounts/enrolment#one-robot-two-clouds)).
-- Stack lokal dan dashboard lokal tetap jalan di kedua mode.
+- Stack lokal dan dashboard lokal tetap jalan di kedua mode, masing-masing dengan salinan data lokalnya sendiri: data itu replika satu cloud (user-nya, rental profile-nya, unit id robot ini di sana), dan salinan dari cloud lain yang tertinggal akan menghalangi salinan cloud yang aktif.
 - Ditanam ke `msd700.service`, jadi reboot kembali ke dev.
 - `DEV_SERVER_HOST` dan `DEV_BACKEND_PORT` memindahkan backend dev.
 
@@ -207,7 +208,7 @@ Diteruskan ke session runner: mematikan session tmux robot di dalam container la
 
 ### `--fresh`
 
-Hanya dengan `reenroll`. Juga menghapus cache lokal (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`). Untuk robot yang berangkat dengan rental **baru**. Tanpa flag ini cache disimpan dan full sync merekonsiliasinya.
+Hanya dengan `reenroll`. Juga menghapus cache lokal milik cloud yang sedang dipakai (`mysql_data_local`, `media_data_local`, `mosquitto_data_local`; dengan `--dev`, `mysql_data_local_dev` dan `media_data_local_dev`). Untuk robot yang berangkat dengan rental **baru**. Tanpa flag ini cache disimpan dan full sync merekonsiliasinya.
 
 ### `--no-archive`
 
